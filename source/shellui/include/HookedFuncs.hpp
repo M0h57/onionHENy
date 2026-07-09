@@ -615,12 +615,6 @@ MonoString* GetString(MonoString* str);
 int ItemzLaunchByUri(const char* uri);
 void GoToHome();
 void GoToURI(const char* uri);
-/* FW 11.6: rewrite function=debug_settings → function=debug_settings_old (Legacy ui3). */
-std::string rewrite_debug_settings_uri_to_legacy(std::string uri);
-static constexpr const char *kDebugSettingsLegacyUri =
-    "pssettings:play?function=debug_settings_old";
-static constexpr const char *kDebugSettingsLegacyUriWithMode =
-    "pssettings:play?mode=settings&function=debug_settings_old";
 bool Get_Running_App_TID(std::string& title_id, int& BigAppid);
 void generate_cheats_xml(std::string &new_xml, std::string& not_open_tid, bool running_as_debug_settings, bool show_while_not_open);
 bool if_exists(const char* path);

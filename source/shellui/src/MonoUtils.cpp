@@ -1203,58 +1203,18 @@ bool SetVersionString(const char *str)
 
 extern "C" int sceKernelLoadStartModule(const char *name, size_t argc, const void *argv, uint32_t flags, uint32_t pOpt, int *pResid);
 extern "C" int sceKernelDlsym(int lib, const char *name, void **func);
-std::string rewrite_debug_settings_uri_to_legacy(std::string uri) {
-  /*
-   * FW 11.6 RN Settings:
-   *   function=debug_settings     → RN DebugSettingsScreen (no GMRS)
-   *   function=debug_settings_old → Legacy debug_settings_ui3 (GMRS works)
-   * Rewrite the new path to the old one without touching already-rewritten URIs.
-   */
-  const char *from = "function=debug_settings";
-  const char *to = "function=debug_settings_old";
-  const size_t from_len = 22; // strlen("function=debug_settings")
-  const size_t to_len = 26;
-
-  size_t pos = 0;
-  while ((pos = uri.find(from, pos)) != std::string::npos) {
-    // Already legacy (_old immediately after the base match)
-    if (uri.compare(pos, to_len, to) == 0) {
-      pos += to_len;
-      continue;
-    }
-    // Do not rewrite if an identifier continues (e.g. future suffixes)
-    size_t after = pos + from_len;
-    if (after < uri.size()) {
-      char c = uri[after];
-      if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') ||
-          (c >= '0' && c <= '9') || c == '_') {
-        pos = after;
-        continue;
-      }
-    }
-    uri.replace(pos, from_len, to);
-    pos += to_len;
-  }
-  return uri;
-}
-
 int ItemzLaunchByUri(const char *uri)
 {
 
   if (!uri)
     return -1;
 
-  std::string rewritten = rewrite_debug_settings_uri_to_legacy(uri);
-  if (rewritten != uri) {
-    shellui_log("[DBG-REDIR] ItemzLaunchByUri: \"%s\" -> \"%s\"", uri, rewritten.c_str());
-  }
-
   SceShellUIUtilLaunchByUriParam Param;
   Param.size = sizeof(SceShellUIUtilLaunchByUriParam);
   sceShellUIUtilInitialize();
   sceUserServiceGetForegroundUser((int *)&Param.userId);
 
-  return sceShellUIUtilLaunchByUri(rewritten.c_str(), &Param);
+  return sceShellUIUtilLaunchByUri(uri, &Param);
 }
 
 void GoToHome()

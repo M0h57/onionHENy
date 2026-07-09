@@ -193,43 +193,6 @@ int KillAppWithReason_Hook(int appId, int reason)
     return sceLncUtilKillAppWithReason(appId, reason);
 }
 
-/*
- * FW 11.6: Homepage ★Debug Settings opens RN DebugSettingsScreen, which calls
- *   NativeModules.DebugSettings.GetModel({ pageId: "id_debug_settings" })
- * and never hits GetManifestResourceStream. Intercept that "open" (native side of
- * the click/navigation) and jump to Legacy Old path so GMRS can inject toolbox XML.
- * Ref: kylin-core develop-pro-shell-ui docs + ps5_settings_decompiled.js module 1769.
- */
-static MonoObject *(*DebugSettings_GetModel_orig)(MonoObject *self, MonoObject *arg) = nullptr;
-static MonoObject *(*DebugSettings_OnBack_orig)(MonoObject *self, MonoObject *arg) = nullptr;
-
-static std::string debug_settings_arg_page_id(MonoObject *arg) {
-  if (!arg)
-    return "";
-  // JS passes { pageId: "id_debug_settings" } — try common casings.
-  std::string id = GetPropertyValue(arg, "pageId");
-  if (id.empty())
-    id = GetPropertyValue(arg, "PageId");
-  return id;
-}
-
-static MonoObject *DebugSettings_GetModel_Hook(MonoObject *self, MonoObject *arg) {
-  std::string pageId = debug_settings_arg_page_id(arg);
-  // Default pageId in RN is id_debug_settings when opening the root toolbox page.
-  if (pageId.empty() || pageId == "id_debug_settings") {
-    shellui_log("[DBG-REDIR] GetModel(pageId=\"%s\") — redirect to Legacy Old (debug_settings_ui3)",
-                pageId.empty() ? "(default)" : pageId.c_str());
-    GoToURI(kDebugSettingsLegacyUri);
-    // Best-effort leave the RN screen so user lands on Legacy only.
-    if (DebugSettings_OnBack_orig) {
-      DebugSettings_OnBack_orig(self, arg);
-    }
-  }
-  if (!DebugSettings_GetModel_orig)
-    return nullptr;
-  return DebugSettings_GetModel_orig(self, arg);
-}
-
 void Get_Page_Table_Stats(int vm, int type, int* Used, int* Free, int* Total)
 {
     int _Total = 0, _Free = 0;
@@ -415,18 +378,6 @@ ssize_t read_hook(int fd, void* buf, size_t count) {
 int get_ip_address(char* ip_address);
 void OnRender_Hook(MonoObject* instance)
 {
-    /*
-     * Until toolbox init finishes (hooked==true), only call the original Update.
-     * Installing this detour mid-init and running CreateGameWidget/mono on the
-     * UI thread while the inject thread still uses mono/IPC races Mono and
-     * aborts with: mono_os_mutex_lock ... Invalid argument (22).
-     */
-    if (!hooked) {
-        if (OnRender_orig)
-            OnRender_orig(instance);
-        return;
-    }
-
     static bool Do_Once = false;
     static unsigned int Idle_Thread_ID[8];
     static int Current_Bank = 0;
@@ -1117,47 +1068,11 @@ int main(int argc, char const *argv[]) {
   }
 
   // System.Reflection.RuntimeAssembly.GetManifestResourceStream
-  // Note: class name differs by FW — Assembly on <4.00, RuntimeAssembly on >=4.00
-  // Prefer mono_aot_get_method when available: callers often hit AOT native code, not a
-  // freshly mono_compile_method()'d thunk — patching only the JIT addr can miss all calls.
-  shellui_log("[GMRS-INIT] resolving GetManifestResourceStream (primary class=%s, is_3xx=%d)...",
-              is_3xx ? "Assembly" : RuntimeAssembly_dec.c_str(), is_3xx ? 1 : 0);
-
-  auto resolve_gmrs = [&](const char *klass_name, uint64_t *out_aot, uint64_t *out_jit) -> MonoMethod * {
-    MonoClass *klass = mono_class_from_name(mscorelib_image, sys_reflection_dec.c_str(), klass_name);
-    if (!klass) {
-      shellui_log("[GMRS-INIT] class \"%s\" not found in mscorlib", klass_name);
-      return nullptr;
-    }
-    MonoMethod *m = mono_class_get_method_from_name(klass, GetManifestResourceStream_dec.c_str(), 1);
-    if (!m) {
-      shellui_log("[GMRS-INIT] method GetManifestResourceStream(1) not on class \"%s\"", klass_name);
-      return nullptr;
-    }
-    uint64_t aot = mono_aot_get_method ? mono_aot_get_method(Root_Domain, m) : 0;
-    uint64_t jit = mono_compile_method ? mono_compile_method(m) : 0;
-    shellui_log("[GMRS-INIT] class=%s aot=%#lx jit=%#lx", klass_name, (unsigned long)aot, (unsigned long)jit);
-    if (out_aot) *out_aot = aot;
-    if (out_jit) *out_jit = jit;
-    return m;
-  };
-
-  uint64_t method = 0, aot_addr = 0, jit_addr = 0;
-  const char *primary_class = is_3xx ? "Assembly" : RuntimeAssembly_dec.c_str();
-  if (!resolve_gmrs(primary_class, &aot_addr, &jit_addr)) {
-    shellui_log("[GMRS-INIT] FAIL: GetManifestResourceStream not found (hook will not install)");
-    notify("Failed to get master address");
-    return -1;
-  }
-  // Prefer AOT native entry if present; else JIT/compile_method result.
-  method = aot_addr ? aot_addr : jit_addr;
+  uint64_t method = Get_Address_of_Method(mscorelib_image, sys_reflection_dec.c_str(), is_3xx ? "Assembly" : RuntimeAssembly_dec.c_str(), GetManifestResourceStream_dec.c_str(), 1);
   if (!method) {
-    shellui_log("[GMRS-INIT] FAIL: both aot and jit addresses are null");
     notify("Failed to get master address");
     return -1;
   }
-  shellui_log("[GMRS-INIT] GetManifestResourceStream primary hook addr=%#lx (aot=%#lx jit=%#lx)",
-              (unsigned long)method, (unsigned long)aot_addr, (unsigned long)jit_addr);
 
   shellui_log("Starting hooking...");
   has_hv_bypass = (sceKernelMprotect( & buz[0], 100, 0x7) == 0);
@@ -1165,8 +1080,7 @@ int main(int argc, char const *argv[]) {
 
   Patch_Main_thread_Check(image_core);
 
-  // Hook high-frequency Application.Update LAST — installing it first lets the
-  // main UI thread enter our hooks while we still patch other Mono methods.
+  OnRender_orig = (void(*)(MonoObject*)) DetourFunction(Get_Address_of_Method(pui_img, "Sce.PlayStation.PUI", "Application", "Update", 0), (void*)&OnRender_Hook);
 
 #if 0
     Orig_AppInstUtilInstallByPackage = (int (*)(MonoString * uri, MonoString * ex_uri, MonoString * playgo_scenario_id, MonoString * content_id, MonoString * content_name, MonoString * icon_url, uint32_t slot, bool is_playgo_enabled, MonoObject * pkg_info, MonoArray * languages, MonoArray * playgo_scenario_ids, MonoArray * content_ids)) DetourFunction(Get_Address_of_Method(AppInstallUtil_img, "Sce.Vsh", "AppInstUtilWrapper", "_AppInstUtilInstallByPackage", 12), (void*)&AppInstUtilInstallByPackage_Hook);
@@ -1287,20 +1201,8 @@ int main(int argc, char const *argv[]) {
 
     GetManifestResourceStream_Original = (uint64_t( * )(uint64_t, MonoString * ))(DetourFunction(method, (void * ) & GetManifestResourceStream_Hook));
     if (!GetManifestResourceStream_Original) {
-      shellui_log("[GMRS-INIT] FAIL: DetourFunction returned null for GetManifestResourceStream (no intercept!)");
       notify("Failed to detour Func Set9");
-    } else {
-      shellui_log("[GMRS-INIT] OK: GetManifestResourceStream hooked primary=%#lx, orig=%p hook=%p",
-                  (unsigned long)method,
-                  (void*)GetManifestResourceStream_Original, (void*)&GetManifestResourceStream_Hook);
     }
-    if (aot_addr && jit_addr && aot_addr != jit_addr) {
-      shellui_log("[GMRS-INIT] NOTE: aot!=jit (hooked preferred=%s); if still no [GMRS] enter, other entry may be live",
-                  (method == aot_addr) ? "aot" : "jit");
-    }
-
-    // Skip dual-hooking Assembly base for now — extra mono_compile/detour during
-    // inject increases race surface. Primary RuntimeAssembly path is enough to diagnose.
 
     shellui_log("Performing Magic ....");
     // rest mode without a network
@@ -1309,46 +1211,6 @@ int main(int argc, char const *argv[]) {
       notify("Failed to detour Func Set 10");
     }
 
-    /*
-     * FW 11.6 click/open intercept (not activation gate):
-     * RN DebugSettingsTop calls DebugSettings.GetModel({pageId}) after navigate.
-     * Redirect root page open to function=debug_settings_old → Legacy ui3 → GMRS.
-     */
-    {
-      uint64_t get_model = Get_Address_of_Method(
-          ReactNativeShellAppReactNativeShellApp_img,
-          "Sce.Vsh.ShellUI.Settings", "DebugSettings", "GetModel", 1);
-      if (get_model) {
-        DebugSettings_GetModel_orig =
-            (MonoObject * (*)(MonoObject *, MonoObject *)) DetourFunction(
-                get_model, (void *)&DebugSettings_GetModel_Hook);
-        shellui_log("[DBG-REDIR] DebugSettings.GetModel hooked at %#lx orig=%p",
-                    (unsigned long)get_model, (void *)DebugSettings_GetModel_orig);
-      } else {
-        shellui_log("[DBG-REDIR] DebugSettings.GetModel(1) not found — try 0-arg?");
-        get_model = Get_Address_of_Method(
-            ReactNativeShellAppReactNativeShellApp_img,
-            "Sce.Vsh.ShellUI.Settings", "DebugSettings", "GetModel", 0);
-        if (get_model) {
-          shellui_log("[DBG-REDIR] GetModel/0 exists at %#lx (signature may differ)",
-                      (unsigned long)get_model);
-        }
-      }
-      uint64_t on_back = Get_Address_of_Method(
-          ReactNativeShellAppReactNativeShellApp_img,
-          "Sce.Vsh.ShellUI.Settings", "DebugSettings", "OnBack", 1);
-      // Direct call address only (no detour) — used after redirect to leave RN page.
-      DebugSettings_OnBack_orig =
-          on_back ? (MonoObject * (*)(MonoObject *, MonoObject *)) on_back : nullptr;
-      shellui_log("[DBG-REDIR] DebugSettings.OnBack %s at %#lx",
-                  on_back ? "resolved" : "NOT found", (unsigned long)on_back);
-    }
-
-    /*
-     * IsTestKit IPC is non-critical. Do it while Application.Update is still
-     * unhooked so the UI thread is not in our overlay mono path during the wait.
-     * (IPC error -1 on retail is expected: not a TestKit.)
-     */
     IPC_Client & main_ipc = IPC_Client::getInstance(false);
     is_testkit = main_ipc.IsTestKit();
     if (is_testkit) {
@@ -1377,17 +1239,7 @@ int main(int argc, char const *argv[]) {
     // shellui_log("Decrypted Data: %s", dec_xml_str.c_str());
     shellui_log("Performed Magic");
 
-    /* Mark init complete BEFORE installing per-frame Update hook. */
     hooked = true;
-
-    // High-frequency UI thread hook last — OnRender_Hook also no-ops until hooked.
-    OnRender_orig = (void(*)(MonoObject*)) DetourFunction(Get_Address_of_Method(pui_img, "Sce.PlayStation.PUI", "Application", "Update", 0), (void*)&OnRender_Hook);
-    if (!OnRender_orig) {
-      shellui_log("Failed to detour Application.Update (OnRender)");
-    } else {
-      shellui_log("Application.Update (OnRender) hooked after init");
-    }
-
     pthread_t thread_id;
     scePthreadCreate(&thread_id, nullptr, dialogue_thread, nullptr, "dialogue_thread");
 

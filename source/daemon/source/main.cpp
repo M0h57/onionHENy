@@ -388,7 +388,7 @@ int main() {
      "          \"actionType\": \"DeepLink\",\n"
      "          \"defaultFocus\": true,\n"
      "          \"parameters\": {\n"
-     "            \"actionUrl\": \"pssettings:play?function=debug_settings_old\"\n"
+     "            \"actionUrl\": \"pssettings:play?function=debug_settings\"\n"
      "          }\n"
      "        }\n"
      "      ]\n"
@@ -426,7 +426,7 @@ int main() {
     }
     case TOOLBOX: {
         if (global_conf.toolbox_auto_start)
-            URI = "pssettings:play?mode=settings&function=debug_settings_old";
+            URI = "pssettings:play?mode=settings&function=debug_settings";
         else
             URI = "pshomeui:navigateToHome?bootCondition=psButton";
         break;

@@ -2174,34 +2174,23 @@ bool handle_uri_boot_common(MonoString* uri, int opt, MonoString* titleIdForBoot
     return false; // No redirect needed
   }
   
-  static MonoString *rewrite_boot_uri_if_needed(MonoString *uri) {
-    if (!uri)
-      return uri;
-    std::string s = Mono_to_String(uri);
-    std::string r = rewrite_debug_settings_uri_to_legacy(s);
-    if (r == s)
-      return uri;
-    shellui_log("[DBG-REDIR] BootHelper: \"%s\" -> \"%s\"", s.c_str(), r.c_str());
-    return mono_string_new(Root_Domain, r.c_str());
-  }
-
   bool uri_boot_hook(MonoString* uri, int opt, MonoString* titleIdForBootAction) {
     if(handle_uri_boot_common(uri, opt, titleIdForBootAction)) {
         if(global_conf.lite_mode) {
             // In lite mode, we don't want to handle any shortcuts
             notify("Lite mode is enabled, shortcuts are disabled");
-            return boot_orig(rewrite_boot_uri_if_needed(uri), opt, titleIdForBootAction);
+            return boot_orig(uri, opt, titleIdForBootAction);
         }
 
         std::string uri_string = Mono_to_String(uri);
         if(uri_string == "etaHEN?Dump") {
           return boot_orig(mono_string_new(Root_Domain, "pshomeui:navigateToHome?bootCondition=psButton"),  opt, titleIdForBootAction);
         }
-      // Redirect to Legacy debug settings (GMRS / toolbox XML)
-      return boot_orig(mono_string_new(Root_Domain, kDebugSettingsLegacyUriWithMode), opt, titleIdForBootAction);
+      // Redirect to debug settings
+      return boot_orig(mono_string_new(Root_Domain, "pssettings:play?mode=settings&function=debug_settings"), opt, titleIdForBootAction);
     }
     
-    return boot_orig(rewrite_boot_uri_if_needed(uri), opt, titleIdForBootAction);
+    return boot_orig(uri, opt, titleIdForBootAction);
   }
   
   bool uri_boot_hook_2(MonoString* uri, int opt) {
@@ -2209,11 +2198,11 @@ bool handle_uri_boot_common(MonoString* uri, int opt, MonoString* titleIdForBoot
     shellui_log("uri_boot_hook_2: %s, opt: %i", Mono_to_String(uri).c_str(), opt);
   #endif
     if(handle_uri_boot_common(uri, opt, nullptr)) {
-      // Redirect to Legacy debug settings (no titleId parameter for older fw)
+      // Redirect to debug settings (no titleId parameter for older fw)
       if(global_conf.lite_mode) {
         // In lite mode, we don't want to handle any shortcuts
         notify("Lite mode is enabled, shortcuts are disabled");
-        return boot_orig_2(rewrite_boot_uri_if_needed(uri), opt);
+        return boot_orig_2(uri, opt);
       }
 
       std::string uri_string = Mono_to_String(uri);
@@ -2221,10 +2210,10 @@ bool handle_uri_boot_common(MonoString* uri, int opt, MonoString* titleIdForBoot
         return boot_orig_2(mono_string_new(Root_Domain, "pshomeui:navigateToHome?bootCondition=psButton"),  opt);
       }
 
-      return boot_orig_2(mono_string_new(Root_Domain, kDebugSettingsLegacyUri),  opt);
+      return boot_orig_2(mono_string_new(Root_Domain, "pssettings:play?function=debug_settings"),  opt);
     }
     
-    return boot_orig_2(rewrite_boot_uri_if_needed(uri), opt);
+    return boot_orig_2(uri, opt);
   }
 
   GamePadData GetData_hook(int deviceIndex) {
