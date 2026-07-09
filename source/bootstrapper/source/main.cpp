@@ -1032,22 +1032,11 @@ bool sceKernelIsTestKit() {
   // printf("PSID (%s) Not whitelisted\n", psid_buf);
   return if_exists("/system/priv/lib/libSceDeci5Ttyp.sprx");
 }
-#define PUBLIC_TEST 0
-#define EXPIRE_YEAR 2026
-#define EXPIRE_MONTH 1
-#define EXPIRE_DAY 1
-
-
-bool isPastBetaDate(int year, int month, int day);
 
 int main(void) {
   // ptrace(PT_ATTACH, pid, 0, 0);
   /// clearFramePointer();
   int pid = -1;
-
-#if BETA == 1
-  char out[1024];
-#endif
 
   signal(SIGCHLD, SIG_IGN);
 
@@ -1057,23 +1046,6 @@ int main(void) {
     notify("Unable to raise privileges");
     return -1;
   }
-
-#if BETA == 1
-  printf("Get_code %d", GetDecryptedConsoleCode(
-                            &out[0])); // ignore return value because we need to
-                                       // call is_console_whitelisted anyway
-  bool is_whitelisted = is_console_whitelisted(
-      &buffer[0], &out[0]); // gets PSID if its not whitelisted too
-#endif
-
-#if BETA == 1 || PUBLIC_TEST == 1
-  if (isPastBetaDate(EXPIRE_YEAR, EXPIRE_MONTH, EXPIRE_DAY)) {
-    notify("This etaHEN Beta version expired on %d-%d-%d", EXPIRE_YEAR,
-           EXPIRE_MONTH, EXPIRE_DAY);
-    return -1;
-    raise(SIGSEGV);
-  }
-#endif
 
 #if 0
   if (sceKernelIsTestKit()) {
@@ -1092,37 +1064,6 @@ int main(void) {
          klog_puts("   Failed!");
       
   }
-
-
-  
-  #if BETA == 1 
-  if (!is_whitelisted) {
-    notify("This console is NOT approved to use this etaHEN beta version\n\nIf "
-           "you are not yet approved send LM the pending_approval.bin file "
-           "from your USB for the etaHEN_approval.bin");
-    int fd = open("/mnt/usb0/pending_approval.bin", O_CREAT | O_TRUNC | O_RDWR,
-                  0777);
-    if (fd < 0) {
-      fd = open("/mnt/usb1/pending_approval.bin", O_CREAT | O_TRUNC | O_RDWR,
-                0777);
-      if (fd < 0) {
-        fd = open("/mnt/usb2/pending_approval.bin", O_CREAT | O_TRUNC | O_RDWR,
-                  0777);
-      }
-
-    if (fd >= 0) {
-      write(fd, buffer, strlen(buffer));
-      close(fd);
-    } else {
-      notify("No USB Found to save pending_approval.bin\n\nInsert a EXFAT USB "
-             "then re-run this payload");
-    }
-
-    return -1;
-    raise(SIGSEGV);
-  }
-  #endif
-
 
   OrbisKernelSwVersion sys_ver;
   sceKernelGetProsperoSystemSwVersion(&sys_ver);
