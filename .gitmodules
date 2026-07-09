@@ -1,0 +1,6 @@
+[submodule "third_party/elfldr"]
+	path = third_party/elfldr
+	url = https://github.com/ps5-payload-dev/elfldr.git
+[submodule "third_party/kstuff-lite"]
+	path = third_party/kstuff-lite
+	url = https://github.com/EchoStretch/kstuff-lite.git
