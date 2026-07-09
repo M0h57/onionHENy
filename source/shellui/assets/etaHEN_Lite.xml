@@ -15,10 +15,9 @@
       <list_item id="id_start_opt_1" title="Home Menu" value="1"/>
       <list_item id="id_start_opt_2" title="Settings" value="2"/>
       <list_item id="id_start_opt_3" title="etaHEN Toolbox" value="3"/>
-      <list_item id="id_start_opt_4" title="Itemzflow (if installed)" value="4"/>
     </list>
 
-    <toggle_switch id="id_toolbox_auto_start" title="etaHEN Toolbox on Startup" second_title="Toggle toolbox Startup" confirm="If disabled you will have to either re-add the toolbox or change the Startup setting via Itemzflow's settings menu manually, this will NOT disable any auto start plugins" value="0"/>
+    <toggle_switch id="id_toolbox_auto_start" title="etaHEN Toolbox on Startup" second_title="Toggle toolbox Startup" confirm="If disabled you will have to either re-add the toolbox or change the Startup setting via config.ini manually, this will NOT disable any auto start plugins" value="0"/>
 
         <!-- Credtis -->
     <setting_list id="id_etahen_credit_options" title="About"  second_title="etaHEN Credits, Ko-fi Supporters, and more" style="center" >

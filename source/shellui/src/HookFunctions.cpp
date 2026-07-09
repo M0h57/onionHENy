@@ -75,18 +75,6 @@ DecryptRnpsBundle_t DecryptRnpsBundle = NULL;
 /* ================================= HOOKED GLOBAL VARS ============================================= */
 MonoClass* MemoryStream_IO = nullptr;
 
-/*
-      <list id="id_activate_dumper" title="Activate Itemzflow Game Dumper"  confirm="The Game Dumper has been activated and will automatically dump the next Game Launched (decryption not included)" confirm_phrase="OK" >
-        <list_item id="id_dump_all" title="Dump Based Game + Patch" value="0"/>
-        <list_item id="id_dump_base" title="Dump Base Game Only" value="1"/>
-        <list_item id="id_dump_patch" title="Dump Game Patch Only" value="2"/>
-        <list_item id="id_fuck_uu" title="Placeholder" value="90"/>
-      </list>
-
-
-            <toggle_switch id="id_ps5debug_service" title="PS5Debug (Dizz)" second_title="PS5Debug on Port 9027 (Requires Dizz's PS5Debug Plugin)" value="0"/>
-
-*/
 std::atomic_bool install_thread_in_progress(false);
 std::atomic_bool cheat_action_in_progress(false);
 std::atomic_bool download_kstuff_thread_in_progress(false);
@@ -607,7 +595,7 @@ MonoString* Hook_getIpMacHost(uint64_t inst, SceNetIfName name) {
         return mono_string_new(Root_Domain, full_text);
     }
 
-    snprintf(full_text, sizeof(full_text), "%s\nFTP: 1337\nDPI: 9090\nELF Loader: 9021", full_text);
+    snprintf(full_text, sizeof(full_text), "%s\nFTP: 1337\nDPI: 9090", full_text);
     return mono_string_new(Root_Domain, full_text);
 }
 
@@ -1016,14 +1004,7 @@ void* store_install_thread(void* args) {
     return nullptr;
 }
 
-void* load_ps5debug_thr(void*){
-    IPC_Client& main_ipc = IPC_Client::getInstance(false);
-    if(!main_ipc.Toggle_ps5debug()){
-        notify("Failed to toggle PS5Debug");
-    }
-    pthread_exit(nullptr);
-    return nullptr;
-}
+void* load_ps5debug_thr(void*){ return nullptr; }
 void* download_cheats_thr(void*){
     if(cheat_action_in_progress){
         notify("Cheat action already in progress, please wait for it to complete...");
@@ -1076,13 +1057,11 @@ int OnPress_Hook(MonoObject* Instance, MonoObject* element, MonoObject* e)
     bool& FTP = global_conf.FTP;
     bool& Klog = global_conf.Klog;
     bool& DPI = global_conf.DPI;
-    bool& Auto_ItemzFlow = global_conf.launch_itemzflow;
     bool& Data_SB = global_conf.allow_data_sandbox;
     bool& FTP_Dev_Access = global_conf.ftp_dev_access;
     int& StartOption = global_conf.start_option;
     bool& lite_mode = global_conf.lite_mode;
-    bool& sis_PS5Debug = global_conf.PS5Debug;
-    bool& util_rest_kill = global_conf.util_rest_kill;
+        bool& util_rest_kill = global_conf.util_rest_kill;
     bool& game_rest_kill = global_conf.game_rest_kill;
     int& trial_expire = global_conf.trial_soft_expire_time;
     int& kit_panel = global_conf.kit_panel_info;
@@ -1649,14 +1628,6 @@ int OnPress_Hook(MonoObject* Instance, MonoObject* element, MonoObject* e)
         pthread_detach(thr);
 
     }
-    else if (id == "id_auto_itemzflow") {
-        if (atoi(value.c_str()) == Auto_ItemzFlow) {
-            shellui_log("ItemzFlow auto launch already %s", Auto_ItemzFlow ? "Enabled" : "Disabled");
-            return oOnPress(Instance, element, e);
-		}
-        Auto_ItemzFlow = !Auto_ItemzFlow;
-        //(global_conf.launch_itemzflow ? "ItemzFlow will automatically be opened after" : "ItemzFlow will not be launched on boot");
-    }
     else if (id == "id_debug_jb") {
         if (atoi(value.c_str()) == global_conf.debug_app_jb_msg) {
             shellui_log("Debug JB already %s", global_conf.debug_app_jb_msg ? "Enabled" : "Disabled");
@@ -1677,10 +1648,6 @@ int OnPress_Hook(MonoObject* Instance, MonoObject* element, MonoObject* e)
             global_conf.debug_legacy_cmd_server = !global_conf.debug_legacy_cmd_server;
         }//
     }
-    else if (id == "id_activate_dumper") {
-        int dump_option = atoi(value.c_str());
-        shellui_log("Dump option: %d", dump_option);
-    }
     else if (id == "id_custom_game_opts") {
         if (atoi(value.c_str()) == global_conf.etaHEN_game_opts) {
             shellui_log("etaHEN Game Options already %s", global_conf.etaHEN_game_opts ? "Enabled" : "Disabled");
@@ -1691,7 +1658,6 @@ int OnPress_Hook(MonoObject* Instance, MonoObject* element, MonoObject* e)
     }
     else if (id == "id_start_opt") {
         StartOption = atoi(value.c_str());
-        Auto_ItemzFlow = false;
         shellui_log("Start option: %d", StartOption);
     }
     else if (id == "id_selected_cheats_repo") {
@@ -1739,16 +1705,7 @@ int OnPress_Hook(MonoObject* Instance, MonoObject* element, MonoObject* e)
 
     }
     else if (id == "id_sistro_ps5debug") {
-        if (atoi(value.c_str()) == sis_PS5Debug) {
-            shellui_log("PS5Debug already %s", sis_PS5Debug ? "Enabled" : "Disabled");
-            return oOnPress(Instance, element, e);
-        }
-      
-        pthread_t thr;
-        pthread_create(&thr, nullptr, load_ps5debug_thr, nullptr);
-        pthread_detach(thr);
-
-        sis_PS5Debug = !sis_PS5Debug;
+        notify("PS5Debug is not bundled in OrionHEN");
     }
     else if (id == "id_rest_1") {
         delay_secs = atol(value.c_str());
@@ -1986,8 +1943,8 @@ int OnPress_Hook(MonoObject* Instance, MonoObject* element, MonoObject* e)
                     notify("%s killed", plugin.tid.c_str());
                 }
             }
-            if(!Try_connect_to_host(9021) && !IPC_Client::getInstance(true).Launch_Elfldr()){
-                notify("Failed to Launch Johns Elfldr, failed to enter lite mode");
+            if(!Try_connect_to_host(9021)){
+                notify("Lite mode needs an external elfldr on port 9021 (not bundled in OrionHEN)");
                 return oOnPress(Instance, element, e);
             }
 
@@ -2378,11 +2335,7 @@ int OnPreCreate_Hook(MonoObject* Instance, MonoObject* element) {
         s_MonoText = mono_string_new(Root_Domain, global_conf.selected_cheats_repo ? "1" : "0");
     }
     else if (id == "id_start_opt") {
-        int opt = global_conf.start_option;
-        if (global_conf.launch_itemzflow && !global_conf.start_option) {
-            opt = 4;
-        }
-        s_MonoText = mono_string_new(Root_Domain, std::to_string(opt).c_str());
+        s_MonoText = mono_string_new(Root_Domain, std::to_string(global_conf.start_option).c_str());
     }
     else if (id == "id_trial_soft") {
         s_MonoText = mono_string_new(Root_Domain, std::to_string(global_conf.trial_soft_expire_time).c_str());
@@ -2397,7 +2350,7 @@ int OnPreCreate_Hook(MonoObject* Instance, MonoObject* element) {
 		    s_MonoText = mono_string_new(Root_Domain, global_conf.ftp_dev_access ? "1" : "0");
  	  }
     else if (id == "id_sistro_ps5debug") {
-		    s_MonoText = mono_string_new(Root_Domain, global_conf.PS5Debug ? "1" : "0");
+		    s_MonoText = mono_string_new(Root_Domain, "0");
 	  }
     else if (id == "id_rest_1") {
          s_MonoText = mono_string_new(Root_Domain, std::to_string(global_conf.rest_delay_seconds).c_str());
@@ -2530,7 +2483,7 @@ bool handle_uri_boot_common(MonoString* uri, int opt, MonoString* titleIdForBoot
 #if SHELL_DEBUG==1
         shellui_log("Dump URI detected");
 #endif
-        IPC_Client::getInstance(false).Launch_Dumper();
+        notify("Game dumper payload is not bundled in OrionHEN");
         return true; // Signal to redirect
     }
     else if (uri_string == "etaHEN?DL_UPDATE") {
@@ -2953,7 +2906,7 @@ int LaunchApp(MonoString* titleId, uint64_t* args, int argsSize, LaunchAppParam 
       }
 
       app_launched = true;
-      if(global_conf.pause_kstuff_on_open && Mono_to_String(titleId) != "ITEM00001" && Mono_to_String(titleId).rfind("NPXS") == std::string::npos){
+      if(global_conf.pause_kstuff_on_open && Mono_to_String(titleId).rfind("NPXS") == std::string::npos){
          pthread_t thread;
          shellui_log("Pausing Kstuff on app launch for %s in %d seconds", mono_string_to_utf8(titleId), global_conf.pause_kstuff_on_open_secs);
          pthread_create(&thread, nullptr, kstuff_pause_thread, nullptr);
@@ -2977,7 +2930,7 @@ int LaunchApp(MonoString* titleId, uint64_t* args, int argsSize, LaunchAppParam 
   }
 
   app_launched = true;
-  if(global_conf.pause_kstuff_on_open && Mono_to_String(titleId) != "ITEM00001" && Mono_to_String(titleId).rfind("NPXS") == std::string::npos){
+  if(global_conf.pause_kstuff_on_open && Mono_to_String(titleId).rfind("NPXS") == std::string::npos){
     pthread_t thread;
      shellui_log("Pausing Kstuff on app launch for %s in %d seconds", mono_string_to_utf8(titleId), global_conf.pause_kstuff_on_open_secs);
     pthread_create(&thread, nullptr, kstuff_pause_thread, nullptr);

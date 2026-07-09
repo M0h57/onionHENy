@@ -153,8 +153,13 @@ bool download_file(const char* url, const char* dst) {
     curl_easy_setopt(curl, CURLOPT_URL, url);
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_file_callback);
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, &progress);
+#if LIBCURL_VERSION_NUM >= 0x072000
+    curl_easy_setopt(curl, CURLOPT_XFERINFOFUNCTION, progress_callback);
+    curl_easy_setopt(curl, CURLOPT_XFERINFODATA, &progress);
+#else
     curl_easy_setopt(curl, CURLOPT_PROGRESSFUNCTION, progress_callback);
     curl_easy_setopt(curl, CURLOPT_PROGRESSDATA, &progress);
+#endif
     curl_easy_setopt(curl, CURLOPT_NOPROGRESS, 0L);
     curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
     curl_easy_setopt(curl, CURLOPT_USERAGENT, TEST_USER_AGENT);

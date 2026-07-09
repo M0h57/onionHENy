@@ -539,7 +539,6 @@ typedef struct
 
 bool is_2xx = false;
 int sceKernelGetProsperoSystemSwVersion(OrbisKernelSwVersion* sw);
-int decrypt_self_ftp(const char* input_file_path, const char* output_file_path);
 /// Reimplementation of missing functions --------------------------------------
 static int decrypt_temp(struct client_info *client, char *file_path, char *buf,
     size_t bufsize)
@@ -568,10 +567,11 @@ static int decrypt_temp(struct client_info *client, char *file_path, char *buf,
     etaHEN_log("Decrypting file \"%s\", using temporary file \"%s\"...",
         file_path, temp_path);
 
-    if (is_2xx) 
-       decrypt_self(file_path, temp_path);
-    else
-        decrypt_self_ftp(file_path, temp_path);
+    // libSelfDecryptor removed — always use local decrypt_self
+    if (decrypt_self(file_path, temp_path) != 0) {
+        etaHEN_log("decrypt_self failed for %s", file_path);
+        return -1;
+    }
 
     strcpy(buf, temp_path);
 

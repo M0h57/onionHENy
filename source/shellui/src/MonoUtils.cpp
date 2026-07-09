@@ -559,9 +559,6 @@ bool LoadSettings()
     const char *Klog_str = ini_parser_get(&parser, "Settings.Klog", "0");
     const char *DPI_str = ini_parser_get(&parser, "Settings.DPI", "0");
     const char *libhijacker_cheats_str = ini_parser_get(&parser, "Settings.libhijacker_cheats", "0");
-    const char *PS5Debug_str = ini_parser_get(&parser, "Settings.PS5Debug", "0");
-    const char *launch_itemzflow_str = ini_parser_get(&parser, "Settings.launch_itemzflow", "0");
-    const char *discord_rpc_str = ini_parser_get(&parser, "Settings.discord_rpc", "0");
     const char *testkit_str = ini_parser_get(&parser, "Settings.testkit", "0");
     const char *allow_data_n_sandbox = ini_parser_get(&parser, "Settings.Allow_data_in_sandbox", "1");
     const char *ftp_dev_access = ini_parser_get(&parser, "Settings.ALLOW_FTP_DEV_ACCESS", "0");
@@ -606,9 +603,6 @@ bool LoadSettings()
     global_conf.Klog = Klog_str ? atoi(Klog_str) : 0;
     global_conf.DPI = DPI_str ? atoi(DPI_str) : 0;
     global_conf.libhijacker_cheats = libhijacker_cheats_str ? atoi(libhijacker_cheats_str) : 0;
-    global_conf.PS5Debug = PS5Debug_str ? atoi(PS5Debug_str) : 0;
-    global_conf.launch_itemzflow = launch_itemzflow_str ? atoi(launch_itemzflow_str) : 0;
-    global_conf.discord_rpc = discord_rpc_str ? atoi(discord_rpc_str) : 0;
     global_conf.testkit = testkit_str ? atoi(testkit_str) : 0;
     global_conf.allow_data_sandbox = allow_data_n_sandbox ? atoi(allow_data_n_sandbox) : 0;
     global_conf.ftp_dev_access = ftp_dev_access ? atoi(ftp_dev_access) : 0;
@@ -714,10 +708,7 @@ bool SaveSettings()
   // Construct the settings string
   std::string buff = "[Settings]\n";
   buff += "libhijacker_cheats=" + std::to_string(global_conf.libhijacker_cheats) + "\n";
-  buff += "PS5Debug=" + std::to_string(global_conf.PS5Debug) + "\n";
   buff += "FTP=" + std::to_string(global_conf.FTP) + "\n";
-  buff += "launch_itemzflow=" + std::to_string(global_conf.launch_itemzflow) + "\n";
-  buff += "discord_rpc=" + std::to_string(global_conf.discord_rpc) + "\n";
   buff += "testkit=" + std::to_string(global_conf.testkit) + "\n";
   buff += "Klog=" + std::to_string(global_conf.Klog) + "\n";
   buff += "DPI=" + std::to_string(global_conf.DPI) + "\n";

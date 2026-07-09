@@ -59,7 +59,7 @@ bool if_exists(const char *path);
 
 extern "C" {
 #include <sys/mount.h>
-pid_t elfldr_spawn(const char* cwd, int stdio, uint8_t* elf, const char* name);
+
 int32_t sceKernelPrepareToSuspendProcess(pid_t pid);
 int32_t sceKernelSuspendProcess(pid_t pid);
 int32_t sceKernelPrepareToResumeProcess(pid_t pid);
@@ -71,18 +71,11 @@ int sceKernelMprotect(void *addr, size_t len, int prot);
 int sceSystemServiceLoadExec(const char *path, const char *argv[]);
 int sceSystemServiceGetAppIdOfRunningBigApp();
 
-extern uint8_t ps5debug_start[];
-extern const unsigned int ps5debug_size;
-
-
 extern uint8_t shellui_elf_start[];
 extern const unsigned int shellui_elf_size;
 
 extern uint8_t fps_elf_start[];
 extern const unsigned int fps_elf_size;
-
-extern uint8_t dumper_elf_start[];
-extern const unsigned int dumper_elf_size;
 
 bool Inject_Toolbox(int pid, uint8_t *elf);
 int sceKernelGetAppInfo(int pid, app_info_t *title);
@@ -107,10 +100,7 @@ extern "C" int unmount(const char *path, int flags);
 bool copyRecursive(const char *source, const char *destination);
 bool rmtree(const char *path);
 void calculateSize(uint64_t size, char *result);
-extern std::string dump_path;
-extern std::string dump_title;
-extern bool is_dumper_enabled;
-extern Dump_Option dump_opt;
+
 extern "C" void sceLncUtilGetAppTitleId(uint32_t appId, char *titleId);
 bool GetFileContents(const char *path, char **buffer);
 uint64_t calculateTotalSize(const char *path);
@@ -367,8 +357,7 @@ void LoadSettings() {
     // File doesn't exist, create default config
     etaHEN_log("[Daemon] Config file not found. Creating default...");
     std::string ini_file(
-      "[Settings]\nPS5Debug=0\nFTP=1\nlaunch_itemzflow="
-      "0\ndiscord_rpc=0\nAllow_data_in_sandbox=1\nDPI=0\ntoolbox_auto_start=1\nDPI_v2=0\nKlog=0\nAPP_JB_Debug_Msg=0\nauto_eject_disc=0\n");
+      "[Settings]\nFTP=1\nAllow_data_in_sandbox=0\nDPI=0\ntoolbox_auto_start=1\nDPI_v2=0\nKlog=0\nAPP_JB_Debug_Msg=0\nauto_eject_disc=0\n");
     int fd = open(config_path, O_WRONLY | O_CREAT | O_TRUNC, 0777);
     if (fd >= 0) {
       write(fd, ini_file.c_str(), ini_file.length());
@@ -393,8 +382,6 @@ void LoadSettings() {
     
     const char * libhijacker_cheats_str =
       ini_parser_get(&parser, "Settings.libhijacker_cheats", "0");
-    const char * PS5Debug_str =
-      ini_parser_get(&parser, "Settings.PS5Debug", "0");
     const char * start_option =
       ini_parser_get(&parser, "Settings.StartOption", "0");
     const char * DPI_v2 = ini_parser_get(&parser, "Settings.DPI_v2", "0");
@@ -415,7 +402,6 @@ void LoadSettings() {
     global_conf.overlay_fps = overlay_fps ? atoi(overlay_fps) : 0;
     global_conf.libhijacker_cheats =
       libhijacker_cheats_str ? atoi(libhijacker_cheats_str) : 0;
-    global_conf.PS5Debug = PS5Debug_str ? atoi(PS5Debug_str) : 0;
     global_conf.start_opt =
       start_option ? (StartOpts) atoi(start_option) : NONE;
     global_conf.DPIv2 = DPI_v2 ? atoi(DPI_v2) : 0;
@@ -599,7 +585,7 @@ extern "C" int sceSystemServiceGetAppId(const char *tid);
 #pragma clang diagnostic ignored "-Winfinite-recursion"
 bool if_exists(const char *path);
 
-extern std::string dumping_tid;
+
 
 
 void reply(int sender_socket, bool error, std::string out_var = "Nothing") {
@@ -982,9 +968,26 @@ bool cmd_enable_fps(int appid) {
 bool cmd_enable_toolbox(){
     int wait = 0;
     char buz[100] = {0};
-    if(sceKernelMprotect(&buz[0], 100, 0x7) == 0){
-        if(pause_resume_kstuff()){
-            etaHEN_log("Paused kstuff...");
+
+    /*
+     * If kstuff is present, wait until mprotect works (patches applied) before
+     * we ptrace ShellUI. Injecting while kstuff is still patching ShellUI
+     * causes "waiting for toolbox" forever / ShellUI crash.
+     * (Race seen when daemon+kstuff launched close together via 9021.)
+     */
+    if (find_pid("kstuff.elf") > 0 || find_pid("kstuff") > 0) {
+      etaHEN_log("kstuff present — waiting for mprotect before toolbox inject");
+      for (int i = 0; i < 20; i++) {
+        if (sceKernelMprotect(&buz[0], 100, 0x7) == 0)
+          break;
+        sleep(1);
+      }
+      sleep(2);
+    }
+
+    if (sceKernelMprotect(&buz[0], 100, 0x7) == 0) {
+        if (pause_resume_kstuff()) {
+            etaHEN_log("Paused kstuff for toolbox inject...");
             touch_file("/system_tmp/kstuff_paused");
         }
     }
@@ -996,7 +999,8 @@ bool cmd_enable_toolbox(){
       sleep(global_conf.seconds);
     }
 
-    //notify(true, "Loading the etaHEN ToolBox...");
+    /* ShellUI needs a moment after kstuff trophy patches */
+    sleep(2);
 
     int pid = get_shellui_pid();
     if (pid < 0) {
@@ -1004,10 +1008,11 @@ bool cmd_enable_toolbox(){
       notify(true, "Failed to get shellui pid");
       return false;
     }
+    etaHEN_log("Injecting toolbox into SceShellUI pid=%d", pid);
 
     if (!Inject_Toolbox(pid, shellui_elf_start)) {
       pause_resume_kstuff();
-      ForceKillProc(pid);
+      /* Do NOT ForceKill ShellUI — that loops home menu / coredumps */
       notify(true, "Failed to inject toolbox");
       return false;
     }
@@ -1015,14 +1020,16 @@ bool cmd_enable_toolbox(){
     while (!if_exists("/system_tmp/toolbox_online")) {
       etaHEN_log("waiting for toolbox to start");
       sleep(1);
-      if(++wait >= 15){
-        ForceKillProc(pid);
+      if (++wait >= 45) {
         pause_resume_kstuff();
-        notify(true, "Failed to load the etaHEN toolbox");
+        /* Keep ShellUI alive; user can retry from Debug Settings */
+        notify(true, "Failed to load the etaHEN toolbox (timeout, ShellUI left running)");
         return false;
       }
     }
     unlink("/system_tmp/toolbox_online");
+    pause_resume_kstuff();
+    etaHEN_log("Toolbox online");
 
     return true;
 }
@@ -1072,25 +1079,17 @@ void handleIPC(struct clientArgs *client, std::string &inputStr,
     break;
   }
   case BREW_DECRYPT_DIR: {
-
+    // Generic decrypt IPC (no Itemzflow DUMP00000 hand-off)
     reply(sender_app, false);
-
-    launchApp(dumping_tid.c_str());
-
-    std::string dump_path =
+    std::string dest_path =
         std::string(json_getPropertyValue(my_json, "dest_path"));
     std::string sandbox_dir =
         std::string(json_getPropertyValue(my_json, "src_path"));
-    etaHEN_log("Decrypt to %s", dump_path.c_str());
-    mkdir(dump_path.c_str(), 0777);
+    etaHEN_log("Decrypt to %s", dest_path.c_str());
+    mkdir(dest_path.c_str(), 0777);
     notify(false, "Attempting to decrypt %s -> %s", sandbox_dir.c_str(),
-           dump_path.c_str());
-    sleep(6);
-    last_ipc_error = !decrypt_dir(sandbox_dir, dump_path);
-    mkdir("/data/decryption_done.log", 0777);
-
-    launchApp("DUMP00000");
-
+           dest_path.c_str());
+    last_ipc_error = !decrypt_dir(sandbox_dir, dest_path);
     break;
   }
   case BREW_INSTALL_THE_STORE: {
@@ -1136,16 +1135,6 @@ void handleIPC(struct clientArgs *client, std::string &inputStr,
       break;
     }
     reply(sender_app, false);
-    break;
-  }
-  case BREW_ACTIVATE_DUMPER: {
-
-    dump_path = std::string(json_getPropertyValue(my_json, "dump_path"));
-    dump_opt =
-        (Dump_Option)json_getInteger(json_getProperty(my_json, "dump_opt"));
-    dump_title = std::string(json_getPropertyValue(my_json, "dump_title"));
-    reply(sender_app, false);
-    is_dumper_enabled = true;
     break;
   }
   case BREW_TESTKIT_CHECK: {
@@ -1265,49 +1254,13 @@ void handleIPC(struct clientArgs *client, std::string &inputStr,
     reply(sender_app, false, size_buf);
     break;
   }
-  case BREW_TOGGLE_PS5DEBUG:{
-    OrbisKernelSwVersion sys_ver;
-    sceKernelGetProsperoSystemSwVersion(&sys_ver);
-    bool not_supported = ((sys_ver.version >> 16) < 0x300 || (sys_ver.version >> 16) >= 0x800);
-    if(not_supported){
-      notify(true, "PS5Debug is not supported on this firmware");
-      reply(sender_app, true);
-      break;
-    }
-
-    if(global_conf.PS5Debug){
-      notify(true, "PS5Debug is Running\nPS5Debug requires a restart to disable");
-      reply(sender_app, false);
-      break;
-    }
-
-    notify(true, "Loading PS5Debug...");
-#if 1
-    if (elfldr_spawn("/", STDOUT_FILENO, ps5debug_start, "PS5Debug") < 0) {
-        notify(true, "PS5Debug is starting\nWait for the PS5Debug welcome message");
-        global_conf.PS5Debug = true;
-    }
-#endif
-    reply(sender_app, false);
-
-    break;
-  }
   case BREW_UNUSED_1: {
     // This command is not used anymore but kept for backwards compatibility
-    notify(true, "This command is not used anymore, Update itemzflow");
+    notify(true, "This command is not used anymore");
     reply(sender_app, true);
     break;
   }
-  case BREW_LAUNCH_DUMPER:{
-#if 1
-    if (elfldr_spawn("/", STDOUT_FILENO, dumper_elf_start, "Dumper") < 0) {
-        notify(true, "Dumper is starting\nPlease wait...");
-    }
-#endif
-    reply(sender_app, false);
-    break;
-  }
-    case BREW_ADJUST_FAN_SPEED: {
+  case BREW_ADJUST_FAN_SPEED: {
     int speed = json_getInteger(json_getProperty(my_json, "speed"));
     int enabled = json_getInteger(json_getProperty(my_json, "enabled"));
     etaHEN_log("Adjusting Fan Speed to: %d", speed);

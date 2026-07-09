@@ -21,19 +21,16 @@ enum StartOpts {
   HOME_MENU,
   SETTINGS,
   TOOLBOX,
-  ITEMZFLOW,
-
 };
 
 struct daemon_settings {
   bool libhijacker_cheats = false;
-  bool PS5Debug = false;
+
   bool FTP = true;
-  bool launch_if = false;
-  bool discord_rpc = false;
+
   bool is_testkit = false;
   bool has_ftp_dev = false;
-  bool allow_data = true;
+  bool allow_data = false; /* sandbox /data patch removed from OrionHEN */
   bool DPIv2 = false;
   bool elf_loader = true;
   bool enable_fan_speed = false;
@@ -94,16 +91,6 @@ extern "C" int sceNetSocket(const char *name, int domain, int type,
 extern "C" int sceNetConnect(OrbisNetId s, const OrbisNetSockaddr *name,
                              OrbisNetSocklen_t namelen);
 extern "C" int sceNetSend(int s, const void *msg, size_t len, int flags);
-
-typedef enum {
-  DUMP_ALL = 0,
-  BASE_GAME,
-  GAME_PATCH,
-  DUMP_VALID,
-  REMASTER,
-  DLC,
-  FPKG,
-} Dump_Option;
 
 #define ORBIS_KERNEL_PROT_CPU_READ 0x01
 #define ORBIS_KERNEL_PROT_CPU_RW 0x02

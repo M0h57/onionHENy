@@ -137,7 +137,6 @@ int numb_of_tries = 0;
 int retries = 0;
 pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t jb_lock = PTHREAD_MUTEX_INITIALIZER;
-pthread_t discordRpcServerThread = NULL;
 pthread_t ftp = NULL;
 pthread_t dpi_thread = NULL;
 pthread_t kernelrw_thread = NULL;
@@ -223,20 +222,64 @@ static pid_t find_pid(const char *name) {
 }
 
 int get_shellcore_pid() {
+    /*
+     * Prefer process name (ki_comm @ ~0x1BF), not thr name (ki_tdname @ 447).
+     * Local find_pid() matches thr name only and often misses SceShellCore
+     * → false "SceShellCore not found" / allow_data sandbox patch skipped.
+     */
+    int mib[4] = {CTL_KERN, KERN_PROC, KERN_PROC_PROC, 0};
+    size_t buf_size = 0;
+    uint8_t *buf = nullptr;
     int pid = -1;
-    size_t NumbOfProcs = 9999;
 
-    for (int j = 0; j <= NumbOfProcs; j++) {
-        char tmp_buf[500];
-        memset(tmp_buf, 0, sizeof(tmp_buf));
-        sceKernelGetProcessName(j, tmp_buf);
-        if (strcmp( "SceShellCore", tmp_buf) == 0) {
-            pid = j;
-            break;
-        }
+    if (sysctl(mib, 4, NULL, &buf_size, NULL, 0) || !buf_size)
+        return -1;
+    buf = (uint8_t *)malloc(buf_size);
+    if (!buf)
+        return -1;
+    if (sysctl(mib, 4, buf, &buf_size, NULL, 0)) {
+        free(buf);
+        return -1;
     }
 
-    return pid == -1 ? find_pid("SceShellCore") : pid;
+    for (uint8_t *ptr = buf; ptr < buf + buf_size;) {
+        int ki_structsize = *(int *)ptr;
+        if (ki_structsize <= 0)
+            break;
+        pid_t ki_pid = *(pid_t *)&ptr[72];
+        /* FreeBSD/PS5 kinfo_proc: ki_comm is process name */
+        char *ki_comm = (char *)&ptr[0x1BF];
+        if (ki_structsize > 0x1BF + 5 && ki_comm[0] &&
+            strstr(ki_comm, "SceShellCore") != NULL) {
+            pid = ki_pid;
+            break;
+        }
+        /* also try thr name (some builds only set this) */
+        char *ki_tdname = (char *)&ptr[447];
+        if (ki_structsize > 447 + 5 && ki_tdname[0] &&
+            strstr(ki_tdname, "SceShellCore") != NULL) {
+            pid = ki_pid;
+            break;
+        }
+        ptr += ki_structsize;
+    }
+    free(buf);
+
+    if (pid < 0) {
+        for (int j = 1; j < 20000; j++) {
+            char tmp_buf[256];
+            memset(tmp_buf, 0, sizeof(tmp_buf));
+            if (sceKernelGetProcessName(j, tmp_buf) != 0)
+                continue;
+            if (strcmp(tmp_buf, "SceShellCore") == 0) {
+                pid = j;
+                break;
+            }
+        }
+    }
+    if (pid < 0)
+        pid = find_pid("SceShellCore");
+    return pid;
 }
 
 
@@ -430,7 +473,12 @@ uint8_t *PatternScan(const uint64_t module_base, const uint64_t module_size, con
     return nullptr;
 }
 // Shell patch functions
+// OrionHEN: sandbox /data mount patch disabled (see main.cpp). Kept as stub so
+// any leftover callers link; does not touch SceShellCore.
 bool patchShellCore() {
+    etaHEN_log("patchShellCore: disabled (Allow_data_in_sandbox not used)");
+    return false;
+#if 0 /* historical: force /data into app sandboxes via SceShellCore patches */
     const UniquePtr<Hijacker> executable = Hijacker::getHijacker(get_shellcore_pid());
     uintptr_t shellcore_base = 0;
     uint64_t shellcore_size = 0;
@@ -632,6 +680,7 @@ bool patchShellCore() {
     }
 
     return status;
+#endif /* historical sandbox patch */
 }
 
 // Command server functions

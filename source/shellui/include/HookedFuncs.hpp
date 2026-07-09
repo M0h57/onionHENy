@@ -206,9 +206,8 @@ typedef struct etaHENSettings_t
     bool DPI = true;
     bool DPI_v2 = false;
     bool libhijacker_cheats = false;
-    bool PS5Debug = false;
-    bool launch_itemzflow = false;
-    bool discord_rpc = false;
+
+
     bool testkit = false;
     bool allow_data_sandbox = false;
     bool ftp_dev_access = false;

@@ -88,7 +88,6 @@ bool shellui_patch(void);
 void* runDirectPKGInstaller(void* args);
 
 extern atomic_bool no_network_rest_mode_action;
-extern pthread_t discordRpcServerThread;
 extern pthread_t kernelrw_thread;
 
 jmp_buf g_catch_buf;
@@ -105,9 +104,6 @@ static void cleanup(void) {
 
     if (global_conf.FTP)
         ShutdownFTP();
-
-    if (global_conf.discord_rpc)
-        pthread_join(discordRpcServerThread, NULL);
 
     shutdown_klog();
     pthread_join(kernelrw_thread, NULL);
@@ -132,7 +128,6 @@ void LoadSettings(void) {
         if (ini_parser_load(&parser, "/data/etaHEN/config.ini")) {
             const char* FTP_str = ini_parser_get(&parser, "Settings.FTP", "1");
             const char* DPI_str = ini_parser_get(&parser, "Settings.DPI", "0");
-            const char* discord_rpc_str = ini_parser_get(&parser, "Settings.discord_rpc", "0");
             const char* allow_data_n_sandbox = ini_parser_get(&parser, "Settings.Allow_data_in_sandbox", "1");
             const char* ftp_dev_access = ini_parser_get(&parser, "Settings.ALLOW_FTP_DEV_ACCESS", "0");
             const char* lite_mode = ini_parser_get(&parser, "Settings.LiteMode", "0");
@@ -140,8 +135,6 @@ void LoadSettings(void) {
             const char* Klog_str = ini_parser_get(&parser, "Settings.Klog", "0");
             const char* toolbox_for_rest = ini_parser_get(&parser, "Settings.disable_toolbox_auto_start_for_rest_mode", "0");\
 				const char* legacy_cmd_server_str = ini_parser_get(&parser, "Settings.legacy_cmd_server", "0");
-
-            global_conf.discord_rpc = discord_rpc_str ? atoi(discord_rpc_str) : 0;
             global_conf.allow_data = allow_data_n_sandbox ? atoi(allow_data_n_sandbox) : 0;
             global_conf.has_ftp_dev = ftp_dev_access ? atoi(ftp_dev_access) : 0;
             global_conf.FTP = FTP_str ? atoi(FTP_str) : 0;
@@ -191,11 +184,10 @@ int main(void) {
     set_proc_authid(getpid(), DEBUG_AUTHID);
 
 
-    global_conf.allow_data = true;
+    global_conf.allow_data = false;
     global_conf.DPI = true;
     global_conf.seconds = 0;
     global_conf.FTP = true;
-    global_conf.discord_rpc = false;
     global_conf.has_ftp_dev = false;
     global_conf.toolbox_auto_start = true;
     global_conf.DPI_v2 = false;
@@ -215,12 +207,9 @@ int main(void) {
        etaHEN_log("Kit detected, patching acti time...");
        patchShellActi();
     }
-    if (global_conf.allow_data) {
-        etaHEN_log("Allowing data in sandbox");
-        patchShellCore();
-        etaHEN_log("Patched shellcore");
-    }
-
+    /* Allow_data_in_sandbox / patchShellCore removed from OrionHEN:
+     * it only forced /data visibility inside app sandboxes (not jailbreak).
+     * Not needed for util/daemon/toolbox; dropped to avoid ShellCore noise. */
 
     start_ip_thread();
     pthread_create(&ipc_server, NULL, IPC_loop, NULL);
@@ -263,11 +252,6 @@ int main(void) {
             if (StartFTP())
                 etaHEN_log("[Setting enabled] Starting FTP Server...");
         }
-        
-        if (global_conf.discord_rpc) {
-            pthread_create(&discordRpcServerThread, NULL, startDiscordRpcServer, NULL);
-        }
-        
         if (global_conf.DPI) {
             startDirectPKGInstaller(false);
         }
@@ -289,9 +273,6 @@ int main(void) {
 
         etaHEN_log("Caching cheat list...");
         pthread_create(&cheat_cache, NULL, MakeInitialCheatCache, NULL);
-
-        if (global_conf.discord_rpc)
-            pthread_join(discordRpcServerThread, NULL);
 
         pthread_join(cmd_server, NULL);
 
