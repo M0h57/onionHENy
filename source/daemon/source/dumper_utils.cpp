@@ -33,10 +33,7 @@ along with this program; see the file COPYING. If not, see
 #include "ipc.hpp"
 #include <string>
 
-extern "C"{
-     #include "../../libSelfDecryptor/include/SelfDecryptor.h"
-     int decrypt_game_dir(const char *source, const char *dest);
-}
+// libSelfDecryptor removed — decrypt_dir uses local decrypt_self() only
 long totalSize = 0;
 long copiedSoFar = 0;
 clock_t lastTime = clock();
@@ -405,15 +402,7 @@ bool ends_with(const std::string& str, const std::string& suffix) {
 }
 #define SELF_ORBIS_MAGIC        0x1D3D154F
 bool decrypt_dir(const std::string& inputPath, const std::string& outputPath) {
-
-    OrbisKernelSwVersion sys_ver;
-    sceKernelGetProsperoSystemSwVersion(&sys_ver);
-    bool alt_method = (sys_ver.version > 0x3000000);
-
-    if (alt_method) {
-        etaHEN_log("decrypt_self: using alt method");
-        return decrypt_all(inputPath.c_str(), outputPath.c_str()) == 0;
-    }
+    // Always use local mmap-based decrypt_self (no libSelfDecryptor)
     DIR* dir = opendir(inputPath.c_str());
     if (!dir){
 		etaHEN_log("Failed to open directory %s", inputPath.c_str());

@@ -132,7 +132,6 @@ typedef struct notify_request
 typedef struct
 {
 	bool FTP;
-	bool discord_rpc;
 	bool has_ftp_dev;
 	bool allow_data;
 	bool DPI;
@@ -160,7 +159,6 @@ bool load_plugin(const char *path);
 
 /*================== Threads =================*/
 extern pthread_t dpi_thread;
-extern pthread_t discordRpcServerThread;
 extern pthread_t ftp;
 extern pthread_t klog_thread;
 extern pthread_t kernelrw_thread;
@@ -179,7 +177,6 @@ enum Commands
 	REMOUNT_FOLDER_CMD,
 	ETAHEN_VER_CMD,
 	PATCH_LNC_DEBUG_CMD,
-	ACTIVATE_DUMPER_CMD,
 	TEST_CMD,
 	SYMLINK_CMD,
 };
@@ -248,7 +245,6 @@ bool extract_zip(const char *zip_path, const char *extract_dir);
 
 
 /*============ Back up JB server ==============*/
-void *startDiscordRpcServer(void *unused);
 int get_ip_address(char *ip_address);
 void etaHEN_log(const char *fmt, ...);
 bool touch_file(const char *destfile);
