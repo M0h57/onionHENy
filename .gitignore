@@ -1,0 +1,41 @@
+# OS / editor
+.DS_Store
+.idea/
+.vscode/
+*.swp
+*~
+
+# Build trees
+source/build/
+source/**/CMakeFiles/
+source/**/bin/
+source/CMakeCache.txt
+source/build.ninja
+source/cmake_install.cmake
+source/compile_commands.json
+source/.ninja_deps
+source/.ninja_log
+source/.cache/
+
+# Build outputs / artifacts
+*.o
+*.elf
+*.a.tmp
+*.tmp*
+hen.bin
+source/lib/libNidResolver.a
+source/lib/libNineS.a
+source/lib/libhijacker.a
+source/libhijacker/libhijacker.a
+source/util/assets/shellui.elf
+source/stubber/main.exe
+source/stubber/out/
+source/homebrew/
+source/BREW00000
+source/aerolib.csv
+
+# IDA / reverse tooling
+*.i64
+*.idb
+*.til
+*.lnk
