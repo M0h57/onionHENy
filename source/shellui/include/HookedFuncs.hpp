@@ -375,6 +375,7 @@ void notify(const char* text, ...);
 
 extern uint64_t(*GetManifestResourceStream_Original)(uint64_t inst, MonoString* FileName);
 extern uint64_t(*GetManifestResourceInternal_Orig)(MonoObject* instance, MonoString* name, int* size, MonoObject& module);
+extern void (*DebugSettings_GetModel_Orig)(MonoObject* instance, MonoObject* param, MonoObject* promise);
 extern  void (*OnShareButton_orig)(MonoObject* data);
 extern void (*CaptureScreen_orig_old)(MonoObject * inst, int userId, long deviceId, int capType, MonoObject* capacityInfo);
 extern void (*CaptureScreen_orig_new)(MonoObject* inst, int userId, long deviceId, int capType,  MonoString* format, MonoObject* capInfo);
@@ -396,6 +397,7 @@ uint64_t Get_Address_of_Method(MonoImage* Assembly_Image, const char* Name_Space
 uint64_t Get_Address_of_Method(MonoImage* Assembly_Image, MonoClass* klass, const char* Method_Name, int Param_Count);
 uint64_t GetManifestResourceStream_Hook(uint64_t inst, MonoString* FileName);
 uint64_t GetManifestResourceInternal_Hook(MonoObject* instance, MonoString* name, int* size, MonoObject& module);
+void DebugSettings_GetModel_Hook(MonoObject* instance, MonoObject* param, MonoObject* promise);
 MonoObject* New_Mono_XML_From_String(std::string xml_doc);
 bool write_asset(const char* path, const void* start, uint32_t size);
 int ini_parser_load(IniParser* parser, const char* filename);

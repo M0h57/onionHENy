@@ -1122,6 +1122,23 @@ int main(int argc, char const *argv[]) {
       return -1;
     }
 
+    uint64_t debugSettingsGetModel = Get_Address_of_Method(ReactNativeShellAppReactNativeShellApp_img,
+                                                           "ReactNative.Modules.ShellUI.Settings",
+                                                           "DebugSettingsModule",
+                                                           "GetModel",
+                                                           2);
+    if (debugSettingsGetModel) {
+      DebugSettings_GetModel_Orig = (void (*)(MonoObject*, MonoObject*, MonoObject*))
+          DetourFunction(debugSettingsGetModel, (void*)&DebugSettings_GetModel_Hook);
+      if (DebugSettings_GetModel_Orig) {
+        shellui_log("[DBG-GETMODEL] DebugSettingsModule.GetModel hooked");
+      } else {
+        shellui_log("[DBG-GETMODEL] failed to detour DebugSettingsModule.GetModel");
+      }
+    } else {
+      shellui_log("[DBG-GETMODEL] DebugSettingsModule.GetModel not found");
+    }
+
     LaunchApp_orig = (int( * )(MonoString * , uint64_t * , int, LaunchAppParam * )) DetourFunction(Get_Address_of_Method(lnc_img, "Sce.Vsh.LncUtil", "LncUtilWrapper", "LaunchApp", 4), (void * )&LaunchApp);
     if (!LaunchApp_orig) {
       shellui_log("Failed to detour Func Set -2");
