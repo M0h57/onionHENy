@@ -232,10 +232,10 @@ public:
     // Get message back from daemon
     error = (IPC_Ret)IPCReceiveData(msg, ipc_msg1);
     if (error == IPC_Ret::NO_ERROR) {
-      game_log("[ItemzDaemon] Daemon returned NO ERROR");
+      game_log("[Daemon] Daemon returned NO ERROR");
       return true;
     } else {
-      game_log("[ItemzDaemon] Daemon returned an ERROR");
+      game_log("[Daemon] Daemon returned an ERROR");
       // notify("Daemon returned an ERROR");
       return false;
     }
@@ -451,28 +451,11 @@ public:
   }
 
   bool Launch_Elfldr() {
-    if (!util_daemon) {
-      game_log("This IPC command is NOT in the main daemon");
-      return false;
-    }
-    std::string ipc_msg;
-    if (!IPCSendCommand(BREW_UTIL_LAUNCH_ELFLDR, ipc_msg)) {
-      return false;
-    }
-    return true;
+    // OrionHEN no longer embeds / launches the 9021 elfldr service.
+    game_log("Launch_Elfldr: unsupported (9021 service removed)");
+    return false;
   }
 
-  bool Toggle_ps5debug() {
-    if (util_daemon) {
-      game_log("This IPC command is NOT in the util daemon");
-      return false;
-    }
-    std::string ipc_msg;
-    if (!IPCSendCommand(BREW_TOGGLE_PS5DEBUG, ipc_msg)) {
-      return false;
-    }
-    return true;
-  }
 
   bool Cheats_Action(Cheat_Actions act) {
     DaemonCommands cmd;

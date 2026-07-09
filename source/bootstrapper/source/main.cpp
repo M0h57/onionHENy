@@ -55,6 +55,7 @@ along with this program; see the file COPYING. If not, see
   ******************************************************************************/
  #include <util.hpp>
  #include <freebsd-helper.h>
+ #include <elfldr_remote.h>
  
  extern "C" {
  #include "elfldr.h"
@@ -64,7 +65,6 @@ along with this program; see the file COPYING. If not, see
  #include <ps5/klog.h>
  #include <ps5/kernel.h>
 
- pid_t elfldr_spawn(const char* cwd, int stdio, uint8_t* elf, const char* name);
  int sceKernelMprotect(void* addr, size_t len, int prot);
 
  extern uint8_t kstuff_start[];
@@ -297,7 +297,8 @@ const char json_payload[] =
  FileDescriptor sock;
  
  // Constants
- static const int LOGGER_PORT = 9021;
+ /* Must NOT use 9021 — that is external elfldr. */
+ static const int LOGGER_PORT = 9088;
  static const int STDOUT = 1;
  static const int STDERR = 2;
  
@@ -762,12 +763,21 @@ bool load_plugin(const char *path, const char *filename)
       unlink(pbuf);
     }
 
-    printf("loading elf %s\n", filename);
-    pid = elfldr_spawn("/", sock.fd, buf, header->titleID);
-    if (pid >= 0)
-      printf("  Launched!\n");
-    else
-      printf("  Already Running!\n");
+    printf("loading elf via 9021 %s\n", filename);
+    {
+      char epath[256];
+      snprintf(epath, sizeof(epath), "/data/etaHEN/plugins/%s.elf", header->titleID);
+      if (elfldr_remote_write_and_launch(epath, buf, (size_t)st.st_size)) {
+        sleep(2);
+        pid = find_pid(header->titleID);
+        if (pid < 0)
+          pid = 1; /* launched; pid unknown */
+        printf("  Launched via 9021!\n");
+      } else {
+        printf("  Failed 9021 launch\n");
+        pid = -1;
+      }
+    }
 
     free(buf), buf = NULL;
 
@@ -849,12 +859,22 @@ bool load_plugin(const char *path, const char *filename)
     return true;
   }
 
-  printf("loading plugin %s\n", path);
-  pid = elfldr_spawn("/", sock.fd, elf, header->titleID);
-  if (pid >= 0)
-    printf("  Launched!\n");
-  else
-    printf("  Already Running!\n");
+  printf("loading plugin via 9021 %s\n", path);
+  {
+    char epath[256];
+    size_t elf_sz = (size_t)st.st_size - sizeof(CustomPluginHeader);
+    snprintf(epath, sizeof(epath), "/data/etaHEN/plugins/%s.elf", header->titleID);
+    if (elfldr_remote_write_and_launch(epath, elf, elf_sz)) {
+      sleep(2);
+      pid = find_pid(header->titleID);
+      if (pid < 0)
+        pid = 1;
+      printf("  Launched via 9021!\n");
+    } else {
+      printf("  Failed 9021 launch\n");
+      pid = -1;
+    }
+  }
 
   f = open(pbuf, O_WRONLY | O_CREAT | O_TRUNC, 0666);
   if (f >= 0)
@@ -968,7 +988,6 @@ void free_plugin_files(char **plugin_files) {
   free((void *)plugin_files);
 }
 
-bool Byepervisor();
 bool sceKernelIsTestKit() {
   uint8_t s_PsId[16] = {0};
 
@@ -1108,12 +1127,11 @@ int main(void) {
   OrbisKernelSwVersion sys_ver;
   sceKernelGetProsperoSystemSwVersion(&sys_ver);
 
+  // Byepervisor (1.xx–2.xx HV path) removed from OrionHEN.
+  // Target firmwares that need it should use a dedicated payload.
   if (sys_ver.version < 0x3000000 && !sceKernelIsGenuineDevKit()) {
-    klog_printf("FW %s version has Byepervisor available, sstarting....\n", sys_ver.version_str);
-    if (!Byepervisor()) {
-      printf("Byepervisor failed or is resume_nedded");
-      return 0;
-    }
+    klog_printf("FW %s is < 3.00 and Byepervisor is not bundled; continuing without HV path\n",
+                sys_ver.version_str);
   }
 
   klog_puts("============== Spawner (Bootstrapper) Started =================");
@@ -1146,8 +1164,6 @@ int main(void) {
   write_embedded_assets();
   klog_printf("   Written!\n");
 
-	sceNotificationSend(0xFE, true, &json_payload[0]);
-
   klog_printf("Unmounting /update forcefully ...");
   // block updates
   unlink("/update/PS5UPDATE.PUP");
@@ -1159,85 +1175,139 @@ int main(void) {
 
   klog_puts("   Success!");
 
-#if 1
-  char buz[100] = { 0 };
-  // Load kstuff if needed
-  bool dont_load_kstuff = (if_exists("/mnt/usb0/no_kstuff") || if_exists("/data/etaHEN/no_kstuff"));
-  if (dont_load_kstuff) {
-      notify("kstuff loading disabled via file, non-payload homebrew and PS4 FPKGs will be disabled");
-      klog_puts("kstuff loading disabled in config.ini or no_kstuff file found");
-  }
-  if (!dont_load_kstuff && sys_ver.version >= 0x3000000) {
-      //notify("Loading kstuff ...");
+  /*
+   * Launch policy: NO local spawn.
+   * 1) Write util/daemon/kstuff to disk first.
+   * 2) Ask external elfldr :9021 via file: URI (one at a time, wait between).
+   */
+  char buz[100] = {0};
 
-      bool cleanup_kstuff = false;
-      uint8_t* kstuff_address = get_kstuff_address(cleanup_kstuff);
-
-      if (elfldr_spawn("/", STDOUT_FILENO, kstuff_address, "kstuff")) {
-          int wait = 0;
-          bool kstuff_not_loaded = false;
-          sleep(1);
-          while ((kstuff_not_loaded = sceKernelMprotect(&buz[0], 100, 0x7) < 0)) {
-              if (wait++ > 10) {
-                  notify("Failed to load kstuff, kstuff will be unavailable");
-                  break;
-              }
-              sleep(1);
-          }
-
-          if (!kstuff_not_loaded)
-              klog_puts("kstuff loaded");
-
-          if (cleanup_kstuff) {
-              free(kstuff_address);
-          }
+  auto write_elf_file = [](const char *path, const uint8_t *elf,
+                           size_t size) -> bool {
+    mkdir("/data/etaHEN", 0777);
+    mkdir("/data/etaHEN/daemons", 0777);
+    int fd = open(path, O_WRONLY | O_CREAT | O_TRUNC, 0777);
+    if (fd < 0)
+      return false;
+    size_t off = 0;
+    while (off < size) {
+      ssize_t n = write(fd, elf + off, size - off);
+      if (n <= 0) {
+        close(fd);
+        return false;
       }
-      else {
-          notify("Failed to load kstuff, kstuff will be unavailable");
-      }
-  }
-  sleep(1);
-#endif
-
-  klog_printf("Starting Utility etaHEN services ...");
-
-  while ((pid = find_pid("etaHEN")) > 0) {
-   // printf("killing pid %d\n", pid);
-    if (kill(pid, SIGKILL)) {
-      perror("kill");
+      off += (size_t)n;
     }
-  }
-
-  if (elfldr_spawn("/", sock.fd, util_start, "etaHEN Utility Daemon") >= 0) {
-      klog_printf("  Launched!\n");
-    // Open the file with write permission, create if not exist, truncate to zero if exists
-    int fd = open("/data/etaHEN/daemons/util.elf", O_WRONLY | O_CREAT | O_TRUNC, 0777);
-    if (fd == -1) {
-      perror("open failed");
-      return -1337;
-    }
-    // Write the buffer to the file
-    if (write(fd, util_start, util_size) == -1) {
-       perror("write failed");
-    }
-
-    // Close the file descriptor
     close(fd);
-  } else {
-    klog_printf("failed to launch utility daemon\n");
-    notify("failed to launch the etaHEN utility daemon");
+    return true;
+  };
+
+  klog_puts("Writing daemon ELFs to /data/etaHEN/daemons ...");
+  if (!write_elf_file("/data/etaHEN/daemons/util.elf", util_start, util_size)) {
+    notify("failed to write util.elf");
     return -2;
   }
-
-  klog_printf("Starting the main etaHEN daemon ...");
-
-  if (elfldr_spawn("/", sock.fd, daemon_start, "etaHEN Critical services") >= 0) {
-      klog_printf("  Launched!\n");
-  } else {
-      klog_printf("failed to launch main daemon\n");
-      notify("failed to launch the main etaHEN daemon");
-      return -2;
+  if (!write_elf_file("/data/etaHEN/daemons/daemon.elf", daemon_start,
+                      daemon_size)) {
+    notify("failed to write daemon.elf");
+    return -2;
   }
+  if (!if_exists("/data/etaHEN/kstuff.elf")) {
+    (void)write_elf_file("/data/etaHEN/daemons/kstuff.elf", kstuff_start,
+                         (size_t)kstuff_size);
+  }
+  klog_puts("   Daemon ELFs written");
+
+  if (!elfldr_remote_available()) {
+    klog_puts("FATAL: no elfldr on 127.0.0.1:9021");
+    notify("Start elfldr on 9021 first, then re-run. ELFs are on disk under /data/etaHEN/daemons/");
+    return -2;
+  }
+  klog_puts("elfldr :9021 OK - launching via file URI (serialized)");
+
+  /* Let the system settle after remount/unmount before first EXEC */
+  sleep(3);
+
+  auto launch_path = [](const char *path, const char *label,
+                        const char *wait_name) -> bool {
+    klog_printf("9021 file: %s (%s)\n", path, label);
+    if (!elfldr_remote_send_file_uri(path)) {
+      klog_printf("  send FAILED %s\n", label);
+      return false;
+    }
+    /* Wait for process; do not fire next spawn while SpZeroConf is busy */
+    for (int i = 0; i < 30; i++) {
+      if (wait_name && find_pid(wait_name) > 0) {
+        klog_printf("  running: %s\n", wait_name);
+        return true;
+      }
+      sleep(1);
+    }
+    klog_printf("  sent %s (process name not seen yet, continuing)\n", label);
+    return true; /* URI accepted; name may differ across elfldr versions */
+  };
+
+  /*
+   * Order matters for toolbox inject:
+   *   util first (services)
+   *   kstuff second (must finish patching ShellUI BEFORE daemon injects toolbox)
+   *   daemon last  (cmd_enable_toolbox injects into SceShellUI)
+   * Launching daemon+kstuff together races ptrace on ShellUI → toolbox timeout.
+   */
+  klog_puts("Starting util via 9021 ...");
+  while ((pid = find_pid("util.elf")) > 0 || (pid = find_pid("etaHEN Utility")) > 0) {
+    kill(pid, SIGKILL);
+    sleep(1);
+  }
+  if (!launch_path("/data/etaHEN/daemons/util.elf", "util", "util.elf")) {
+    notify("failed to launch util via elfldr :9021");
+    return -2;
+  }
+  sleep(2);
+
+  bool dont_load_kstuff =
+      (if_exists("/mnt/usb0/no_kstuff") || if_exists("/data/etaHEN/no_kstuff"));
+  if (dont_load_kstuff) {
+    klog_puts("kstuff disabled via no_kstuff file");
+  } else if (sys_ver.version >= 0x3000000) {
+    klog_puts("Loading kstuff via 9021 (before daemon/toolbox) ...");
+    const char *kpath = if_exists("/data/etaHEN/kstuff.elf")
+                            ? "/data/etaHEN/kstuff.elf"
+                            : "/data/etaHEN/daemons/kstuff.elf";
+    if (launch_path(kpath, "kstuff", "kstuff.elf")) {
+      int wait = 0;
+      bool not_loaded = true;
+      while ((not_loaded = (sceKernelMprotect(&buz[0], 100, 0x7) < 0))) {
+        if (wait++ > 15) {
+          notify("Failed to load kstuff, continuing without it");
+          break;
+        }
+        sleep(1);
+      }
+      if (!not_loaded) {
+        klog_puts("kstuff loaded — wait for ShellUI settle");
+        sleep(3); /* let kstuff finish ShellUI patches before inject */
+      }
+    } else {
+      notify("Failed to load kstuff via 9021, continuing");
+    }
+  }
+  sleep(1);
+
+  klog_puts("Starting daemon via 9021 (toolbox inject) ...");
+  while ((pid = find_pid("daemon.elf")) > 0 ||
+         (pid = find_pid("etaHEN Critical")) > 0) {
+    kill(pid, SIGKILL);
+    sleep(1);
+  }
+  if (!launch_path("/data/etaHEN/daemons/daemon.elf", "daemon", "daemon.elf")) {
+    notify("failed to launch daemon via elfldr :9021");
+    return -2;
+  }
+  sleep(2);
+
+  /* Welcome toast after launches (earlier toast raced MediaCore + EXEC) */
+  sceNotificationSend(0xFE, true, &json_payload[0]);
 
   // return 0;
 

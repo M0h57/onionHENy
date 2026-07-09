@@ -27,39 +27,27 @@ along with this program; see the file COPYING. If not, see
 #include <sys/mman.h>
 
 #include <ps5/kernel.h>
+#include <ps5/klog.h>
 
 #include "pt.h"
 
 
 static int
 sys_ptrace(int request, pid_t pid, caddr_t addr, int data) {
-  uint8_t privcaps[16] = {0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,
-                          0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff};
   pid_t mypid = getpid();
-  uint8_t caps[16];
   uint64_t authid;
   int ret;
 
   if(!(authid=kernel_get_ucred_authid(mypid))) {
     return -1;
   }
-  if(kernel_get_ucred_caps(mypid, caps)) {
-    return -1;
-  }
-
   if(kernel_set_ucred_authid(mypid, 0x4800000000010003l)) {
-    return -1;
-  }
-  if(kernel_set_ucred_caps(mypid, privcaps)) {
     return -1;
   }
 
   ret = (int)syscall(SYS_ptrace, request, pid, addr, data);
 
   if(kernel_set_ucred_authid(mypid, authid)) {
-    return -1;
-  }
-  if(kernel_set_ucred_caps(mypid, caps)) {
     return -1;
   }
 
@@ -76,12 +64,6 @@ pt_resolve(pid_t pid, const char* nid) {
   }
 
   return kernel_dynlib_resolve(pid, 0x2001, nid);
-}
-
-
-int
-pt_trace_me(void) {
-  return sys_ptrace(PT_TRACE_ME, 0, 0, 0);
 }
 
 
@@ -103,71 +85,6 @@ int
 pt_detach(pid_t pid, int sig) {
   if(sys_ptrace(PT_DETACH, pid, 0, sig) == -1) {
     return -1;
-  }
-
-  return 0;
-}
-
-int
-pt_follow_fork(pid_t pid) {
-  if(sys_ptrace(PT_FOLLOW_FORK, pid, NULL, 1) == -1) {
-    return -1;
-  }
-
-  if(sys_ptrace(PT_LWP_EVENTS, pid, NULL, 1) == -1) {
-    return -1;
-  }
-
-  return 0;
-}
-
-
-int
-pt_follow_exec(pid_t pid) {
-  if(sys_ptrace(PT_LWP_EVENTS, pid, NULL, 1) == -1) {
-    return -1;
-  }
-
-  return 0;
-}
-
-
-pid_t
-pt_await_child(pid_t pid) {
-  struct ptrace_lwpinfo lwpinfo;
-
-  memset(&lwpinfo, 0, sizeof(lwpinfo));
-  while(!(lwpinfo.pl_flags & PL_FLAG_FORKED)) {
-    if(waitpid(pid, NULL, 0) == -1) {
-      return -1;
-    }
-
-    if(sys_ptrace(PT_LWPINFO, pid, (caddr_t)&lwpinfo, sizeof(lwpinfo)) == -1) {
-      return -1;
-    }
-  }
-
-  if(waitpid(lwpinfo.pl_child_pid, NULL, 0) == -1) {
-    return -1;
-  }
-
-  return lwpinfo.pl_child_pid;
-}
-
-
-int
-pt_await_exec(pid_t pid) {
-  struct ptrace_lwpinfo lwpinfo;
-
-  memset(&lwpinfo, 0, sizeof(lwpinfo));
-  while(!(lwpinfo.pl_flags & PL_FLAG_EXEC)) {
-    if(waitpid(pid, NULL, 0) == -1) {
-      return -1;
-    }
-
-    if(sys_ptrace(PT_LWPINFO, pid, (caddr_t)&lwpinfo, sizeof(lwpinfo)) == -1) {
-      return -1;
-    }
   }
 
   return 0;
@@ -205,6 +122,12 @@ pt_getint(pid_t pid, intptr_t addr) {
 
 
 int
+pt_setint(pid_t pid, intptr_t addr, int val) {
+  return sys_ptrace(PT_WRITE_D, pid, (caddr_t)addr, val);
+}
+
+
+int
 pt_getregs(pid_t pid, struct reg *r) {
   return sys_ptrace(PT_GETREGS, pid, (caddr_t)r, 0);
 }
@@ -216,7 +139,77 @@ pt_setregs(pid_t pid, const struct reg *r) {
 }
 
 
-static long
+int
+pt_copyin(pid_t pid, const void* buf, intptr_t addr, size_t len) {
+  struct ptrace_io_desc iod = {
+    .piod_op = PIOD_WRITE_D,
+    .piod_offs = (void*)addr,
+    .piod_addr = (void*)buf,
+    .piod_len = len};
+  return sys_ptrace(PT_IO, pid, (caddr_t)&iod, 0);
+}
+
+
+int
+pt_setchar(pid_t pid, intptr_t addr, char val) {
+  return pt_copyin(pid, &val, addr, sizeof(val));
+}
+
+
+int
+pt_setshort(pid_t pid, intptr_t addr, short val) {
+  return pt_copyin(pid, &val, addr, sizeof(val));
+}
+
+
+int
+pt_setlong(pid_t pid, intptr_t addr, long val) {
+  return pt_copyin(pid, &val, addr, sizeof(val));
+}
+
+
+int
+pt_copyout(pid_t pid, intptr_t addr, void* buf, size_t len) {
+  struct ptrace_io_desc iod = {
+    .piod_op = PIOD_READ_D,
+    .piod_offs = (void*)addr,
+    .piod_addr = buf,
+    .piod_len = len};
+  return sys_ptrace(PT_IO, pid, (caddr_t)&iod, 0);
+}
+
+
+char
+pt_getchar(pid_t pid, intptr_t addr) {
+  char val = 0;
+
+  pt_copyout(pid, addr, &val, sizeof(val));
+
+  return val;
+}
+
+
+short
+pt_getshort(pid_t pid, intptr_t addr) {
+  short val = 0;
+
+  pt_copyout(pid, addr, &val, sizeof(val));
+
+  return val;
+}
+
+
+long
+pt_getlong(pid_t pid, intptr_t addr) {
+  long val = 0;
+
+  pt_copyout(pid, addr, &val, sizeof(val));
+
+  return val;
+}
+
+
+long
 pt_call(pid_t pid, intptr_t addr, ...) {
   struct reg jmp_reg;
   struct reg bak_reg;
@@ -230,12 +223,12 @@ pt_call(pid_t pid, intptr_t addr, ...) {
   jmp_reg.r_rip = addr;
 
   va_start(ap, addr);
-  jmp_reg.r_rdi = va_arg(ap, int64_t);
-  jmp_reg.r_rsi = va_arg(ap, int64_t);
-  jmp_reg.r_rdx = va_arg(ap, int64_t);
-  jmp_reg.r_rcx = va_arg(ap, int64_t);
-  jmp_reg.r_r8  = va_arg(ap, int64_t);
-  jmp_reg.r_r9  = va_arg(ap, int64_t);
+  jmp_reg.r_rdi = va_arg(ap, uint64_t);
+  jmp_reg.r_rsi = va_arg(ap, uint64_t);
+  jmp_reg.r_rdx = va_arg(ap, uint64_t);
+  jmp_reg.r_rcx = va_arg(ap, uint64_t);
+  jmp_reg.r_r8  = va_arg(ap, uint64_t);
+  jmp_reg.r_r9  = va_arg(ap, uint64_t);
   va_end(ap);
 
   if(pt_setregs(pid, &jmp_reg)) {
@@ -283,12 +276,12 @@ pt_syscall(pid_t pid, int sysno, ...) {
   jmp_reg.r_rax = sysno;
 
   va_start(ap, sysno);
-  jmp_reg.r_rdi = va_arg(ap, int64_t);
-  jmp_reg.r_rsi = va_arg(ap, int64_t);
-  jmp_reg.r_rdx = va_arg(ap, int64_t);
-  jmp_reg.r_r10 = va_arg(ap, int64_t);
-  jmp_reg.r_r8  = va_arg(ap, int64_t);
-  jmp_reg.r_r9  = va_arg(ap, int64_t);
+  jmp_reg.r_rdi = va_arg(ap, uint64_t);
+  jmp_reg.r_rsi = va_arg(ap, uint64_t);
+  jmp_reg.r_rdx = va_arg(ap, uint64_t);
+  jmp_reg.r_r10 = va_arg(ap, uint64_t);
+  jmp_reg.r_r8  = va_arg(ap, uint64_t);
+  jmp_reg.r_r9  = va_arg(ap, uint64_t);
   va_end(ap);
 
   if(pt_setregs(pid, &jmp_reg)) {
@@ -314,18 +307,6 @@ pt_syscall(pid_t pid, int sysno, ...) {
 }
 
 
-int
-pt_jitshm_create(pid_t pid, intptr_t name, size_t size, int flags) {
-  return (int)pt_syscall(pid, 0x215, name, size, flags);
-}
-
-
-int
-pt_jitshm_alias(pid_t pid, int fd, int flags) {
-  return (int)pt_syscall(pid, 0x216, fd, flags);
-}
-
-
 intptr_t
 pt_mmap(pid_t pid, intptr_t addr, size_t len, int prot, int flags,
 	int fd, off_t off) {
@@ -335,19 +316,19 @@ pt_mmap(pid_t pid, intptr_t addr, size_t len, int prot, int flags,
 
 int
 pt_msync(pid_t pid, intptr_t addr, size_t len, int flags) {
-  return (int)pt_syscall(pid, SYS_msync, addr, len, flags);
+  return pt_syscall(pid, SYS_msync, addr, len, flags);
 }
 
 
 int
 pt_munmap(pid_t pid, intptr_t addr, size_t len) {
-  return (int)pt_syscall(pid, SYS_munmap, addr, len);
+  return pt_syscall(pid, SYS_munmap, addr, len);
 }
 
 
 int
 pt_mprotect(pid_t pid, intptr_t addr, size_t len, int prot) {
-  return (int)pt_syscall(pid, SYS_mprotect, addr, len, prot);
+  return pt_syscall(pid, SYS_mprotect, addr, len, prot);
 }
 
 
@@ -364,8 +345,15 @@ pt_setsockopt(pid_t pid, int fd, int level, int optname, intptr_t optval,
 			 optlen, 0);
 }
 
+
 int
-pt_bind(pid_t pid, int sockfd, intptr_t addr, socklen_t addrlen) {
+pt_close(pid_t pid, int fd) {
+  return (int)pt_syscall(pid, SYS_close, fd);
+}
+
+
+int
+pt_bind(pid_t pid, int sockfd, intptr_t addr, uint32_t addrlen) {
   return (int)pt_syscall(pid, SYS_bind, sockfd, addr, addrlen);
 }
 
@@ -373,12 +361,6 @@ pt_bind(pid_t pid, int sockfd, intptr_t addr, socklen_t addrlen) {
 ssize_t
 pt_recvmsg(pid_t pid, int fd, intptr_t msg, int flags) {
   return (int)pt_syscall(pid, SYS_recvmsg, fd, msg, flags);
-}
-
-
-int
-pt_close(pid_t pid, int fd) {
-  return (int)pt_syscall(pid, SYS_close, fd);
 }
 
 
@@ -401,30 +383,17 @@ pt_pipe(pid_t pid, intptr_t pipefd) {
 }
 
 
-void
-pt_perror(pid_t pid, const char *s) {
+int
+pt_errno(pid_t pid) {
   intptr_t faddr = pt_resolve(pid, "9BcDykPmo1I");
   intptr_t addr = pt_call(pid, faddr);
-  int err = pt_getint(pid, addr);
-  char buf[255];
-
-  strcpy(buf, s);
-  strcat(buf, ": ");
-  strcat(buf, strerror(err));
-  puts(buf);
+  return pt_getint(pid, addr);
 }
 
 
 intptr_t
 pt_sceKernelGetProcParam(pid_t pid) {
   intptr_t faddr = pt_resolve(pid, "959qrazPIrg");
-
-  return pt_call(pid, faddr);
-}
-
-intptr_t
-pt_getargv(pid_t pid) {
-  intptr_t faddr = pt_resolve(pid, "FJmglmTMdr4");
 
   return pt_call(pid, faddr);
 }

@@ -28,11 +28,7 @@ extern "C" {
 #include <sys/ioctl.h>
 
 int sceKernelMprotect(void *addr, size_t len, int prot);
-pid_t elfldr_spawn(const char* cwd, int stdio, uint8_t* elf, const char* name);
 
-
-extern uint8_t elfldr_start[];
-extern const unsigned int elfldr_size;
 
 int sceSystemServiceLoadExec(const char *path, const char *arg);
 extern bool is_handler_enabled;
@@ -532,16 +528,11 @@ void handleIPC(struct clientArgs *client, std::string &inputStr,
     }
     break;
   }
-  case BREW_UTIL_LAUNCH_ELFLDR: {
-#if 1
-    if (elfldr_spawn("/", STDOUT_FILENO, elfldr_start, "elfldr.elf") >= 0) {
-      reply(sender_app, false);
-      break;
-    }
-#endif
+  case BREW_UTIL_LAUNCH_ELFLDR:
+    /* 9021 elfldr service removed from OrionHEN — not bundled. */
+    etaHEN_log("BREW_UTIL_LAUNCH_ELFLDR: unsupported (no 9021 service)");
     reply(sender_app, true);
     break;
-  }
   case BREW_UTIL_DOWNLOAD_CHEATS: {
     json_t const *target_repo_property = json_getProperty(my_json, "repo");
     int repo = json_getInteger(target_repo_property);

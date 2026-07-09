@@ -50,24 +50,19 @@ along with this program; see the file COPYING. If not, see
 
 extern "C" {
 #include <ps5/kernel.h>
-pid_t elfldr_spawn(const char* cwd, int stdio, uint8_t* elf, const char* name);
+#include <elfldr_remote.h>
 }
 
 using namespace std;
 extern struct daemon_settings global_conf;
 // Global variables
-std::string dump_path;
-std::string dump_title;
-std::string dumping_tid;
-bool is_dumper_enabled = false;
-Dump_Option dump_opt = DUMP_ALL;
+
 atomic_bool cmd_srv_Running = false;
 atomic_bool rest_mode_action = false;
 extern atomic_bool sce_cmd_srv_Running;
 extern atomic_bool ipc_server_2_running;
 extern atomic_int ipc_2_ret;
 extern pthread_t klog_srv;
-extern pthread_t discordRpcServerThread;
 extern int shellui_pid_for_comp;
 extern int DISCORD_RPC_SERVER_PORT;
 
@@ -87,7 +82,7 @@ enum Commands : int {
   REMOUNT_FOLDER_CMD,
   ETAHEN_VER_CMD,
   PATCH_LNC_DEBUG_CMD,
-  ACTIVATE_DUMPER_CMD,
+
   TEST_CMD,
   SYMLINK_CMD,
 };
@@ -152,8 +147,7 @@ pid_t find_pid(const char *name);
 bool Open_Utility_Elf(const char *path, uint8_t **buffer);
 void *fifo_and_dumper_thread(void *args) noexcept;
 void *runDirectPKGInstaller(void *args);
-void *startDiscordRpcServerThread(void *arg);
-void Start_Dumper(const char *source, const char *destination, const char *title_id, Dump_Option opt);
+
 void activate_shellui_patch(void);
 
 // External function declarations
@@ -162,8 +156,7 @@ extern "C" {
   void sceNetCtlTerm(void);
   int sceKernelLoadStartModule(const char *name, size_t argc, const void *argv, uint32_t flags, void *unknown, int *result);
   int sceKernelDlsym(uint32_t lib, const char *name, void **fun);
-  int PS5Debug_connect();
-  int unmount(const char *dir, int flags);
+    int unmount(const char *dir, int flags);
   int sceLncUtilLaunchApp(const char *tid, const char *argv[], LncAppParam *param);
   int sceSysUtilSendSystemNotificationWithText(int messageType, const char *message);
   int sceNotificationSendById(int userid, bool logged_in, const char *useCaseId, const char *message);
@@ -330,7 +323,7 @@ void notify(bool show_watermark, const char *text, ...) {
   if (show_watermark)
     snprintf(req.message, sizeof(req.message), "[etaHEN] %s", buff);
   else
-    snprintf(req.message, sizeof(req.message), "[Itemzflow] %s", buff);
+    snprintf(req.message, sizeof(req.message), "[OrionHEN] %s", buff);
 
   req.type = 0;
   req.unk3 = 0;
@@ -377,9 +370,7 @@ bool Get_Running_App_TID(std::string &title_id, int &BigAppid) {
 bool is_whitelisted_app(const std::string &tid) {
   // Static set of exactly matched title IDs (only initialized once)
   static const std::unordered_set<std::string> whitelist = {
-      "ITEM00001",
-      "NPXS39041", 
-      "DUMP00000",
+      "NPXS39041",
       "PKGI13337",
       "PKGI12345",
       "TOOL00001",
@@ -567,37 +558,30 @@ void *fifo_and_dumper_thread(void *args) noexcept {
   bool fifo_found = false;
 
 #define MAX_RETIRES 5
-  uint8_t* util_elf = nullptr;
 
   while (true) {
       std::string sandbox_dir;
       // restart the util services daemon if it crashes or exits
-      if (find_pid("etaHEN Utility") < 0 && retries < MAX_RETIRES) {
-          if (retries == 0 || !util_elf) {
-              notify(true, "etaHEN Utility is not running, restarting...");
-              if (!Open_Utility_Elf("/data/etaHEN/daemons/util.elf", &util_elf)) {
-                  if (++retries >= MAX_RETIRES)
-                      notify(true, "Failed to open etaHEN Utility, please resend the payload or restart the console");
-                  continue;
-              }
+      if (find_pid("util.elf") < 0 && find_pid("etaHEN Utility") < 0 &&
+          retries < MAX_RETIRES) {
+          if (retries == 0) {
+              notify(true, "etaHEN Utility is not running, restarting via 9021...");
           }
 
           if (++retries >= MAX_RETIRES) {
-              notify(true, "etaHEN Utility services failed to restart, please resend the payload or restart the console");
-              free(util_elf);
+              notify(true, "etaHEN Utility services failed to restart — check elfldr :9021 and /data/etaHEN/daemons/util.elf");
               continue;
           }
 
-          if (elfldr_spawn("/", STDOUT_FILENO, util_elf, "etaHEN Utility Daemon") >= 0) {
-              etaHEN_log("  Launched!");
+          bool ok = elfldr_remote_send_file_uri("/data/etaHEN/daemons/util.elf");
+          if (ok) {
+              sleep(2);
+              etaHEN_log("  Launched util via 9021!");
               notify(true, "etaHEN Utility services successfully restarted");
               retries = 0;
+          } else {
+              etaHEN_log("failed to launch util via 9021 (need elfldr + util.elf), retry: %d", retries);
           }
-          else {
-              etaHEN_log("failed to launch utility daemon, retry: %d", retries);
-          }
-
-          free(util_elf);
       }
 
     pthread_mutex_lock(&jb_lock);
@@ -620,45 +604,6 @@ void *fifo_and_dumper_thread(void *args) noexcept {
           cmd_enable_fps(bappid);
     }
 
-    if (is_dumper_enabled) {
-      if (strstr(tid.c_str(), "ITEM00001") != 0) {
-        pthread_mutex_unlock(&jb_lock);
-        continue;
-      }
-      
-      sandbox_dir = "/mnt/sandbox/pfsmnt/" + tid + "-app0/";
-      while (!if_exists(sandbox_dir.c_str())) {
-        puts("waiting for Game filesystem ...");
-        sleep(1);
-      }
-
-      etaHEN_log("Game filesystem mounted @ %s", sandbox_dir.c_str());
-
-      int id = 0;
-      uint32_t res = sceUserServiceGetForegroundUser(&id);
-      if (res != 0) {
-        printf("sceUserServiceGetForegroundUser failed: 0x%x\n", res);
-        pthread_mutex_unlock(&jb_lock);
-        continue;
-      }
-      etaHEN_log("[LA] user id %u", id);
-
-      // the thread will clean this up
-      Flag flag = Flag_None;
-      LncAppParam param{sizeof(LncAppParam), id, 0, 0, flag};
-      char buffer[255];
-      snprintf(buffer, sizeof(buffer), "%d", dump_opt);
-      const char *argv[5] = {dump_title.c_str(), dump_path.c_str(), tid.c_str(), &buffer[0], nullptr};
-
-      dumping_tid = tid;
-      // LAUNCH THE DUMP UTIL WITH ARGS FROM ITEMZFLOW
-      int err = sceLncUtilLaunchApp("DUMP00000", argv, &param);
-      if (0 < err) {
-        etaHEN_log("sceLncUtilLaunchApp returned 0x%x", (uint32_t)err);
-      }
-      is_dumper_enabled = false;
-    }
-    
     if (!is_whitelisted_app(tid)) {
       pthread_mutex_unlock(&jb_lock);
       continue;

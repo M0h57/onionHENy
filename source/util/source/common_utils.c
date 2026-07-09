@@ -18,10 +18,12 @@ along with this program; see the file COPYING. If not, see
 #include <signal.h>
 #include <unistd.h>
 #include <sys/signal.h>
+#include <sys/stat.h>
 #include <freebsd-helper.h>
 #include <libgen.h>
 #include <ps5/klog.h>
 #include "pt.h"
+#include <elfldr_remote.h>
 
 typedef struct app_info {
   uint32_t app_id;
@@ -39,30 +41,12 @@ int elfldr_set_procname(pid_t pid, const char* name);
 
 int sceKernelGetProcessName(int pid, char *name);
 int sceKernelGetAppInfo(int pid, app_info_t *title);
-pid_t elfldr_spawn(const char* cwd, int stdio, uint8_t* elf, const char* name);
-
 atomic_bool not_connected = false;
 
 #define SCE_NET_CTL_ERROR_NOT_CONNECTED 0x80412108
 #define SCE_NET_CTL_ERROR_NOT_AVAIL 0x80412109
- 
- __asm__(
 
-  
-	".global elfldr_start\n"
-	".type   elfldr_start, @object\n"
-	".align  16\n"
-	"elfldr_start:\n"
-    	".incbin \"assets/elfldr.elf\"\n"
-	"elfldr_end:\n"
-	    ".global elfldr_size\n"
-	    ".type   elfldr_size, @object\n"
-	    ".align  4\n"
-	"elfldr_size:\n"
-    	".int    elfldr_end - elfldr_start\n"
-);
-
-
+/* OrionHEN: no local spawn — plugins launch via external elfldr :9021. */
 
  static int
      sys_ptrace(int request, pid_t pid, caddr_t addr, int data) {
@@ -184,7 +168,7 @@ void notify(bool show_watermark, const char *text, ...)
 	if (show_watermark)
 		snprintf(req.message, sizeof(req.message), "[etaHEN] %s", buff);
 	else
-		snprintf(req.message, sizeof(req.message), "[Itemzflow] %s", buff);
+		snprintf(req.message, sizeof(req.message), "[OrionHEN] %s", buff);
 
     req.type = 0;
     req.unk3 = 0;
@@ -525,13 +509,25 @@ bool load_plugin(const char *path)
       unlink(pbuf);
     }
 
-    etaHEN_log("loading elf %s", filename);
-    pid = elfldr_spawn("/", STDOUT_FILENO, buf, header->titleID);
-
-    if (pid >= 0)
-      etaHEN_log("  Launched!");
-    else
-      etaHEN_log("  Already Running!");
+    etaHEN_log("loading elf via 9021 %s", filename);
+    {
+      char epath[256];
+      snprintf(epath, sizeof(epath), "/data/etaHEN/plugins/%s.elf", header->titleID);
+      if (elfldr_remote_write_and_launch(epath, buf, (size_t)st.st_size)) {
+        char nbuf[64];
+        sleep(2);
+        snprintf(nbuf, sizeof(nbuf), "%s.elf", header->titleID);
+        pid = find_pid(nbuf);
+        if (pid < 0)
+          pid = find_pid(header->titleID);
+        if (pid < 0)
+          pid = 1;
+        etaHEN_log("  Launched via 9021!");
+      } else {
+        etaHEN_log("  Failed 9021 launch");
+        pid = -1;
+      }
+    }
 
     free(buf);
 
@@ -606,13 +602,27 @@ bool load_plugin(const char *path)
   uint8_t *elf = get_elf_header_address(buf);
   make_plugin_app(header->titleID, elf, st.st_size - sizeof(CustomPluginHeader));
 
-  etaHEN_log("loading plugin %s", path);
-  pid = elfldr_spawn("/", STDOUT_FILENO, elf, header->titleID);
+  etaHEN_log("loading plugin via 9021 %s", path);
+  {
+    char epath[256];
+    size_t elf_sz = (size_t)st.st_size - sizeof(CustomPluginHeader);
+    snprintf(epath, sizeof(epath), "/data/etaHEN/plugins/%s.elf", header->titleID);
+    if (elfldr_remote_write_and_launch(epath, elf, elf_sz)) {
+      char nbuf[64];
+      sleep(2);
+      snprintf(nbuf, sizeof(nbuf), "%s.elf", header->titleID);
+      pid = find_pid(nbuf);
+      if (pid < 0)
+        pid = find_pid(header->titleID);
+      if (pid < 0)
+        pid = 1;
+      etaHEN_log("  Launched via 9021!");
+    } else {
+      etaHEN_log("  Failed 9021 launch");
+      pid = -1;
+    }
+  }
   bool success = (pid >= 0);
-  if (success)
-    etaHEN_log("  Launched!");
-  else
-    etaHEN_log("  Failed to launch plugin");
 
   f = open(pbuf, O_WRONLY | O_CREAT | O_TRUNC, 0666);
   if (f >= 0)

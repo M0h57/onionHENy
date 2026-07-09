@@ -18,49 +18,24 @@ along with this program; see the file COPYING. If not, see
 
 #include <unistd.h>
 
-
 /**
- * Escape jail and raise privileges.
- **/
+ * libelfldr — in-process ELF spawn for daemons/util (OrionHEN).
+ *
+ * Path: rfork SceSpZeroConf + int3 @ main (aligned with third_party/elfldr).
+ * API: (cwd, stdio, elf, name); cwd unused. Not the 9021 socksrv binary.
+ *
+ * IMPORTANT: bootstrapper must NOT use this rfork path — it crashes shell
+ * services when called from a payload. Bootstrapper keeps its own
+ * sceKernelSpawn-based elfldr.c under bootstrapper/source/.
+ */
+
+pid_t elfldr_find_pid(const char* name);
+
+pid_t
+elfldr_spawn(const char* cwd, int stdio, uint8_t* elf, const char* name);
+int   elfldr_exec(pid_t pid, int stdio, uint8_t* elf);
+
+int elfldr_read(int fd, uint8_t** elf, size_t* elf_size);
+int elfldr_sanity_check(uint8_t *elf, size_t elf_size);
+
 int elfldr_raise_privileges(pid_t pid);
-
-
-/**
- * Execute an ELF inside a new process.
- **/
-pid_t elfldr_spawn(const char* cwd, int stdio, uint8_t* elf, const char* name);
-
-/**
- * Execute an ELF inside the process with the given pid.
- **/
-int elfldr_exec(pid_t pid, uint8_t* elf);
-
-
-/**
- * Set environmental variables in the given process.
- **/
-int elfldr_set_environ(pid_t pid, char** envp);
-
-
-/**
- * Set the name of a process.
- **/
-int elfldr_set_procname(pid_t pid, const char* name);
-
-
-/**
- * Set stdout and stderr file descriptors of the given process.
- **/
-int elfldr_set_stdio(pid_t pid, int stdio);
-
-
-/**
- * Set the current working directory.
- **/
-int elfldr_set_cwd(pid_t pid, const char* cwd);
-
-
-/**
- * Set the heap size for libc.
- **/
-int elfldr_set_heap_size(pid_t pid, ssize_t size);

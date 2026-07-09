@@ -80,7 +80,7 @@ extern "C" {
     uint64_t sceKernelGetProcessTime();
     int sceSystemServiceGetAppId(const char *title_id);
     int scePadSetProcessPrivilege(int priv);
-    pid_t elfldr_spawn(const char* cwd, int stdio, uint8_t* elf, const char* name);
+
     int sceUserServiceGetForegroundUser(int *userId);
     int sceLncUtilLaunchApp(const char *tid, const char *argv[], LncAppParam *param);
     uint32_t _sceApplicationGetAppId(int pid, uint32_t *appId);
@@ -104,9 +104,6 @@ extern "C" {
     // PayloadAPI definitions
     #include <ps5/payload.h>
     
-    // External data
-    extern uint8_t ps5debug_start[];
-    extern const unsigned int ps5debug_size;
     int sceNotificationSend(int userId, bool isLogged, const char* payload);
 
 }
@@ -329,11 +326,11 @@ int main() {
     kernel_base = args->kdata_base_addr;
 
     etaHEN_log("=========== starting etaHEN (0x%X) ... ===========", fw_ver);
-    bool has_hv_bypass = (sceKernelMprotect(&buz[0], 100, 0x7) == 0);
+    (void)sceKernelMprotect(&buz[0], 100, 0x7); // probe mprotect / kstuff state
     bool is_lite = if_exists("/system_tmp/lite_mode");
     bool toolbox_only = (fw_ver >= 0x10000);
-    bool no_ps5debug = (fw_ver >= 0x800);
     is_800 = (fw_ver >= 0x800);
+    (void)is_lite;
 
 
     LoadSettings();
@@ -360,13 +357,7 @@ int main() {
     }
     else if (!global_conf.toolbox_auto_start) {
         notify(true, "the etaHEN Toolbox auto start is disabled in the config.ini\n\n"
-                    "If you want to re-enable the toolbox go to ItemzFlow's settings menu");
-    }
-
-    // Load PS5Debug if needed
-    if (global_conf.PS5Debug && !no_ps5debug && !has_hv_bypass && !is_lite) {
-        if (!elfldr_spawn("/", STDOUT_FILENO, ps5debug_start, "ps5debug"))
-            notify(true, "Failed to load PS5Debug");
+                    "Re-enable toolbox_auto_start in /data/etaHEN/config.ini or open Debug Settings");
     }
 
      const char json_payload[] =
@@ -442,10 +433,6 @@ int main() {
     }
     case SETTINGS: {
         URI = "pssettings:play?mode=settings";
-        break;
-    }
-    case ITEMZFLOW: {
-        launchApp("ITEM00001");
         break;
     }
     default:

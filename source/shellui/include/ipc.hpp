@@ -239,10 +239,10 @@ public:
     // Get message back from daemon
     error = (IPC_Ret)IPCReceiveData(msg, ipc_msg1);
     if (error == IPC_Ret::NO_ERROR) {
-      shellui_log("[ItemzDaemon] Daemon returned NO ERROR");
+      shellui_log("[Daemon] Daemon returned NO ERROR");
       return true;
     } else {
-      shellui_log("[ItemzDaemon] Daemon returned an ERROR");
+      shellui_log("[Daemon] Daemon returned an ERROR");
       // notify("Daemon returned an ERROR");
       return false;
     }
@@ -458,28 +458,11 @@ public:
   }
 
   bool Launch_Elfldr() {
-    if (!util_daemon) {
-      shellui_log("This IPC command is NOT in the main daemon");
-      return false;
-    }
-    std::string ipc_msg;
-    if (!IPCSendCommand(BREW_UTIL_LAUNCH_ELFLDR, ipc_msg)) {
-      return false;
-    }
-    return true;
+    // OrionHEN no longer embeds / launches the 9021 elfldr service.
+    shellui_log("Launch_Elfldr: unsupported (9021 service removed)");
+    return false;
   }
 
-  bool Toggle_ps5debug() {
-    if (util_daemon) {
-      shellui_log("This IPC command is NOT in the util daemon");
-      return false;
-    }
-    std::string ipc_msg;
-    if (!IPCSendCommand(BREW_TOGGLE_PS5DEBUG, ipc_msg)) {
-      return false;
-    }
-    return true;
-  }
 
   bool Cheats_Action(Cheat_Actions act, int repo) {
     DaemonCommands cmd;
@@ -539,17 +522,6 @@ public:
 
     return true;
 }
-void Launch_Dumper() {
-    if (util_daemon) {
-        shellui_log("This IPC command is in the main daemon");
-        return;
-    }
-    std::string ipc_msg;
-    if (!IPCSendCommand(BREW_LAUNCH_DUMPER, ipc_msg)) {
-        shellui_log("Failed to launch dumper");
-    }
-  }
-
   static void generate_default_games_xml(std::string &xml_buffer,  bool game_shortcut_activated) {
   std::string list_id = game_shortcut_activated ? "id_debug_settings" : "id_ps5_backups";
 

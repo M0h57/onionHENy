@@ -233,6 +233,7 @@ elfldr_load(pid_t pid, uint8_t *elf) {
                          ROUND_PG(phdr[i].p_memsz),
                          PFLAGS(phdr[i].p_flags))) {
 	LOG_PERROR("kernel_mprotect");
+	error = 1;
       }
     } else {
       if(pt_mprotect(pid, ctx.base_addr + phdr[i].p_vaddr,
@@ -367,7 +368,8 @@ elfldr_prepare_exec(pid_t pid, uint8_t *elf) {
     return -1;
   }
 
-  r.r_rsp &= ~0xfl;
+  /* Do not force-align rsp here: stack is already aligned at the int3 break
+   * (upstream elfldr reverted this after it crashed SceRedisServer-based spawn). */
   pt_setlong(pid, r.r_rsp-8, r.r_rip);
   r.r_rsp -= 8;
   r.r_rip = entry;
@@ -375,7 +377,6 @@ elfldr_prepare_exec(pid_t pid, uint8_t *elf) {
 
   if(pt_setregs(pid, &r)) {
     LOG_PERROR("pt_setregs");
-    pt_detach(pid, SIGKILL);
     return -1;
   }
 
@@ -568,9 +569,7 @@ sys_budget_set(long budget) {
 
 
 static int
-elfldr_rfork_entry(void* progname) {
-  char* const argv[] = {(char*)progname, 0};
-
+elfldr_rfork_entry(void* argv) {
   if(sys_budget_set(0)) {
     klog_perror("sys_budget_set");
     return -1;
@@ -593,7 +592,7 @@ elfldr_rfork_entry(void* progname) {
     return -1;
   }
 
-  execve(SceSpZeroConf, argv, 0);
+  execve(SceSpZeroConf, (char* const*)argv, 0);
   klog_perror("execve");
   return -1;
 }
@@ -722,10 +721,14 @@ elfldr_read(int fd, uint8_t** elf, size_t* elf_size) {
 
 /**
  * Execute an ELF inside a new process.
+ *
+ * OrionHEN API keeps (cwd, stdio, elf, name) for existing callers.
+ * Internally matches upstream ps5-payload-dev/elfldr rfork + argv path.
+ * cwd is currently unused (child starts under SceSpZeroConf).
  **/
 pid_t
 elfldr_spawn(const char* cwd, int stdio, uint8_t* elf, const char* name) {
-
+  char* const argv[] = {(char*)(name && name[0] ? name : "payload.elf"), NULL};
   uint8_t int3instr = 0xcc;
   struct kevent evt;
   intptr_t brkpoint;
@@ -733,6 +736,8 @@ elfldr_spawn(const char* cwd, int stdio, uint8_t* elf, const char* name) {
   void *stack;
   pid_t pid;
   int kq;
+
+  (void)cwd;
 
   if((kq=kqueue()) < 0) {
     LOG_PERROR("kqueue");
@@ -746,7 +751,7 @@ elfldr_spawn(const char* cwd, int stdio, uint8_t* elf, const char* name) {
   }
 
   if((pid=rfork_thread(RFPROC | RFCFDG | RFMEM, stack+PAGE_SIZE-8,
-		       elfldr_rfork_entry, (void*)name)) < 0) {
+		       elfldr_rfork_entry, (void*)argv)) < 0) {
     LOG_PERROR("rfork_thread");
     free(stack);
     close(kq);
@@ -826,7 +831,7 @@ elfldr_spawn(const char* cwd, int stdio, uint8_t* elf, const char* name) {
   }
 
   // Execute the ELF
-  elfldr_set_procname(pid, name);
+  elfldr_set_procname(pid, argv[0]);
   if(elfldr_exec(pid, stdio, elf)) {
     kill(pid, SIGKILL);
     return -1;

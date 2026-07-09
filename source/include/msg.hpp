@@ -23,7 +23,6 @@ enum DaemonCommands : int {
   BREW_TEST_CONNECTION = 0x9000000,
   BREW_RETURN_VALUE = 0x9000002,
   BREW_REMOUNT_FOLDER,
-  BREW_ACTIVATE_DUMPER,
   BREW_STAT_CMD,
   BREW_CALC_DIR_SIZE,
   BREW_COPY_FILE,
@@ -36,8 +35,10 @@ enum DaemonCommands : int {
   BREW_DECRYPT_DIR,
   BREW_LAST_RET,
   BREW_TESTKIT_CHECK,
-  BREW_ENABLE_TOOLBOX,   
+  BREW_ENABLE_TOOLBOX,
   BREW_CHMOD_DIR,
+  // BREW_LAUNCH_DUMPER removed (no embedded ps5-app-dumper)
+  BREW_ADJUST_FAN_SPEED,
 
   BREW_UTIL_TEST_CONNECTION = 0x8000000,
   BREW_UTIL_RETURN_VALUE = 0x8000002,
@@ -54,13 +55,15 @@ enum DaemonCommands : int {
   BREW_UTIL_RELOAD_CHEATS,
   BREW_UTIL_DOWNLOAD_KSTUFF,
   BREW_UTIL_TOGGLE_LEGACY_CMD_SERVER,
+  // Util-daemon commands used by shellui webMAN games menu
+  BREW_UTIL_GET_GAMES_LIST,
+  BREW_UTIL_LAUNCH_GAME_BY_BUTTON_ID,
 
-  // Special command to launch Johns elfldr for lite mode
-  BREW_UTIL_LAUNCH_ELFLDR = 0xE1F1D8, // not used if already running
+  // Legacy: 9021 elfldr auto-launch removed (command kept for IPC compatibility)
+  BREW_UTIL_LAUNCH_ELFLDR = 0xE1F1D8,
   BREW_RELOAD_SETTINGS = 0xC0FFEE,
 
-  //Special Main daemon command for loading PS5Debug
-  BREW_TOGGLE_PS5DEBUG = 0xDE8E6,
+  // BREW_TOGGLE_PS5DEBUG removed (ps5debug no longer embedded)
 
   //KILL MAIN DAEMOM
   BREW_KILL_DAEMON = 0xDEAD0001,
