@@ -138,9 +138,6 @@ void RemoveGameWidget(RemoveWidget widget) {
                         "id_fps_label", "id_fps_value", 
                         "id_ip_label", "id_ip_value" });
 		break;
-    case REMOVE_KSTUFF_DISABLED:
-		removeWidgets({ "id_kstuff_disabled_label" });
-		break;
     }
 }
 
@@ -207,11 +204,6 @@ void CreateGameWidget(CreateWidget widget) {
             { "id_ip_value", global_conf.overlay_ip_x + 70.0f, global_conf.overlay_ip_y, "---.---.---.---", 0, 1.0f, 1.0f, 1.0f, 1.0f }     // White
 		};
         break;
-      case CREATE_KSTUFF_DISABLED:
-          configs = {
-             {"id_kstuff_disabled_label", 850.0f, 20.0f, "KStuff is Disabled via Shortcut", 1, 1.0f, 0.0f, 0.0f, 1.0f} // Red + Bold
-          };
-		break;
 }
 
 
@@ -353,195 +345,6 @@ void CallDecrypt(unsigned char* bundleData, int bundleOffset, int bundleSize, in
 
 
 
-void pause_resume_kstuff(KstuffPauseStatus opt, bool notify_user)
-{
-  intptr_t sysentvec = 0;
-  intptr_t sysentvec_ps4 = 0;
-  bool success = false;
-  switch(kernel_get_fw_version() & 0xffff0000) {
-  case 0x1000000:
-  case 0x1010000:
-  case 0x1020000:
-  case 0x1050000:
-  case 0x1100000:
-  case 0x1110000:
-  case 0x1120000:
-  case 0x1130000:
-  case 0x1140000:
-  case 0x2000000:
-  case 0x2200000:
-  case 0x2250000:
-  case 0x2260000:
-  case 0x2300000:
-  case 0x2500000:
-  case 0x2700000:
-  if(notify_user)
-    notify("1.xx-2.xx doesnt use kstuff, aborting...");
-  return;       
-  case 0x3000000:
-  case 0x3100000:
-  case 0x3200000:
-  case 0x3210000:
-    sysentvec     = KERNEL_ADDRESS_DATA_BASE + 0xca0cd8;
-    sysentvec_ps4 = KERNEL_ADDRESS_DATA_BASE + 0xca0e50;
-    success = true;
-    break;
- 
-  case 0x4000000:
-  case 0x4020000:
-  case 0x4030000:
-  case 0x4500000:
-  case 0x4510000:
-    sysentvec     = KERNEL_ADDRESS_DATA_BASE + 0xd11bb8;
-    sysentvec_ps4 = KERNEL_ADDRESS_DATA_BASE + 0xd11d30;
-    success = true;
-    break;
- 
-  case 0x5000000:
-  case 0x5020000:
-  case 0x5100000:
-  case 0x5500000:
-    sysentvec     = KERNEL_ADDRESS_DATA_BASE + 0xe00be8;
-    sysentvec_ps4 = KERNEL_ADDRESS_DATA_BASE + 0xe00d60;
-    success = true;
-    break;
- 
-  case 0x6000000:
-  case 0x6020000:
-  case 0x6500000:
-    sysentvec     = KERNEL_ADDRESS_DATA_BASE + 0xe210a8;
-    sysentvec_ps4 = KERNEL_ADDRESS_DATA_BASE + 0xe21220;
-    success = true;
-    break;
-
-  case 0x7000000:
-  case 0x7010000:
-     sysentvec     = KERNEL_ADDRESS_DATA_BASE + 0xe21ab8;
-     sysentvec_ps4 = KERNEL_ADDRESS_DATA_BASE + 0xe21c30;
-     success = true;
-     break;
-  case 0x7200000:
-  case 0x7400000:
-  case 0x7600000:
-  case 0x7610000:
-     sysentvec     = KERNEL_ADDRESS_DATA_BASE + 0xe21b78;
-     sysentvec_ps4 = KERNEL_ADDRESS_DATA_BASE + 0xe21cf0;
-     success = true;
-     break;
-
-  case 0x8000000:
-  case 0x8200000:
-  case 0x8400000:
-  case 0x8600000:
-    sysentvec     = KERNEL_ADDRESS_DATA_BASE + 0xe21ca8;
-    sysentvec_ps4 = KERNEL_ADDRESS_DATA_BASE + 0xe21e20;
-    success = true;
-    break;
-
-  case 0x9000000:
-  case 0x9050000:
-  case 0x9200000:
-  case 0x9400000:
-  case 0x9600000:
-      sysentvec = KERNEL_ADDRESS_DATA_BASE + 0xdba648;
-      sysentvec_ps4 = KERNEL_ADDRESS_DATA_BASE + 0xdba7c0;
-    success = true;
-    break;
-
-  case 0x10000000:
-  case 0x10010000:
-  case 0x10200000:
-  case 0x10400000:
-  case 0x10600000:
-      sysentvec = KERNEL_ADDRESS_DATA_BASE + 0xdba6d8;
-      sysentvec_ps4 = KERNEL_ADDRESS_DATA_BASE + 0xdba850;
-    success = true;
-    break;
- 
-  default:
-    notify("Unsupported firmware");
-  }
-
-  if(!success){
-      notify("Failed to get sysentvec address, aborting...");
-      return;
-  }
-
-  global_conf.kstuff_pause_opt = opt;
-
-  if(opt == NOT_PAUSED){
-    bool ps4_unpaused = false;
-    bool ps5_unpaused = false;
-    if(kernel_getshort(sysentvec_ps4 + 14) == 0xffff) {
-        kernel_setshort(sysentvec_ps4 + 14, 0xdeb7);
-        ps4_unpaused = true;
-    }
-    if(kernel_getshort(sysentvec + 14) == 0xffff) {
-        kernel_setshort(sysentvec + 14, 0xdeb7);
-        ps5_unpaused = true;
-    }
-
-    if(notify_user){
-        if (ps5_unpaused && ps4_unpaused) {
-            if (global_conf.overlay_kstuff) {
-                RemoveGameWidget(REMOVE_KSTUFF_DISABLED);
-                global_conf.overlay_kstuff_active = false;
-            }
-            else {
-                notify("[Kstuff] both sysentvecs unpaused");
-            }
-        }
-        else if(ps5_unpaused)
-           notify("[Kstuff] PS5 sysentvec unpaused");
-        else if(ps4_unpaused)
-           notify("[Kstuff] PS4 sysentvec unpaused");
-    } 
-  }
-  else if (opt == PS5_ONLY) // pause ps5 only
-  {
-    if(kernel_getshort(sysentvec_ps4 + 14) != 0xffff) {
-        kernel_setshort(sysentvec_ps4 + 14, 0xffff);
-      
-        if(notify_user)
-           notify("[Kstuff] PS4 sysentvec paused");
-      } 
-  }
-  else if (opt == PS4_ONLY) // pause ps4 only
-  {
-    if(kernel_getshort(sysentvec + 14) != 0xffff) {
-        kernel_setshort(sysentvec + 14, 0xffff);
-
-        if(notify_user)
-           notify("[Kstuff] PS5 sysentvec paused");
-      } 
-  }
-  else if (opt == BOTH_PAUSED) // pause both
-  {
-    kernel_setshort(sysentvec + 14, 0xffff);
-    kernel_setshort(sysentvec_ps4 + 14, 0xffff);
-
-    if (notify_user) {
-        if (global_conf.overlay_kstuff) {
-            CreateGameWidget(CREATE_KSTUFF_DISABLED);
-            global_conf.overlay_kstuff_active = true;
-        }
-		else
-            notify("[Kstuff] both sysentvec paused");
-    } 
-      
-  }
-
-}
-
-void* kstuff_pause_thread(void* arg){
-    sleep(2);
-    sleep(global_conf.pause_kstuff_on_open_secs);
-
-    if(!if_exists("/user/data/etaHEN/no_kstuff") && !if_exists("/usb0/etaHEN/no_kstuff")){
-        pause_resume_kstuff(BOTH_PAUSED, true);
-    }
-    return nullptr;
-}
 
 extern "C" int sceKernelGetSocSensorTemperature(int numb, int *temp);
 
@@ -901,8 +704,6 @@ bool read_and_send_file(const std::string& filePath) {
     return true;
 }
 void* launch_thr(void*) {
-    pause_resume_kstuff(NOT_PAUSED, false);
-
     if(!read_and_send_file("/user/data/etaHEN/etaHEN.bin")){
         notify("Failed to send etaHEN payload!, failed to exit lite mode");
         return nullptr;
@@ -1067,7 +868,6 @@ int OnPress_Hook(MonoObject* Instance, MonoObject* element, MonoObject* e)
     int& kit_panel = global_conf.kit_panel_info;
     uint64_t& delay_secs = global_conf.rest_delay_seconds;
     bool& DPI_v2 = global_conf.DPI_v2;
-    int& kstuff_pause_opt = global_conf.kstuff_pause_opt;
     bool& dis_tids = global_conf.display_tids;
     cheats_repo_source& selected_cheats_repo = global_conf.selected_cheats_repo;
 
@@ -1202,16 +1002,6 @@ int OnPress_Hook(MonoObject* Instance, MonoObject* element, MonoObject* e)
 
         global_conf.overlay_ip = !global_conf.overlay_ip;
 	}
-    else if (id == "id_overlay_kstuff") {
-        if (atoi(value.c_str()) == global_conf.overlay_kstuff) {
-            return oOnPress(Instance, element, e);
-        }
-        global_conf.overlay_kstuff = !global_conf.overlay_kstuff;
-        if(!global_conf.overlay_kstuff && global_conf.overlay_kstuff_active){
-            RemoveGameWidget(REMOVE_KSTUFF_DISABLED);
-            global_conf.overlay_kstuff_active = false;
-		}
-    }
     else if (id == "id_all_cpu_usage") {
         if (global_conf.all_cpu_usage == atoi(value.c_str())) {
             return oOnPress(Instance, element, e);
@@ -1303,15 +1093,6 @@ int OnPress_Hook(MonoObject* Instance, MonoObject* element, MonoObject* e)
             RemoveGameWidget(REMOVE_IP_OVERLAY);
             CreateGameWidget(CREATE_IP_OVERLAY);
 		}
-    }
-    else if (id == "id_enable_kstuff_on_close"){
-        global_conf.enable_kstuff_on_close = atoi(value.c_str());
-    }
-    else if (id == "id_pause_kstuff_on_open"){
-        global_conf.pause_kstuff_on_open = atoi(value.c_str());
-    }
-    else if (id == "id_pause_kstuff_on_open_secs") {
-        global_conf.pause_kstuff_on_open_secs = atol(value.c_str());
     }
     else if (id == "id_kstuff_autoload") {
        // if(atoi(value.c_str()) == if_exists("/user/data/etaHEN/no_kstuff")) {
@@ -1441,10 +1222,7 @@ int OnPress_Hook(MonoObject* Instance, MonoObject* element, MonoObject* e)
         }
     }
     else if (is_game) {
-        if(IPC_Client::getInstance(true).Launch_Game_By_ID(id) && global_conf.pause_kstuff_on_open){
-            pthread_t thread;
-            pthread_create(&thread, nullptr, kstuff_pause_thread, nullptr);
-        }
+        IPC_Client::getInstance(true).Launch_Game_By_ID(id);
     }
     else if (id.rfind("id_auto_plugin") != std::string::npos) {
 		if (!auto_list.empty()) {
@@ -1742,15 +1520,6 @@ int OnPress_Hook(MonoObject* Instance, MonoObject* element, MonoObject* e)
       }
       disable_for_rest_mode = !disable_for_rest_mode; //global_conf.disable_toolbox_auto_start_for_rest_mode 
     }
-    else if (id == "id_pause_kstuff"){
-        if (atoi(value.c_str()) == kstuff_pause_opt) {
-            shellui_log("kstuff_pause_opt already %s", kstuff_pause_opt ? "Enabled" : "Disabled");
-            return oOnPress(Instance, element, e);
-        }
-        kstuff_pause_opt = atoi(value.c_str());
-        pause_resume_kstuff((KstuffPauseStatus)kstuff_pause_opt, true);
-            
-    }
     else if (id == "id_cheats_shortcut") {
       if (atoi(value.c_str()) == global_conf.cheats_shortcut_opt) {
           shellui_log("Cheats_shortcut already %i", global_conf.cheats_shortcut_opt);
@@ -1759,12 +1528,7 @@ int OnPress_Hook(MonoObject* Instance, MonoObject* element, MonoObject* e)
       Cheats_Shortcut opt = (Cheats_Shortcut)atoi(value.c_str());
   
       if(opt == CHEATS_SINGLE_SHARE ){
-         if(global_conf.kstuff_shortcut_opt == KSTUFF_SINGLE_SHARE){
-              shellui_log("Kstuff and Cheats shortcuts cannot be the same, current selection will NOT be saved");
-              notify("Kstuff and Cheats shortcuts cannot be the same, current selection will NOT be saved");
-              return oOnPress(Instance, element, e);
-          }
-          else if(global_conf.toolbox_shortcut_opt == TOOLBOX_SINGLE_SHARE){
+         if(global_conf.toolbox_shortcut_opt == TOOLBOX_SINGLE_SHARE){
               shellui_log("Toolbox and Cheats shortcuts cannot be the same, current selection will NOT be saved");
               notify("Toolbox and Cheats shortcuts cannot be the same, current selection will NOT be saved");
               return oOnPress(Instance, element, e);
@@ -1776,12 +1540,7 @@ int OnPress_Hook(MonoObject* Instance, MonoObject* element, MonoObject* e)
           }
       }
       else if(opt == CHEATS_LONG_SHARE ){
-         if(global_conf.kstuff_shortcut_opt == KSTUFF_LONG_SHARE){
-              shellui_log("Kstuff and Cheats long shortcuts cannot be the same, current selection will NOT be saved");
-              notify("Kstuff and Cheats long shortcuts cannot be the same, current selection will NOT be saved");
-              return oOnPress(Instance, element, e);
-          }
-          else if(global_conf.toolbox_shortcut_opt == TOOLBOX_LONG_SHARE){
+         if(global_conf.toolbox_shortcut_opt == TOOLBOX_LONG_SHARE){
               shellui_log("Toolbox and Cheats long shortcuts cannot be the same, current selection will NOT be saved");
               notify("Toolbox and Cheats long shortcuts cannot be the same, current selection will NOT be saved");
               return oOnPress(Instance, element, e);
@@ -1793,49 +1552,6 @@ int OnPress_Hook(MonoObject* Instance, MonoObject* element, MonoObject* e)
           }
       }
       global_conf.cheats_shortcut_opt = opt;
-  }
-  else if (id == "id_kstuff_shortcut") {
-      if (atoi(value.c_str()) == global_conf.kstuff_shortcut_opt) {
-          shellui_log("kstuff_shortcut_opt already %i", global_conf.kstuff_shortcut_opt);
-          return oOnPress(Instance, element, e);
-      }
-      Kstuff_Shortcut opt = (Kstuff_Shortcut)atoi(value.c_str());
-  
-      if(opt == KSTUFF_SINGLE_SHARE ){
-         if(global_conf.cheats_shortcut_opt == CHEATS_SINGLE_SHARE){
-              shellui_log("Cheats and Kstuff shortcuts cannot be the same, current selection will NOT be saved");
-              notify("Cheats and Kstuff shortcuts cannot be the same, current selection will NOT be saved");
-              return oOnPress(Instance, element, e);
-          }
-          else if(global_conf.toolbox_shortcut_opt == TOOLBOX_SINGLE_SHARE){
-              shellui_log("Toolbox and Kstuff shortcuts cannot be the same, current selection will NOT be saved");
-              notify("Toolbox and Kstuff shortcuts cannot be the same, current selection will NOT be saved");
-              return oOnPress(Instance, element, e);
-          }
-          else if(global_conf.games_shortcut_opt == GAMES_SINGLE_SHARE){
-              shellui_log("Games and Kstuff shortcuts cannot be the same, current selection will NOT be saved");
-              notify("Games and Kstuff shortcuts cannot be the same, current selection will NOT be saved");
-              return oOnPress(Instance, element, e);
-          }
-      }
-      else if(opt == KSTUFF_LONG_SHARE ){
-         if(global_conf.cheats_shortcut_opt == CHEATS_LONG_SHARE){
-              shellui_log("Cheats and Kstuff long shortcuts cannot be the same, current selection will NOT be saved");
-              notify("Cheats and Kstuff long shortcuts cannot be the same, current selection will NOT be saved");
-              return oOnPress(Instance, element, e);
-          }
-          else if(global_conf.toolbox_shortcut_opt == TOOLBOX_LONG_SHARE){
-              shellui_log("Toolbox and Kstuff long shortcuts cannot be the same, current selection will NOT be saved");
-              notify("Toolbox and Kstuff long shortcuts cannot be the same, current selection will NOT be saved");
-              return oOnPress(Instance, element, e);
-          }
-          else if(global_conf.games_shortcut_opt == GAMES_LONG_SHARE){
-              shellui_log("Games and Kstuff long shortcuts cannot be the same, current selection will NOT be saved");
-              notify("Games and Kstuff long shortcuts cannot be the same, current selection will NOT be saved");
-              return oOnPress(Instance, element, e);
-          }
-      }
-      global_conf.kstuff_shortcut_opt = opt;
   }
   else if (id == "id_toolbox_shortcut" ){
       if (atoi(value.c_str()) == global_conf.toolbox_shortcut_opt) {
@@ -1850,11 +1566,6 @@ int OnPress_Hook(MonoObject* Instance, MonoObject* element, MonoObject* e)
               notify("Cheats and Toolbox shortcuts cannot be the same, current selection will NOT be saved");
               return oOnPress(Instance, element, e);
           }
-          else if(global_conf.kstuff_shortcut_opt == KSTUFF_SINGLE_SHARE){
-              shellui_log("Kstuff and Toolbox shortcuts cannot be the same, current selection will NOT be saved");
-              notify("Kstuff and Toolbox shortcuts cannot be the same, current selection will NOT be saved");
-              return oOnPress(Instance, element, e);
-          }
           else if(global_conf.games_shortcut_opt == GAMES_SINGLE_SHARE){
               shellui_log("Games and Toolbox shortcuts cannot be the same, current selection will NOT be saved");
               notify("Games and Toolbox shortcuts cannot be the same, current selection will NOT be saved");
@@ -1865,11 +1576,6 @@ int OnPress_Hook(MonoObject* Instance, MonoObject* element, MonoObject* e)
          if(global_conf.cheats_shortcut_opt == CHEATS_LONG_SHARE){
               shellui_log("Cheats and Toolbox long shortcuts cannot be the same, current selection will NOT be saved");
               notify("Cheats and Toolbox long shortcuts cannot be the same, current selection will NOT be saved");
-              return oOnPress(Instance, element, e);
-          }
-          else if(global_conf.kstuff_shortcut_opt == KSTUFF_LONG_SHARE){
-              shellui_log("Kstuff and Toolbox long shortcuts cannot be the same, current selection will NOT be saved");
-              notify("Kstuff and Toolbox long shortcuts cannot be the same, current selection will NOT be saved");
               return oOnPress(Instance, element, e);
           }
           else if(global_conf.games_shortcut_opt == GAMES_LONG_SHARE){
@@ -1893,11 +1599,6 @@ int OnPress_Hook(MonoObject* Instance, MonoObject* element, MonoObject* e)
               notify("Cheats and Games shortcuts cannot be the same, current selection will NOT be saved");
               return oOnPress(Instance, element, e);
           }
-          else if(global_conf.kstuff_shortcut_opt == KSTUFF_SINGLE_SHARE){
-              shellui_log("Kstuff and Games shortcuts cannot be the same, current selection will NOT be saved");
-              notify("Kstuff and Games shortcuts cannot be the same, current selection will NOT be saved");
-              return oOnPress(Instance, element, e);
-          }
           else if(global_conf.toolbox_shortcut_opt == TOOLBOX_SINGLE_SHARE){
               shellui_log("Toolbox and Games shortcuts cannot be the same, current selection will NOT be saved");
               notify("Toolbox and Games shortcuts cannot be the same, current selection will NOT be saved");
@@ -1908,11 +1609,6 @@ int OnPress_Hook(MonoObject* Instance, MonoObject* element, MonoObject* e)
          if(global_conf.cheats_shortcut_opt == CHEATS_LONG_SHARE){
               shellui_log("Cheats and Games long shortcuts cannot be the same, current selection will NOT be saved");
               notify("Cheats and Games long shortcuts cannot be the same, current selection will NOT be saved");
-              return oOnPress(Instance, element, e);
-          }
-          else if(global_conf.kstuff_shortcut_opt == KSTUFF_LONG_SHARE){
-              shellui_log("Kstuff and Games long shortcuts cannot be the same, current selection will NOT be saved");
-              notify("Kstuff and Games long shortcuts cannot be the same, current selection will NOT be saved");
               return oOnPress(Instance, element, e);
           }
           else if(global_conf.toolbox_shortcut_opt == TOOLBOX_LONG_SHARE){
@@ -2209,7 +1905,6 @@ int OnPreCreate_Hook(MonoObject* Instance, MonoObject* element) {
     bool& Klog = global_conf.Klog;
     bool& DPI = global_conf.DPI;
     bool& DPI_v2 = global_conf.DPI_v2;
-    int & kstuff_pause_opt = global_conf.kstuff_pause_opt;
     MonoString* s_MonoText = nullptr;
 
     char tid[32] = { 0 };
@@ -2289,9 +1984,6 @@ int OnPreCreate_Hook(MonoObject* Instance, MonoObject* element) {
 	else if (id == "id_overlay_ip") {
         s_MonoText = mono_string_new(Root_Domain, global_conf.overlay_ip ? "1" : "0");
 	}
-    else if (id == "id_overlay_kstuff") {
-        s_MonoText = mono_string_new(Root_Domain, global_conf.overlay_kstuff ? "1" : "0");
-    }
     else if (id == "id_all_cpu_usage") {
 		s_MonoText = mono_string_new(Root_Domain, global_conf.all_cpu_usage ? "1" : "0");
     }
@@ -2303,15 +1995,6 @@ int OnPreCreate_Hook(MonoObject* Instance, MonoObject* element) {
     }
     else if (id == "id_kstuff_autoload") {
 		s_MonoText = mono_string_new(Root_Domain, !if_exists("/user/data/etaHEN/no_kstuff") ? "1" : "0");
-    }
-    else if (id == "id_enable_kstuff_on_close") {
-        s_MonoText = mono_string_new(Root_Domain, global_conf.enable_kstuff_on_close ? "1" : "0");
-    }
-    else if (id == "id_pause_kstuff_on_open"){
-        s_MonoText = mono_string_new(Root_Domain, global_conf.pause_kstuff_on_open ? "1" : "0");
-    }
-    else if (id == "id_pause_kstuff_on_open_secs"){
-        s_MonoText = mono_string_new(Root_Domain, std::to_string(global_conf.pause_kstuff_on_open_secs).c_str());
     }
     else if (id == "id_disp_titleids"){
         s_MonoText = mono_string_new(Root_Domain, global_conf.display_tids ? "1" : "0");
@@ -2370,9 +2053,6 @@ int OnPreCreate_Hook(MonoObject* Instance, MonoObject* element) {
     else if (id == "id_lite_mode") {
 	      s_MonoText = mono_string_new(Root_Domain, global_conf.lite_mode ? "1" : "0");
 	  } 
-    else if (id == "id_pause_kstuff") {
-        s_MonoText = mono_string_new(Root_Domain, std::to_string(kstuff_pause_opt).c_str());
-    }
     else if (id.rfind("id_cheat_") != std::string::npos) {
         if(is_current_game_open){
            ParseCheatID(id.c_str(), tid, &cheat_id);
@@ -2388,9 +2068,6 @@ int OnPreCreate_Hook(MonoObject* Instance, MonoObject* element) {
     }
     else if (id == "id_games_shortcut") {
         s_MonoText = mono_string_new(Root_Domain, std::to_string(global_conf.games_shortcut_opt).c_str());
-    }
-    else if (id == "id_kstuff_shortcut") {
-        s_MonoText = mono_string_new(Root_Domain, std::to_string(global_conf.kstuff_shortcut_opt).c_str());
     }
     else if (id == "id_toolbox_auto_start") {
         s_MonoText = mono_string_new(Root_Domain, global_conf.toolbox_auto_start ? "1" : "0");
@@ -2497,23 +2174,34 @@ bool handle_uri_boot_common(MonoString* uri, int opt, MonoString* titleIdForBoot
     return false; // No redirect needed
   }
   
+  static MonoString *rewrite_boot_uri_if_needed(MonoString *uri) {
+    if (!uri)
+      return uri;
+    std::string s = Mono_to_String(uri);
+    std::string r = rewrite_debug_settings_uri_to_legacy(s);
+    if (r == s)
+      return uri;
+    shellui_log("[DBG-REDIR] BootHelper: \"%s\" -> \"%s\"", s.c_str(), r.c_str());
+    return mono_string_new(Root_Domain, r.c_str());
+  }
+
   bool uri_boot_hook(MonoString* uri, int opt, MonoString* titleIdForBootAction) {
     if(handle_uri_boot_common(uri, opt, titleIdForBootAction)) {
         if(global_conf.lite_mode) {
             // In lite mode, we don't want to handle any shortcuts
             notify("Lite mode is enabled, shortcuts are disabled");
-            return boot_orig(uri, opt, titleIdForBootAction);
+            return boot_orig(rewrite_boot_uri_if_needed(uri), opt, titleIdForBootAction);
         }
 
         std::string uri_string = Mono_to_String(uri);
         if(uri_string == "etaHEN?Dump") {
           return boot_orig(mono_string_new(Root_Domain, "pshomeui:navigateToHome?bootCondition=psButton"),  opt, titleIdForBootAction);
         }
-      // Redirect to debug settings
-      return boot_orig(mono_string_new(Root_Domain, "pssettings:play?mode=settings&function=debug_settings"), opt, titleIdForBootAction);
+      // Redirect to Legacy debug settings (GMRS / toolbox XML)
+      return boot_orig(mono_string_new(Root_Domain, kDebugSettingsLegacyUriWithMode), opt, titleIdForBootAction);
     }
     
-    return boot_orig(uri, opt, titleIdForBootAction);
+    return boot_orig(rewrite_boot_uri_if_needed(uri), opt, titleIdForBootAction);
   }
   
   bool uri_boot_hook_2(MonoString* uri, int opt) {
@@ -2521,11 +2209,11 @@ bool handle_uri_boot_common(MonoString* uri, int opt, MonoString* titleIdForBoot
     shellui_log("uri_boot_hook_2: %s, opt: %i", Mono_to_String(uri).c_str(), opt);
   #endif
     if(handle_uri_boot_common(uri, opt, nullptr)) {
-      // Redirect to debug settings (no titleId parameter for older fw)
+      // Redirect to Legacy debug settings (no titleId parameter for older fw)
       if(global_conf.lite_mode) {
         // In lite mode, we don't want to handle any shortcuts
         notify("Lite mode is enabled, shortcuts are disabled");
-        return boot_orig_2(uri, opt);
+        return boot_orig_2(rewrite_boot_uri_if_needed(uri), opt);
       }
 
       std::string uri_string = Mono_to_String(uri);
@@ -2533,17 +2221,16 @@ bool handle_uri_boot_common(MonoString* uri, int opt, MonoString* titleIdForBoot
         return boot_orig_2(mono_string_new(Root_Domain, "pshomeui:navigateToHome?bootCondition=psButton"),  opt);
       }
 
-      return boot_orig_2(mono_string_new(Root_Domain, "pssettings:play?function=debug_settings"),  opt);
+      return boot_orig_2(mono_string_new(Root_Domain, kDebugSettingsLegacyUri),  opt);
     }
     
-    return boot_orig_2(uri, opt);
+    return boot_orig_2(rewrite_boot_uri_if_needed(uri), opt);
   }
 
   GamePadData GetData_hook(int deviceIndex) {
     GamePadData result;
     bool cheas_sc_activated = false;
     bool game_sc_activated = false;
-    bool kstuff_sc_activated = false;
     bool toolbox_sc_activated = false;
   
     const std::chrono::milliseconds LONG_PRESS_DURATION(1000); // 1 second
@@ -2557,11 +2244,6 @@ bool handle_uri_boot_common(MonoString* uri, int opt, MonoString* titleIdForBoot
     static bool games_pressed = false;
     static std::chrono::steady_clock::time_point games_press_start;
     static bool games_long_press_triggered = false;
-  
-    // Static variables for Kstuff shortcut hold detection
-    static bool kstuff_pressed = false;
-    static std::chrono::steady_clock::time_point kstuff_press_start;
-    static bool kstuff_long_press_triggered = false;
   
     // Static variables for Toolbox shortcut hold detection
     static bool toolbox_pressed = false;
@@ -2695,54 +2377,6 @@ bool handle_uri_boot_common(MonoString* uri, int opt, MonoString* titleIdForBoot
       }
     }
   
-    // Kstuff Shortcut
-    if (global_conf.kstuff_shortcut_opt != KSTUFF_SC_OFF) {
-      bool kstuff_buttons_held = false;
-  
-      switch (global_conf.kstuff_shortcut_opt) {
-      case R2_L2:
-        kstuff_buttons_held = (result.Buttons & R2) && (result.Buttons & L2);
-        break;
-      case L2_SQUARE:
-        kstuff_buttons_held = (result.Buttons & L2) && (result.Buttons & Square);
-        break;
-      default:
-        break;
-      }
-  
-      if (kstuff_buttons_held) {
-        if (!kstuff_pressed) {
-          kstuff_pressed = true;
-          kstuff_press_start = std::chrono::steady_clock::now();
-          kstuff_long_press_triggered = false;
-        } else {
-          auto current_time = std::chrono::steady_clock::now();
-          auto hold_duration = std::chrono::duration_cast < std::chrono::milliseconds > (
-            current_time - kstuff_press_start
-          );
-  
-          if (hold_duration >= LONG_PRESS_DURATION && !kstuff_long_press_triggered) {
-            kstuff_sc_activated = true;
-            kstuff_long_press_triggered = true;
-          }
-        }
-      } else {
-        kstuff_pressed = false;
-        kstuff_long_press_triggered = false;
-      }
-  
-      if (kstuff_sc_activated) {
-        //  shellui_log("Kstuff Shortcut Activated");
-        if(if_exists("/user/data/etaHEN/no_kstuff") || if_exists("/usb0/etaHEN/no_kstuff")){
-            notify("Kstuff auto-start is disabled, shortcut unable to continue...");
-            return result;
-		}
-        pause_resume_kstuff(((global_conf.kstuff_pause_opt != NOT_PAUSED) ? NOT_PAUSED : BOTH_PAUSED), true);
-        result.Buttons = None; // Clear the Select button to prevent triggering other actions
-        //shellui_log("kstuff_pause_opt %d, %s", global_conf.kstuff_pause_opt, global_conf.kstuff_pause_opt != NOT_PAUSED ? "Resuming kstuff" : "Pausing kstuff");
-      }
-    }
-  
     // Toolbox Shortcut
     if (global_conf.toolbox_shortcut_opt != TOOLBOX_SC_OFF) {
       bool toolbox_buttons_held = false;
@@ -2810,11 +2444,6 @@ bool CaptureScreen(){
     GoToURI("etaHEN?webMAN_Games");
     return true;
   }
-  else if (global_conf.kstuff_shortcut_opt == KSTUFF_LONG_SHARE){
-    //shellui_log("CaptureScreen: Long Share Shortcut activated");
-    pause_resume_kstuff(((global_conf.kstuff_pause_opt != NOT_PAUSED) ? NOT_PAUSED : BOTH_PAUSED), true);
-    return true;
-  }
   else if (global_conf.toolbox_shortcut_opt == TOOLBOX_LONG_SHARE){
     //shellui_log("CaptureScreen: Long Share Shortcut activated");
     GoToURI("pssettings:play?mode=settings&function=debug_settings");
@@ -2871,12 +2500,6 @@ void OnShareButton(MonoObject * data) {
     GoToURI("etaHEN?webMAN_Games");
     return;
   }
-  else if (global_conf.kstuff_shortcut_opt == KSTUFF_SINGLE_SHARE) {
-    // shellui_log("Share Shortcut: Pausing Kstuff");
-    pause_resume_kstuff(((global_conf.kstuff_pause_opt != NOT_PAUSED) ? NOT_PAUSED : BOTH_PAUSED), true);
-    //shellui_log("kstuff_pause_opt %d, %s", global_conf.kstuff_pause_opt, global_conf.kstuff_pause_opt != NOT_PAUSED ? "Resuming kstuff" : "Pausing kstuff");
-    return;
-  }
   else if (global_conf.toolbox_shortcut_opt == TOOLBOX_SINGLE_SHARE) {
     // shellui_log("Share Shortcut: Redirecting to Toolbox");
     GoToURI("pssettings:play?mode=settings&function=debug_settings");
@@ -2906,12 +2529,6 @@ int LaunchApp(MonoString* titleId, uint64_t* args, int argsSize, LaunchAppParam 
       }
 
       app_launched = true;
-      if(global_conf.pause_kstuff_on_open && Mono_to_String(titleId).rfind("NPXS") == std::string::npos){
-         pthread_t thread;
-         shellui_log("Pausing Kstuff on app launch for %s in %d seconds", mono_string_to_utf8(titleId), global_conf.pause_kstuff_on_open_secs);
-         pthread_create(&thread, nullptr, kstuff_pause_thread, nullptr);
-      }
-
       return ret;
 
    }
@@ -2930,11 +2547,6 @@ int LaunchApp(MonoString* titleId, uint64_t* args, int argsSize, LaunchAppParam 
   }
 
   app_launched = true;
-  if(global_conf.pause_kstuff_on_open && Mono_to_String(titleId).rfind("NPXS") == std::string::npos){
-    pthread_t thread;
-     shellui_log("Pausing Kstuff on app launch for %s in %d seconds", mono_string_to_utf8(titleId), global_conf.pause_kstuff_on_open_secs);
-    pthread_create(&thread, nullptr, kstuff_pause_thread, nullptr);
-  }
 
  #if SHELL_DEBUG == 1
   notify("LaunchApp returned: %d", ret);
@@ -3094,6 +2706,5 @@ void Terminate() {
         IPC_Client& ipc = IPC_Client::getInstance(true);
         ipc.SendRestModeAction();
     }
-    pause_resume_kstuff(NOT_PAUSED, true);
     oTerminate();
 }

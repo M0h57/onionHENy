@@ -78,7 +78,6 @@ enum RemoveWidget {
     REMOVE_FPS_OVERLAY,
     REMOVE_IP_OVERLAY,
     REMOVE_ALL_OVERLAYS,
-	REMOVE_KSTUFF_DISABLED
 };
 
 enum CreateWidget {
@@ -88,7 +87,6 @@ enum CreateWidget {
     CREATE_FPS_OVERLAY,
     CREATE_IP_OVERLAY,
     CREATE_ALL_OVERLAYS,
-    CREATE_KSTUFF_DISABLED
 };
 
 struct WidgetConfig {
@@ -179,14 +177,6 @@ enum Cheats_Shortcut{
     GAMES_SINGLE_SHARE,
  };
  
- enum Kstuff_Shortcut{
-    KSTUFF_SC_OFF = 0,
-    R2_L2,
-    L2_SQUARE,
-    KSTUFF_LONG_SHARE,
-    KSTUFF_SINGLE_SHARE,
- };
-
  enum overlay_positions{
     OVERLAY_POS_TOP_LEFT = 0,
     OVERLAY_POS_TOP_RIGHT,
@@ -226,25 +216,18 @@ typedef struct etaHENSettings_t
 	bool overlay_ram = true;
     bool overlay_fps = false;
     bool overlay_ip = false;
-    bool overlay_kstuff = false;
-    bool overlay_kstuff_active = false;
-    bool enable_kstuff_on_close = false;
-    bool pause_kstuff_on_open = false;
     bool all_cpu_usage = false;
     int start_option = 0;
     int trial_soft_expire_time = 0;
     int kit_panel_info = 0;
-    int kstuff_pause_opt = NOT_PAUSED;
     uint64_t rest_delay_seconds = 0;
     bool enable_fan_speed = false;
     int fan_threshold = 77;
-    int pause_kstuff_on_open_secs = 0;
     
     // Shortcuts
     Cheats_Shortcut cheats_shortcut_opt = CHEATS_SC_OFF;
     Toolbox_Shortcut toolbox_shortcut_opt = TOOLBOX_SC_OFF;
     Games_Shortcut games_shortcut_opt = GAMES_SC_OFF;
-    Kstuff_Shortcut kstuff_shortcut_opt = KSTUFF_SC_OFF;
 
 	//floats for overlays
     float overlay_gpu_x = 10.0f;
@@ -632,6 +615,12 @@ MonoString* GetString(MonoString* str);
 int ItemzLaunchByUri(const char* uri);
 void GoToHome();
 void GoToURI(const char* uri);
+/* FW 11.6: rewrite function=debug_settings → function=debug_settings_old (Legacy ui3). */
+std::string rewrite_debug_settings_uri_to_legacy(std::string uri);
+static constexpr const char *kDebugSettingsLegacyUri =
+    "pssettings:play?function=debug_settings_old";
+static constexpr const char *kDebugSettingsLegacyUriWithMode =
+    "pssettings:play?mode=settings&function=debug_settings_old";
 bool Get_Running_App_TID(std::string& title_id, int& BigAppid);
 void generate_cheats_xml(std::string &new_xml, std::string& not_open_tid, bool running_as_debug_settings, bool show_while_not_open);
 bool if_exists(const char* path);

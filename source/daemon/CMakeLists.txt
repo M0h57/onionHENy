@@ -59,6 +59,13 @@ set(CMAKE_CXX_FLAGS "${CMAKE_C_FLAGS} -DDEBUG -gfull -gdwarf-2 -O0 -pedantic -pe
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O0 ")
 
 target_sources(${PROJECT_NAME} PRIVATE ${SrcFiles} "${PROJECT_ROOT}/lib/elfldr_remote.c")
+# .incbin in embeddded_payloads.c is invisible to the compiler dependency scanner.
+# Without OBJECT_DEPENDS, shellui/fps_elf rebuilds do not re-embed into daemon.elf.
+set_source_files_properties(
+	${D_SRC}/embeddded_payloads.c
+	PROPERTIES OBJECT_DEPENDS
+		"${D_CWD}/assets/shellui.elf;${D_CWD}/assets/fps_elf.elf"
+)
 target_include_directories(${PROJECT_NAME} PRIVATE "${D_CWD}/include")
 target_link_directories	(${PROJECT_NAME} PUBLIC "${PROJECT_ROOT}/lib")
 add_dependencies(${PROJECT_NAME} NineS shellui hijacker)

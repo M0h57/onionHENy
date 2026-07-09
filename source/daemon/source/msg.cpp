@@ -135,118 +135,6 @@ static bool remount(const char *dev, const char *path, int mnt_flag) {
 }
 
 
-bool pause_resume_kstuff()
-{
-  intptr_t sysentvec = 0;
-  intptr_t sysentvec_ps4 = 0;
-
-  switch(kernel_get_fw_version() & 0xffff0000) {
-  case 0x1000000:
-  case 0x1010000:
-  case 0x1020000:
-  case 0x1050000:
-  case 0x1100000:
-  case 0x1110000:
-  case 0x1120000:
-  case 0x1130000:
-  case 0x1140000:
-  case 0x2000000:
-  case 0x2200000:
-  case 0x2250000:
-  case 0x2260000:
-  case 0x2300000:
-  case 0x2500000:
-  case 0x2700000:
-     return false;
-  case 0x3000000:
-  case 0x3100000:
-  case 0x3200000:
-  case 0x3210000:
-    sysentvec     = KERNEL_ADDRESS_DATA_BASE + 0xca0cd8;
-    sysentvec_ps4 = KERNEL_ADDRESS_DATA_BASE + 0xca0e50;
-    break;
- 
-  case 0x4000000:
-  case 0x4020000:
-  case 0x4030000:
-  case 0x4500000:
-  case 0x4510000:
-    sysentvec     = KERNEL_ADDRESS_DATA_BASE + 0xd11bb8;
-    sysentvec_ps4 = KERNEL_ADDRESS_DATA_BASE + 0xd11d30;
-    break;
- 
-  case 0x5000000:
-  case 0x5020000:
-  case 0x5100000:
-  case 0x5500000:
-    sysentvec     = KERNEL_ADDRESS_DATA_BASE + 0xe00be8;
-    sysentvec_ps4 = KERNEL_ADDRESS_DATA_BASE + 0xe00d60;
-    break;
- 
-  case 0x6000000:
-  case 0x6020000:
-  case 0x6500000:
-    sysentvec     = KERNEL_ADDRESS_DATA_BASE + 0xe210a8;
-    sysentvec_ps4 = KERNEL_ADDRESS_DATA_BASE + 0xe21220;
-    break;
-
-  case 0x7000000:
-  case 0x7010000:
-     sysentvec     = KERNEL_ADDRESS_DATA_BASE + 0xe21ab8;
-     sysentvec_ps4 = KERNEL_ADDRESS_DATA_BASE + 0xe21c30;
-     break;
-  case 0x7200000:
-  case 0x7400000:
-  case 0x7600000:
-  case 0x7610000:
-     sysentvec     = KERNEL_ADDRESS_DATA_BASE + 0xe21b78;
-     sysentvec_ps4 = KERNEL_ADDRESS_DATA_BASE + 0xe21cf0;
-     break;
- 
-  case 0x8000000:
-  case 0x8200000:
-  case 0x8400000:
-  case 0x8600000:
-    sysentvec     = KERNEL_ADDRESS_DATA_BASE + 0xe21ca8;
-    sysentvec_ps4 = KERNEL_ADDRESS_DATA_BASE + 0xe21e20;
-    break;
-
-  case 0x9000000:
-  case 0x9050000:
-  case 0x9200000:
-  case 0x9400000:
-  case 0x9600000:
-      sysentvec = KERNEL_ADDRESS_DATA_BASE + 0xdba648;
-      sysentvec_ps4 = KERNEL_ADDRESS_DATA_BASE + 0xdba7c0;
-      break;
-
-  case 0x10000000:
-  case 0x10010000:
-  case 0x10200000:
-  case 0x10400000:
-  case 0x10600000:
-      sysentvec = KERNEL_ADDRESS_DATA_BASE + 0xdba6d8;
-      sysentvec_ps4 = KERNEL_ADDRESS_DATA_BASE + 0xdba850;
-    break;
-
-  default:
-    etaHEN_log("Unsupported firmware");
-    return false;
-    
-  }
-
-  if(kernel_getshort(sysentvec_ps4 + 14) == 0xffff) {
-     //etaHEN_log("already paused, doing nothing");
-      kernel_setshort(sysentvec + 14, 0xdeb7);
-      kernel_setshort(sysentvec_ps4 + 14, 0xdeb7);
-  } else {
-    kernel_setshort(sysentvec + 14, 0xffff);
-    kernel_setshort(sysentvec_ps4 + 14, 0xffff);
-}
-
- return true;
-}
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/stat.h>
@@ -877,29 +765,18 @@ bool cmd_enable_fps_new(int appid) {
     sleep(5);
 
     SuspendApp(appid);
-    char buz[100] = { 0 };
-    if (sceKernelMprotect(&buz[0], 100, 0x7) == 0) {
-        if (pause_resume_kstuff()) {
-            etaHEN_log("Paused kstuff...");
-            touch_file("/system_tmp/kstuff_paused");
-        }
-    }
 
     int pid = get_game_pid();
     if (pid < 0) {
-        pause_resume_kstuff();
         notify(true, "Failed to get game pid");
         return false;
     }
 
     if (!Inject_Toolbox(pid, fps_elf_start)) {
-        pause_resume_kstuff();
         ForceKillProc(pid);
         notify(true, "Failed to inject fps");
         return false;
     }
-
-    pause_resume_kstuff();
 
     sleep(1);
     ResumeApp(pid);
@@ -974,6 +851,8 @@ bool cmd_enable_toolbox(){
      * we ptrace ShellUI. Injecting while kstuff is still patching ShellUI
      * causes "waiting for toolbox" forever / ShellUI crash.
      * (Race seen when daemon+kstuff launched close together via 9021.)
+     * Note: we do NOT pause/resume kstuff — plugins may own that; only wait for
+     * mprotect readiness.
      */
     if (find_pid("kstuff.elf") > 0 || find_pid("kstuff") > 0) {
       etaHEN_log("kstuff present — waiting for mprotect before toolbox inject");
@@ -983,13 +862,6 @@ bool cmd_enable_toolbox(){
         sleep(1);
       }
       sleep(2);
-    }
-
-    if (sceKernelMprotect(&buz[0], 100, 0x7) == 0) {
-        if (pause_resume_kstuff()) {
-            etaHEN_log("Paused kstuff for toolbox inject...");
-            touch_file("/system_tmp/kstuff_paused");
-        }
     }
 
     etaHEN_log("Activating toolbox...");
@@ -1004,14 +876,12 @@ bool cmd_enable_toolbox(){
 
     int pid = get_shellui_pid();
     if (pid < 0) {
-      pause_resume_kstuff();
       notify(true, "Failed to get shellui pid");
       return false;
     }
     etaHEN_log("Injecting toolbox into SceShellUI pid=%d", pid);
 
     if (!Inject_Toolbox(pid, shellui_elf_start)) {
-      pause_resume_kstuff();
       /* Do NOT ForceKill ShellUI — that loops home menu / coredumps */
       notify(true, "Failed to inject toolbox");
       return false;
@@ -1021,14 +891,12 @@ bool cmd_enable_toolbox(){
       etaHEN_log("waiting for toolbox to start");
       sleep(1);
       if (++wait >= 45) {
-        pause_resume_kstuff();
         /* Keep ShellUI alive; user can retry from Debug Settings */
         notify(true, "Failed to load the etaHEN toolbox (timeout, ShellUI left running)");
         return false;
       }
     }
     unlink("/system_tmp/toolbox_online");
-    pause_resume_kstuff();
     etaHEN_log("Toolbox online");
 
     return true;

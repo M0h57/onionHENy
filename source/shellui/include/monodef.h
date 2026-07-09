@@ -46,13 +46,6 @@ typedef double              gdouble;
 typedef uint16_t            gunichar2;
 
 typedef enum {
-	NOT_PAUSED,
-	PS5_ONLY,
-	PS4_ONLY,
-	BOTH_PAUSED,
-} KstuffPauseStatus;
-
-typedef enum {
 	MONO_IMAGE_OK,
 	MONO_IMAGE_ERROR_ERRNO,
 	MONO_IMAGE_MISSING_ASSEMBLYREF,

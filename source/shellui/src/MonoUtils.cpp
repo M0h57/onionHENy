@@ -579,20 +579,12 @@ bool LoadSettings()
 	  const char* overlay_fps = ini_parser_get(&parser, "Settings.overlay_fps", "0");
 	  const char* overlay_ip = ini_parser_get(&parser, "Settings.overlay_ip", "0");
 	  const char* overlay_position = ini_parser_get(&parser, "Settings.Overlay_pos", "0"); // 0: Top-Left, 1: Top-Right, 2: Bottom-Left, 3: Bottom-Right
-	  const char* overlay_kstuff = ini_parser_get(&parser, "Settings.overlay_kstuff", "0");
-    const char* enable_kstuff_on_close = ini_parser_get(&parser, "Settings.enable_kstuff_on_close", "0");
-    const char* id_pause_kstuff_on_open = ini_parser_get(&parser, "Settings.pause_kstuff_on_open", "0");
-    const char* id_pause_kstuff_on_open_secs = ini_parser_get(&parser, "Settings.pause_kstuff_on_open_secs", "10");
     const char* fan_threshold = ini_parser_get(&parser, "Settings.fan_threshold", "77");
     const char* enable_fan_speed = ini_parser_get(&parser, "Settings.enable_fan_speed", "0");
 
 
     // Check if the strings are not nullptr before converting
-    global_conf.enable_kstuff_on_close = enable_kstuff_on_close ? atoi(enable_kstuff_on_close) : 0;
-    global_conf.pause_kstuff_on_open = id_pause_kstuff_on_open ? atoi(id_pause_kstuff_on_open) : 0;
-    global_conf.pause_kstuff_on_open_secs = id_pause_kstuff_on_open_secs ? atoi(id_pause_kstuff_on_open_secs) : 10;
     global_conf.enable_fan_speed = enable_fan_speed ? atoi(enable_fan_speed) : 0;
-	  global_conf.overlay_kstuff = overlay_kstuff ? atoi(overlay_kstuff) : 0;
     global_conf.fan_threshold = fan_threshold ? atoi(fan_threshold) : 77;
     global_conf.FTP = FTP_str ? atoi(FTP_str) : 0;
     global_conf.etaHEN_game_opts = game_opts_str ? atoi(game_opts_str) : 0;
@@ -628,12 +620,10 @@ bool LoadSettings()
     const char *cheats_shortcut_opt = ini_parser_get(&parser, "Settings.Cheats_shortcut_opt", "0");
     const char *toolbox_shortcut_opt = ini_parser_get(&parser, "Settings.Toolbox_shortcut_opt", "0");
     const char *games_shortcut_opt = ini_parser_get(&parser, "Settings.Games_shortcut_opt", "0");
-    const char *kstuff_shortcut_opt = ini_parser_get(&parser, "Settings.Kstuff_shortcut_opt", "0");
 
     global_conf.cheats_shortcut_opt = cheats_shortcut_opt ? (Cheats_Shortcut)atoi(cheats_shortcut_opt) : CHEATS_SC_OFF;
     global_conf.toolbox_shortcut_opt = toolbox_shortcut_opt ? (Toolbox_Shortcut)atoi(toolbox_shortcut_opt) : TOOLBOX_SC_OFF;
     global_conf.games_shortcut_opt = games_shortcut_opt ? (Games_Shortcut)atoi(games_shortcut_opt) : GAMES_SC_OFF;
-    global_conf.kstuff_shortcut_opt = kstuff_shortcut_opt ? (Kstuff_Shortcut)atoi(kstuff_shortcut_opt) : KSTUFF_SC_OFF;
 
     global_conf.overlay_pos = overlay_position ? (overlay_positions)atoi(overlay_position) : OVERLAY_POS_TOP_LEFT;
 
@@ -730,17 +720,12 @@ bool SaveSettings()
   buff += "overlay_gpu=" + std::to_string(global_conf.overlay_gpu) + "\n";
   buff += "overlay_fps=" + std::to_string(global_conf.overlay_fps) + "\n";
   buff += "overlay_ip=" + std::to_string(global_conf.overlay_ip) + "\n";
-  buff += "overlay_kstuff=" + std::to_string(global_conf.overlay_kstuff) + "\n";
-  buff += "enable_kstuff_on_close=" + std::to_string(global_conf.enable_kstuff_on_close) + "\n";
-  buff += "pause_kstuff_on_open=" + std::to_string(global_conf.pause_kstuff_on_open) + "\n";
   buff += "enable_fan_speed=" + std::to_string(global_conf.enable_fan_speed) + "\n";
   buff += "fan_threshold=" + std::to_string(global_conf.fan_threshold) + "\n";
-  buff += "pause_kstuff_on_open_secs=" + std::to_string(global_conf.pause_kstuff_on_open_secs) + "\n";
   //shortcuts
   buff += "Cheats_shortcut_opt=" + std::to_string(global_conf.cheats_shortcut_opt) + "\n";
   buff += "Toolbox_shortcut_opt=" + std::to_string(global_conf.toolbox_shortcut_opt) + "\n";
   buff += "Games_shortcut_opt=" + std::to_string(global_conf.games_shortcut_opt) + "\n";
-  buff += "Kstuff_shortcut_opt=" + std::to_string(global_conf.kstuff_shortcut_opt) + "\n";
 
   buff += "Overlay_pos=" + std::to_string(global_conf.overlay_pos) + "\n";
   // Open the file for writing
@@ -867,30 +852,52 @@ bool is_valid_plugin(CustomPluginHeader &header)
 
 MonoObject *New_Mono_XML_From_String(std::string xml_doc)
 {
+  shellui_log("[GMRS] New_Mono_XML_From_String: xml_size=%zu Root_Domain=%p MemoryStream_IO=%p",
+              xml_doc.size(), (void *)Root_Domain, (void *)MemoryStream_IO);
+
+  if (xml_doc.empty()) {
+    shellui_log("[GMRS] New_Mono_XML_From_String: empty xml_doc");
+    return nullptr;
+  }
+  if (!Root_Domain) {
+    shellui_log("[GMRS] New_Mono_XML_From_String: Root_Domain is null");
+    return nullptr;
+  }
+  if (!MemoryStream_IO) {
+    shellui_log("[GMRS] New_Mono_XML_From_String: MemoryStream_IO is null");
+    return nullptr;
+  }
+
   MonoArray *Array = mono_array_new(Root_Domain, mono_get_byte_class(), xml_doc.size());
   if (!Array)
   {
-    shellui_log("Failed to create array");
+    shellui_log("[GMRS] New_Mono_XML_From_String: Failed to create byte[] array (size=%zu)", xml_doc.size());
     return nullptr;
   }
 
   char *Array_addr = mono_array_addr_with_size(Array, sizeof(char), 0);
-  sceKernelMprotect(Array_addr, xml_doc.size() + 1, 0x7);
+  if (!Array_addr) {
+    shellui_log("[GMRS] New_Mono_XML_From_String: mono_array_addr_with_size returned null");
+    return nullptr;
+  }
+  int mprot = sceKernelMprotect(Array_addr, xml_doc.size() + 1, 0x7);
+  if (mprot != 0) {
+    shellui_log("[GMRS] New_Mono_XML_From_String: sceKernelMprotect failed ret=%d (continuing anyway)", mprot);
+  }
   memcpy(Array_addr, xml_doc.data(), xml_doc.size());
 
   MonoObject *MemoryStream_Instance = mono_object_new(Root_Domain, MemoryStream_IO);
   if (!MemoryStream_Instance)
   {
     MemoryStream_IO = nullptr;
-#if SHELL_DEBUG == 1
-    shellui_log("Failed to create MemoryStream_Instance");
-#endif
+    shellui_log("[GMRS] New_Mono_XML_From_String: Failed to create MemoryStream_Instance");
     return nullptr;
   }
   void *args[] = {Array};
   InvokeByDesc(MemoryStream_IO, ":.ctor(byte[])", MemoryStream_Instance, args);
   mono_gchandle_new(MemoryStream_Instance, 1);
 
+  shellui_log("[GMRS] New_Mono_XML_From_String: ok instance=%p", (void *)MemoryStream_Instance);
   return MemoryStream_Instance;
 }
 std::string remote_play_info;
@@ -1196,18 +1203,58 @@ bool SetVersionString(const char *str)
 
 extern "C" int sceKernelLoadStartModule(const char *name, size_t argc, const void *argv, uint32_t flags, uint32_t pOpt, int *pResid);
 extern "C" int sceKernelDlsym(int lib, const char *name, void **func);
+std::string rewrite_debug_settings_uri_to_legacy(std::string uri) {
+  /*
+   * FW 11.6 RN Settings:
+   *   function=debug_settings     → RN DebugSettingsScreen (no GMRS)
+   *   function=debug_settings_old → Legacy debug_settings_ui3 (GMRS works)
+   * Rewrite the new path to the old one without touching already-rewritten URIs.
+   */
+  const char *from = "function=debug_settings";
+  const char *to = "function=debug_settings_old";
+  const size_t from_len = 22; // strlen("function=debug_settings")
+  const size_t to_len = 26;
+
+  size_t pos = 0;
+  while ((pos = uri.find(from, pos)) != std::string::npos) {
+    // Already legacy (_old immediately after the base match)
+    if (uri.compare(pos, to_len, to) == 0) {
+      pos += to_len;
+      continue;
+    }
+    // Do not rewrite if an identifier continues (e.g. future suffixes)
+    size_t after = pos + from_len;
+    if (after < uri.size()) {
+      char c = uri[after];
+      if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') ||
+          (c >= '0' && c <= '9') || c == '_') {
+        pos = after;
+        continue;
+      }
+    }
+    uri.replace(pos, from_len, to);
+    pos += to_len;
+  }
+  return uri;
+}
+
 int ItemzLaunchByUri(const char *uri)
 {
 
   if (!uri)
     return -1;
-  //
+
+  std::string rewritten = rewrite_debug_settings_uri_to_legacy(uri);
+  if (rewritten != uri) {
+    shellui_log("[DBG-REDIR] ItemzLaunchByUri: \"%s\" -> \"%s\"", uri, rewritten.c_str());
+  }
+
   SceShellUIUtilLaunchByUriParam Param;
   Param.size = sizeof(SceShellUIUtilLaunchByUriParam);
   sceShellUIUtilInitialize();
   sceUserServiceGetForegroundUser((int *)&Param.userId);
 
-  return sceShellUIUtilLaunchByUri(uri, &Param);
+  return sceShellUIUtilLaunchByUri(rewritten.c_str(), &Param);
 }
 
 void GoToHome()

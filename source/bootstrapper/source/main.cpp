@@ -105,7 +105,7 @@ const char json_payload[] =
      "          \"actionType\": \"DeepLink\",\n"
      "          \"defaultFocus\": true,\n"
      "          \"parameters\": {\n"
-     "            \"actionUrl\": \"pssettings:play?function=debug_settings\"\n"
+     "            \"actionUrl\": \"pssettings:play?function=debug_settings_old\"\n"
      "          }\n"
      "        }\n"
      "      ]\n"

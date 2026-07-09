@@ -59,6 +59,13 @@ set(CMAKE_CXX_FLAGS "${CMAKE_C_FLAGS} -DDEBUG -gfull -gdwarf-2 -O0 -pedantic -pe
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O0")
 
 target_sources(${PROJECT_NAME} PRIVATE ${SrcFiles})
+# .incbin in daemon.c is invisible to the compiler dependency scanner.
+# Without OBJECT_DEPENDS, daemon/util/kstuff rebuilds do not re-embed into bootstrapper.
+set_source_files_properties(
+	${D_SRC}/daemon.c
+	PROPERTIES OBJECT_DEPENDS
+		"${PROJECT_ROOT}/bin/daemon.elf;${PROJECT_ROOT}/bin/util.elf;${D_CWD}/assets/kstuff.elf"
+)
 # elfldr.c still provides elfldr_raise_privileges; launches go via 9021 (elfldr_remote.c).
 target_include_directories(${PROJECT_NAME} PRIVATE "${D_CWD}/include")
 target_link_directories	(${PROJECT_NAME} PUBLIC "${PROJECT_ROOT}/lib")

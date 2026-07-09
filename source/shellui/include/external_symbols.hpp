@@ -605,6 +605,6 @@ extern int (*sceShellUIUtilLaunchByUri)(const char* uri, SceShellUIUtilLaunchByU
 int sceSystemServiceGetAppId(const char * tid);
 void KillAllWithName(const char * name, int signal);
 extern "C" {
-    void pause_resume_kstuff(KstuffPauseStatus opt, bool notify_user);
+
     int sceAppInstUtilInstallByPackage(pkg_metadata* arg1, pkg_info* pkg_info, playgo_info* arg2);
 }
