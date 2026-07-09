@@ -5,3 +5,4 @@ OrionHEN continues **etaHEN** (LightningMods) for PS5, in the same AIO-HEN tradi
 | Document | Description |
 |----------|-------------|
 | [pkg-writeup.md](pkg-writeup.md) | PS5 PKG technical writeup |
+| [shellui-injection.md](shellui-injection.md) | ShellUI inject path + kylin-core libNineS stability fixes |

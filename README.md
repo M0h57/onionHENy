@@ -37,7 +37,6 @@ If you benefit from OrionHEN, please also consider supporting the original autho
 
 ## What is OrionHEN?
 
-OrionHEN is a PS5 homebrew enabler and toolbox: debug settings replacement, dual daemons, optional FTP / Klog / elfldr / DPI, Itemzflow integration, kstuff-related flows, plugins, and more — inherited from etaHEN and kept alive here.
 
 - **License:** GPLv3 (same family of obligations as etaHEN; see [`LICENSE`](LICENSE))
 - **Source:** [`source/`](source/)
@@ -66,14 +65,31 @@ OrionHEN/
 
 Source lives in [`source/`](source/) under GPLv3, with the files required to satisfy the license.
 
-You need a Prospero / PS5 payload SDK (`PS5_PAYLOAD_SDK`) and a clang toolchain targeting `x86_64-sie-ps5`. Build with CMake (see `source/CMakePresets.json`). A thin wrapper is available when the SDK is configured:
+You need a Prospero / PS5 payload SDK (`PS5_PAYLOAD_SDK`) and a clang toolchain targeting `x86_64-sie-ps5`.
+
+**Recommended (full pipeline):** pulls open-source third-parties (submodules / GitHub Releases), then builds shellui → daemon/util → bootstrapper → unpacker:
 
 ```bash
-./scripts/ps5_cmake.sh -S source -B source/build
+git submodule update --init --recursive
+export PS5_PAYLOAD_SDK=/path/to/ps5-payload-sdk
+
+./scripts/build.sh
+# or only fetch embeds:
+# ./scripts/sync_vendor.sh
+
+# dry-run compile without real vendor blobs:
+# ./scripts/build.sh --stub-missing
+```
+
+
+Manual CMake (advanced):
+
+```bash
+./scripts/ps5_cmake.sh -S source -B source/build -G Ninja -DV_FW=0x3000000
 cmake --build source/build
 ```
 
-Detailed step-by-step build recipes may grow over time; for now, assume a normal CMake workflow on a properly set up SDK.
+Artifacts land in `source/bin/`.
 
 Technical notes and writeups: [`docs/`](docs/).
 
@@ -120,7 +136,7 @@ powershell.exe -ExecutionPolicy Bypass -File C:\Path\To\OrionHEN\scripts\send_pa
 .\scripts\send_payload.ps1 -Payload "C:\path\to\example.elf" -IP "192.168.x.x" -Port XXXX
 ```
 
-Common ports: exploit elfldr **9020**, SB elfldr **9021**.
+Common ports: exploit elfldr **9020** (external). OrionHEN does **not** ship a 9021 elfldr service; payloads are spawned via **libelfldr**.
 
 ### Other tools
 
@@ -164,18 +180,13 @@ Common ports: exploit elfldr **9020**, SB elfldr **9021**.
 - Custom system software version string
 - kstuff-related flows for fself / fpkg support
 - Logs under `/data/etaHEN` (path may remain for config compatibility)
-- Optional system-wide controller shortcut to open Itemzflow
-- Debug settings, game dumper (with Itemzflow), HEN config file
 - Jailbreak IPC for homebrew apps
 - Update blocker (unmounts update partition)
 - Optional Illusions cheats/patches [plugin](https://github.com/LightningMods/etaHEN-SDK/tree/main/Plugin_samples/Illusion_cheats)
 - Optional FTP on port **1337**
-- Optional `/data` inside app sandboxes
+- ~~Optional `/data` inside app sandboxes~~ (removed — was only sandbox path visibility, not jailbreak)
 - Klog server on port **9081**
-- ELF loader on port **9021** (John’s elfldr)
-- Optional PS5Debug
-- Itemzflow integration
-- Optional Discord RPC on port **8000** ([client setup](https://github.com/jeroendev-one/ps5-rpc-client))
+- Embedded ELF spawn via **libelfldr** (no bundled 9021 network loader)
 - Optional Direct PKG Installer v2 WebUI: `http://PS5_IP:12800`
 - Optional Direct PKG Installer service on port **9090**
 
@@ -188,7 +199,6 @@ Custom plugins are still developed against the public [etaHEN SDK](https://githu
 - Keep the stack building and usable on supported firmwares
 - Stability and maintenance after the etaHEN hand-off
 - Clear OrionHEN branding for binaries and config over time
-- Features previously listed upstream (FPS counter, more userland patches, better PS5 game support via Itemzflow, etc.)
 
 ---
 
@@ -199,22 +209,17 @@ Path may stay under `etaHEN` for a while so existing installs and tools keep wor
 
 | INI key | Description | Default |
 |---------|-------------|---------|
-| `PS5Debug` | 0 = no PS5Debug (SiSTR0) autoload, 1 = enable | 0 |
 | `FTP` | 0 = disable FTP, 1 = enable | 1 |
-| `discord_rpc` | 0 = disable Discord RPC, 1 = enable | 0 |
 | `toolbox_auto_start` | 0 = off, 1 = on | 1 |
-| `Allow_data_in_sandbox` | 0 = no `/data` in app sandbox, 1 = allow | 1 |
+| `Allow_data_in_sandbox` | **Ignored** (sandbox `/data` patch removed) | 0 |
 | `DPI` | 0 = disable Direct PKG Installer, 1 = enable | 0 |
 | `DPI_v2` | 0 = disable DPI v2, 1 = enable | 0 |
 | `Klog` | 0 = disable kernel log server, 1 = enable | 0 |
 | `ALLOW_FTP_DEV_ACCESS` | 0 = disable FTP dev access, 1 = enable | 0 |
-| `StartOption` | 0=None, 1=Home, 2=Settings, 3=Toolbox, 4=Itemzflow | 0 |
 | `Rest_Mode_Delay_Seconds` | Delay before shellui patch after rest | 0 |
 | `Util_rest_kill` | Kill util daemon on rest | 0 |
 | `Game_rest_kill` | Kill open game on rest | 0 |
 | `disable_toolbox_auto_start_for_rest_mode` | Disable toolbox autostart after rest | 0 |
-| `libhijacker_cheats` | Enable libhijacker cheats | 0 |
-| `launch_itemzflow` | Auto-launch Itemzflow | 0 |
 | `testkit` | TestKit mode | 0 |
 | `Display_tids` | Show title IDs | 0 |
 | `APP_JB_Debug_Msg` | App jailbreak debug messages | 0 |
@@ -343,8 +348,6 @@ int main()
 - [ChendoChap](https://github.com/ChendoChap)
 - [astrelsky](https://github.com/astrelsky)
 - [illusion](https://github.com/illusion0001)
-- CTN & [SiSTR0](https://github.com/SiSTR0) — PS5Debug
-- [Nomadic](https://github.com/jeroendev-one) — Discord RPC feature
 
 ### Testers (upstream)
 

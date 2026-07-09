@@ -24,14 +24,24 @@ OrionHEN is based on etaHEN’s open-source release. See the [root README](../RE
 
 Requires a Prospero / PS5 payload SDK (`PS5_PAYLOAD_SDK`) and clang targeting `x86_64-sie-ps5`.
 
-From the repo root:
+**Full pipeline** (preferred) from the repo root:
 
 ```bash
-./scripts/ps5_cmake.sh -S source -B source/build
+export PS5_PAYLOAD_SDK=/path/to/ps5-payload-sdk
+./scripts/build.sh
+```
+
+Stages vendor embeds, then shellui → daemon/util → bootstrapper → unpacker.  
+See `vendor/README.md` and `./scripts/build.sh --help`.
+
+Manual CMake:
+
+```bash
+./scripts/ps5_cmake.sh -S source -B source/build -G Ninja -DV_FW=0x3000000
 cmake --build source/build
 ```
 
-Or use `CMakePresets.json` in this directory. Build products go under `source/bin/` (gitignored).
+Build products go under `bin/` (gitignored).
 
 ## Further reading
 

@@ -1,0 +1,62 @@
+# ShellUI injection flow & kylin-core libNineS fixes
+
+## Call path (OrionHEN / etaHEN)
+
+```
+daemon: cmd_enable_toolbox()          [daemon/source/msg.cpp]
+  ├─ get_shellui_pid()                // find SceShellUI
+  └─ Inject_Toolbox(pid, shellui.elf) [libNineS/src/main.c]
+       └─ inject_elf(proc, elf)       [libNineS/src/injector.c]
+            ├─ elevate authid once (debugger / ptrace)
+            ├─ pt_attach(SceShellUI)
+            ├─ init_remote_function_pointers()  // malloc, pthread_create, …
+            ├─ elfldr_load()                    // map ELF into target
+            ├─ elfldr_payload_args()
+            ├─ mmap bootstrap stager + copyin
+            ├─ mmap SCEFunctions blob + copyin
+            ├─ pt_call2(bootstrap) → remote pthread_create(elf_main)
+            │     stager ends with int3
+            └─ pt_detach + restore authid
+```
+
+ShellUI payload then signals readiness via `/system_tmp/toolbox_online` (daemon waits up to ~15s).
+
+kylin-core uses the same `inject_elf()` path for ShellUI overlay injection (`overlay_service.c` → `inject_elf`), plus higher-level retries / kill-respawn / boot-id skip that live outside libNineS.
+
+## Inconsistencies found (etaHEN vs kylin-core)
+
+| Area | etaHEN (before) | kylin-core | Risk |
+|------|-----------------|------------|------|
+| `sys_ptrace` | Flip authid to debugger **on every** ptrace call, then restore | Direct `syscall(SYS_ptrace)` | **Thread-unsafe race** between concurrent ptrace ops; can SIGSEGV daemon or corrupt authid |
+| `pt_call2` | `pt_continue` then **immediately** `pt_setregs(bak)` | `pt_continue` → **`waitpid`** → then restore regs | **Critical race**: restores ShellUI registers while bootstrap still runs → crash / freeze / power loss |
+| `inject_elf` authid | `set_ucred_to_debugger()` with **no restore** | Backup original authid → elevate → restore on all exits | Daemon stuck elevated; failed inject leaves bad state |
+| Error paths | Often leave `status=true` on load/mmap failure | Set `status=false` on each failure | Caller thinks inject succeeded |
+| `MAP_FAILED` | Only checks `!bootstrap` | Also rejects `(uint64_t)-1` | mmap failure treated as success addr |
+| mprotect / copyin | Unchecked | Checked, fail inject | Partial maps then trigger entry |
+| `attached` flag | Not cleared after detach | Cleared when detach succeeds | Stale attach state on retry |
+
+## Fixes adopted in OrionHEN
+
+Ported into `source/libNineS/src/pt.c` and `source/libNineS/src/injector.c` (without kylin-specific logger; uses `ps5/klog`).
+
+1. **Scoped debugger authid** at `inject_elf` entry/exit only  
+2. **No per-ptrace authid flip** in `sys_ptrace`  
+3. **`waitpid` after stager `pt_continue`** in `pt_call2`  
+4. **Strict validation** of null args, entry/args, mmap, mprotect, copyin  
+5. **Clear `attached`** on successful detach; always try authid restore  
+
+## Not ported (higher-level kylin-core only)
+
+These live in `kylin-core/src/services/overlay_service.c`, not libNineS:
+
+- Injection file lock (`/system_tmp/...`)
+- Boot-time “already injected” record / skip
+- Multi-attempt inject + kill ShellUI + wait for respawn
+
+Optional follow-up for OrionHEN daemon: add similar retry/respawn around `cmd_enable_toolbox()` if field failure rate stays high.
+
+## Upstream files for reference
+
+- `kylin-core/third_party/libNineS/src/pt.c`
+- `kylin-core/third_party/libNineS/src/injector.c`
+- `kylin-core/src/services/overlay_service.c`
