@@ -9,6 +9,8 @@ Host-side unit tests for cheat **file parsing** (no PS5 SDK), modeled after
 |-------|----------|
 | `test_cheat_utils` | hex decode, JSON extract, brace matching, replace_all, load buffer, ABI layout |
 | `test_cheat_parsers` | JSON / SHN / MC4 / ShnExt via `CheatParserFactory`, plus real fixtures |
+| `test_settings` | `orion::Settings` serialize keys, file round-trip, legacy key, defaults |
+| `test_ready` | ready marker signal / wait / clear / path rejection |
 
 Runtime apply (`CheatApplier` / memory backends) is **not** host-tested.
 

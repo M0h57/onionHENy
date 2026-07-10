@@ -115,7 +115,35 @@ void apply_parser(IniParser *parser, Settings *out) {
       atoi_def(ini_parser_get(parser, "Settings.schema_version", "1"), 1);
 }
 
-std::string serialize(const Settings &in) {
+bool write_path(const char *path, const std::string &body) {
+  if (!path || !dir_writable_parent(path)) {
+    return false;
+  }
+  int fd = open(path, O_WRONLY | O_CREAT | O_TRUNC, 0777);
+  if (fd < 0) {
+    return false;
+  }
+  ssize_t n = write(fd, body.data(), body.size());
+  close(fd);
+  return n == static_cast<ssize_t>(body.size());
+}
+
+bool try_load_path(const char *path, Settings *out) {
+  if (!path_exists(path)) {
+    return false;
+  }
+  IniParser parser{};
+  if (!ini_parser_load(&parser, path)) {
+    return false;
+  }
+  apply_parser(&parser, out);
+  g_last_loaded = path;
+  return true;
+}
+
+} // namespace
+
+std::string settings_serialize(const Settings &in) {
   std::string b;
   b.reserve(1024);
   b += "[Settings]\n";
@@ -156,33 +184,20 @@ std::string serialize(const Settings &in) {
   return b;
 }
 
-bool write_path(const char *path, const std::string &body) {
-  if (!path || !dir_writable_parent(path)) {
+bool settings_load_file(const char *path, Settings *out) {
+  if (!out || !path) {
     return false;
   }
-  int fd = open(path, O_WRONLY | O_CREAT | O_TRUNC, 0777);
-  if (fd < 0) {
-    return false;
-  }
-  ssize_t n = write(fd, body.data(), body.size());
-  close(fd);
-  return n == static_cast<ssize_t>(body.size());
+  *out = Settings{};
+  return try_load_path(path, out);
 }
 
-bool try_load_path(const char *path, Settings *out) {
-  if (!path_exists(path)) {
+bool settings_save_file(const char *path, const Settings &in) {
+  if (!path) {
     return false;
   }
-  IniParser parser{};
-  if (!ini_parser_load(&parser, path)) {
-    return false;
-  }
-  apply_parser(&parser, out);
-  g_last_loaded = path;
-  return true;
+  return write_path(path, settings_serialize(in));
 }
-
-} // namespace
 
 bool settings_load(Settings *out) {
   if (!out) {
@@ -211,7 +226,7 @@ bool settings_load(Settings *out) {
 }
 
 bool settings_save(const Settings &in) {
-  const std::string body = serialize(in);
+  const std::string body = settings_serialize(in);
   bool ok = false;
   if (write_path(kConfigPathPrimary, body)) {
     ok = true;

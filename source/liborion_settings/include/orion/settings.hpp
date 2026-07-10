@@ -28,6 +28,11 @@ along with this program; see the file COPYING. If not, see
 // Load tries both; save writes all writable targets so the files stay twins.
 // ---------------------------------------------------------------------------
 
+// Force C++ linkage even if a parent header included us under extern "C".
+#ifdef __cplusplus
+extern "C++" {
+#endif
+
 namespace orion {
 
 // Canonical filesystem paths (string keys match Settings.* INI keys).
@@ -88,6 +93,13 @@ struct Settings {
 // Returns true if a file was loaded; false means defaults only (file missing).
 bool settings_load(Settings *out);
 
+// Load/save a single explicit path (host tests and tooling).
+bool settings_load_file(const char *path, Settings *out);
+bool settings_save_file(const char *path, const Settings &in);
+
+// Serialize full schema to INI text (no I/O).
+std::string settings_serialize(const Settings &in);
+
 // Serialize full schema. Writes every path that can be opened for write.
 // Returns true if at least one write succeeded.
 bool settings_save(const Settings &in);
@@ -103,3 +115,7 @@ const char *settings_last_loaded_path();
 bool settings_usb_disables_toolbox_auto_start();
 
 } // namespace orion
+
+#ifdef __cplusplus
+} // extern "C++"
+#endif

@@ -18,6 +18,8 @@ KEYSTONE_LDFLAGS := -L$(KEYSTONE_PREFIX)/lib -lkeystone
 COMMON_FLAGS := -Wall -Wextra -g -O0 -DORION_HOST_TEST=1 -DCBC=1 \
 	-I$(UTIL_ROOT)/include \
 	-I$(UTIL_ROOT)/tests \
+	-I$(REPO_ROOT)/source/include \
+	-I$(REPO_ROOT)/source/liborion_settings/include \
 	-I$(REPO_ROOT)/source/extern/cJSON \
 	$(KEYSTONE_CFLAGS)
 
@@ -40,21 +42,28 @@ PROD_CXX_SRCS := \
 	$(UTIL_ROOT)/source/cheats/Mc4CheatParser.cpp \
 	$(UTIL_ROOT)/source/cheats/ShnExtCheatParser.cpp \
 	$(UTIL_ROOT)/source/cheats/CheatParserFactory.cpp \
-	$(REPO_ROOT)/source/extern/cJSON/cJSON.cpp
+	$(REPO_ROOT)/source/extern/cJSON/cJSON.cpp \
+	$(REPO_ROOT)/source/liborion_settings/source/settings.cpp
+
+PROD_READY_SRC := $(REPO_ROOT)/source/liborion_ready/source/ready.c
 
 TEST_C_SRCS := \
 	test_harness.c \
 	test_support.c \
 	test_cheat_utils.c \
+	test_ready.c \
 	stubs/host_stubs.c
 
 TEST_CXX_SRCS := \
 	test_cheat_parsers.cpp \
+	test_settings.cpp \
 	test_main.cpp
 
 PROD_C_OBJS := $(patsubst $(UTIL_ROOT)/%.c,$(BUILD_DIR)/prod/%.o,$(PROD_C_SRCS))
 PROD_CXX_OBJS := $(patsubst $(UTIL_ROOT)/%.cpp,$(BUILD_DIR)/prod/%.o,$(filter $(UTIL_ROOT)/%,$(PROD_CXX_SRCS)))
 PROD_CXX_OBJS += $(BUILD_DIR)/prod/extern/cJSON.o
+PROD_CXX_OBJS += $(BUILD_DIR)/prod/liborion_settings/settings.o
+PROD_C_OBJS += $(BUILD_DIR)/prod/liborion_ready/ready.o
 TEST_C_OBJS := $(patsubst %.c,$(BUILD_DIR)/tests/%.o,$(TEST_C_SRCS))
 TEST_CXX_OBJS := $(patsubst %.cpp,$(BUILD_DIR)/tests/%.o,$(TEST_CXX_SRCS))
 
@@ -93,6 +102,14 @@ $(BUILD_DIR)/prod/%.o: $(UTIL_ROOT)/%.cpp | $(BUILD_DIR)
 $(BUILD_DIR)/prod/extern/cJSON.o: $(REPO_ROOT)/source/extern/cJSON/cJSON.cpp | $(BUILD_DIR)
 	@mkdir -p $(dir $@)
 	$(HOST_CXX) $(CXXFLAGS) $(THIRD_PARTY_FLAGS) -c -o $@ $<
+
+$(BUILD_DIR)/prod/liborion_settings/settings.o: $(REPO_ROOT)/source/liborion_settings/source/settings.cpp | $(BUILD_DIR)
+	@mkdir -p $(dir $@)
+	$(HOST_CXX) $(CXXFLAGS) -c -o $@ $<
+
+$(BUILD_DIR)/prod/liborion_ready/ready.o: $(REPO_ROOT)/source/liborion_ready/source/ready.c | $(BUILD_DIR)
+	@mkdir -p $(dir $@)
+	$(HOST_CC) $(CFLAGS) -c -o $@ $<
 
 $(BUILD_DIR)/tests/%.o: %.c | $(BUILD_DIR)
 	@mkdir -p $(dir $@)
