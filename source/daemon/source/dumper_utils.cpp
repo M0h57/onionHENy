@@ -22,7 +22,7 @@ along with this program; see the file COPYING. If not, see
 
 #include <sys/types.h>
 #include <sys/sysctl.h>
-#include "launcher.hpp"
+
 #include <pthread.h>
 
 #include <stdbool.h>
