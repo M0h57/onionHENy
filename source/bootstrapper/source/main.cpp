@@ -608,129 +608,149 @@ bool is_elf_file(const void* buffer, size_t size) {
 }
 
 
-bool load_plugin(const char *path, const char *filename)
-{
-  int fd = open(path, O_RDONLY);
-  if (fd < 0)
-  {
-    perror("Failed to open file");
-    return false;
+
+namespace {
+
+void plugin_pid_path(char* out, size_t out_sz, const char* title_id) {
+  snprintf(out, out_sz, "/system_tmp/%s.PID", title_id);
+}
+
+pid_t read_plugin_pid(const char* pid_path) {
+  const int f = open(pid_path, O_RDONLY);
+  if (f < 0)
+    return -1;
+  char t[32];
+  const int r = read(f, t, sizeof(t) - 1);
+  close(f);
+  if (r <= 0)
+    return -1;
+  t[r] = '\0';
+  return static_cast<pid_t>(atoi(t));
+}
+
+void write_plugin_pid(const char* pid_path, pid_t pid) {
+  const int f = open(pid_path, O_WRONLY | O_CREAT | O_TRUNC, 0666);
+  if (f < 0)
+    return;
+  if (pid >= 0) {
+    char t[32];
+    const int len = snprintf(t, sizeof(t), "%d", pid);
+    write(f, t, len);
+  } else {
+    unlink(pid_path);
+  }
+  close(f);
+}
+
+/** Kill a previously launched plugin if its PID file is still valid. */
+void stop_running_plugin(const char* pid_path, const char* title_id, const char* kind) {
+  pid_t pid = read_plugin_pid(pid_path);
+  if (pid > 0) {
+    char name[32];
+    if (sceKernelGetProcessName(pid, name) < 0) {
+      printf("Stale plugin PID file detected for %s, removing\n", title_id);
+      unlink(pid_path);
+      pid = -1;
+    }
   }
 
-  struct stat st;
-  if (fstat(fd, &st) != 0)
-  {
+  printf("seeing if %s is running\n", kind);
+  if (pid > 0) {
+    printf("killing pid %d\n", pid);
+    if (kill(pid, SIGKILL))
+      perror("kill");
+    unlink(pid_path);
+  }
+}
+
+/**
+ * Write ELF bytes and launch via elfldr :9021.
+ * Returns pid (>=0) on success, -1 on failure.
+ * Unknown pid after launch is reported as 1 (matches prior behaviour).
+ */
+pid_t launch_plugin_via_9021(const char* title_id, const uint8_t* elf, size_t elf_sz,
+                             const char* log_name) {
+  char epath[256];
+  snprintf(epath, sizeof(epath), "/data/OrionHEN/plugins/%s.elf", title_id);
+  printf("loading %s via 9021 %s\n", log_name, title_id);
+
+  if (!elfldr_remote_write_and_launch(epath, elf, elf_sz)) {
+    printf("  Failed 9021 launch\n");
+    return -1;
+  }
+
+  sleep(2);
+  pid_t pid = orion_find_pid_substr(title_id);
+  if (pid < 0)
+    pid = 1; /* launched; pid unknown */
+  printf("  Launched via 9021!\n");
+  return pid;
+}
+
+uint8_t* read_file_all(const char* path, size_t* out_size) {
+  const int fd = open(path, O_RDONLY);
+  if (fd < 0) {
+    perror("Failed to open file");
+    return nullptr;
+  }
+
+  struct stat st {};
+  if (fstat(fd, &st) != 0) {
     perror("Failed to get file stats");
     close(fd);
-    return false;
+    return nullptr;
   }
-  // Allocate buffer and read the entire file.
-  uint8_t *buf = (uint8_t *)malloc(st.st_size);
-  if (!buf)
-  {
+
+  uint8_t* buf = static_cast<uint8_t*>(malloc(st.st_size));
+  if (!buf) {
     perror("Failed to allocate memory for Plugin file");
     close(fd);
-    return false;
+    return nullptr;
   }
 
-  if (read(fd, buf, st.st_size) != st.st_size)
-  {
+  if (read(fd, buf, st.st_size) != st.st_size) {
     perror("Failed to read Plugin file");
-    free(buf), buf = NULL;
+    free(buf);
     close(fd);
-    return false;
+    return nullptr;
   }
   close(fd);
+  *out_size = static_cast<size_t>(st.st_size);
+  return buf;
+}
 
-  const CustomPluginHeader *header = (const CustomPluginHeader *)buf;
+} // namespace
 
-  char pbuf[256];
-  snprintf(pbuf, sizeof(pbuf), "/system_tmp/%s.PID", header->titleID);
+bool load_plugin(const char *path, const char *filename)
+{
+  size_t size = 0;
+  uint8_t* buf = read_file_all(path, &size);
+  if (!buf)
+    return false;
 
-  if (strstr(filename, ".elf") != NULL)
-  {
-    // Handle ELF plugin loading
-    if (!is_elf_file(buf, st.st_size))
-    {
-      free(buf), buf = NULL;
+  const auto* header = reinterpret_cast<const CustomPluginHeader*>(buf);
+  char pid_path[256];
+  plugin_pid_path(pid_path, sizeof(pid_path), header->titleID);
+
+  // ---- raw .elf payload ----
+  if (strstr(filename, ".elf") != nullptr) {
+    if (!is_elf_file(buf, size)) {
+      free(buf);
       return false;
     }
 
-    pid_t pid = -1;
-    int f = open(pbuf, O_RDONLY);
-    if (f >= 0)
-    {
-      char t[32];
-      int r = read(f, t, sizeof(t) - 1);
-      close(f);
-      if (r > 0)
-      {
-        t[r] = 0;
-        pid = atoi(t);
-      }
-    }
-
-    if (pid > 0)
-    {
-      char name[32];
-      if (sceKernelGetProcessName(pid, name) < 0)
-      {
-        printf("Stale plugin PID file detected for %s, removing\n", header->titleID);
-        unlink(pbuf);
-        pid = -1;
-      }
-    }
-
-    printf("seeing if elf is running\n");
-    if (pid > 0)
-    {
-      printf("killing pid %d\n", pid);
-      if (kill(pid, SIGKILL))
-        perror("kill");
-      unlink(pbuf);
-    }
-
-    printf("loading elf via 9021 %s\n", filename);
-    {
-      char epath[256];
-      snprintf(epath, sizeof(epath), "/data/OrionHEN/plugins/%s.elf", header->titleID);
-      if (elfldr_remote_write_and_launch(epath, buf, (size_t)st.st_size)) {
-        sleep(2);
-        pid = orion_find_pid_substr(header->titleID);
-        if (pid < 0)
-          pid = 1; /* launched; pid unknown */
-        printf("  Launched via 9021!\n");
-      } else {
-        printf("  Failed 9021 launch\n");
-        pid = -1;
-      }
-    }
-
-    free(buf), buf = NULL;
-
-    f = open(pbuf, O_WRONLY | O_CREAT | O_TRUNC, 0666);
-    if (f >= 0)
-    {
-      if (pid >= 0)
-      {
-        char t[32];
-        int l = snprintf(t, sizeof(t), "%d", pid);
-        write(f, t, l);
-      }
-      else
-      {
-        unlink(pbuf);
-      }
-      close(f);
-    }
-
-    return true;
+    stop_running_plugin(pid_path, header->titleID, "elf");
+    const pid_t pid =
+        launch_plugin_via_9021(header->titleID, buf, size, filename);
+    free(buf);
+    write_plugin_pid(pid_path, pid);
+    return true; // historical: always true after attempt
   }
 
-  if (!is_valid_plugin(buf))
-  {
+  // ---- .plugin package ----
+  if (!is_valid_plugin(buf)) {
     puts("Invalid plugin file.");
-    free(buf), buf = NULL;
+    free(buf);
     return false;
   }
 
@@ -740,87 +760,20 @@ bool load_plugin(const char *path, const char *filename)
   printf("Plugin Version: %s\n", header->plugin_version);
   puts("=========================================");
 
-  snprintf(pbuf, sizeof(pbuf), "/system_tmp/%s.PID", header->titleID);
+  stop_running_plugin(pid_path, header->titleID, "plugin");
 
-  uint8_t *elf = get_elf_header_address(buf);
-
-  pid_t pid = -1;
-  int f = open(pbuf, O_RDONLY);
-  if (f >= 0)
-  {
-    char t[32];
-    int r = read(f, t, sizeof(t) - 1);
-    close(f);
-    if (r > 0)
-    {
-      t[r] = 0;
-      pid = atoi(t);
-    }
-  }
-
-  if (pid > 0)
-  {
-    char name[32];
-    if (sceKernelGetProcessName(pid, name) < 0)
-    {
-      printf("Stale plugin PID file detected for %s, removing\n", header->titleID);
-      unlink(pbuf);
-      pid = -1;
-    }
-  }
-
-  printf("seeing if plugin is running\n");
-  if (pid > 0)
-  {
-    printf("killing pid %d\n", pid);
-    if (kill(pid, SIGKILL))
-      perror("kill");
-    unlink(pbuf);
-  }
-
-  if (strcmp(header->titleID, "EORR37000") == 0)
-  {
+  if (strcmp(header->titleID, "EORR37000") == 0) {
     notify("The Error disabler plugin is no longer required and has been auto deleted.");
     unlink(path);
-    free(buf), buf = NULL;
+    free(buf);
     return true;
   }
 
-  printf("loading plugin via 9021 %s\n", path);
-  {
-    char epath[256];
-    size_t elf_sz = (size_t)st.st_size - sizeof(CustomPluginHeader);
-    snprintf(epath, sizeof(epath), "/data/OrionHEN/plugins/%s.elf", header->titleID);
-    if (elfldr_remote_write_and_launch(epath, elf, elf_sz)) {
-      sleep(2);
-      pid = orion_find_pid_substr(header->titleID);
-      if (pid < 0)
-        pid = 1;
-      printf("  Launched via 9021!\n");
-    } else {
-      printf("  Failed 9021 launch\n");
-      pid = -1;
-    }
-  }
-
-  f = open(pbuf, O_WRONLY | O_CREAT | O_TRUNC, 0666);
-  if (f >= 0)
-  {
-    if (pid >= 0)
-    {
-      char t[32];
-      int l = snprintf(t, sizeof(t), "%d", pid);
-      write(f, t, l);
-    }
-    else
-    {
-      unlink(pbuf);
-    }
-    close(f);
-  }
-
-  free(buf), buf = NULL;
-
+  uint8_t* elf = get_elf_header_address(buf);
+  const size_t elf_sz = size - sizeof(CustomPluginHeader);
+  const pid_t pid = launch_plugin_via_9021(header->titleID, elf, elf_sz, path);
+  write_plugin_pid(pid_path, pid);
+  free(buf);
   return true;
 }
 
@@ -916,34 +869,27 @@ void free_plugin_files(char **plugin_files) {
 }
 
 int main(void) {
-  // ptrace(PT_ATTACH, pid, 0, 0);
-  /// clearFramePointer();
-  int pid = -1;
-
   signal(SIGCHLD, SIG_IGN);
 
   klog_puts("Jailbreaking the boostrapper ...");
-  // launch socksrv.elf in a new processes
   if (elfldr_raise_privileges(getpid())) {
     notify("Unable to raise privileges");
     return -1;
   }
-
   klog_printf("   Success!\n");
-  if(if_exists("/data/I_want_logging_for_orionhen")){
-      klog_printf("Redirecting stdout and stderr to logger ...");
-     if(initStdout() >= 0)
-         klog_puts("   Success!");
-     else
-         klog_puts("   Failed!");
-      
+
+  if (if_exists("/data/I_want_logging_for_orionhen")) {
+    klog_printf("Redirecting stdout and stderr to logger ...");
+    if (initStdout() >= 0)
+      klog_puts("   Success!");
+    else
+      klog_puts("   Failed!");
   }
 
   OrbisKernelSwVersion sys_ver;
   sceKernelGetProsperoSystemSwVersion(&sys_ver);
 
   // Byepervisor (1.xx–2.xx HV path) removed from OrionHEN.
-  // Target firmwares that need it should use a dedicated payload.
   if (sys_ver.version < 0x3000000 && !sceKernelIsGenuineDevKit()) {
     klog_printf("FW %s is < 3.00 and Byepervisor is not bundled; continuing without HV path\n",
                 sys_ver.version_str);
@@ -951,6 +897,7 @@ int main(void) {
 
   klog_puts("============== Spawner (Bootstrapper) Started =================");
 
+  // Directory layout
   mkdir("/data/OrionHEN", 0777);
   mkdir("/data/OrionHEN/plugins", 0777);
   mkdir("/data/OrionHEN/payloads", 0777);
@@ -980,14 +927,10 @@ int main(void) {
   klog_printf("   Written!\n");
 
   klog_printf("Unmounting /update forcefully ...");
-  // block updates
   unlink("/update/PS5UPDATE.PUP");
   unlink("/update/PS5UPDATE.PUP.net.temp");
-  // unlink("/update/PS4UPDATE.PUP.md5");
-  if ((int)unmount("/update", 0x80000LL) < 0) {
+  if ((int)unmount("/update", 0x80000LL) < 0)
     unmount("/update", 0);
-  }
-
   klog_puts("   Success!");
 
   /*
@@ -1017,13 +960,39 @@ int main(void) {
     return true;
   };
 
+  auto kill_by_name = [](const char *a, const char *b) {
+    int p = -1;
+    while ((p = orion_find_pid_substr(a)) > 0 ||
+           (p = orion_find_pid_substr(b)) > 0) {
+      kill(p, SIGKILL);
+      sleep(1);
+    }
+  };
+
+  auto launch_path = [](const char *path, const char *label,
+                        const char *wait_name) -> bool {
+    klog_printf("9021 file: %s (%s)\n", path, label);
+    if (!elfldr_remote_send_file_uri(path)) {
+      klog_printf("  send FAILED %s\n", label);
+      return false;
+    }
+    for (int i = 0; i < 30; i++) {
+      if (wait_name && orion_find_pid_substr(wait_name) > 0) {
+        klog_printf("  running: %s\n", wait_name);
+        return true;
+      }
+      sleep(1);
+    }
+    klog_printf("  sent %s (process name not seen yet, continuing)\n", label);
+    return true;
+  };
+
   klog_puts("Writing daemon ELFs to /data/OrionHEN/daemons ...");
   if (!write_elf_file("/data/OrionHEN/daemons/util.elf", util_start, util_size)) {
     notify("failed to write util.elf");
     return -2;
   }
-  if (!write_elf_file("/data/OrionHEN/daemons/daemon.elf", daemon_start,
-                      daemon_size)) {
+  if (!write_elf_file("/data/OrionHEN/daemons/daemon.elf", daemon_start, daemon_size)) {
     notify("failed to write daemon.elf");
     return -2;
   }
@@ -1039,57 +1008,29 @@ int main(void) {
     return -2;
   }
   klog_puts("elfldr :9021 OK - launching via file URI (serialized)");
-
-  /* Let the system settle after remount/unmount before first EXEC */
-  sleep(3);
-
-  auto launch_path = [](const char *path, const char *label,
-                        const char *wait_name) -> bool {
-    klog_printf("9021 file: %s (%s)\n", path, label);
-    if (!elfldr_remote_send_file_uri(path)) {
-      klog_printf("  send FAILED %s\n", label);
-      return false;
-    }
-    /* Wait for process; do not fire next spawn while SpZeroConf is busy */
-    for (int i = 0; i < 30; i++) {
-      if (wait_name && orion_find_pid_substr(wait_name) > 0) {
-        klog_printf("  running: %s\n", wait_name);
-        return true;
-      }
-      sleep(1);
-    }
-    klog_printf("  sent %s (process name not seen yet, continuing)\n", label);
-    return true; /* URI accepted; name may differ across elfldr versions */
-  };
+  sleep(3); /* settle after remount/unmount */
 
   /*
-   * Order matters for toolbox inject:
-   *   util first (services)
-   *   kstuff second (must finish patching ShellUI BEFORE daemon injects toolbox)
-   *   daemon last  (cmd_enable_toolbox injects into SceShellUI)
-   * Launching daemon+kstuff together races ptrace on ShellUI → toolbox timeout.
+   * Order: util → kstuff → daemon
+   * (daemon injects toolbox; kstuff must patch ShellUI first)
    */
   klog_puts("Starting util via 9021 ...");
-  while ((pid = orion_find_pid_substr("util.elf")) > 0 ||
-         (pid = orion_find_pid_substr("OrionHEN Utility")) > 0) {
-    kill(pid, SIGKILL);
-    sleep(1);
-  }
+  kill_by_name("util.elf", "OrionHEN Utility");
   orion_ready_clear(ORION_READY_UTIL);
   orion_ready_clear(ORION_READY_KSTUFF);
   orion_ready_clear(ORION_READY_DAEMON);
   orion_ready_clear(ORION_READY_TOOLBOX);
+
   if (!launch_path("/data/OrionHEN/daemons/util.elf", "util", "util.elf")) {
     notify("failed to launch util via elfldr :9021");
     return -2;
   }
-  if (!orion_ready_wait(ORION_READY_UTIL, /*timeout_ms=*/15000, /*poll_ms=*/200)) {
+  if (!orion_ready_wait(ORION_READY_UTIL, /*timeout_ms=*/15000, /*poll_ms=*/200))
     klog_puts("util ready timeout — continuing (process may still be starting)");
-  }
 
-  bool dont_load_kstuff =
-      (if_exists("/mnt/usb0/no_kstuff") || if_exists("/data/OrionHEN/no_kstuff"));
-  if (dont_load_kstuff) {
+  const bool skip_kstuff =
+      if_exists("/mnt/usb0/no_kstuff") || if_exists("/data/OrionHEN/no_kstuff");
+  if (skip_kstuff) {
     klog_puts("kstuff disabled via no_kstuff file");
     orion_ready_signal(ORION_READY_KSTUFF);
   } else if (sys_ver.version >= 0x3000000) {
@@ -1110,67 +1051,50 @@ int main(void) {
       if (!not_loaded) {
         klog_puts("kstuff mprotect OK — signal ready");
         orion_ready_signal(ORION_READY_KSTUFF);
-        /* Brief settle for ShellUI trophy patches (still a short fixed delay). */
-        sleep(1);
+        sleep(1); /* brief settle for ShellUI trophy patches */
       }
     } else {
       notify("Failed to load kstuff via 9021, continuing");
     }
   } else {
-    /* No kstuff path: mark kstuff ready so waiters are not blocked. */
     orion_ready_signal(ORION_READY_KSTUFF);
   }
 
   klog_puts("Starting daemon via 9021 (toolbox inject) ...");
-  while ((pid = orion_find_pid_substr("daemon.elf")) > 0 ||
-         (pid = orion_find_pid_substr("OrionHEN Critical")) > 0) {
-    kill(pid, SIGKILL);
-    sleep(1);
-  }
+  kill_by_name("daemon.elf", "OrionHEN Critical");
   orion_ready_clear(ORION_READY_DAEMON);
   if (!launch_path("/data/OrionHEN/daemons/daemon.elf", "daemon", "daemon.elf")) {
     notify("failed to launch daemon via elfldr :9021");
     return -2;
   }
-  if (!orion_ready_wait(ORION_READY_DAEMON, /*timeout_ms=*/20000, /*poll_ms=*/200)) {
+  if (!orion_ready_wait(ORION_READY_DAEMON, /*timeout_ms=*/20000, /*poll_ms=*/200))
     klog_puts("daemon ready timeout — continuing");
-  }
 
-  /* Welcome toast after launches (earlier toast raced MediaCore + EXEC) */
   sceNotificationSend(0xFE, true, &json_payload[0]);
 
-  // return 0;
-
+  // Autostart plugins (skip elfldr.plugin)
   char **plugin_paths = find_plugin_files();
   if (plugin_paths && plugin_count > 0) {
     int loaded_plugins = 0;
-    // First, load all plugins except elfldr.plugin
     for (int i = 0; i < plugin_count; i++) {
-      // Skip loading elfldr.plugin in this loop
-      if (strstr(plugin_paths[i], "elfldr") == 0) {
-          klog_printf("Loading plugin: %s\n", plugin_paths[i]);
-        if (!load_plugin(plugin_paths[i], loaded_filenames[i])) {
-          snprintf(buff, sizeof(buff),
-                   "[OrionHEN] Failed to load plugin!\nPath: %s",
-                   plugin_paths[i]);
-          notify(buff);
-          klog_puts("FAILED!");
-          continue;
-        }
-
-        klog_puts("Loaded!");
-        loaded_plugins++;
+      if (strstr(plugin_paths[i], "elfldr") != nullptr)
+        continue;
+      klog_printf("Loading plugin: %s\n", plugin_paths[i]);
+      if (!load_plugin(plugin_paths[i], loaded_filenames[i])) {
+        snprintf(buff, sizeof(buff),
+                 "[OrionHEN] Failed to load plugin!\nPath: %s",
+                 plugin_paths[i]);
+        notify(buff);
+        klog_puts("FAILED!");
+        continue;
       }
+      klog_puts("Loaded!");
+      loaded_plugins++;
     }
-    //(void)memset(buff, 0, sizeof(buff));
-    // snprintf(buff, sizeof(buff), "Successfully loaded %d plugins",
-    // loaded_plugins); notify(buff);
     klog_printf("Successfully loaded %d plugins\n", loaded_plugins);
     free_plugin_files(plugin_paths);
   }
-  // raise(SIGKILL, getpid());
-  // sceSystemServiceLoadExec("exit", NULL);
-  klog_puts("============== Spawner (Bootstrapper) Finished =================");
 
+  klog_puts("============== Spawner (Bootstrapper) Finished =================");
   return 0;
 }

@@ -307,134 +307,151 @@ bool is_elf_file(const void *buffer, size_t size)
   return memcmp(buffer, elf_magic, 4) == 0;
 }
 
-bool load_plugin(const char *path)
+static void plugin_pid_path(char *out, size_t out_sz, const char *title_id)
+{
+  snprintf(out, out_sz, "/system_tmp/%s.PID", title_id);
+}
+
+static pid_t read_plugin_pid(const char *pid_path)
+{
+  int f = open(pid_path, O_RDONLY);
+  if (f < 0)
+    return -1;
+
+  char t[32];
+  int r = read(f, t, sizeof(t) - 1);
+  close(f);
+  if (r <= 0)
+    return -1;
+
+  t[r] = '\0';
+  return (pid_t)atoi(t);
+}
+
+static void write_plugin_pid(const char *pid_path, pid_t pid)
+{
+  int f = open(pid_path, O_WRONLY | O_CREAT | O_TRUNC, 0666);
+  if (f < 0)
+    return;
+
+  if (pid >= 0) {
+    char t[32];
+    int len = snprintf(t, sizeof(t), "%d", pid);
+    write(f, t, len);
+  } else {
+    unlink(pid_path);
+  }
+  close(f);
+}
+
+static void stop_running_plugin(const char *pid_path, const char *title_id)
+{
+  pid_t pid = read_plugin_pid(pid_path);
+  if (pid > 0) {
+    char name[32];
+    if (sceKernelGetProcessName(pid, name) < 0) {
+      OrionHEN_log("Stale plugin PID file detected for %s, removing", title_id);
+      unlink(pid_path);
+      pid = -1;
+    }
+  }
+
+  if (pid > 0) {
+    OrionHEN_log("killing pid %d (plugin: %s)", pid, title_id);
+    kill(pid, SIGKILL);
+    unlink(pid_path);
+  }
+}
+
+/** Returns pid (>=0) on success, -1 on failure. Unknown live pid → 1. */
+static pid_t launch_plugin_via_9021(const char *title_id, const uint8_t *elf,
+                                    size_t elf_sz, const char *log_label)
+{
+  char epath[256];
+  snprintf(epath, sizeof(epath), "/data/OrionHEN/plugins/%s.elf", title_id);
+  OrionHEN_log("loading %s via 9021 %s", log_label, title_id);
+
+  if (!elfldr_remote_write_and_launch(epath, elf, elf_sz)) {
+    OrionHEN_log("  Failed 9021 launch");
+    return -1;
+  }
+
+  sleep(2);
+  char nbuf[64];
+  snprintf(nbuf, sizeof(nbuf), "%s.elf", title_id);
+  pid_t pid = find_pid(nbuf);
+  if (pid < 0)
+    pid = find_pid(title_id);
+  if (pid < 0)
+    pid = 1;
+  OrionHEN_log("  Launched via 9021!");
+  return pid;
+}
+
+static uint8_t *read_file_all(const char *path, size_t *out_size)
 {
   int fd = open(path, O_RDONLY);
-  if (fd < 0)
-  {
+  if (fd < 0) {
     OrionHEN_log("Failed to open file, %s (error %s)", path, strerror(errno));
-    return false;
+    return NULL;
   }
 
   struct stat st;
-  if (fstat(fd, &st) != 0)
-  {
+  if (fstat(fd, &st) != 0) {
     OrionHEN_log("Failed to get file stats");
     close(fd);
-    return false;
-  }
- 
-  // Allocate buffer and read the entire file.
-  uint8_t *buf = (uint8_t *)malloc(st.st_size);
-  if (!buf)
-  {
-    OrionHEN_log("Failed to allocate memory for Plugin file");
-    close(fd);
-    return false;
+    return NULL;
   }
 
-  if (read(fd, buf, st.st_size) != st.st_size)
-  {
+  uint8_t *buf = (uint8_t *)malloc(st.st_size);
+  if (!buf) {
+    OrionHEN_log("Failed to allocate memory for Plugin file");
+    close(fd);
+    return NULL;
+  }
+
+  if (read(fd, buf, st.st_size) != st.st_size) {
     OrionHEN_log("Failed to read Plugin file");
     free(buf);
     close(fd);
-    return false;
+    return NULL;
   }
   close(fd);
+  *out_size = (size_t)st.st_size;
+  return buf;
+}
+
+bool load_plugin(const char *path)
+{
+  size_t size = 0;
+  uint8_t *buf = read_file_all(path, &size);
+  if (!buf)
+    return false;
 
   const CustomPluginHeader *header = (const CustomPluginHeader *)buf;
-  const char *filename = basename(path);
+  const char *filename = basename((char *)path);
+  char pid_path[256];
+  plugin_pid_path(pid_path, sizeof(pid_path), header->titleID);
 
-  if (strstr(filename, ".elf") != NULL)
-  {
+  /* ---- raw .elf payload ---- */
+  if (strstr(filename, ".elf") != NULL) {
     OrionHEN_log("ELF detected: %s", filename);
-
-    if (!is_elf_file(buf, st.st_size))
-    {
+    if (!is_elf_file(buf, size)) {
       OrionHEN_log("Invalid ELF file.");
       orion_notify(true, "Invalid ELF file: %s", filename);
       free(buf);
       return false;
     }
 
-    char pbuf[256];
-    snprintf(pbuf, sizeof(pbuf), "/system_tmp/%s.PID", header->titleID);
-
-    pid_t pid = -1;
-    int f = open(pbuf, O_RDONLY);
-    if (f >= 0)
-    {
-      char t[32];
-      int r = read(f, t, sizeof(t) - 1);
-      close(f);
-      if (r > 0)
-      {
-        t[r] = 0;
-        pid = atoi(t);
-      }
-    }
-
-    if (pid > 0)
-    {
-      char name[32];
-      if (sceKernelGetProcessName(pid, name) < 0)
-      {
-        OrionHEN_log("Stale plugin PID file detected for %s, removing", header->titleID);
-        unlink(pbuf);
-        pid = -1;
-      }
-    }
-
-    if (pid > 0)
-    {
-      OrionHEN_log("killing pid %d (plugin: %s)", pid, header->titleID);
-      kill(pid, SIGKILL);
-      unlink(pbuf);
-    }
-
-    OrionHEN_log("loading elf via 9021 %s", filename);
-    {
-      char epath[256];
-      snprintf(epath, sizeof(epath), "/data/OrionHEN/plugins/%s.elf", header->titleID);
-      if (elfldr_remote_write_and_launch(epath, buf, (size_t)st.st_size)) {
-        char nbuf[64];
-        sleep(2);
-        snprintf(nbuf, sizeof(nbuf), "%s.elf", header->titleID);
-        pid = find_pid(nbuf);
-        if (pid < 0)
-          pid = find_pid(header->titleID);
-        if (pid < 0)
-          pid = 1;
-        OrionHEN_log("  Launched via 9021!");
-      } else {
-        OrionHEN_log("  Failed 9021 launch");
-        pid = -1;
-      }
-    }
-
+    stop_running_plugin(pid_path, header->titleID);
+    pid_t pid = launch_plugin_via_9021(header->titleID, buf, size, filename);
     free(buf);
-
-    f = open(pbuf, O_WRONLY | O_CREAT | O_TRUNC, 0666);
-    if (f >= 0)
-    {
-      if (pid >= 0)
-      {
-        char t[32];
-        int l = snprintf(t, sizeof(t), "%d", pid);
-        write(f, t, l);
-      }
-      else
-      {
-        unlink(pbuf);
-      }
-      close(f);
-    }
-
+    write_plugin_pid(pid_path, pid);
     return (pid >= 0);
   }
 
-  if (!is_valid_plugin(buf))
-  {
+  /* ---- .plugin package ---- */
+  if (!is_valid_plugin(buf)) {
     OrionHEN_log("Invalid plugin file.");
     free(buf);
     return false;
@@ -446,85 +463,16 @@ bool load_plugin(const char *path)
   OrionHEN_log("Plugin Version: %s", header->plugin_version);
   OrionHEN_log("=========================================");
 
-  char pbuf[256];
-  snprintf(pbuf, sizeof(pbuf), "/system_tmp/%s.PID", header->titleID);
-
-  pid_t pid = -1;
-  int f = open(pbuf, O_RDONLY);
-  if (f >= 0)
-  {
-    char t[32];
-    int r = read(f, t, sizeof(t) - 1);
-    close(f);
-    if (r > 0)
-    {
-      t[r] = 0;
-      pid = atoi(t);
-    }
-  }
-
-  if (pid > 0)
-  {
-    char name[32];
-    if (sceKernelGetProcessName(pid, name) < 0)
-    {
-      OrionHEN_log("Stale plugin PID file detected for %s, removing", header->titleID);
-      unlink(pbuf);
-      pid = -1;
-    }
-  }
-
-  OrionHEN_log("seeing if plugin is running");
-  if (pid > 0)
-  {
-    OrionHEN_log("killing pid %d (plugin: %s)", pid, header->titleID);
-    kill(pid, SIGKILL);
-    unlink(pbuf);
-  }
+  stop_running_plugin(pid_path, header->titleID);
 
   uint8_t *elf = get_elf_header_address(buf);
-  make_plugin_app(header->titleID, elf, st.st_size - sizeof(CustomPluginHeader));
+  size_t elf_sz = size - sizeof(CustomPluginHeader);
+  make_plugin_app(header->titleID, elf, elf_sz);
 
-  OrionHEN_log("loading plugin via 9021 %s", path);
-  {
-    char epath[256];
-    size_t elf_sz = (size_t)st.st_size - sizeof(CustomPluginHeader);
-    snprintf(epath, sizeof(epath), "/data/OrionHEN/plugins/%s.elf", header->titleID);
-    if (elfldr_remote_write_and_launch(epath, elf, elf_sz)) {
-      char nbuf[64];
-      sleep(2);
-      snprintf(nbuf, sizeof(nbuf), "%s.elf", header->titleID);
-      pid = find_pid(nbuf);
-      if (pid < 0)
-        pid = find_pid(header->titleID);
-      if (pid < 0)
-        pid = 1;
-      OrionHEN_log("  Launched via 9021!");
-    } else {
-      OrionHEN_log("  Failed 9021 launch");
-      pid = -1;
-    }
-  }
-  bool success = (pid >= 0);
-
-  f = open(pbuf, O_WRONLY | O_CREAT | O_TRUNC, 0666);
-  if (f >= 0)
-  {
-    if (success)
-    {
-      char t[32];
-      int l = snprintf(t, sizeof(t), "%d", pid);
-      write(f, t, l);
-    }
-    else
-    {
-      unlink(pbuf);
-    }
-    close(f);
-  }
-
+  pid_t pid = launch_plugin_via_9021(header->titleID, elf, elf_sz, path);
+  write_plugin_pid(pid_path, pid);
   free(buf);
-  return success;
+  return (pid >= 0);
 }
 
 int launchApp(const char *titleId)

@@ -135,6 +135,105 @@ extern void makenewapp();
 extern void *IPC_loop(void *);
 extern bool is_handler_enabled;
 
+namespace {
+
+/** Welcome toast shown once at daemon startup. */
+constexpr const char kWelcomeToastJson[] =
+    "{\n"
+    "  \"rawData\": {\n"
+    "    \"viewTemplateType\": \"InteractiveToastTemplateB\",\n"
+    "    \"channelType\": \"Downloads\",\n"
+    "    \"useCaseId\": \"IDC\",\n"
+    "    \"toastOverwriteType\": \"No\",\n"
+    "    \"isImmediate\": true,\n"
+    "    \"priority\": 100,\n"
+    "    \"viewData\": {\n"
+    "      \"icon\": {\n"
+    "        \"type\": \"Url\",\n"
+    "        \"parameters\": {\n"
+    "          \"url\": \"/user/data/OrionHEN/orionhen.png\"\n"
+    "        }\n"
+    "      },\n"
+    "      \"message\": {\n"
+    "        \"body\": \"OrionHEN\"\n"
+    "      },\n"
+    "      \"subMessage\": {\n"
+    "        \"body\": \"Welcome to OrionHEN\"\n"
+    "      },\n"
+    "      \"actions\": [\n"
+    "        {\n"
+    "          \"actionName\": \"Go to the OrionHEN Toolbox\",\n"
+    "          \"actionType\": \"DeepLink\",\n"
+    "          \"defaultFocus\": true,\n"
+    "          \"parameters\": {\n"
+    "            \"actionUrl\": \"pssettings:play?function=debug_settings\"\n"
+    "          }\n"
+    "        }\n"
+    "      ]\n"
+    "    },\n"
+    "    \"platformViews\": {\n"
+    "      \"previewDisabled\": {\n"
+    "        \"viewData\": {\n"
+    "          \"icon\": {\n"
+    "            \"type\": \"Predefined\",\n"
+    "            \"parameters\": {\n"
+    "              \"icon\": \"download\"\n"
+    "            }\n"
+    "          },\n"
+    "          \"message\": {\n"
+    "            \"body\": \"OrionHEN Running\"\n"
+    "          }\n"
+    "        }\n"
+    "      }\n"
+    "    }\n"
+    "  },\n"
+    "  \"createdDateTime\": \"2025-12-14T03:14:51.473Z\",\n"
+    "  \"localNotificationId\": \"588193127\"\n"
+    "}";
+
+void install_crash_handlers() {
+  struct sigaction action {};
+  action.sa_handler = sig_handler;
+  sigemptyset(&action.sa_mask);
+  action.sa_flags = 0;
+  for (int i = 0; i < 12; i++)
+    sigaction(i, &action, nullptr);
+}
+
+/** URI opened after daemon is up (home / toolbox / settings). */
+const char* startup_uri_for_option(int start_option, bool toolbox_auto_start) {
+  switch (start_option) {
+  case HOME_MENU:
+    return "pshomeui:navigateToHome?bootCondition=psButton";
+  case TOOLBOX:
+    return toolbox_auto_start
+               ? "pssettings:play?mode=settings&function=debug_settings"
+               : "pshomeui:navigateToHome?bootCondition=psButton";
+  case SETTINGS:
+    return "pssettings:play?mode=settings";
+  default:
+    OrionHEN_log("unknown opt %d", start_option);
+    return nullptr;
+  }
+}
+
+void start_worker_threads(pthread_t* fifo_thr, pthread_t* pt_thr, pthread_t* msg_thr) {
+  pthread_create(fifo_thr, nullptr, fifo_and_dumper_thread, nullptr);
+  pthread_create(pt_thr, nullptr, Play_time_thread, nullptr);
+  pthread_create(msg_thr, nullptr, IPC_loop, nullptr);
+}
+
+/** Keep IPC_loop alive: rejoin + restart on exit. */
+[[noreturn]] void ipc_supervisor_loop(pthread_t* msg_thr) {
+  while (true) {
+    pthread_join(*msg_thr, nullptr);
+    pthread_create(msg_thr, nullptr, IPC_loop, nullptr);
+    sleep(1);
+  }
+}
+
+} // namespace
+
 int launchApp(const char *titleId) {
     int id = 0;
 
@@ -214,155 +313,66 @@ int ItemzLaunchByUri(const char* uri) {
 }
 
 bool is_800 = false;
+
 int main() {
   orion_log_configure("OrionHEN", "/data/OrionHEN/OrionHEN.log");
-    char buz[255];
-    pthread_t fifo_thr = nullptr;
-    pthread_t pt_thr = nullptr;
-    pthread_t msg_thr = nullptr;
-    
-    sceNetCtlInit();
-    sceUserServiceInitialize(&DEFAULT_PRIORITY);
-    puts("daemon entered");
-    
-    OrbisKernelSwVersion sys_ver;
-    sceKernelGetProsperoSystemSwVersion(&sys_ver);
-    int fw_ver = (sys_ver.version >> 16);
 
-    // Set up signal handlers
-    struct sigaction new_SIG_action;
-    new_SIG_action.sa_handler = sig_handler;
-    sigemptyset(&new_SIG_action.sa_mask);
-    new_SIG_action.sa_flags = 0;
+  char buz[255];
+  pthread_t fifo_thr = nullptr;
+  pthread_t pt_thr = nullptr;
+  pthread_t msg_thr = nullptr;
 
-    for (int i = 0; i < 12; i++)
-        sigaction(i, &new_SIG_action, NULL);
+  sceNetCtlInit();
+  sceUserServiceInitialize(&DEFAULT_PRIORITY);
+  puts("daemon entered");
 
-    unlink("/data/OrionHEN/OrionHEN.log");
-    unlink("/data/OrionHEN/OrionHEN_crash.log");
+  OrbisKernelSwVersion sys_ver;
+  sceKernelGetProsperoSystemSwVersion(&sys_ver);
+  const int fw_ver = (sys_ver.version >> 16);
 
-    payload_args_t *args = payload_get_args();
-    kernel_base = args->kdata_base_addr;
+  install_crash_handlers();
 
-    OrionHEN_log("=========== starting OrionHEN (0x%X) ... ===========", fw_ver);
-    (void)sceKernelMprotect(&buz[0], 100, 0x7); // probe mprotect / kstuff state
-    bool toolbox_only = (fw_ver >= 0x10000);
-    is_800 = (fw_ver >= 0x800);
+  unlink("/data/OrionHEN/OrionHEN.log");
+  unlink("/data/OrionHEN/OrionHEN_crash.log");
 
+  payload_args_t* args = payload_get_args();
+  kernel_base = args->kdata_base_addr;
 
-    LoadSettings();
+  OrionHEN_log("=========== starting OrionHEN (0x%X) ... ===========", fw_ver);
+  (void)sceKernelMprotect(&buz[0], 100, 0x7); // probe mprotect / kstuff state
+  const bool toolbox_only = (fw_ver >= 0x10000);
+  is_800 = (fw_ver >= 0x800);
 
-    // Start threads
-    get_ip_address(&buz[0]);
-    pthread_create(&fifo_thr, nullptr, fifo_and_dumper_thread, nullptr);
-    pthread_create(&pt_thr, nullptr, Play_time_thread, nullptr);
-    pthread_create(&msg_thr, nullptr, IPC_loop, nullptr);
-    orion_ready_signal(ORION_READY_DAEMON);
+  LoadSettings();
 
-    OrionHEN_log("is toolbox only: %s | ver: %x", toolbox_only ? "Yes" : "No", sys_ver.version);
-    // Initialize toolbox if needed
-    if (g_settings.toolbox_auto_start) {
-        cmd_enable_toolbox();
-    }
-    else if (!g_settings.toolbox_auto_start) {
-        orion_notify(true, "the OrionHEN Toolbox auto start is disabled in the config.ini\n\n"
-                    "Re-enable toolbox_auto_start in /data/OrionHEN/config.ini or open Debug Settings");
-    }
+  get_ip_address(&buz[0]);
+  start_worker_threads(&fifo_thr, &pt_thr, &msg_thr);
+  orion_ready_signal(ORION_READY_DAEMON);
 
-     const char json_payload[] =
-     "{\n"
-     "  \"rawData\": {\n"
-     "    \"viewTemplateType\": \"InteractiveToastTemplateB\",\n"
-     "    \"channelType\": \"Downloads\",\n"
-     "    \"useCaseId\": \"IDC\",\n"
-     "    \"toastOverwriteType\": \"No\",\n"
-     "    \"isImmediate\": true,\n"
-     "    \"priority\": 100,\n"
-     "    \"viewData\": {\n"
-     "      \"icon\": {\n"
-     "        \"type\": \"Url\",\n"
-     "        \"parameters\": {\n"
-     "          \"url\": \"/user/data/OrionHEN/orionhen.png\"\n"
-     "        }\n"
-     "      },\n"
-     "      \"message\": {\n"
-     "        \"body\": \"OrionHEN\"\n"
-     "      },\n"
-     "      \"subMessage\": {\n"
-     "        \"body\": \"Welcome to OrionHEN\"\n"
-     "      },\n"
-     "      \"actions\": [\n"
-     "        {\n"
-     "          \"actionName\": \"Go to the OrionHEN Toolbox\",\n"
-     "          \"actionType\": \"DeepLink\",\n"
-     "          \"defaultFocus\": true,\n"
-     "          \"parameters\": {\n"
-     "            \"actionUrl\": \"pssettings:play?function=debug_settings\"\n"
-     "          }\n"
-     "        }\n"
-     "      ]\n"
-     "    },\n"
-     "    \"platformViews\": {\n"
-     "      \"previewDisabled\": {\n"
-     "        \"viewData\": {\n"
-     "          \"icon\": {\n"
-     "            \"type\": \"Predefined\",\n"
-     "            \"parameters\": {\n"
-     "              \"icon\": \"download\"\n"
-     "            }\n"
-     "          },\n"
-     "          \"message\": {\n"
-     "            \"body\": \"OrionHEN Running\"\n"
-     "          }\n"
-     "        }\n"
-     "      }\n"
-     "    }\n"
-     "  },\n"
-     "  \"createdDateTime\": \"2025-12-14T03:14:51.473Z\",\n"
-     "  \"localNotificationId\": \"588193127\"\n"
-     "}";
-	sceNotificationSend(0xFE, true, &json_payload[0]);
+  OrionHEN_log("is toolbox only: %s | ver: %x", toolbox_only ? "Yes" : "No",
+               sys_ver.version);
 
+  if (g_settings.toolbox_auto_start) {
+    cmd_enable_toolbox();
+  } else {
+    orion_notify(true,
+                 "the OrionHEN Toolbox auto start is disabled in the config.ini\n\n"
+                 "Re-enable toolbox_auto_start in /data/OrionHEN/config.ini or open "
+                 "Debug Settings");
+  }
 
-    OrionHEN_log("StartUp thread created!! - welcome to OrionHEN");
+  sceNotificationSend(0xFE, true, kWelcomeToastJson);
+  OrionHEN_log("StartUp thread created!! - welcome to OrionHEN");
 
-    // Launch the appropriate app based on configuration
-    const char *URI = nullptr;
-    switch (g_settings.start_option) {
-    case HOME_MENU: {
-        URI = "pshomeui:navigateToHome?bootCondition=psButton";
-        break;
-    }
-    case TOOLBOX: {
-        if (g_settings.toolbox_auto_start)
-            URI = "pssettings:play?mode=settings&function=debug_settings";
-        else
-            URI = "pshomeui:navigateToHome?bootCondition=psButton";
-        break;
-    }
-    case SETTINGS: {
-        URI = "pssettings:play?mode=settings";
-        break;
-    }
-    default:
-        OrionHEN_log("unknown opt %d", g_settings.start_option);
-        break;
-    }
+  if (const char* uri =
+          startup_uri_for_option(g_settings.start_option, g_settings.toolbox_auto_start)) {
+    OrionHEN_log("ret %d", ItemzLaunchByUri(uri));
+  }
 
-    if (URI)
-        OrionHEN_log("ret %d", ItemzLaunchByUri(URI));
+  if (g_settings.auto_eject_disc)
+    sceShellCoreUtilRequestEjectDevice("/dev/cd0");
 
-    if(g_settings.auto_eject_disc){
-        sceShellCoreUtilRequestEjectDevice("/dev/cd0");
-    }
-
-    // Main loop to keep the process running
-    while (true) {
-        pthread_join(msg_thr, NULL);
-        pthread_create(&msg_thr, nullptr, IPC_loop, nullptr);
-        sleep(1);
-    }
-
-    puts("main thread ended");
-    return 0;
+  ipc_supervisor_loop(&msg_thr);
+  // unreachable
+  return 0;
 }

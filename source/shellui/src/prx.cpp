@@ -1,4 +1,3 @@
-
 /* Copyright (C) 2025 OrionHEN / LightningMods
 
 This program is free software; you can redistribute it and/or modify it
@@ -17,23 +16,29 @@ along with this program; see the file COPYING. If not, see
 
 #include "Detour.h"
 #include "HookedFuncs.hpp"
-#include <orion/proc_query.h>
+#include "appinst_types.hpp"
 #include "defs.h"
 #include "external_symbols.hpp"
 #include "ipc.hpp"
 #include "proc.h"
 #include "ps5/kernel.h"
 #include "ucred.h"
-#include <orion/ready.h>
-#include <cstdint>
-#include <iostream>
 #include "webserver.hpp"
 
+#include <orion/proc_query.h>
+#include <orion/ready.h>
+
+#include <cstdint>
+#include <string>
 #include <unistd.h>
 #include <util.hpp>
+#include <vector>
+
+// ---------------------------------------------------------------------------
+// Globals (referenced by other shellui translation units)
+// ---------------------------------------------------------------------------
 
 std::string dec_xml_str;
-
 std::string UI3_dec;
 std::string legacy_dec;
 std::string appsystem_dll;
@@ -41,7 +46,6 @@ std::string uilib;
 std::string Sysinfo;
 std::string display_info;
 std::string uilib_dll;
-
 std::string plugin_xml;
 std::string remote_play_xml;
 std::string debug_settings_xml;
@@ -50,13 +54,12 @@ std::string cheats_xml;
 MonoImage* pui_img = nullptr;
 MonoImage* AppSystem_img = nullptr;
 MonoObject* Game = nullptr;
-MonoImage * react_common_img = nullptr;
+MonoImage* react_common_img = nullptr;
 
 bool hooked = false;
-// SCE hooks for orion_find_pid_ex (installed after dynlib resolve in main)
-
 bool has_hv_bypass = false;
-
+bool is_6xx = false;
+bool is_3xx = false;
 
 extern "C" long ptr_syscall = 0;
 
@@ -76,606 +79,644 @@ void __syscall() {
 void (*OnRender_orig)(MonoObject* instance);
 MonoObject* rootWidget = nullptr;
 MonoObject* font = nullptr;
-
-void (*Orig_ReloadApp)(MonoString *str) = nullptr;
-
-
-bool is_6xx = false, is_3xx = false;
+void (*Orig_ReloadApp)(MonoString* str) = nullptr;
 
 // Defined in prx_install / prx_overlay
-void ReloadApp(MonoString *str);
+void ReloadApp(MonoString* str);
 void OnRender_Hook(MonoObject* instance);
 void* dialogue_thread(void* arg);
 int KillAppWithReason_Hook(int appId, int reason);
-extern ssize_t(*read_orig)(int fd, void *buf, size_t count);
-extern ssize_t read_hook(int fd, void* buf, size_t count);
-#include "appinst_types.hpp"
-extern int (*sceAppInstUtilInstallByPackage_orig)(MetaInfo* arg1, SceAppInstallPkgInfo* pkg_info, PlayGoInfo* arg2);
-int sceAppInstUtilInstallByPackage_hook(MetaInfo* arg1, SceAppInstallPkgInfo* pkg_info, PlayGoInfo* arg2);
 
-int main(int argc, char const *argv[]) {
-  OrbisKernelSwVersion sw;
-  char buz[100];
-  if (hooked) {
-    return 0;
+extern ssize_t (*read_orig)(int fd, void* buf, size_t count);
+extern ssize_t read_hook(int fd, void* buf, size_t count);
+extern int (*sceAppInstUtilInstallByPackage_orig)(MetaInfo* arg1,
+                                                  SceAppInstallPkgInfo* pkg_info,
+                                                  PlayGoInfo* arg2);
+int sceAppInstUtilInstallByPackage_hook(MetaInfo* arg1,
+                                        SceAppInstallPkgInfo* pkg_info,
+                                        PlayGoInfo* arg2);
+
+// ---------------------------------------------------------------------------
+// Init constants
+// ---------------------------------------------------------------------------
+
+namespace {
+
+constexpr int kSyscallInstrOffset = 0x0A;
+constexpr size_t kMprotectProbeSize = 100;
+constexpr int kProtRwx = 0x7; // PROT_READ | PROT_WRITE | PROT_EXEC
+constexpr uint32_t kFw3xxMaxExclusive = 0x4000042;
+constexpr uint32_t kFw6xxMin = 0x6000000;
+// Same magnitude as the previous sleep(0x100000) keep-alive.
+constexpr unsigned kKeepAliveSleepSec = 0x100000;
+
+// XOR key material used for version string + toolbox XML (base64 of "SISTR0_I_SEE_YOU").
+constexpr const char* kXorKeyB64 = "U0lTVFIwX0lfU0VFX1lPVQ==";
+
+// ---------------------------------------------------------------------------
+// RAII: restore process authid on every exit path
+// ---------------------------------------------------------------------------
+
+struct AuthIdGuard {
+  pid_t pid;
+  uintptr_t old_authid;
+  bool active = true;
+
+  AuthIdGuard(pid_t p, uintptr_t auth) : pid(p), old_authid(auth) {}
+  ~AuthIdGuard() {
+    if (active)
+      set_proc_authid(pid, old_authid);
+  }
+  void release() { active = false; }
+
+  AuthIdGuard(const AuthIdGuard&) = delete;
+  AuthIdGuard& operator=(const AuthIdGuard&) = delete;
+};
+
+// ---------------------------------------------------------------------------
+// Detour helpers
+// ---------------------------------------------------------------------------
+
+template <typename Fn>
+bool install_detour(const char* name, uint64_t target, void* hook, Fn& out_orig,
+                    bool required) {
+  if (!target) {
+    shellui_log("Hook target missing: %s", name);
+    if (required)
+      notify("Failed to find hook target");
+    return !required;
   }
 
-  static ssize_t(*read)(int fd, void* buf, size_t count) = nullptr;
-  static int (*sceAppInstUtilInstallByPackage)(MetaInfo * arg1, SceAppInstallPkgInfo * pkg_info, PlayGoInfo * arg2) = nullptr;
+  void* trampoline = DetourFunction(target, hook);
+  if (!trampoline) {
+    shellui_log("Detour failed: %s", name);
+    if (required)
+      notify("Failed to install hook");
+    return !required;
+  }
 
+  out_orig = reinterpret_cast<Fn>(trampoline);
+  return true;
+}
 
-  pid_t pid = getpid();
-  uintptr_t old_authid = set_ucred_to_debugger();
+template <typename Fn>
+bool install_detour_native(const char* name, void* target, void* hook, Fn& out_orig,
+                           bool required) {
+  return install_detour(name, reinterpret_cast<uint64_t>(target), hook, out_orig,
+                        required);
+}
 
+// ---------------------------------------------------------------------------
+// Mono images used during init
+// ---------------------------------------------------------------------------
 
-  int appinstaller_handle = get_module_handle(pid, "libSceAppInstUtil.sprx");
-  KERNEL_DLSYM(appinstaller_handle, sceAppInstUtilInstallByPackage);
-  
+struct ShellImages {
+  MonoImage* legacy = nullptr;
+  MonoImage* mscorlib = nullptr;
+  MonoImage* react_pui = nullptr;
+  MonoImage* app_system = nullptr;
+  MonoImage* core = nullptr;
+  MonoImage* capture_menu = nullptr;
+  MonoImage* lnc = nullptr; // optional
+  MonoImage* react_common = nullptr;
+  MonoImage* rn_shell = nullptr;
+  MonoImage* app_install = nullptr;
+  MonoImage* pui = nullptr;
+};
 
-  int libkernelsys_handle = get_module_handle(pid, "libkernel_sys.sprx");
+MonoImage* require_dll(const char* name) {
+  MonoImage* img = getDLLimage(name);
+  if (!img) {
+    shellui_log("Failed to load Mono assembly: %s", name);
+    notify("Failed to load assembly");
+  }
+  return img;
+}
 
-  KERNEL_DLSYM(libkernelsys_handle, sceKernelDebugOutText);
-  KERNEL_DLSYM(libkernelsys_handle, sceKernelMkdir);
-  KERNEL_DLSYM(libkernelsys_handle, scePthreadCreate);
-  KERNEL_DLSYM(libkernelsys_handle, sceKernelMprotect);
-  KERNEL_DLSYM(libkernelsys_handle, sceKernelSendNotificationRequest);
-  KERNEL_DLSYM(libkernelsys_handle, sceKernelGetProsperoSystemSwVersion);
-  KERNEL_DLSYM(libkernelsys_handle, sceKernelGetAppInfo);
-  KERNEL_DLSYM(libkernelsys_handle, sceKernelGetProcessName);
-  KERNEL_DLSYM(libkernelsys_handle, read);
+// ---------------------------------------------------------------------------
+// Phase 1: native dynlib symbols
+// ---------------------------------------------------------------------------
 
-  shellui_log("Starting ShellUI Module ....");
-  // int native_handle = get_module_handle(pid, "libNativeExtensions.sprx");
-  //KERNEL_DLSYM(native_handle, DecryptRnpsBundle);
-  
-  // KERNEL_DLSYM(libSceKernelHandle, sceKernelGetSocSensorTemperature);
-  //
-  //  JIT
-  //
+bool resolve_native_symbols(pid_t pid, void*& out_read,
+                            void*& out_sceAppInstUtilInstallByPackage) {
+  // Locals required by KERNEL_DLSYM (writes into a named variable).
+  static int (*sceAppInstUtilInstallByPackage)(MetaInfo*, SceAppInstallPkgInfo*,
+                                               PlayGoInfo*) = nullptr;
+  static ssize_t (*read)(int, void*, size_t) = nullptr;
+
+  int appinstaller = get_module_handle(pid, "libSceAppInstUtil.sprx");
+  KERNEL_DLSYM(appinstaller, sceAppInstUtilInstallByPackage);
+  out_sceAppInstUtilInstallByPackage =
+      reinterpret_cast<void*>(sceAppInstUtilInstallByPackage);
+
+  int libkernelsys = get_module_handle(pid, "libkernel_sys.sprx");
+  KERNEL_DLSYM(libkernelsys, sceKernelDebugOutText);
+  KERNEL_DLSYM(libkernelsys, sceKernelMkdir);
+  KERNEL_DLSYM(libkernelsys, scePthreadCreate);
+  KERNEL_DLSYM(libkernelsys, sceKernelMprotect);
+  KERNEL_DLSYM(libkernelsys, sceKernelSendNotificationRequest);
+  KERNEL_DLSYM(libkernelsys, sceKernelGetProsperoSystemSwVersion);
+  KERNEL_DLSYM(libkernelsys, sceKernelGetAppInfo);
+  KERNEL_DLSYM(libkernelsys, sceKernelGetProcessName);
+  KERNEL_DLSYM(libkernelsys, read);
+  out_read = reinterpret_cast<void*>(read);
+
   KERNEL_DLSYM(libSceKernelHandle, sceKernelJitCreateSharedMemory);
   KERNEL_DLSYM(libSceKernelHandle, sceKernelJitCreateAliasOfSharedMemory);
   KERNEL_DLSYM(libSceKernelHandle, sceKernelJitMapSharedMemory);
   KERNEL_DLSYM(libSceKernelHandle, ioctl);
   KERNEL_DLSYM(libSceKernelHandle, __sys_regmgr_call);
 
-  // get the yscall address for the ioctl hook
-  static __attribute__ ((used)) long getpid = 0;
-  KERNEL_DLSYM(libSceKernelHandle, getpid);
-  ptr_syscall = getpid;
-  ptr_syscall += 0xa; // jump directly to the syscall instruction
+  // Point ptr_syscall at the syscall instruction inside getpid.
+  // Variable name must be `getpid` for KERNEL_DLSYM's #sym string.
+  {
+    static __attribute__((used)) long getpid = 0;
+    KERNEL_DLSYM(libSceKernelHandle, getpid);
+    ptr_syscall = getpid + kSyscallInstrOffset;
+  }
 
-  int libshelluiutil_handle = get_module_handle(pid, "libSceShellUIUtil.sprx");
-  KERNEL_DLSYM(libshelluiutil_handle, sceShellUIUtilLaunchByUri);
-  KERNEL_DLSYM(libshelluiutil_handle, sceShellUIUtilInitialize);
-  
+  int shellui_util = get_module_handle(pid, "libSceShellUIUtil.sprx");
+  KERNEL_DLSYM(shellui_util, sceShellUIUtilLaunchByUri);
+  KERNEL_DLSYM(shellui_util, sceShellUIUtilInitialize);
 
-  //
-  // Mono is already loaded into the SceShellUI process
-  //
-  int libmono_handle = get_module_handle(pid, "libmonosgen-2.0.sprx");
+  int system_service = get_module_handle(pid, "libSceSystemService.sprx");
+  KERNEL_DLSYM(system_service, sceSystemServiceGetAppIdOfRunningBigApp);
+  KERNEL_DLSYM(system_service, sceSystemServiceGetAppTitleId);
+  {
+    void* sceSystemServiceLaunchApp = nullptr;
+    KERNEL_DLSYM(system_service, sceSystemServiceLaunchApp);
+    if (!sceSystemServiceLaunchApp)
+      shellui_log("Failed to resolve sceSystemServiceLaunchApp");
+  }
 
-  KERNEL_DLSYM(libmono_handle, mono_object_to_string);
-  KERNEL_DLSYM(libmono_handle, mono_get_root_domain);
-  KERNEL_DLSYM(libmono_handle, mono_property_get_get_method);
-  KERNEL_DLSYM(libmono_handle, mono_property_get_set_method);
-  KERNEL_DLSYM(libmono_handle, mono_class_get_property_from_name);
-  KERNEL_DLSYM(libmono_handle, mono_class_from_name);
-  KERNEL_DLSYM(libmono_handle, mono_raise_exception);
-  KERNEL_DLSYM(libmono_handle, mono_runtime_invoke);
-  KERNEL_DLSYM(libmono_handle, mono_array_new);
-  KERNEL_DLSYM(libmono_handle, mono_string_new);
-  KERNEL_DLSYM(libmono_handle, mono_jit_set_aot_only);
-  KERNEL_DLSYM(libmono_handle, mono_jit_init_version);
-  KERNEL_DLSYM(libmono_handle, mono_object_new);
-  KERNEL_DLSYM(libmono_handle, mono_object_unbox);
-  KERNEL_DLSYM(libmono_handle, mono_set_dirs);
-  KERNEL_DLSYM(libmono_handle, mono_compile_method);
-  KERNEL_DLSYM(libmono_handle, mono_assembly_get_image);
-  KERNEL_DLSYM(libmono_handle, mono_domain_assembly_open);
-  KERNEL_DLSYM(libmono_handle, mono_get_byte_class);
-  KERNEL_DLSYM(libmono_handle, mono_thread_attach);
-  KERNEL_DLSYM(libmono_handle, mono_object_get_class);
-  KERNEL_DLSYM(libmono_handle, mono_vtable_get_static_field_data);
-  KERNEL_DLSYM(libmono_handle, mono_class_get_method_from_name);
-  KERNEL_DLSYM(libmono_handle, mono_class_get_field_from_name);
-  KERNEL_DLSYM(libmono_handle, mono_aot_get_method);
-  KERNEL_DLSYM(libmono_handle, mono_field_static_set_value);
-  KERNEL_DLSYM(libmono_handle, mono_assembly_setrootdir);
-  KERNEL_DLSYM(libmono_handle, mono_free);
-  KERNEL_DLSYM(libmono_handle, mono_gchandle_new);
-  KERNEL_DLSYM(libmono_handle, mono_image_open_from_data);
-  KERNEL_DLSYM(libmono_handle, mono_runtime_object_init);
-  KERNEL_DLSYM(libmono_handle, mono_domain_get);
-  KERNEL_DLSYM(libmono_handle, mono_assembly_load_from);
-  KERNEL_DLSYM(libmono_handle, mono_method_desc_new);
-  KERNEL_DLSYM(libmono_handle, mono_method_desc_search_in_class);
-  KERNEL_DLSYM(libmono_handle, mono_method_desc_free);
-  KERNEL_DLSYM(libmono_handle, mono_object_new_specific);
-  KERNEL_DLSYM(libmono_handle, mono_thread_detach);
-  KERNEL_DLSYM(libmono_handle, mono_array_addr_with_size);
-  KERNEL_DLSYM(libmono_handle, mono_thread_current);
-  KERNEL_DLSYM(libmono_handle, mono_class_vtable);
-  KERNEL_DLSYM(libmono_handle, mono_domain_unload);
-  KERNEL_DLSYM(libmono_handle, mono_string_to_utf8);
+  int remote_play = get_module_handle(pid, "libSceRemoteplay.sprx");
+  KERNEL_DLSYM(remote_play, sceRemoteplayNotifyPinCodeError);
+  KERNEL_DLSYM(remote_play, sceRemoteplayInitialize);
+  KERNEL_DLSYM(remote_play, sceRemoteplayGeneratePinCode);
+  KERNEL_DLSYM(remote_play, sceRemoteplayConfirmDeviceRegist);
 
-  if (!mono_object_to_string || !mono_get_root_domain ||
-      !mono_property_get_get_method || !mono_property_get_set_method ||
-      !mono_class_get_property_from_name || !mono_class_from_name ||
-      !mono_runtime_invoke || !mono_array_new || !mono_string_new ||
-      !mono_jit_set_aot_only || !mono_jit_init_version || !mono_object_new ||
-      !mono_object_unbox || !mono_set_dirs || !mono_compile_method ||
-      !mono_assembly_get_image || !mono_domain_assembly_open ||
-      !mono_get_byte_class || !mono_thread_attach || !mono_object_get_class ||
-      !mono_vtable_get_static_field_data || !mono_class_get_method_from_name ||
-      !mono_class_get_field_from_name || !mono_aot_get_method ||
-      !mono_field_static_set_value || !mono_assembly_setrootdir || !mono_free ||
-      !mono_gchandle_new || !mono_image_open_from_data ||
-      !mono_runtime_object_init || !mono_domain_get ||
-      !mono_assembly_load_from || !mono_method_desc_new ||
-      !mono_method_desc_search_in_class || !mono_method_desc_free ||
-      !mono_object_new_specific || !mono_thread_detach ||
-      !mono_array_addr_with_size || !mono_thread_current ||
-      !mono_class_vtable || !mono_domain_unload || !mono_string_to_utf8) {
+  int reg = get_module_handle(pid, "libSceRegMgr.sprx");
+  KERNEL_DLSYM(reg, sceRegMgrGetInt);
+
+  return true;
+}
+
+// ---------------------------------------------------------------------------
+// Phase 2: mono runtime symbols
+// ---------------------------------------------------------------------------
+
+bool resolve_mono_symbols(pid_t pid) {
+  int libmono = get_module_handle(pid, "libmonosgen-2.0.sprx");
+
+  KERNEL_DLSYM(libmono, mono_object_to_string);
+  KERNEL_DLSYM(libmono, mono_get_root_domain);
+  KERNEL_DLSYM(libmono, mono_property_get_get_method);
+  KERNEL_DLSYM(libmono, mono_property_get_set_method);
+  KERNEL_DLSYM(libmono, mono_class_get_property_from_name);
+  KERNEL_DLSYM(libmono, mono_class_from_name);
+  KERNEL_DLSYM(libmono, mono_raise_exception);
+  KERNEL_DLSYM(libmono, mono_runtime_invoke);
+  KERNEL_DLSYM(libmono, mono_array_new);
+  KERNEL_DLSYM(libmono, mono_string_new);
+  KERNEL_DLSYM(libmono, mono_jit_set_aot_only);
+  KERNEL_DLSYM(libmono, mono_jit_init_version);
+  KERNEL_DLSYM(libmono, mono_object_new);
+  KERNEL_DLSYM(libmono, mono_object_unbox);
+  KERNEL_DLSYM(libmono, mono_set_dirs);
+  KERNEL_DLSYM(libmono, mono_compile_method);
+  KERNEL_DLSYM(libmono, mono_assembly_get_image);
+  KERNEL_DLSYM(libmono, mono_domain_assembly_open);
+  KERNEL_DLSYM(libmono, mono_get_byte_class);
+  KERNEL_DLSYM(libmono, mono_thread_attach);
+  KERNEL_DLSYM(libmono, mono_object_get_class);
+  KERNEL_DLSYM(libmono, mono_vtable_get_static_field_data);
+  KERNEL_DLSYM(libmono, mono_class_get_method_from_name);
+  KERNEL_DLSYM(libmono, mono_class_get_field_from_name);
+  KERNEL_DLSYM(libmono, mono_aot_get_method);
+  KERNEL_DLSYM(libmono, mono_field_static_set_value);
+  KERNEL_DLSYM(libmono, mono_assembly_setrootdir);
+  KERNEL_DLSYM(libmono, mono_free);
+  KERNEL_DLSYM(libmono, mono_gchandle_new);
+  KERNEL_DLSYM(libmono, mono_image_open_from_data);
+  KERNEL_DLSYM(libmono, mono_runtime_object_init);
+  KERNEL_DLSYM(libmono, mono_domain_get);
+  KERNEL_DLSYM(libmono, mono_assembly_load_from);
+  KERNEL_DLSYM(libmono, mono_method_desc_new);
+  KERNEL_DLSYM(libmono, mono_method_desc_search_in_class);
+  KERNEL_DLSYM(libmono, mono_method_desc_free);
+  KERNEL_DLSYM(libmono, mono_object_new_specific);
+  KERNEL_DLSYM(libmono, mono_thread_detach);
+  KERNEL_DLSYM(libmono, mono_array_addr_with_size);
+  KERNEL_DLSYM(libmono, mono_thread_current);
+  KERNEL_DLSYM(libmono, mono_class_vtable);
+  KERNEL_DLSYM(libmono, mono_domain_unload);
+  KERNEL_DLSYM(libmono, mono_string_to_utf8);
+
+  const bool ok =
+      mono_object_to_string && mono_get_root_domain && mono_property_get_get_method &&
+      mono_property_get_set_method && mono_class_get_property_from_name &&
+      mono_class_from_name && mono_runtime_invoke && mono_array_new && mono_string_new &&
+      mono_jit_set_aot_only && mono_jit_init_version && mono_object_new &&
+      mono_object_unbox && mono_set_dirs && mono_compile_method &&
+      mono_assembly_get_image && mono_domain_assembly_open && mono_get_byte_class &&
+      mono_thread_attach && mono_object_get_class && mono_vtable_get_static_field_data &&
+      mono_class_get_method_from_name && mono_class_get_field_from_name &&
+      mono_aot_get_method && mono_field_static_set_value && mono_assembly_setrootdir &&
+      mono_free && mono_gchandle_new && mono_image_open_from_data &&
+      mono_runtime_object_init && mono_domain_get && mono_assembly_load_from &&
+      mono_method_desc_new && mono_method_desc_search_in_class && mono_method_desc_free &&
+      mono_object_new_specific && mono_thread_detach && mono_array_addr_with_size &&
+      mono_thread_current && mono_class_vtable && mono_domain_unload &&
+      mono_string_to_utf8;
+
+  if (!ok)
     shellui_log("Failed to resolve mono symbols");
-    return -1;
-  }
+  return ok;
+}
 
-  int libscesystem_service_handle =
-      get_module_handle(pid, "libSceSystemService.sprx");
+// ---------------------------------------------------------------------------
+// Phase 3: resource / type name strings (kept as base64 at rest)
+// ---------------------------------------------------------------------------
 
-  KERNEL_DLSYM(libscesystem_service_handle,
-               sceSystemServiceGetAppIdOfRunningBigApp);
-  KERNEL_DLSYM(libscesystem_service_handle, sceSystemServiceGetAppTitleId);
-
-
-  void *sceSystemServiceLaunchApp = nullptr;
-  KERNEL_DLSYM(libscesystem_service_handle, sceSystemServiceLaunchApp);
-  if (!sceSystemServiceLaunchApp) {
-    shellui_log("Failed to resolve sceSystemServiceLaunchApp");
-  }
-
-  int libRemotePlay_handle = get_module_handle(pid, "libSceRemoteplay.sprx");
-
-  KERNEL_DLSYM(libRemotePlay_handle, sceRemoteplayNotifyPinCodeError);
-  KERNEL_DLSYM(libRemotePlay_handle, sceRemoteplayInitialize);
-  KERNEL_DLSYM(libRemotePlay_handle, sceRemoteplayGeneratePinCode);
-  KERNEL_DLSYM(libRemotePlay_handle, sceRemoteplayConfirmDeviceRegist);
-
-  
-  int libReg_handle = get_module_handle(pid, "libSceRegMgr.sprx");
-  KERNEL_DLSYM(libReg_handle, sceRegMgrGetInt);
-
-  /*
-  "Sce.Vsh.UILib", "SystemSoftwareVersionInfo");
-  */
-  std::string SettingsPage_dec = base64_decode("U2V0dGluZ1BhZ2U=");
-  std::string SettingsPlugin_dec = base64_decode("U2V0dGluZ3NQbHVnaW4=");
-  std::string cxml_dec = base64_decode("Q3htbFVyaQ==");
-  std::string GetManifestResourceStream_dec = base64_decode("R2V0TWFuaWZlc3RSZXNvdXJjZVN0cmVhbQ==");
-  std::string RuntimeAssembly_dec = base64_decode("UnVudGltZUFzc2VtYmx5");
-  std::string sys_reflection_dec = base64_decode("U3lzdGVtLlJlZmxlY3Rpb24==");
-  std::string key_base64 = "U0lTVFIwX0lfU0VFX1lPVQ==";
-  legacy_dec = base64_decode("U2NlLlZzaC5TaGVsbFVJLkxlZ2FjeS5kbGw=");
-  UI3_dec = base64_decode("U2NlLlZzaC5TaGVsbFVJLlNldHRpbmdzLkNvcmVVSTM=");
-  plugin_xml = base64_decode("U2NlLlZzaC5TaGVsbFVJLkxlZ2FjeS5zcmMuU2NlLlZzaC5Ta"
-                             "GVsbFVJLlNldHRpbmdzLlBsdWdpbnMucGx1Z2lucy54bWw=");
-  cheats_xml = base64_decode("U2NlLlZzaC5TaGVsbFVJLkxlZ2FjeS5zcmMuU2NlLlZzaC5Ta"
-                             "GVsbFVJLlNldHRpbmdzLlBsdWdpbnMuY2hlYXRzLnhtbA==");
-  remote_play_xml =  base64_decode("U2NlLlZzaC5TaGVsbFVJLkxlZ2FjeS5zcmMuU2NlLlZzaC5TaGVsbFVJLlNldHRpbmdzLlBsdWdpbnMucmVtb3RlX3BsYXkueG1s");
+void init_resource_names() {
+  // Manifest resource paths (used by GetManifestResourceStream hook)
+  plugin_xml = base64_decode(
+      "U2NlLlZzaC5TaGVsbFVJLkxlZ2FjeS5zcmMuU2NlLlZzaC5Ta"
+      "GVsbFVJLlNldHRpbmdzLlBsdWdpbnMucGx1Z2lucy54bWw=");
+  cheats_xml = base64_decode(
+      "U2NlLlZzaC5TaGVsbFVJLkxlZ2FjeS5zcmMuU2NlLlZzaC5Ta"
+      "GVsbFVJLlNldHRpbmdzLlBsdWdpbnMuY2hlYXRzLnhtbA==");
+  remote_play_xml = base64_decode(
+      "U2NlLlZzaC5TaGVsbFVJLkxlZ2FjeS5zcmMuU2NlLlZzaC5TaGVsbFVJLlNldHRpbmdzLlBs"
+      "dWdpbnMucmVtb3RlX3BsYXkueG1s");
   debug_settings_xml = base64_decode(
       "U2NlLlZzaC5TaGVsbFVJLkxlZ2FjeS5zcmMuU2NlLlZzaC5TaGVsbFVJLlNldHRpbmdzLlBs"
       "dWdpbnMuRGVidWdTZXR0aW5ncy5kYXRhLmRlYnVnX3NldHRpbmdzLnhtbA==");
+
+  // Assembly / type names used across hooks
+  legacy_dec = base64_decode("U2NlLlZzaC5TaGVsbFVJLkxlZ2FjeS5kbGw="); // Legacy.dll
+  UI3_dec = base64_decode("U2NlLlZzaC5TaGVsbFVJLlNldHRpbmdzLkNvcmVVSTM="); // Settings.CoreUI3
+  appsystem_dll = base64_decode("U2NlLlZzaC5TaGVsbFVJLkFwcFN5c3RlbS5kbGw=");
+  uilib = base64_decode("U2NlLlZzaC5VSUxpYg==");
+  Sysinfo = base64_decode("U3lzdGVtU29mdHdhcmVWZXJzaW9uSW5mbw==");
+  display_info = base64_decode("c2V0X0Rpc3BsYXlWZXJzaW9u");
+  uilib_dll = base64_decode(
+      "L3N5c3RlbV9leC9jb21tb25fZXgvbGliL1NjZS5Wc2guVUlMaWIuZGxs");
+
   shellui_log("[GMRS-INIT] expected resource names:");
   shellui_log("[GMRS-INIT]   debug_settings_xml=\"%s\"", debug_settings_xml.c_str());
   shellui_log("[GMRS-INIT]   plugin_xml=\"%s\"", plugin_xml.c_str());
   shellui_log("[GMRS-INIT]   cheats_xml=\"%s\"", cheats_xml.c_str());
   shellui_log("[GMRS-INIT]   remote_play_xml=\"%s\"", remote_play_xml.c_str());
-  appsystem_dll = base64_decode("U2NlLlZzaC5TaGVsbFVJLkFwcFN5c3RlbS5kbGw=");
-  uilib = base64_decode("U2NlLlZzaC5VSUxpYg==");
-  Sysinfo = base64_decode("U3lzdGVtU29mdHdhcmVWZXJzaW9uSW5mbw==");
-  display_info = base64_decode("c2V0X0Rpc3BsYXlWZXJzaW9u");
-  uilib_dll = base64_decode("L3N5c3RlbV9leC9jb21tb25fZXgvbGliL1NjZS5Wc2guVUlMaWIuZGxs");
+}
 
-  // Base64 decoded strings
-  std::string mscorlib_dll = base64_decode("bXNjb3JsaWIuZGxs"); // "mscorlib.dll"
-  std::string reactpui_dll = base64_decode("UmVhY3ROYXRpdmUuUFVJLmRsbA=="); // "ReactNative.PUI.dll"
-  std::string appsystem_dll_name = base64_decode("U2NlLlZzaC5TaGVsbFVJLkFwcFN5c3RlbS5kbGw="); // "Sce.Vsh.ShellUI.AppSystem.dll"
-  std::string core_dll = base64_decode("U2NlLlBsYXlTdGF0aW9uLkNvcmUuZGxs"); // "Sce.PlayStation.Core.dll"
-  std::string capture_menu_dll = base64_decode("U2NlLlZzaC5TaGVsbFVJLkNhcHR1cmVNZW51LmRsbA=="); // "Sce.Vsh.ShellUI.CaptureMenu.dll"
+// ---------------------------------------------------------------------------
+// Phase 4: version banner + toolbox XML decrypt
+// ---------------------------------------------------------------------------
 
-  // Namespace and class names
-  std::string appsystem_namespace = base64_decode("U2NlLlZzaC5TaGVsbFVJLkFwcFN5c3RlbQ=="); // "Sce.Vsh.ShellUI.AppSystem"
-  std::string layer_manager = base64_decode("TGF5ZXJNYW5hZ2Vy"); // "LayerManager"
-  std::string update_impose_flag = base64_decode("VXBkYXRlSW1wb3NlU3RhdHVzRmxhZw=="); // "UpdateImposeStatusFlag"
-  std::string input_namespace = base64_decode("U2NlLlBsYXlTdGF0aW9uLkNvcmUuSW5wdXQ="); // "Sce.PlayStation.Core.Input"
-  std::string gamepad_class = base64_decode("R2FtZVBhZA=="); // "GamePad"
-  std::string getdata_method = base64_decode("R2V0RGF0YQ=="); // "GetData"
-  std::string security_namespace = base64_decode("UmVhY3ROYXRpdmUuUGxheVN0YXRpb24uU2VjdXJpdHk="); // "ReactNative.PlayStation.Security" 
-  std::string bundle_decryptor = base64_decode("SmF2YVNjcmlwdEJ1bmRsZURlY3J5cHRvcg=="); // "JavaScriptBundleDecryptor"
-  std::string decrypt_method = base64_decode("RGVjcnlwdA=="); // "Decrypt"
-  std::string onpressed_method = base64_decode("T25QcmVzc2Vk"); // "OnPressed"
-  std::string boot_helper = base64_decode("Qm9vdEhlbHBlcg=="); // "BootHelper"
-  std::string boot_method = base64_decode("Qm9vdA=="); // "Boot"
-  std::string capture_namespace = base64_decode("U2NlLlZzaC5TaGVsbFVJLkNhcHR1cmVNZW51"); // "Sce.Vsh.ShellUI.CaptureMenu"
-  std::string capture_controller = base64_decode("Q2FwdHVyZUNvbnRyb2xsZXI="); // "CaptureController"
-  std::string capture_screen = base64_decode("Q2FwdHVyZVNjcmVlbg=="); // "CaptureScreen"
-  std::string event_manager = base64_decode("RXZlbnRNYW5hZ2Vy"); // "EventManager" 
-  std::string onshare_button = base64_decode("T25TaGFyZUJ1dHRvbg=="); // "OnShareButton"
-  std::string oncreating_method = base64_decode("T25DcmVhdGluZw=="); // "OnCreating"
-  std::string getstring_method = base64_decode("R2V0U3RyaW5n"); // "GetString"
-  std::string term = base64_decode("VGVybWluYXRl"); // "Terminate"
+bool init_version_string(const OrbisKernelSwVersion& sw) {
+  const char enc_ver[] = "\x30\x44\x0d\x1c\x13\x08\x69\x35\x3d\x44\x0d\x46";
+  const std::string key = base64_decode(kXorKeyB64);
+  auto dev_ver_bytes =
+      encrypt_decrypt(reinterpret_cast<const unsigned char*>(enc_ver),
+                      sizeof(enc_ver) - 1, key);
+  std::string dec_ver(dev_ver_bytes.begin(), dev_ver_bytes.end());
+  dec_ver += OrionHEN_VERSION;
 
-  sceKernelGetProsperoSystemSwVersion(&sw);
-  is_3xx = (sw.version < 0x4000042);
-  is_6xx = (sw.version >= 0x6000000);
-  shellui_log("System Software Version: %s is_3xx: %s", sw.version_str, is_3xx ? "Yes" : "No");
-
-#if 0
-  sceLncUtilLaunchApp_dyn = reinterpret_cast<SceLncUtilLaunchAppType>(reinterpret_cast<uintptr_t>(sceSystemServiceLaunchApp) + is_3xx ? 0x1250 : 0x1260));
-#endif
-
-  if (mono_get_root_domain) {
-    shellui_log("loading settings");
-    if (!LoadSettings()) {
-      shellui_log("Failed to load settings");
-      return -1;
-    } else {
-      shellui_log("Settings loaded successfully");
-    }
-
-    Root_Domain = mono_get_root_domain();
-    if (!Root_Domain) {
-      shellui_log( "failed to get shellui root domain");
-      return -1;
-    } else {
-      shellui_log("Shellui Root Domain: %p", Root_Domain);
-    }
-
-    mono_thread_attach(Root_Domain);
-
-    const char *enc_ver = "\x30\x44\x0d\x1c\x13\x08\x69\x35\x3d\x44\x0d\x46";
-    std::vector<unsigned char> dev_ver_string = encrypt_decrypt((unsigned char *)enc_ver, strlen(enc_ver), key_base64);
-    std::string dec_ver = std::string(dev_ver_string.begin(), dev_ver_string.end());
-    dec_ver += OrionHEN_VERSION;
-    std::string final_ver;
+  std::string final_ver;
 #if PUBLIC_TEST == 1
-    final_ver = dec_ver + "-PUBLIC_TEST" + " (" + sw.version_str + " )";
+  final_ver = dec_ver + "-PUBLIC_TEST (" + sw.version_str + " )";
 #elif PRE_RELEASE == 1
-    final_ver = dec_ver + " PRE_RELEASE" + " (" + sw.version_str + " )";
+  final_ver = dec_ver + " PRE_RELEASE (" + sw.version_str + " )";
 #else
-    final_ver = dec_ver + " (" + sw.version_str + " )";
+  final_ver = dec_ver + " (" + sw.version_str + " )";
 #endif
-    shellui_log("Decrypted Version: %s", final_ver.c_str());
 
-    if (!SetVersionString(final_ver.c_str())) {
-      shellui_log("Failed to set func556");
-      return -1;
-    }
+  shellui_log("Decrypted Version: %s", final_ver.c_str());
+  if (!SetVersionString(final_ver.c_str())) {
+    shellui_log("Failed to set version string");
+    return false;
+  }
+  return true;
+}
 
-    int size = ((uint64_t)&toolbox_end - (uint64_t)&toolbox_start);
-    shellui_log("[GMRS-INIT] decrypting toolbox XML embed: blob=%d", size);
-    std::vector<unsigned char> decrypted_data = encrypt_decrypt(toolbox_start, size, key_base64);
-    // Convert decrypted data to a string
-    dec_xml_str = std::string(decrypted_data.begin(), decrypted_data.end());
-    shellui_log("[GMRS-INIT] decrypted toolbox XML: full=%zu full_prefix=%.60s",
-                dec_xml_str.size(),
-                dec_xml_str.empty() ? "(empty)" : dec_xml_str.c_str());
-    if (dec_xml_str.empty() || dec_xml_str.find("system_settings") == std::string::npos) {
-      shellui_log("[GMRS-INIT] WARN: full toolbox XML missing/invalid after decrypt!");
-    }
-    // Load the assembly    
-    std::string PowerManager = base64_decode("UG93ZXJNYW5hZ2Vy");
-    std::string term = base64_decode("VGVybWluYXRl");
+bool decrypt_toolbox_xml() {
+  const int size =
+      static_cast<int>(reinterpret_cast<uint64_t>(&toolbox_end) -
+                       reinterpret_cast<uint64_t>(&toolbox_start));
+  shellui_log("[GMRS-INIT] decrypting toolbox XML embed: blob=%d", size);
 
-    MonoImage * leg_img = getDLLimage(legacy_dec.c_str());
-    if (!leg_img) {
-      notify("Failed to get legacy image");
-      return -1;
-    }
+  const std::string key = base64_decode(kXorKeyB64);
+  auto decrypted = encrypt_decrypt(toolbox_start, size, key);
+  dec_xml_str.assign(decrypted.begin(), decrypted.end());
 
-    MonoImage * mscorelib_image = getDLLimage(mscorlib_dll.c_str());
-    if (!mscorelib_image) {
-      notify("Failed to get mscorelib image");
-      return -1;
-    }
+  shellui_log("[GMRS-INIT] decrypted toolbox XML: full=%zu full_prefix=%.60s",
+              dec_xml_str.size(),
+              dec_xml_str.empty() ? "(empty)" : dec_xml_str.c_str());
 
-    MonoImage * REACTPUI_img = getDLLimage(reactpui_dll.c_str());
-    if (!REACTPUI_img) {
-      notify("Failed to get image 0.");
-      return -1;
-    }
+  if (dec_xml_str.empty() ||
+      dec_xml_str.find("system_settings") == std::string::npos) {
+    shellui_log("[GMRS-INIT] WARN: full toolbox XML missing/invalid after decrypt!");
+  }
+  return true;
+}
 
-    MonoImage * AppSystem_img = getDLLimage(appsystem_dll_name.c_str());
-    if (!AppSystem_img) {
-      notify("Failed to get image 1.5.");
-      return -1;
-    }
+// ---------------------------------------------------------------------------
+// Phase 5: load Mono assemblies
+// ---------------------------------------------------------------------------
 
-    MonoImage * image_core = getDLLimage(core_dll.c_str());
-    if (!image_core) {
-      notify("Failed to get image 1.");
-      return -1;
-    }
+bool load_shell_images(ShellImages& out) {
+  out.legacy = require_dll(legacy_dec.c_str());
+  out.mscorlib = require_dll("mscorlib.dll");
+  out.react_pui = require_dll("ReactNative.PUI.dll");
+  out.app_system = require_dll(appsystem_dll.c_str());
+  out.core = require_dll("Sce.PlayStation.Core.dll");
+  out.capture_menu = require_dll("Sce.Vsh.ShellUI.CaptureMenu.dll");
 
-    MonoImage * capture_menu = getDLLimage(capture_menu_dll.c_str());
-    if (!capture_menu) {
-      notify("Failed to get image 3.");
-      return -1;
-    }
+  // Optional: LaunchApp / KillAppWithReason only when present
+  out.lnc = getDLLimage("Sce.Vsh.LncUtilWrapper.dll");
+  if (!out.lnc)
+    notify("Failed to get LncUtilWrapper image");
 
-    MonoImage * lnc_img = getDLLimage("Sce.Vsh.LncUtilWrapper.dll");
-    if (!lnc_img) {
-      notify("Failed to get image 4.");
-     // return -1;
-    }
+  out.react_common = require_dll("ReactNative.Vsh.Common.dll");
+  out.rn_shell = require_dll("Sce.Vsh.ShellUI.ReactNativeShellApp.dll");
+  out.app_install = require_dll("Sce.Vsh.AppInstUtilWrapper.dll");
+  out.pui = require_dll("Sce.PlayStation.PUI.dll");
 
-    react_common_img = getDLLimage("ReactNative.Vsh.Common.dll");
-    if (!react_common_img) {
-      notify("Failed to get image 5.");
-      return -1;
-    }
-    
-    MonoImage * ReactNativeShellAppReactNativeShellApp_img = getDLLimage("Sce.Vsh.ShellUI.ReactNativeShellApp.dll");
-    if (!ReactNativeShellAppReactNativeShellApp_img) {
-      notify("Failed to get image 6.");
-      return -1;
-    }
+  // Publish images other modules need
+  AppSystem_img = out.app_system;
+  react_common_img = out.react_common;
+  pui_img = out.pui;
 
-    MonoImage* AppInstallUtil_img = getDLLimage("Sce.Vsh.AppInstUtilWrapper.dll");
-    if(!AppInstallUtil_img) {
-      notify("Failed to get image 7.");
-      return -1;
-	}
+  return out.legacy && out.mscorlib && out.react_pui && out.app_system && out.core &&
+         out.capture_menu && out.react_common && out.rn_shell && out.app_install &&
+         out.pui;
+}
 
-  pui_img = getDLLimage("Sce.PlayStation.PUI.dll");
-  if (!pui_img) {
-    notify("Failed to get pui image");
-    return -1;
+// ---------------------------------------------------------------------------
+// Phase 6: resolve Game container scene
+// ---------------------------------------------------------------------------
+
+bool resolve_game_container(MonoImage* app_system) {
+  MonoClass* layer_manager =
+      mono_class_from_name(app_system, "Sce.Vsh.ShellUI.AppSystem", "LayerManager");
+  if (!layer_manager) {
+    notify("Failed to get LayerManager class");
+    return false;
   }
 
-  if (1) {
-      MonoClass* LayerManager = mono_class_from_name(AppSystem_img, "Sce.Vsh.ShellUI.AppSystem", "LayerManager");
-      if (!LayerManager) {
-          notify("Failed to get LayerManager class");
-          return -1;
-      }
-
-      // Get the method - this should return MonoMethod*, not an address
-      MonoMethod* FindContainerSceneByPath = mono_class_get_method_from_name(LayerManager, "FindContainerSceneByPath", 1);
-      if (!FindContainerSceneByPath) {
-          notify("Failed to get FindContainerSceneByPath method");
-          return -1;
-      }
-
-      // Create the string argument
-      MonoString* pathArg = mono_string_new(mono_domain_get(), "Game");
-
-      // Prepare arguments array
-      void* args[1];
-      args[0] = pathArg;
-
-      // Invoke the method (static call since Instance is nullptr)
-      MonoObject* exception = nullptr;
-      Game = mono_runtime_invoke(FindContainerSceneByPath, nullptr, args, &exception);
-      if (exception) {
-          notify("Exception occurred while calling FindContainerSceneByPath");
-          return -1;
-      }
-      if (!Game) {
-          notify("Failed to get Game ContainerScene");
-          return -1;
-      }
-
-      shellui_log("Game ContainerScene: %p", Game);
+  MonoMethod* find =
+      mono_class_get_method_from_name(layer_manager, "FindContainerSceneByPath", 1);
+  if (!find) {
+    notify("Failed to get FindContainerSceneByPath method");
+    return false;
   }
 
-  // System.Reflection.RuntimeAssembly.GetManifestResourceStream
-  uint64_t method = Get_Address_of_Method(mscorelib_image, sys_reflection_dec.c_str(), is_3xx ? "Assembly" : RuntimeAssembly_dec.c_str(), GetManifestResourceStream_dec.c_str(), 1);
-  if (!method) {
-    notify("Failed to get master address");
-    return -1;
+  MonoString* path_arg = mono_string_new(mono_domain_get(), "Game");
+  void* args[1] = {path_arg};
+  MonoObject* exception = nullptr;
+  Game = mono_runtime_invoke(find, nullptr, args, &exception);
+
+  if (exception) {
+    notify("Exception occurred while calling FindContainerSceneByPath");
+    return false;
+  }
+  if (!Game) {
+    notify("Failed to get Game ContainerScene");
+    return false;
   }
 
-  shellui_log("Starting hooking...");
-  has_hv_bypass = (sceKernelMprotect( & buz[0], 100, 0x7) == 0);
+  shellui_log("Game ContainerScene: %p", Game);
+  return true;
+}
+
+// ---------------------------------------------------------------------------
+// Phase 7: install hooks
+// ---------------------------------------------------------------------------
+
+bool install_hooks(const ShellImages& img, void* read_fn) {
+  char probe[kMprotectProbeSize];
+  has_hv_bypass =
+      (sceKernelMprotect(probe, sizeof(probe), kProtRwx) == 0);
   shellui_log("has_hv_bypass=%d (mprotect for detours)", has_hv_bypass ? 1 : 0);
 
-  Patch_Main_thread_Check(image_core);
+  Patch_Main_thread_Check(img.core);
 
-  OnRender_orig = (void(*)(MonoObject*)) DetourFunction(Get_Address_of_Method(pui_img, "Sce.PlayStation.PUI", "Application", "Update", 0), (void*)&OnRender_Hook);
+  // --- PUI render ---
+  OnRender_orig = reinterpret_cast<void (*)(MonoObject*)>(DetourFunction(
+      Get_Address_of_Method(img.pui, "Sce.PlayStation.PUI", "Application", "Update", 0),
+      reinterpret_cast<void*>(&OnRender_Hook)));
 
-  uint64_t updateNavigationState = Get_Address_of_Method(REACTPUI_img,
-                                                         "ReactNative.Views.UI3.View",
-                                                         "ReactNavigatorManager",
-                                                         "UpdateNavigationState",
-                                                         1);
-  if (updateNavigationState) {
-    ReactNavigatorManager_UpdateNavigationState_Orig = (void (*)(MonoObject*, MonoObject*))
-        DetourFunction(updateNavigationState, (void*)&ReactNavigatorManager_UpdateNavigationState_Hook);
-    if (ReactNavigatorManager_UpdateNavigationState_Orig) {
-      shellui_log("[DBG-NAV] ReactNavigatorManager.UpdateNavigationState hooked");
+  // --- Navigation (optional diagnostics) ---
+  {
+    uint64_t addr = Get_Address_of_Method(
+        img.react_pui, "ReactNative.Views.UI3.View", "ReactNavigatorManager",
+        "UpdateNavigationState", 1);
+    if (addr) {
+      ReactNavigatorManager_UpdateNavigationState_Orig =
+          reinterpret_cast<void (*)(MonoObject*, MonoObject*)>(
+              DetourFunction(addr, reinterpret_cast<void*>(
+                                       &ReactNavigatorManager_UpdateNavigationState_Hook)));
+      shellui_log(ReactNavigatorManager_UpdateNavigationState_Orig
+                      ? "[DBG-NAV] UpdateNavigationState hooked"
+                      : "[DBG-NAV] failed to detour UpdateNavigationState");
     } else {
-      shellui_log("[DBG-NAV] failed to detour ReactNavigatorManager.UpdateNavigationState");
+      shellui_log("[DBG-NAV] UpdateNavigationState not found");
     }
-  } else {
-    shellui_log("[DBG-NAV] ReactNavigatorManager.UpdateNavigationState not found");
   }
 
-#if 0
-    Orig_AppInstUtilInstallByPackage = (int (*)(MonoString * uri, MonoString * ex_uri, MonoString * playgo_scenario_id, MonoString * content_id, MonoString * content_name, MonoString * icon_url, uint32_t slot, bool is_playgo_enabled, MonoObject * pkg_info, MonoArray * languages, MonoArray * playgo_scenario_ids, MonoArray * content_ids)) DetourFunction(Get_Address_of_Method(AppInstallUtil_img, "Sce.Vsh", "AppInstUtilWrapper", "_AppInstUtilInstallByPackage", 12), (void*)&AppInstUtilInstallByPackage_Hook);
-	if (!Orig_AppInstUtilInstallByPackage) {
-		notify("Failed to hook AppInstUtilInstallByPackage");
-		return -1;
-	}
+  // --- Registry (required) ---
+  if (!sceRegMgrGetInt) {
+    notify("Failed to find sceRegMgrGetInt");
+    return false;
+  }
+  if (!install_detour_native("sceRegMgrGetInt",
+                             reinterpret_cast<void*>(sceRegMgrGetInt),
+                             reinterpret_cast<void*>(&sceRegMgrGetInt_hook),
+                             sceRegMgrGetInt, true))
+    return false;
 
-	sceAppInstUtilInstallByPackage_orig = (int (*)(MetaInfo * arg1, SceAppInstallPkgInfo * pkg_info, PlayGoInfo * arg2)) DetourFunction((uintptr_t)sceAppInstUtilInstallByPackage, (void*)&sceAppInstUtilInstallByPackage_hook);
-    if (!sceAppInstUtilInstallByPackage_orig) {
-        notify("Failed to detour sceAppInstUtilInstallByPackage");
-        return -1;
-    }
-#endif
-    if(sceRegMgrGetInt) {
-      sceRegMgrGetInt = (int( * )(long, int * )) DetourFunction((uintptr_t)sceRegMgrGetInt, (void *)&sceRegMgrGetInt_hook);
-      if (!sceRegMgrGetInt) {
-        notify("Failed to detour int func");
-        return -1;
-      }
-    }
-    else{
-      notify("Failed to find sceRegMgrGetInt");
-      return -1;
-	}
+  // --- libc read (required) ---
+  if (!install_detour_native("read", read_fn, reinterpret_cast<void*>(&read_hook),
+                             read_orig, true))
+    return false;
 
-#if 1
-	read_orig = (ssize_t(*)(int fd, void *buf, size_t count)) DetourFunction((uintptr_t)read, (void*)&read_hook);
-    if (!read_orig) {
-      notify("Failed to detour read func");
-      return -1;
-	}
-#endif
+  // --- Option menu createJson (required) ---
+  {
+    uint64_t addr = Get_Address_of_Method(
+        img.rn_shell, "ReactNative.Modules.ShellUI.HomeUI", "OptionMenu", "createJson",
+        8);
+    if (!install_detour("OptionMenu.createJson", addr,
+                        reinterpret_cast<void*>(&createJson_hook), createJson, true))
+      return false;
+  }
 
-    void* createJson_addr =  DetourFunction(Get_Address_of_Method(ReactNativeShellAppReactNativeShellApp_img, "ReactNative.Modules.ShellUI.HomeUI", "OptionMenu", "createJson", 8), (void * )&createJson_hook);
-    createJson = (void( * )(MonoObject *, MonoObject * , MonoString * , MonoString * , MonoString * , MonoString * , MonoString * , MonoObject * , bool)) createJson_addr;
-    if (!createJson_addr) {
-      shellui_log("Failed to detour Func Set -3");
-      return -1;
-    }
-
-    uint64_t debugSettingsGetModel = Get_Address_of_Method(ReactNativeShellAppReactNativeShellApp_img,
-                                                           "ReactNative.Modules.ShellUI.Settings",
-                                                           "DebugSettingsModule",
-                                                           "GetModel",
-                                                           2);
-    if (debugSettingsGetModel) {
-      DebugSettings_GetModel_Orig = (void (*)(MonoObject*, MonoObject*, MonoObject*))
-          DetourFunction(debugSettingsGetModel, (void*)&DebugSettings_GetModel_Hook);
-      if (DebugSettings_GetModel_Orig) {
-        shellui_log("[DBG-GETMODEL] DebugSettingsModule.GetModel hooked");
-      } else {
-        shellui_log("[DBG-GETMODEL] failed to detour DebugSettingsModule.GetModel");
-      }
+  // --- DebugSettings.GetModel (optional) ---
+  {
+    uint64_t addr = Get_Address_of_Method(
+        img.rn_shell, "ReactNative.Modules.ShellUI.Settings", "DebugSettingsModule",
+        "GetModel", 2);
+    if (addr) {
+      DebugSettings_GetModel_Orig =
+          reinterpret_cast<void (*)(MonoObject*, MonoObject*, MonoObject*)>(
+              DetourFunction(addr, reinterpret_cast<void*>(&DebugSettings_GetModel_Hook)));
+      shellui_log(DebugSettings_GetModel_Orig
+                      ? "[DBG-GETMODEL] GetModel hooked"
+                      : "[DBG-GETMODEL] failed to detour GetModel");
     } else {
-      shellui_log("[DBG-GETMODEL] DebugSettingsModule.GetModel not found");
+      shellui_log("[DBG-GETMODEL] GetModel not found");
     }
+  }
 
-    LaunchApp_orig = (int( * )(MonoString * , uint64_t * , int, LaunchAppParam * )) DetourFunction(Get_Address_of_Method(lnc_img, "Sce.Vsh.LncUtil", "LncUtilWrapper", "LaunchApp", 4), (void * )&LaunchApp);
-    if (!LaunchApp_orig) {
-      shellui_log("Failed to detour Func Set -2");
-     // return -1;
-    }
+  // --- LncUtil (optional when image missing) ---
+  if (img.lnc) {
+    (void)install_detour(
+        "LncUtilWrapper.LaunchApp",
+        Get_Address_of_Method(img.lnc, "Sce.Vsh.LncUtil", "LncUtilWrapper", "LaunchApp",
+                              4),
+        reinterpret_cast<void*>(&LaunchApp), LaunchApp_orig, false);
 
-    void* KillAppWithReason_orig = DetourFunction(Get_Address_of_Method(lnc_img, "Sce.Vsh.LncUtil", "LncUtilWrapper","KillAppWithReason", 2), (void *)&KillAppWithReason_Hook);
-    if (!KillAppWithReason_orig) {
+    void* kill_tramp = DetourFunction(
+        Get_Address_of_Method(img.lnc, "Sce.Vsh.LncUtil", "LncUtilWrapper",
+                              "KillAppWithReason", 2),
+        reinterpret_cast<void*>(&KillAppWithReason_Hook));
+    if (!kill_tramp)
       notify("Failed to detour KillAppWithReason");
-    }
+  }
 
-    UpdateImposeStatusFlag_Orig = (void( * )(MonoObject * , MonoObject * )) DetourFunction(Get_Address_of_Method(AppSystem_img, appsystem_namespace.c_str(), layer_manager.c_str(), update_impose_flag.c_str(), 2), (void * )&UpdateImposeStatusFlag_hook);
-    if (!UpdateImposeStatusFlag_Orig) {
-      notify("Failed to detour Func Set -1");
-    }
+  // --- Impose / GamePad ---
+  (void)install_detour(
+      "LayerManager.UpdateImposeStatusFlag",
+      Get_Address_of_Method(img.app_system, "Sce.Vsh.ShellUI.AppSystem", "LayerManager",
+                            "UpdateImposeStatusFlag", 2),
+      reinterpret_cast<void*>(&UpdateImposeStatusFlag_hook), UpdateImposeStatusFlag_Orig,
+      false);
 
-    GetData = (GamePadData( * )(int)) DetourFunction(Get_Address_of_Method(image_core, input_namespace.c_str(), gamepad_class.c_str(), getdata_method.c_str(), 1), (void * )&GetData_hook);
-    if (!GetData) {
-      notify("Failed to detour Func Set0");
-      return -1;
-    }
+  if (!install_detour("GamePad.GetData",
+                      Get_Address_of_Method(img.core, "Sce.PlayStation.Core.Input",
+                                            "GamePad", "GetData", 1),
+                      reinterpret_cast<void*>(&GetData_hook), GetData, true))
+    return false;
 
-    CxmlUri = (MonoString * ( * )(MonoObject * , MonoString * )) DetourFunction(Get_Address_of_Method(leg_img, UI3_dec.c_str(), SettingsPlugin_dec.c_str(), cxml_dec.c_str(), 1), (void * )&CxmlUri_Hook);
-    if (!CxmlUri) {
-      notify("Failed to detour Func Set1");
-    }
+  // --- Settings UI hooks ---
+  (void)install_detour(
+      "SettingsPlugin.CxmlUri",
+      Get_Address_of_Method(img.legacy, UI3_dec.c_str(), "SettingsPlugin", "CxmlUri", 1),
+      reinterpret_cast<void*>(&CxmlUri_Hook), CxmlUri, false);
 
-#if 1
-    CallDecrypt_orig = (void( * )(unsigned char * , int, int, int * , int * )) DetourFunction(Get_Address_of_Method(REACTPUI_img, security_namespace.c_str(), bundle_decryptor.c_str(), decrypt_method.c_str(), 5), (void * )&CallDecrypt);
+  // Bundle decrypt; fall back to ioctl detour if the Mono method is unavailable
+  {
+    const uint64_t addr = Get_Address_of_Method(
+        img.react_pui, "ReactNative.PlayStation.Security", "JavaScriptBundleDecryptor",
+        "Decrypt", 5);
+    (void)install_detour("JavaScriptBundleDecryptor.Decrypt", addr,
+                         reinterpret_cast<void*>(&CallDecrypt), CallDecrypt_orig, false);
     if (!CallDecrypt_orig) {
-      if (ioctl) {
-         shellui_log("Found ioctl at %p", ioctl);
-         DetourFunction((uintptr_t)ioctl, (void *)&ioctl_hook);
-         shellui_log("Detoured ioctl to ioctl_Hook");
-       } else {
-         notify("Failed to find func workaround");
-         return -1;
-       }
-    }
-#endif
-    oOnPress = (int( * )(MonoObject * , MonoObject * , MonoObject * )) DetourFunction(Get_Address_of_Method(leg_img, UI3_dec.c_str(), SettingsPage_dec.c_str(), onpressed_method.c_str(), 2), (void * )&OnPress_Hook);
-    if (!oOnPress) {
-      shellui_log("Failed to detour Func Set3");
-    }
-
-    boot_orig = (bool( * )(MonoString * , int, MonoString * )) DetourFunction(Get_Address_of_Method(AppSystem_img, appsystem_namespace.c_str(), boot_helper.c_str(), boot_method.c_str(), 3), (void * )&uri_boot_hook);
-    if (!boot_orig) {
-      boot_orig_2 = (bool( * )(MonoString * , int)) DetourFunction(Get_Address_of_Method(AppSystem_img, appsystem_namespace.c_str(), boot_helper.c_str(), boot_method.c_str(), 2), (void * )&uri_boot_hook_2);
-      if (!boot_orig_2) {
-        notify("failed to detour Func Set4");
+      if (!ioctl) {
+        notify("Failed to find decrypt workaround");
+        return false;
       }
+      shellui_log("Found ioctl at %p", ioctl);
+      DetourFunction(reinterpret_cast<uintptr_t>(ioctl),
+                     reinterpret_cast<void*>(&ioctl_hook));
+      shellui_log("Detoured ioctl to ioctl_hook");
     }
+  }
 
-    CaptureScreen_orig_old = (void( * )(MonoObject *, int, long, int, MonoObject * )) DetourFunction(Get_Address_of_Method(capture_menu, capture_namespace.c_str(), capture_controller.c_str(), capture_screen.c_str(), 4), (void * )&CaptureScreen_old);
+  (void)install_detour(
+      "SettingPage.OnPressed",
+      Get_Address_of_Method(img.legacy, UI3_dec.c_str(), "SettingPage", "OnPressed", 2),
+      reinterpret_cast<void*>(&OnPress_Hook), oOnPress, false);
+
+  // BootHelper.Boot: try 3-arg then 2-arg signature
+  {
+    const uint64_t boot3 = Get_Address_of_Method(
+        img.app_system, "Sce.Vsh.ShellUI.AppSystem", "BootHelper", "Boot", 3);
+    (void)install_detour("BootHelper.Boot(3)", boot3,
+                         reinterpret_cast<void*>(&uri_boot_hook), boot_orig, false);
+    if (!boot_orig) {
+      const uint64_t boot2 = Get_Address_of_Method(
+          img.app_system, "Sce.Vsh.ShellUI.AppSystem", "BootHelper", "Boot", 2);
+      (void)install_detour("BootHelper.Boot(2)", boot2,
+                           reinterpret_cast<void*>(&uri_boot_hook_2), boot_orig_2, false);
+      if (!boot_orig_2)
+        notify("failed to detour BootHelper.Boot");
+    }
+  }
+
+  // CaptureScreen: 4-arg (old) then 5-arg (new)
+  {
+    const uint64_t cap4 = Get_Address_of_Method(
+        img.capture_menu, "Sce.Vsh.ShellUI.CaptureMenu", "CaptureController",
+        "CaptureScreen", 4);
+    (void)install_detour("CaptureScreen(4)", cap4,
+                         reinterpret_cast<void*>(&CaptureScreen_old),
+                         CaptureScreen_orig_old, false);
     if (!CaptureScreen_orig_old) {
-        CaptureScreen_orig_new = (void( * )(MonoObject *, int, long, int, MonoString * , MonoObject * )) DetourFunction(Get_Address_of_Method(capture_menu, capture_namespace.c_str(), capture_controller.c_str(), capture_screen.c_str(), 5), (void * )&CaptureScreen_new);
-        if(!CaptureScreen_orig_new) {
-           notify("Failed to detour Func Set5");
-        }
+      const uint64_t cap5 = Get_Address_of_Method(
+          img.capture_menu, "Sce.Vsh.ShellUI.CaptureMenu", "CaptureController",
+          "CaptureScreen", 5);
+      (void)install_detour("CaptureScreen(5)", cap5,
+                           reinterpret_cast<void*>(&CaptureScreen_new),
+                           CaptureScreen_orig_new, false);
+      if (!CaptureScreen_orig_new)
+        notify("Failed to detour CaptureScreen");
     }
+  }
 
-    OnShareButton_orig = (void( * )(MonoObject * )) DetourFunction(Get_Address_of_Method(capture_menu, capture_namespace.c_str(), event_manager.c_str(), onshare_button.c_str(), 1), (void * )&OnShareButton);
-    if (!OnShareButton_orig) {
-      notify("Failed to detour Func Set6");
+  (void)install_detour(
+      "EventManager.OnShareButton",
+      Get_Address_of_Method(img.capture_menu, "Sce.Vsh.ShellUI.CaptureMenu",
+                            "EventManager", "OnShareButton", 1),
+      reinterpret_cast<void*>(&OnShareButton), OnShareButton_orig, false);
+
+  (void)install_detour(
+      "SettingPage.OnCreating",
+      Get_Address_of_Method(img.legacy, UI3_dec.c_str(), "SettingPage", "OnCreating", 1),
+      reinterpret_cast<void*>(&OnPreCreate_Hook), oOnPreCreate, false);
+
+  if (!install_detour(
+          "SettingsPlugin.GetString",
+          Get_Address_of_Method(img.legacy, UI3_dec.c_str(), "SettingsPlugin", "GetString",
+                                1),
+          reinterpret_cast<void*>(&GetString_Hook), oGetString, true))
+    return false;
+
+  // GetManifestResourceStream: Assembly on 3.xx, RuntimeAssembly otherwise
+  {
+    const char* klass = is_3xx ? "Assembly" : "RuntimeAssembly";
+    uint64_t method = Get_Address_of_Method(img.mscorlib, "System.Reflection", klass,
+                                            "GetManifestResourceStream", 1);
+    if (!method) {
+      notify("Failed to get master address");
+      return false;
     }
+    (void)install_detour("GetManifestResourceStream", method,
+                         reinterpret_cast<void*>(&GetManifestResourceStream_Hook),
+                         GetManifestResourceStream_Original, false);
+  }
 
-    oOnPreCreate = (int( * )(MonoObject * , MonoObject * )) DetourFunction(Get_Address_of_Method(leg_img, UI3_dec.c_str(), SettingsPage_dec.c_str(), oncreating_method.c_str(), 1), (void * )&OnPreCreate_Hook);
-    if (!oOnPreCreate) {
-      notify("Failed to detour Func Set7");
-    }
+  (void)install_detour(
+      "PowerManager.Terminate",
+      Get_Address_of_Method(img.app_system, "Sce.Vsh.ShellUI.AppSystem", "PowerManager",
+                            "Terminate", 0),
+      reinterpret_cast<void*>(&Terminate), oTerminate, false);
 
-    oGetString = (MonoString * ( * )(MonoObject * , MonoString * )) DetourFunction(Get_Address_of_Method(leg_img, UI3_dec.c_str(), SettingsPlugin_dec.c_str(), getstring_method.c_str(), 1), (void * )&GetString_Hook);
-    if (!oGetString) {
-      notify("Failed to detour Func Set8");
-      return -1;
-    }
+  return true;
+}
 
-    GetManifestResourceStream_Original = (uint64_t( * )(uint64_t, MonoString * ))(DetourFunction(method, (void * ) & GetManifestResourceStream_Hook));
-    if (!GetManifestResourceStream_Original) {
-      notify("Failed to detour Func Set9");
-    }
+// ---------------------------------------------------------------------------
+// Phase 8: process query hooks + keep-alive
+// ---------------------------------------------------------------------------
 
-    shellui_log("Performing Magic ....");
-    // rest mode without a network
-    oTerminate = (void( * )(void))(DetourFunction(Get_Address_of_Method(AppSystem_img, appsystem_namespace.c_str(), PowerManager.c_str(), term.c_str(), 0), (void * )&Terminate));
-    if (!oTerminate) {
-      notify("Failed to detour Func Set 10");
-    }
-
-#if 0
-    Orig_ReloadApp = (void(*)(MonoString*))DetourFunction(Get_Address_of_Method(react_common_img, "ReactNative.Vsh.Common", "ReactApplicationSceneManager", "ReloadApp", 1), (void * )&ReloadApp);
-    if (!Orig_ReloadApp) {
-      notify("Failed to detour Func Set 11");
-    }
-#endif
-
-    //
-    // Restore normal authid
-    //
-    set_proc_authid(pid, old_authid);
-    //
-    // Continue
-    //
-    if(g_settings.display_tids)
-       ReloadRNPSApp("NPXS40002"); // home screen tid
-
-    // shellui_log("Decrypted Data: %s", dec_xml_str.c_str());
-    shellui_log("Performed Magic");
-
-    
-  // Platform process lookup: use resolved SCE function pointers.
+void setup_proc_hooks() {
   orion_proc_set_sce_hooks(
-      [](int pid, char *name) -> int {
+      [](int pid, char* name) -> int {
         return sceKernelGetProcessName ? sceKernelGetProcessName(pid, name) : -1;
       },
-      [](pid_t pid, void *info) -> int {
+      [](pid_t pid, void* info) -> int {
         return sceKernelGetAppInfo
-                   ? sceKernelGetAppInfo(pid, static_cast<app_info_t *>(info))
+                   ? sceKernelGetAppInfo(pid, static_cast<app_info_t*>(info))
                    : -1;
       },
       []() -> int {
@@ -683,18 +724,102 @@ int main(int argc, char const *argv[]) {
                    ? sceSystemServiceGetAppIdOfRunningBigApp()
                    : -1;
       });
+}
+
+void run_keep_alive() {
+  pthread_t thread_id{};
+  scePthreadCreate(&thread_id, nullptr, dialogue_thread, nullptr, "dialogue_thread");
+  orion_ready_signal(ORION_READY_TOOLBOX);
+
+  while (true) {
+    shellui_log("sleeping ....");
+    sleep(kKeepAliveSleepSec);
+  }
+}
+
+} // namespace
+
+// ---------------------------------------------------------------------------
+// main — orchestration only
+// ---------------------------------------------------------------------------
+
+int main(int argc, char const* argv[]) {
+  (void)argc;
+  (void)argv;
+
+  if (hooked)
+    return 0;
+
+  const pid_t pid = getpid();
+  AuthIdGuard auth(pid, set_ucred_to_debugger());
+
+  void* read_fn = nullptr;
+  void* appinst_fn = nullptr;
+  (void)appinst_fn;
+
+  if (!resolve_native_symbols(pid, read_fn, appinst_fn))
+    return -1;
+
+  shellui_log("Starting ShellUI Module ....");
+
+  if (!resolve_mono_symbols(pid))
+    return -1;
+
+  init_resource_names();
+
+  OrbisKernelSwVersion sw{};
+  sceKernelGetProsperoSystemSwVersion(&sw);
+  is_3xx = (sw.version < kFw3xxMaxExclusive);
+  is_6xx = (sw.version >= kFw6xxMin);
+  shellui_log("System Software Version: %s is_3xx: %s", sw.version_str,
+              is_3xx ? "Yes" : "No");
+
+  if (!mono_get_root_domain)
+    return -1;
+
+  shellui_log("loading settings");
+  if (!LoadSettings()) {
+    shellui_log("Failed to load settings");
+    return -1;
+  }
+  shellui_log("Settings loaded successfully");
+
+  Root_Domain = mono_get_root_domain();
+  if (!Root_Domain) {
+    shellui_log("failed to get shellui root domain");
+    return -1;
+  }
+  shellui_log("Shellui Root Domain: %p", Root_Domain);
+  mono_thread_attach(Root_Domain);
+
+  if (!init_version_string(sw))
+    return -1;
+  if (!decrypt_toolbox_xml())
+    return -1;
+
+  ShellImages images;
+  if (!load_shell_images(images))
+    return -1;
+  if (!resolve_game_container(images.app_system))
+    return -1;
+
+  shellui_log("Starting hooking...");
+  if (!install_hooks(images, read_fn))
+    return -1;
+
+  shellui_log("Performing Magic ....");
+
+  // Drop elevated auth before long-running work
+  set_proc_authid(pid, auth.old_authid);
+  auth.release();
+
+  if (g_settings.display_tids)
+    ReloadRNPSApp("NPXS40002");
+
+  shellui_log("Performed Magic");
+  setup_proc_hooks();
 
   hooked = true;
-    pthread_t thread_id;
-    scePthreadCreate(&thread_id, nullptr, dialogue_thread, nullptr, "dialogue_thread");
-
-    // file to let the main daemon know that its finished loading
-    orion_ready_signal(ORION_READY_TOOLBOX);
-
-    while (true) {
-      shellui_log("sleeping ....");
-      sleep(0x100000);
-    }
-    return 0;
-    }
+  run_keep_alive();
+  return 0;
 }

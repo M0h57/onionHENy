@@ -20,6 +20,7 @@
 #include <sstream>
 #include <fstream>
 #include <unordered_map>
+#include <unordered_set>
 #include <random>
 #include <vector>
 #include <string>
@@ -85,15 +86,135 @@ bool is_valid_plugin(CustomPluginHeader &header)
   return true;
 }
 
-void generate_remote_play_xml(std::string &xml_buffer)
-{
-  // int pair_stat = -1, pair_err = -1, err = -1;
+namespace {
+
+/** UI-facing path: strip /user prefix, map /usb* → /mnt/usb*. */
+std::string display_path_for_ui(const std::string& path) {
+  if (path.rfind("/user", 0) == 0)
+    return path.substr(5); // drop "/user"
+  if (path.rfind("/usb", 0) == 0)
+    return "/mnt" + path;
+  return path;
+}
+
+bool read_plugin_header(const std::string& path, CustomPluginHeader& header) {
+  const int fd = open(path.c_str(), O_RDONLY, 0);
+  if (fd < 0) {
+    shellui_log("Failed to open Plugin file");
+    return false;
+  }
+  const ssize_t n = read(fd, &header, sizeof(header));
+  close(fd);
+  if (n != static_cast<ssize_t>(sizeof(header))) {
+    shellui_log("Failed to read Plugin file, %s", path.c_str());
+    return false;
+  }
+  return true;
+}
+
+bool is_plugin_or_elf_name(const char* name) {
+  const bool is_elf = strstr(name, ".elf") != nullptr;
+  const bool is_plugin = strstr(name, ".plugin") != nullptr;
+  const bool is_auto = strstr(name, ".auto_start") != nullptr;
+  return (is_plugin || is_elf) && !is_auto;
+}
+
+void append_plugin_entry(std::string& xml, const std::string& directory,
+                         const char* filename, bool plugins_xml, int& next_id) {
+  if (!is_plugin_or_elf_name(filename))
+    return;
+
+  const bool is_elf = strstr(filename, ".elf") != nullptr;
+  const std::string path = directory + "/" + filename;
+  shellui_log("Found Plugin: %s", path.c_str());
+
+  CustomPluginHeader header{};
+  if (!read_plugin_header(path, header))
+    return;
+
+  if (!is_elf && !is_valid_plugin(header)) {
+    shellui_log("Invalid plugin file.");
+    return;
+  }
+  if (is_elf) {
+    strncpy(header.prefix, "<elf>", 5);
+    strncpy(header.plugin_version, "", 4);
+  }
+  shellui_log("Valid plugin file.");
+
+  const std::string shown_path = display_path_for_ui(path);
+  const std::string version_str =
+      is_elf ? "" : ("(v" + std::string(header.plugin_version) + ")");
+  const std::string id_prefix = plugins_xml ? "id_plugin_" : "id_auto_plugin_";
+  const std::string id = id_prefix + std::to_string(next_id++);
+
+  std::string toggle;
+  if (plugins_xml) {
+    const char* tid = is_elf ? filename : header.titleID;
+    toggle = "<toggle_switch id=\"" + id + "\" title=\"" + filename + " " +
+             version_str + "\" second_title=\"启动/停止 " + filename +
+             " (路径: " + shown_path + ") (" + tid + ")\" value=\"0\"/>\n";
+  } else {
+    toggle = "<toggle_switch id=\"" + id + "\" title=\"" + filename + " " +
+             version_str + "\" second_title=\"启用/禁用 " + filename +
+             " 的自动启动  (" + shown_path + ")\" value=\"0\"/>\n";
+  }
+  xml += toggle;
+
+  Plugins entry;
+  entry.shellui_path = path;
+  entry.tid = is_elf ? filename : header.titleID;
+  entry.path = shown_path;
+  entry.name = filename;
+  entry.version = header.plugin_version;
+  entry.id = id;
+  if (plugins_xml)
+    plugins_list.push_back(entry);
+  else
+    auto_list.push_back(entry);
+}
+
+void append_homebrew_game(std::string& xml, const std::string& game_dir,
+                          const char* dir_name, int random_num) {
+  const std::string elf_path = game_dir + "/eboot.elf";
+  if (access(elf_path.c_str(), F_OK) != 0)
+    return;
+
+#if SHELL_DEBUG == 1
+  shellui_log("Found Game: %s", game_dir.c_str());
+#endif
+
+  std::string title_id, title, ver;
+  const std::string shown_path = display_path_for_ui(game_dir);
+
+  std::string icon_path = game_dir + "/sce_sys/icon0.png";
+  escapeXML(icon_path);
+
+  GameEntry game;
+  game.tid = title_id;
+  game.title = title;
+  escapeXML(game.title);
+  game.version = ver;
+  game.path = shown_path;
+  game.dir_name = dir_name;
+  escapeXML(game.dir_name);
+  game.icon_path = icon_path;
+  game.id = "id_orionhen_pl_loader_" + title_id + "_" + std::to_string(random_num);
+  games_list.push_back(game);
+
+  xml += "<button id=\"" + game.id + "\" title=\"(" + title_id + ") " + title +
+         "\" icon=\"" + icon_path + "\" second_title=\"" + shown_path +
+         " | 版本: " + ver + "\"/>\n";
+}
+
+} // namespace
+
+void generate_remote_play_xml(std::string& xml_buffer) {
   char pin_code[PIN_CODE_SIZE] = {0};
   char AccountID[ACCOUNT_ID_BASE64_SIZE] = {0};
   uint64_t dec_account_id = 0;
-  uint32_t pinCode = 0;
+
   bzero(AccountID, ACCOUNT_ID_BASE64_SIZE);
-  std::stringstream ss;
 
   xml_buffer = R"(<?xml version="1.0" encoding="UTF-8" ?>
     <system_settings version="1.0" plugin="debug_settings_plugin">
@@ -101,67 +222,60 @@ void generate_remote_play_xml(std::string &xml_buffer)
 
   shellui_log("Starting remote play");
   static bool remote_play_initialized = false;
-  if (!remote_play_initialized)
-  {
+  if (!remote_play_initialized) {
     InitRemotePlay();
     remote_play_initialized = true;
   }
 
-  if (IsNotActivated())
-  {
-    //
-    // Implicit activate it
-    //
+  if (IsNotActivated()) {
     GetEncodedAccountID(AccountID, dec_account_id);
     xml_buffer += R"(<label id="id_pin_2" title="账号已由 OrionHEN 激活，请重启主机后再使用远程游玩！" style="center"/>)";
-    goto close;
+    xml_buffer += R"(</setting_list></system_settings>)";
+    return;
   }
 
   shellui_log("Get encoded account id");
   GetEncodedAccountID(AccountID, dec_account_id);
   shellui_log("Get encoded account id ==> %s", AccountID);
+
   remote_play_info = "账号 ID: " + std::string(AccountID);
-  ss << std::hex << std::uppercase << dec_account_id;
-  remote_play_info += "\n解码后账号 ID: " + ss.str();
+  {
+    std::stringstream ss;
+    ss << std::hex << std::uppercase << dec_account_id;
+    remote_play_info += "\n解码后账号 ID: " + ss.str();
+  }
 
-  pinCode = GeneratePINCode();
+  const uint32_t pinCode = GeneratePINCode();
   shellui_log("Pin code => %d", pinCode);
-
   sprintf(pin_code, "PIN 码  : %04d %04d    ", pinCode / 10000, pinCode % 10000);
   remote_play_info += "\n" + std::string(pin_code);
-  xml_buffer += R"(<label id="id_pin" title=")" + std::string(pin_code) + R"(" style="center"/>)";
+  xml_buffer +=
+      R"(<label id="id_pin" title=")" + std::string(pin_code) + R"(" style="center"/>)";
   shellui_log("Pin code str => %s", pin_code);
 
   xml_buffer += R"(<label id="base64_account_id" title="账号 ID: )";
   xml_buffer += std::string(AccountID) + R"(" style="center"/>)";
 
-  if(usbpath() != -1)
-      xml_buffer += R"(<button id="id_save_rp_info" title="将远程游玩详情保存到 USB" style="center"/>)";
+  if (usbpath() != -1)
+    xml_buffer +=
+        R"(<button id="id_save_rp_info" title="将远程游玩详情保存到 USB" style="center"/>)";
 
-close:
   xml_buffer += R"(</setting_list></system_settings>)";
-
-  // shellui_log("%s\n", xml_buffer.c_str());
 }
 
-void generate_plugin_xml(std::string &xml_buffer, bool plugins_xml)
-{
-  struct dirent *entry;
-  int toggle_switch_id = 1;
-
-  std::vector<std::string> directories = {
+void generate_plugin_xml(std::string& xml_buffer, bool plugins_xml) {
+  static const std::vector<std::string> kPluginDirs = {
       "/user/data/OrionHEN/plugins",
       "/usb0/OrionHEN/plugins",
       "/usb1/OrionHEN/plugins",
       "/usb2/OrionHEN/plugins",
       "/usb3/OrionHEN/plugins",
-
       "/user/data/OrionHEN/payloads",
       "/usb0/OrionHEN/payloads",
       "/usb1/OrionHEN/payloads",
       "/usb2/OrionHEN/payloads",
-      "/usb3/OrionHEN/payloads"
-    };
+      "/usb3/OrionHEN/payloads",
+  };
 
   xml_buffer = "<?xml version=\"1.0\" encoding=\"UTF-8\" ?>\n"
                "<system_settings version=\"1.0\" plugin=\"debug_settings_plugin\">\n"
@@ -172,95 +286,28 @@ void generate_plugin_xml(std::string &xml_buffer, bool plugins_xml)
   else
     xml_buffer += "<setting_list id=\"id_auto_plugins\" title=\"★ 插件 - 启动菜单\">\n";
 
-  for (const auto &directory : directories)
-  {
-    DIR *dir = opendir(directory.c_str());
-    // Open the directory
-    if (!dir)
-    {
+  int toggle_switch_id = 1;
+  for (const auto& directory : kPluginDirs) {
+    DIR* dir = opendir(directory.c_str());
+    if (!dir) {
       shellui_log("Failed to open directory: %s", directory.c_str());
       continue;
     }
-    // Iterate over each file in the directory
-    while ((entry = readdir(dir)) != nullptr)
-    {
-      bool is_elf = strstr(entry->d_name, ".elf") != NULL;
-      if ((strstr(entry->d_name, ".plugin") || is_elf) && strstr(entry->d_name, ".auto_start") == NULL)
-      {
-        Plugins new_list;
-        // Store the ID in the plugin_ids array
-        CustomPluginHeader header = {};
-        std::string toggle_switch;
-        std::string id;
-        std::string path = directory + "/" + entry->d_name;
 
-        shellui_log("Found Plugin: %s", path.c_str());
+    while (struct dirent* entry = readdir(dir))
+      append_plugin_entry(xml_buffer, directory, entry->d_name, plugins_xml,
+                          toggle_switch_id);
 
-        int fd = open(path.c_str(), O_RDONLY, 0);
-        if (fd < 0)
-        {
-          shellui_log("Failed to open Plugin file");
-          continue;
-        }
-
-        if (read(fd, (void *)&header, sizeof(CustomPluginHeader)) != sizeof(CustomPluginHeader))
-        {
-          shellui_log("Failed to read Plugin file, %s", path.c_str());
-          close(fd);
-          continue;
-        }
-
-        close(fd);
-
-        if (!is_elf && !is_valid_plugin(header))
-        {
-          shellui_log("Invalid plugin file.");
-          continue;
-        }
-        else if(is_elf){
-          strncpy(header.prefix, "<elf>", 5);
-          strncpy(header.plugin_version, "", 4);
-        }
-        shellui_log("Valid plugin file.");
-
-        std::string shown_path = path; // Initialize with the original path
-        //path before any edits for shellui
-        new_list.shellui_path = path;
-
-        const std::string prefix = "/user";
-        if (path.find(prefix) == 0) { // Check if the path starts with "/user"
-           shown_path = path.substr(prefix.length()); // Remove "/user"
-        }
-
-        shown_path = (path.substr(0, 4) == "/usb") ? "/mnt" + path : shown_path;
-
-	      std::string version_str = !is_elf ? "(v" + std::string(header.plugin_version) + ")" : "";
-
-        id = plugins_xml ? "id_plugin_" + std::to_string(toggle_switch_id++) : "id_auto_plugin_" + std::to_string(toggle_switch_id++);
-        if (plugins_xml)
-          toggle_switch = "<toggle_switch id=\"" + id + "\" title=\"" + entry->d_name + " " + version_str + "\" second_title=\"启动/停止 " + entry->d_name + " (路径: " + shown_path + ") (" + (is_elf ? entry->d_name : header.titleID) + ")\" value=\"0\"/>\n";
-        else
-          toggle_switch = "<toggle_switch id=\"" + id + "\" title=\"" + entry->d_name + " " + version_str + "\" second_title=\"启用/禁用 " + entry->d_name + " 的自动启动  (" + shown_path + ")\" value=\"0\"/>\n";
-
-        xml_buffer += toggle_switch;
-        new_list.tid = (is_elf ? entry->d_name : header.titleID);
-        new_list.path = shown_path;
-        new_list.name = entry->d_name;
-        new_list.version = header.plugin_version;
-        new_list.id = id;
-        plugins_xml ? plugins_list.push_back(new_list) : auto_list.push_back(new_list);
-      }
-    }
     closedir(dir);
   }
 
-  if (plugins_xml)
-  {
-    xml_buffer += "<link id=\"id_auto_plugins\" title=\"★ 插件 - 启动菜单\" file=\"auto_plugins.xml\" second_title=\"配置在加载 OrionHEN 时自动启动的插件\"/>\n";
+  if (plugins_xml) {
+    xml_buffer +=
+        "<link id=\"id_auto_plugins\" title=\"★ 插件 - 启动菜单\" "
+        "file=\"auto_plugins.xml\" "
+        "second_title=\"配置在加载 OrionHEN 时自动启动的插件\"/>\n";
     xml_buffer += "</setting_list>\n</setting_list>\n</system_settings> ";
-  }
-  else
-  {
+  } else {
     xml_buffer += "</setting_list>\n</system_settings> ";
   }
 }
@@ -287,298 +334,225 @@ void escapeXML(std::string& input)
     }
 }
 
-void generate_cheats_xml(std::string &new_xml, std::string& not_open_tid, bool running_as_debug_settings, bool show_while_not_open)
-{
-  int appid = -1;
-  std::string list_id = running_as_debug_settings ? "id_debug_settings" : "id_cheat_title";
+namespace {
 
-  // buttons for if nothing is found
-  /* Download only; no RELOAD/index rebuild — util hot-reloads on file signature. */
-  std::string dl_cheats = R"(<list id="id_selected_cheats_repo" title="金手指仓库来源" >
-                   <list_item id="id_selected_cheats_repo_1" title="OrionHEN PS5 金手指仓库" value="0"/>
-                   <list_item id="id_selected_cheats_repo_2" title="GoldHEN PS4 金手指仓库" value="1"/>
-                 </list>
-                <button id="id_dl_cheats" title="下载/更新金手指" second_title="从所选 GitHub 仓库下载到 /data/OrionHEN/cheats/（TITLEID_VERSION.ext）"/>)";
-  //
+/** Download / repo selector block when no cheats are available. */
+constexpr const char* kDownloadCheatsXml =
+    R"(<list id="id_selected_cheats_repo" title="金手指仓库来源" >
+         <list_item id="id_selected_cheats_repo_1" title="OrionHEN PS5 金手指仓库" value="0"/>
+         <list_item id="id_selected_cheats_repo_2" title="GoldHEN PS4 金手指仓库" value="1"/>
+       </list>
+       <button id="id_dl_cheats" title="下载/更新金手指"
+               second_title="从所选 GitHub 仓库下载到 /data/OrionHEN/cheats/（TITLEID_VERSION.ext）"/>)";
+
+std::string read_file_to_string(const char* path) {
+  struct stat st {};
+  if (stat(path, &st) == -1 || st.st_size <= 0) {
+    shellui_log("Unable to stat file %s", path);
+    return {};
+  }
+
+  const int fd = open(path, O_RDONLY);
+  if (fd < 0) {
+    shellui_log("Error reading %s file!", path);
+    return {};
+  }
+
+  std::string buf(static_cast<size_t>(st.st_size), '\0');
+  const ssize_t n = read(fd, buf.data(), buf.size());
+  close(fd);
+
+  if (n < 0 || static_cast<size_t>(n) != buf.size()) {
+    shellui_log("read failed for %s", path);
+    return {};
+  }
+  return buf;
+}
+
+void append_authors_xml(std::string& xml, cJSON* root) {
+  xml += R"(<label id="credits" style="center" title="金手指作者: )";
+
+  std::unordered_set<std::string> seen;
+  bool first = true;
+  cJSON* authors = orion_cjson::item(root, "authors");
+  if (cJSON_IsArray(authors)) {
+    cJSON* author = nullptr;
+    cJSON_ArrayForEach(author, authors) {
+      const char* value = orion_cjson::string_value(author);
+      if (!value || !seen.insert(value).second)
+        continue;
+
+      std::string name = value;
+      escapeXML(name);
+      if (!first)
+        xml += ", ";
+      xml += name;
+      first = false;
+    }
+  }
+  xml += R"(" />)";
+}
+
+void append_cheat_entries_xml(std::string& xml, cJSON* root,
+                              const std::string& tid,
+                              const std::string& game_name, bool can_toggle) {
+  cJSON* cheats = orion_cjson::item(root, "cheats");
+  if (!cJSON_IsArray(cheats))
+    return;
+
+  cJSON* entry = nullptr;
+  cJSON_ArrayForEach(entry, cheats) {
+    std::string name = orion_cjson::string_item(entry, "name", "");
+    std::string desc = orion_cjson::string_item(entry, "description", "开/关");
+    escapeXML(name);
+    escapeXML(desc);
+
+    const int id = orion_cjson::int_item(entry, "id");
+    const bool enabled = orion_cjson::bool_item(entry, "enabled");
+    const std::string id_attr = "id_cheat_" + tid + "_" + std::to_string(id);
+
+    if (can_toggle) {
+      xml += R"(<toggle_switch id=")" + id_attr +
+             R"(" icon="tex_game_icon" title=")" + name +
+             R"(" description=")" + desc +
+             R"(" value=")" + (enabled ? "1" : "0") + R"("/>)";
+    } else {
+      xml += R"(<button id=")" + id_attr +
+             R"(" icon="tex_game_icon" title=")" + name +
+             R"(" description=")" + desc +
+             R"(" second_title="为 )" + game_name + R"( 启用/禁用 )" + name +
+             R"(" />)";
+    }
+    cheatEnabledMap[id] = enabled;
+  }
+}
+
+void finish_cheats_xml(std::string& xml) {
+  xml += "</setting_list>\n</system_settings>";
+}
+
+} // namespace
+
+void generate_cheats_xml(std::string& new_xml, std::string& not_open_tid,
+                         bool running_as_debug_settings, bool show_while_not_open) {
+  const std::string list_id =
+      running_as_debug_settings ? "id_debug_settings" : "id_cheat_title";
 
   new_xml =
       "<?xml version=\"1.0\" encoding=\"UTF-8\" ?>\n"
       "<system_settings version=\"1.0\" plugin=\"debug_settings_plugin\">\n"
       "\n";
 
+  int appid = -1;
   is_game_open = Get_Running_App_TID(running_tid, appid);
-  is_current_game_open = (is_game_open && running_tid == (show_while_not_open ? not_open_tid : running_tid));
+  is_current_game_open =
+      is_game_open &&
+      running_tid == (show_while_not_open ? not_open_tid : running_tid);
 
-  if (!is_game_open && !show_while_not_open)
-  {
-    new_xml += "<setting_list id=\"" + list_id + "\" title=\"OrionHEN 金手指 - 当前"
-               "没有打开的游戏\">\n";
-    new_xml += dl_cheats;
+  // No game running and not browsing offline cheats → download UI only.
+  if (!is_game_open && !show_while_not_open) {
+    new_xml += "<setting_list id=\"" + list_id +
+               "\" title=\"OrionHEN 金手指 - 当前没有打开的游戏\">\n";
+    new_xml += kDownloadCheatsXml;
+    finish_cheats_xml(new_xml);
+    return;
   }
-  else
-  {
-    std::string game_ver;
-    std::string cheat_info_json;
-    IPC_Client &client = IPC_Client::getInstance(true);
 
-    running_tid = show_while_not_open ? not_open_tid : running_tid;
+  running_tid = show_while_not_open ? not_open_tid : running_tid;
+  IPC_Client& client = IPC_Client::getInstance(true);
 
-    if (!client.GameVerFromTid(running_tid, game_ver))
-    {
-      game_ver = "无法检测补丁版本";
-    } 
+  std::string game_ver;
+  if (!client.GameVerFromTid(running_tid, game_ver))
+    game_ver = "无法检测补丁版本";
 
-    new_xml += "<setting_list id=\"" + list_id + "\" title=\"OrionHEN 金手指 - ";
-    new_xml += running_tid + " - " + game_ver + "\">\n";
+  new_xml += "<setting_list id=\"" + list_id + "\" title=\"OrionHEN 金手指 - " +
+             running_tid + " - " + game_ver + "\">\n";
 
-    if(!is_game_open && show_while_not_open)
-      new_xml += R"(<label id="id_cheat_disclaimer" title=")" + running_tid + R"( 当前未运行，除非打开游戏否则无法激活任何金手指")" + R"( style="center"/>)";
-
-    if (client.GetGameCheats(running_tid, game_ver, cheat_info_json))
-    {
-      struct stat st;
-
-      if (stat(cheat_info_json.c_str(), &st) == -1)
-      {
-        shellui_log("Unable to stat file %s", cheat_info_json.c_str());
-        goto close;
-      }
-
-      int fd = open(cheat_info_json.c_str(), O_RDONLY);
-
-      if (fd == -1)
-      {
-        shellui_log("Error reading %s file!", cheat_info_json.c_str());
-        goto close;
-      }
-
-      char* json_data = (char*) malloc(st.st_size);
-      // Write the buffer to the file
-      if (read(fd, json_data, st.st_size) == -1) 
-      {
-        perror("read failed");
-        close(fd);
-        free(json_data);
-        goto close;
-      }
-
-      // Close the file descriptor
-      close(fd);
-      unlink(cheat_info_json.c_str());
-      std::string json_string(json_data, st.st_size);
-      orion_cjson::Root res_json(json_string);
-      if (!res_json)
-      {
-        shellui_log("Failed to parse json from cheat response!");
-        free(json_data);
-        goto close;
-      }
-
-      std::string game_name =
-          orion_cjson::string_item(res_json.get(), "name", "");
-      escapeXML(game_name);
-
-      new_xml += R"(<label id="id_cheat_title" title="★ )" + game_name + R"( ★" style="center"/>)";
-
-      // Cheat creator credits
-      new_xml += R"(<label id="credits" style="center" title="金手指作者: )";
-
-      std::unordered_map<std::string, bool> knownAuthors;
-      bool first_author = true;
-      cJSON *authors = orion_cjson::item(res_json.get(), "authors");
-      if (cJSON_IsArray(authors))
-      {
-          cJSON *author = nullptr;
-          cJSON_ArrayForEach(author, authors)
-          {
-              const char *author_value = orion_cjson::string_value(author);
-              if (!author_value)
-                continue;
-
-              std::string author_name = author_value;
-              
-              if (knownAuthors.find(author_name) != knownAuthors.end())
-              {
-                //
-                // repeated
-                //
-                continue;
-              }
-              knownAuthors[author_name] = true;
-              escapeXML(author_name);
-              if (!first_author)
-              {
-                  new_xml += ", ";
-              }
-              new_xml += author_name;
-              first_author = false;
-          }
-      }
-      new_xml += R"(" />)";
-
-      // Build toggle switch XML entry
-      cJSON *cheats = orion_cjson::item(res_json.get(), "cheats");
-      if (cJSON_IsArray(cheats))
-      {
-          cJSON *cheat_entry = nullptr;
-          cJSON_ArrayForEach(cheat_entry, cheats)
-          {
-              std::string cheat_name =
-                  orion_cjson::string_item(cheat_entry, "name", "");
-              std::string description =
-                  orion_cjson::string_item(cheat_entry, "description", "开/关");
-              escapeXML(cheat_name);
-              escapeXML(description);
-
-              int cheat_id = orion_cjson::int_item(cheat_entry, "id");
-              bool enabled = orion_cjson::bool_item(cheat_entry, "enabled");
-              std::string enabled_value = enabled ? "1" : "0";
-              std::string toggle_switch;
-              if(is_game_open && is_current_game_open)
-                 toggle_switch = R"(<toggle_switch id="id_cheat_)" + running_tid + "_" + std::to_string(cheat_id) + R"(" icon="tex_game_icon" title=")" + cheat_name + R"(" description=")" + description + R"(" value=")" + enabled_value + R"("/>)";
-              else
-                  toggle_switch = R"(<button id="id_cheat_)" + running_tid + "_" + std::to_string(cheat_id) + R"(" icon="tex_game_icon" title=")" + cheat_name + R"(" description=")" + description + R"(" second_title="为 )" + game_name + R"( 启用/禁用 )" + cheat_name + R"(" />)";
-
-              new_xml += toggle_switch;
-
-              cheatEnabledMap[cheat_id] = enabled;
-          }
-      }
-
-      // Cleanup
-      free(json_data);
-    }
-    else{
-      new_xml += dl_cheats;
-    }
+  if (!is_game_open && show_while_not_open) {
+    new_xml += R"(<label id="id_cheat_disclaimer" title=")" + running_tid +
+               R"( 当前未运行，除非打开游戏否则无法激活任何金手指" style="center"/>)";
   }
-close:
-  new_xml += "</setting_list>\n</system_settings>";
 
-//  shellui_log("Cheat UI XML => \n%s\n", new_xml.c_str());
+  std::string cheat_path;
+  if (!client.GetGameCheats(running_tid, game_ver, cheat_path)) {
+    new_xml += kDownloadCheatsXml;
+    finish_cheats_xml(new_xml);
+    return;
+  }
+
+  const std::string json_string = read_file_to_string(cheat_path.c_str());
+  if (json_string.empty()) {
+    finish_cheats_xml(new_xml);
+    return;
+  }
+  unlink(cheat_path.c_str());
+
+  orion_cjson::Root res_json(json_string);
+  if (!res_json) {
+    shellui_log("Failed to parse json from cheat response!");
+    finish_cheats_xml(new_xml);
+    return;
+  }
+
+  std::string game_name = orion_cjson::string_item(res_json.get(), "name", "");
+  escapeXML(game_name);
+  new_xml += R"(<label id="id_cheat_title" title="★ )" + game_name +
+             R"( ★" style="center"/>)";
+
+  append_authors_xml(new_xml, res_json.get());
+  append_cheat_entries_xml(new_xml, res_json.get(), running_tid, game_name,
+                           is_game_open && is_current_game_open);
+  finish_cheats_xml(new_xml);
 }
 
 void generate_plapps_xml(std::string& new_xml) {
-
-  struct dirent *entry;
-
-  std::vector<std::string> directories = {
-    "/user/data/homebrew/games",
-    "/usb0/homebrew",
-    "/usb1/homebrew/games",
-    "/usb2/homebrew/games",
-    "/usb3/homebrew/games",
-    "/mnt/ext1/homebrew/games",
-    "/mnt/ext2/homebrew/games",
-    "/mnt/ext0/homebrew/games",
+  static const std::vector<std::string> kHomebrewDirs = {
+      "/user/data/homebrew/games",
+      "/usb0/homebrew",
+      "/usb1/homebrew/games",
+      "/usb2/homebrew/games",
+      "/usb3/homebrew/games",
+      "/mnt/ext1/homebrew/games",
+      "/mnt/ext2/homebrew/games",
+      "/mnt/ext0/homebrew/games",
   };
 
-    new_xml =
-      "<?xml version=\"1.0\" encoding=\"UTF-8\" ?>\n"
-      "<system_settings version=\"1.0\" plugin=\"debug_settings_plugin\">\n"
-      "\n";
+  new_xml = "<?xml version=\"1.0\" encoding=\"UTF-8\" ?>\n"
+            "<system_settings version=\"1.0\" plugin=\"debug_settings_plugin\">\n"
+            "\n"
+            "<setting_list id=\"id_plapps\" title=\"OrionHEN Payload 自制软件 - 应用程序\">\n";
 
-    new_xml += "<setting_list id=\"id_plapps\" title=\"OrionHEN Payload 自制软件 - 应用程序\">\n";
-
-  // Initialize random number generator
   std::random_device rd;
   std::mt19937 gen(rd());
   std::uniform_int_distribution<int> dist(1000, 9999);
 
-  for (const auto &directory : directories)
-  {
-    DIR *dir = opendir(directory.c_str());
-    // Open the directory
-    if (!dir)
-    {
-      #if SHELL_DEBUG==1 
+  for (const auto& directory : kHomebrewDirs) {
+    DIR* dir = opendir(directory.c_str());
+    if (!dir) {
+#if SHELL_DEBUG == 1
       shellui_log("Failed to open directory: %s", directory.c_str());
-      #endif
+#endif
       continue;
     }
-    
-    // Iterate over each entry in the games directory
-    while ((entry = readdir(dir)) != nullptr)
-    {
-      // Skip . and .. directories
+
+    while (struct dirent* entry = readdir(dir)) {
       if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0)
         continue;
-        
-      std::string game_dir = directory + "/" + entry->d_name;
-      
-      // Check if this is a directory by trying to open it
-      struct stat st;
+
+      const std::string game_dir = directory + "/" + entry->d_name;
+      struct stat st {};
       if (stat(game_dir.c_str(), &st) != 0 || !S_ISDIR(st.st_mode)) {
-        #if SHELL_DEBUG==1 
+#if SHELL_DEBUG == 1
         shellui_log("Skipping non-directory: %s", game_dir.c_str());
-        #endif
+#endif
         continue;
       }
-        
-      std::string elf_path = game_dir + "/eboot.elf";
-      std::string icon_path = game_dir + "/sce_sys/icon0.png";
-      
-      // Check if param.json exists
-      if (access(elf_path.c_str(), F_OK) != 0) {
-        #if SHELL_DEBUG==1 
-        shellui_log("No param.json found in: %s", game_dir.c_str());
-        #endif
-        continue;
-      }
-      #if SHELL_DEBUG==1 
-      shellui_log("Found Game: %s", game_dir.c_str());
-      #endif
-      
-      // Parse the JSON to get title_id, content_id, title, and version
-      std::string title_id, title, ver;
-            #if 0
-      if (!getContentInfofromJson(param_path, title_id, title, ver)) {
-        #if SHELL_DEBUG==1 
-        shellui_log("Failed to parse param.json in: %s", game_dir.c_str());
-        #endif
-        continue;
-      }
-      #endif
-      
-      std::string shown_path = game_dir; // Initialize with the original path
-      
-      const std::string prefix = "/user";
-      if (shown_path.find(prefix) == 0) { // Check if the path starts with "/user"
-         shown_path = shown_path.substr(prefix.length()); // Remove "/user"
-      }
-      
-      shown_path = (game_dir.substr(0, 4) == "/usb") ? "/mnt" + game_dir : shown_path;
-      // Generate a random number for the ID
-      int random_num = dist(gen);
-      
-      // Escape the icon path for XML
-      escapeXML(icon_path);
-      
-      // Create and populate a GameEntry
-      GameEntry game;
-      game.tid = title_id;
-      game.title = title;
-      escapeXML(game.title);
-      game.version = ver;
-      game.path = shown_path;
-      game.dir_name = entry->d_name;
-      escapeXML(game.dir_name);
-      game.icon_path = icon_path;
-      game.id = "id_orionhen_pl_loader_" + title_id + "_" + std::to_string(random_num);
-      
-      // Add to the games list
-      games_list.push_back(game);
-      
-      // Format the button XML
-      std::string button = "<button id=\"" + game.id + "\" title=\"(" + title_id + ") " + title + 
-      "\" icon=\"" + icon_path + "\" second_title=\"" + shown_path + " | 版本: " + ver + "\"/>\n";
-      
-      new_xml += button;
+
+      append_homebrew_game(new_xml, game_dir, entry->d_name, dist(gen));
     }
-    //shellui_log("cloaing dir %s", directory.c_str());
     closedir(dir);
   }
 
-    new_xml += "</setting_list>\n</system_settings>";
+  new_xml += "</setting_list>\n</system_settings>";
 }
 
