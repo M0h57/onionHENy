@@ -552,7 +552,9 @@ extern int (*sceRegMgrGetInt)(long, int*);
 
 /* ====================================== Dynamic Mono Symbols ===================================*/
 extern MonoArray* (*mono_array_new)(MonoDomain* domain, MonoClass* eclass, uint32_t size);
-extern void (*mono_gchandle_new)(MonoObject* obj, int pinned);
+/** Real Mono API returns gchandle id (uint32). */
+extern uint32_t (*mono_gchandle_new)(MonoObject *obj, int pinned);
+extern void (*mono_gchandle_free)(uint32_t gchandle);
 extern MonoClass* (*mono_get_byte_class)();
 extern  MonoObject* (*mono_vtable_get_static_field_data)(MonoVTable* vt);
 extern char* (*mono_array_addr_with_size)(MonoArray* array, int size, uintptr_t idx);

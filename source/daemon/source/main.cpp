@@ -171,7 +171,7 @@ constexpr const char kWelcomeToastJson[] =
     "          \"actionType\": \"DeepLink\",\n"
     "          \"defaultFocus\": true,\n"
     "          \"parameters\": {\n"
-    "            \"actionUrl\": \"pssettings:play?function=debug_settings\"\n"
+    "            \"actionUrl\": \"pssettings:play?function=debug_settings_old\"\n"
     "          }\n"
     "        }\n"
     "      ]\n"
@@ -212,7 +212,7 @@ const char* startup_uri_for_option(int start_option, bool toolbox_auto_start) {
     return "pshomeui:navigateToHome?bootCondition=psButton";
   case TOOLBOX:
     return toolbox_auto_start
-               ? "pssettings:play?mode=settings&function=debug_settings"
+               ? "pssettings:play?mode=settings&function=debug_settings_old"
                : "pshomeui:navigateToHome?bootCondition=psButton";
   case SETTINGS:
     return "pssettings:play?mode=settings";
@@ -321,6 +321,9 @@ bool is_800 = false;
 
 int main() {
   orion_log_configure("OrionHEN", "/data/OrionHEN/OrionHEN.log");
+  /* Real linked kernel export (not a dlsym function-pointer variable). */
+  orion_notify_set_send(reinterpret_cast<orion_notify_send_fn>(
+      sceKernelSendNotificationRequest));
 
   char buz[255];
   pthread_t fifo_thr = nullptr;

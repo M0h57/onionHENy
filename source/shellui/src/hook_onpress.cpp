@@ -62,7 +62,8 @@ int OnPress_Hook(MonoObject *Instance, MonoObject *element, MonoObject *e) {
 #if SHELL_DEBUG == 1
     shellui_log("Failed to activate %s, game is not running", ctx.id.c_str());
 #endif
-    return oOnPress(Instance, element, e);
+    // Dynamic cheat ids are not in the stock Settings model — never oOnPress.
+    return 0;
   }
 
   bool isExcludedId =
@@ -107,6 +108,13 @@ int OnPress_Hook(MonoObject *Instance, MonoObject *element, MonoObject *e) {
   run_exact(onpress_system_exact);
   run_exact(onpress_misc_exact);
 
+  if (result == OnPressResult::Consumed) {
+    // Fully owned by OrionHEN (dynamic XML). Skip stock SettingPage.OnPressed.
+    if (ctx.dirty) {
+      settings_commit(ctx.reload_main, ctx.reload_util);
+    }
+    return 0;
+  }
   if (result == OnPressResult::EarlyReturn) {
     return oOnPress(Instance, element, e);
   }

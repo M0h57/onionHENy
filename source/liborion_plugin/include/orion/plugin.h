@@ -28,6 +28,14 @@ bool orion_plugin_is_valid(const void *buf);
 /** ELF bytes start immediately after the package header. */
 const uint8_t *orion_plugin_package_elf(const void *buf);
 
+/**
+ * Derive a stable launch/PID key from a raw ELF basename.
+ * "foo.elf" → "foo", "bar" → "bar". Rejects empty stem (".elf") and path seps.
+ * Used so we never treat ELF file bytes as OrionPluginHeader.titleID
+ * (which produced /data/OrionHEN/plugins/.elf).
+ */
+bool orion_plugin_elf_key_from_name(const char *name, char *out, size_t out_sz);
+
 void orion_plugin_pid_path(char *out, size_t out_sz, const char *title_id);
 pid_t orion_plugin_read_pid_file(const char *pid_path);
 void orion_plugin_write_pid_file(const char *pid_path, pid_t pid);

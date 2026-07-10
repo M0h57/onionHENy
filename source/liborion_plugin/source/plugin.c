@@ -72,8 +72,32 @@ const uint8_t *orion_plugin_package_elf(const void *buf) {
   return (const uint8_t *)buf + sizeof(OrionPluginHeader);
 }
 
+bool orion_plugin_elf_key_from_name(const char *name, char *out, size_t out_sz) {
+  if (!name || !out || out_sz < 2)
+    return false;
+
+  const char *base = strrchr(name, '/');
+  base = base ? base + 1 : name;
+  if (!base[0] || strcmp(base, ".") == 0 || strcmp(base, "..") == 0)
+    return false;
+
+  size_t n = strlen(base);
+  if (n >= 4 && strcmp(base + n - 4, ".elf") == 0)
+    n -= 4;
+  if (n == 0)
+    return false; /* bare ".elf" */
+  if (n >= out_sz)
+    n = out_sz - 1;
+
+  memcpy(out, base, n);
+  out[n] = '\0';
+  if (out[0] == '\0' || strchr(out, '/') != NULL || strchr(out, '\\') != NULL)
+    return false;
+  return true;
+}
+
 void orion_plugin_pid_path(char *out, size_t out_sz, const char *title_id) {
-  snprintf(out, out_sz, "/system_tmp/%s.PID", title_id);
+  snprintf(out, out_sz, "/system_tmp/%s.PID", title_id ? title_id : "");
 }
 
 pid_t orion_plugin_read_pid_file(const char *pid_path) {
@@ -127,6 +151,18 @@ void orion_plugin_stop_by_title(const char *title_id) {
 
 pid_t orion_plugin_launch_9021(const char *title_id, const uint8_t *elf,
                                size_t elf_sz) {
+  if (!title_id || !title_id[0] || !elf || elf_sz < 4) {
+    OrionHEN_log("launch_9021: invalid args title=%s elf_sz=%zu",
+                 title_id ? title_id : "(null)", elf_sz);
+    return -1;
+  }
+  /* Guard against accidental "" → /data/OrionHEN/plugins/.elf */
+  if (strcmp(title_id, ".") == 0 || strcmp(title_id, "..") == 0 ||
+      strchr(title_id, '/') != NULL) {
+    OrionHEN_log("launch_9021: rejected title_id=%s", title_id);
+    return -1;
+  }
+
   char epath[256];
   snprintf(epath, sizeof(epath), "/data/OrionHEN/plugins/%s.elf", title_id);
   OrionHEN_log("loading plugin via 9021 title=%s path=%s", title_id, epath);
@@ -213,12 +249,16 @@ bool orion_plugin_load(const char *path, const char *filename,
     base = basename(name_buf);
   }
 
-  const OrionPluginHeader *header = (const OrionPluginHeader *)buf;
-  char pid_path[256];
-  orion_plugin_pid_path(pid_path, sizeof(pid_path), header->titleID);
+  const size_t base_len = strlen(base);
+  const bool looks_like_elf =
+      base_len > 4 && strcmp(base + base_len - 4, ".elf") == 0;
 
-  /* ---- raw .elf ---- */
-  if (strstr(base, ".elf") != NULL) {
+  char pid_path[256];
+
+  /* ---- raw .elf ----
+   * NEVER use OrionPluginHeader overlay on ELF bytes: e_ident ends in NULs so
+   * titleID becomes "" and launch_9021 writes /data/OrionHEN/plugins/.elf. */
+  if (looks_like_elf) {
     OrionHEN_log("ELF detected: %s", base);
     if (!orion_plugin_is_elf(buf, size)) {
       OrionHEN_log("Invalid ELF file: %s", base);
@@ -227,8 +267,18 @@ bool orion_plugin_load(const char *path, const char *filename,
       return false;
     }
 
-    orion_plugin_stop_by_title(header->titleID);
-    const pid_t pid = orion_plugin_launch_9021(header->titleID, buf, size);
+    char key[64];
+    if (!orion_plugin_elf_key_from_name(base, key, sizeof(key))) {
+      OrionHEN_log("Invalid ELF basename (empty stem): %s", base);
+      orion_notify(1, "Invalid ELF name: %s", base);
+      free(buf);
+      return false;
+    }
+
+    OrionHEN_log("ELF launch key=%s (from %s)", key, base);
+    orion_plugin_pid_path(pid_path, sizeof(pid_path), key);
+    orion_plugin_stop_by_title(key);
+    const pid_t pid = orion_plugin_launch_9021(key, buf, size);
     free(buf);
     orion_plugin_write_pid_file(pid_path, pid);
     if (local.always_succeed_after_launch)
@@ -237,6 +287,7 @@ bool orion_plugin_load(const char *path, const char *filename,
   }
 
   /* ---- .plugin package ---- */
+  const OrionPluginHeader *header = (const OrionPluginHeader *)buf;
   if (!orion_plugin_is_valid(buf)) {
     free(buf);
     return false;
@@ -248,6 +299,7 @@ bool orion_plugin_load(const char *path, const char *filename,
   OrionHEN_log("Plugin Version: %s", header->plugin_version);
   OrionHEN_log("=========================================");
 
+  orion_plugin_pid_path(pid_path, sizeof(pid_path), header->titleID);
   orion_plugin_stop_by_title(header->titleID);
 
   if (local.auto_delete_eorr37000 &&

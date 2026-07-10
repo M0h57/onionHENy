@@ -29,7 +29,8 @@ bool CaptureScreen(){
   }
   else if (g_settings.toolbox_shortcut_opt == TOOLBOX_LONG_SHARE){
     //shellui_log("CaptureScreen: Long Share Shortcut activated");
-    GoToURI("pssettings:play?mode=settings&function=debug_settings");
+    // Direct legacy DebugSettingsOldScreen (not RN DebugSettingsScreen).
+    GoToURI("pssettings:play?mode=settings&function=debug_settings_old");
     return true;
   }
 
@@ -75,7 +76,7 @@ void OnShareButton(MonoObject * data) {
   }
   else if (g_settings.toolbox_shortcut_opt == TOOLBOX_SINGLE_SHARE) {
     // shellui_log("Share Shortcut: Redirecting to Toolbox");
-    GoToURI("pssettings:play?mode=settings&function=debug_settings");
+    GoToURI("pssettings:play?mode=settings&function=debug_settings_old");
     return;
   }
 

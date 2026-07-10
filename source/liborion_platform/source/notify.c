@@ -9,27 +9,35 @@
 #include <stdio.h>
 #include <string.h>
 
+/*
+ * Layout must total 0xC30 (same as elfldr: 45-byte header + 3075 payload).
+ * message starts at offset 0x2D (immediately after use_icon_image_uri).
+ */
 typedef struct {
-  int32_t type;
-  int32_t req_id;
-  int32_t priority;
-  int32_t msg_id;
-  int32_t target_id;
-  int32_t user_id;
-  int32_t unk1;
-  int32_t unk2;
-  int32_t app_id;
-  int32_t error_num;
-  int32_t unk3;
-  char use_icon_image_uri;
-  char message[1024];
-  char uri[1024];
-  char unkstr[1024];
+  int32_t type;             /* 0x00 */
+  int32_t req_id;           /* 0x04 */
+  int32_t priority;         /* 0x08 */
+  int32_t msg_id;           /* 0x0C */
+  int32_t target_id;        /* 0x10 */
+  int32_t user_id;          /* 0x14 */
+  int32_t unk1;             /* 0x18 */
+  int32_t unk2;             /* 0x1C */
+  int32_t app_id;           /* 0x20 */
+  int32_t error_num;        /* 0x24 */
+  int32_t unk3;             /* 0x28 */
+  char use_icon_image_uri;  /* 0x2C */
+  char message[1024];       /* 0x2D */
+  char uri[1024];           /* 0x42D */
+  char unkstr[1024];        /* 0x82D */
+  char _pad_to_c30[3];      /* 0xC2D → 0xC30 */
 } OrbisNotificationRequest;
 
-int32_t sceKernelSendNotificationRequest(int32_t device,
-                                         OrbisNotificationRequest *req,
-                                         size_t size, int32_t blocking);
+_Static_assert(sizeof(OrbisNotificationRequest) == 0xC30,
+               "OrbisNotificationRequest must be 0xC30");
+
+static orion_notify_send_fn g_send = NULL;
+
+void orion_notify_set_send(orion_notify_send_fn fn) { g_send = fn; }
 
 void orion_notify_format(char *out, size_t out_sz, int show_watermark,
                          const char *fmt, va_list ap) {
@@ -51,7 +59,14 @@ void orion_notify_v(int show_watermark, const char *fmt, va_list ap) {
   strncpy(req.uri, "cxml://psnotification/tex_icon_system", sizeof(req.uri) - 1);
 
   OrionHEN_log("Notify: %s", req.message);
-  sceKernelSendNotificationRequest(0, &req, sizeof(req), 0);
+
+  if (!g_send) {
+    /* Never fall back to a direct CALL of sceKernelSendNotificationRequest —
+     * that symbol is a data pointer in shellui/fps injectees. */
+    OrionHEN_log("Notify: send fn not registered (orion_notify_set_send)");
+    return;
+  }
+  (void)g_send(0, &req, sizeof(req), 0);
 }
 
 void orion_notify(int show_watermark, const char *fmt, ...) {

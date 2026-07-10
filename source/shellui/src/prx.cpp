@@ -25,6 +25,7 @@ along with this program; see the file COPYING. If not, see
 #include "ucred.h"
 #include "webserver.hpp"
 
+#include <orion/notify.h>
 #include <orion/proc_query.h>
 #include <orion/ready.h>
 
@@ -221,6 +222,17 @@ bool resolve_native_symbols(pid_t pid, void*& out_read,
   KERNEL_DLSYM(libkernelsys, read);
   out_read = reinterpret_cast<void*>(read);
 
+  /* liborion_platform must not CALL sceKernelSendNotificationRequest by name —
+   * here that symbol is a dlsym'd *function pointer*. Register a trampoline. */
+  orion_notify_set_send(+[](int32_t device, void *req, size_t size,
+                            int32_t blocking) -> int32_t {
+    if (!sceKernelSendNotificationRequest)
+      return -1;
+    return sceKernelSendNotificationRequest(
+        device, static_cast<OrbisNotificationRequest *>(req),
+        static_cast<int>(size), blocking);
+  });
+
   KERNEL_DLSYM(libSceKernelHandle, sceKernelJitCreateSharedMemory);
   KERNEL_DLSYM(libSceKernelHandle, sceKernelJitCreateAliasOfSharedMemory);
   KERNEL_DLSYM(libSceKernelHandle, sceKernelJitMapSharedMemory);
@@ -297,6 +309,7 @@ bool resolve_mono_symbols(pid_t pid) {
   KERNEL_DLSYM(libmono, mono_assembly_setrootdir);
   KERNEL_DLSYM(libmono, mono_free);
   KERNEL_DLSYM(libmono, mono_gchandle_new);
+  KERNEL_DLSYM(libmono, mono_gchandle_free); /* optional; null if missing */
   KERNEL_DLSYM(libmono, mono_image_open_from_data);
   KERNEL_DLSYM(libmono, mono_runtime_object_init);
   KERNEL_DLSYM(libmono, mono_domain_get);
@@ -575,9 +588,21 @@ bool install_hooks(const ShellImages& img, void* read_fn) {
        "OptionMenu", "createJson", 8, reinterpret_cast<void*>(&createJson_hook),
        reinterpret_cast<void**>(&createJson), true},
       /*
-       * Disabled: on 11.600 this method's prologue is not safe for the
-       * current trampoline copier. Calling UpdateImposeStatusFlag_Orig jumps
-       * into the copied stub and faults at trampoline+0x6.
+       * DISABLED on 11.600+ (and likely other FW with similar Mono JIT prologues).
+       *
+       * DetourFunction only memcpy's the first N whole instructions into a trampoline.
+       * UpdateImposeStatusFlag's prologue uses RIP-relative ops; after relocation those
+       * still encode the OLD rip, so UpdateImposeStatusFlag_Orig faults at trampoline+0x6
+       * (field log: IP = trampoline|0x6, right after "[DBG-UIS] calling original").
+       *
+       * This is NOT StopConfirmRegistLoop / remote-play pthread_join — confirm=0 in the
+       * crash path and the loop never runs. Keep disabled; remote-play cleanup is done
+       * from GetManifestResourceStream when leaving the remote_play page.
+       *
+       * {"LayerManager.UpdateImposeStatusFlag", img.app_system,
+       *  "Sce.Vsh.ShellUI.AppSystem", "LayerManager", "UpdateImposeStatusFlag", 2,
+       *  reinterpret_cast<void*>(&UpdateImposeStatusFlag_hook),
+       *  reinterpret_cast<void**>(&UpdateImposeStatusFlag_Orig), false},
        */
       {"GamePad.GetData", img.core, "Sce.PlayStation.Core.Input", "GamePad", "GetData",
        1, reinterpret_cast<void*>(&GetData_hook), reinterpret_cast<void**>(&GetData),

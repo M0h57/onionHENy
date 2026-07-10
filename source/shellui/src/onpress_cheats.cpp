@@ -12,10 +12,13 @@ static OnPressResult prefix_id_cheat(OnPressContext &ctx) {
   if (ctx.id.rfind("id_cheat_", 0) != 0) {
     return OnPressResult::NotMine;
   }
+  // Dynamic cheats are not stock Settings entries: never SaveSettings / oOnPress.
+  ctx.dirty = false;
+
   if (!g_ui.is_current_game_open) {
     notify("The Game is not running, to activate cheats launch the game first");
     shellui_log("Failed to activate %s, game is not running", ctx.id.c_str());
-    return OnPressResult::EarlyReturn;
+    return OnPressResult::Consumed;
   }
   char tid[32];
   int cheat_id;
@@ -27,7 +30,7 @@ static OnPressResult prefix_id_cheat(OnPressContext &ctx) {
     notify("[ERROR] Failed to activate %s\nfailed to find game pid",
            cheat_name.c_str());
     shellui_log("Failed to get pid for %s", tid);
-    return OnPressResult::EarlyReturn;
+    return OnPressResult::Consumed;
   }
   shellui_log("Got proc for %s, tid %s, pid %i", ctx.id.c_str(), tid, pid);
   if (IPC_Client::getInstance(true).ToggleGameCheat(pid, tid, cheat_id,
@@ -39,7 +42,9 @@ static OnPressResult prefix_id_cheat(OnPressContext &ctx) {
   } else {
     notify("[ERROR] Failed to activate %s", cheat_name.c_str());
   }
-  return OnPressResult::Handled;
+  // Consumed: stock SettingPage.OnPressed null-derefs unknown dynamic ids
+  // (id_cheat_<TID>_<n> + toggle_switch) after our IPC/notify path.
+  return OnPressResult::Consumed;
 }
 
 static const OnPressPrefixEntry kPrefix[] = {

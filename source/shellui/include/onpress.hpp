@@ -31,11 +31,15 @@ struct OnPressContext {
 /**
  * Handler result:
  * - Handled: domain handled the id; dispatcher will settings_commit (if dirty) then oOnPress.
+ * - Consumed: fully handled custom/dynamic id; optional commit if dirty, do NOT call oOnPress.
+ *   Use for ids outside the stock Settings model (e.g. id_cheat_*), where original
+ *   SettingPage.OnPressed may null-deref on unknown elements.
  * - EarlyReturn: stop now; call oOnPress without commit (no-op / validation fail).
  * - NotMine: try next matcher / fall through.
  */
 enum class OnPressResult {
   Handled,
+  Consumed,
   EarlyReturn,
   NotMine,
 };

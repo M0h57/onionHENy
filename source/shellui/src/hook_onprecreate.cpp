@@ -4,6 +4,7 @@
  * Value binding is table-driven: each known Id maps to a provider string.
  */
 #include "HookedFuncs.hpp"
+#include "external_symbols.hpp"
 #include "RemotePlay.h"
 #include "Detour.h"
 #include "ipc.hpp"
@@ -224,10 +225,18 @@ int OnPreCreate_Hook(MonoObject* Instance, MonoObject* element) {
   const std::string value = resolve_element_value(id);
 
   if (!value.empty()) {
-    MonoString* text = mono_string_new(Root_Domain, value.c_str());
-    mono_runtime_invoke(set_value_method, element, reinterpret_cast<void**>(&text),
-                        nullptr);
+    MonoDomain *dom = (mono_domain_get ? mono_domain_get() : nullptr);
+    if (!dom)
+      dom = Root_Domain;
+    MonoString *text =
+        (dom && mono_string_new) ? mono_string_new(dom, value.c_str()) : nullptr;
+    if (text) {
+      mono_runtime_invoke(set_value_method, element,
+                          reinterpret_cast<void **>(&text), nullptr);
+    }
   }
 
+  if (!oOnPreCreate)
+    return 0;
   return oOnPreCreate(Instance, element);
 }

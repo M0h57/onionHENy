@@ -836,6 +836,10 @@ static void load_autostart_plugins(void) {
 }
 
 int main(void) {
+  /* Real linked kernel export — must bind before any notify(). */
+  orion_notify_set_send(reinterpret_cast<orion_notify_send_fn>(
+      sceKernelSendNotificationRequest));
+
   signal(SIGCHLD, SIG_IGN);
 
   klog_puts("Jailbreaking the boostrapper ...");

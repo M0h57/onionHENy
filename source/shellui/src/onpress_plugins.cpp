@@ -23,12 +23,8 @@ static OnPressResult prefix_id_plugin(OnPressContext &ctx) {
       continue;
     }
     int pid = -1;
-    if (plugin.tid.rfind(".elf") != std::string::npos &&
-        (pid = sceSystemServiceGetAppId(plugin.tid.c_str())) > 0) {
-      IPC_Client::getInstance(false).ForceKillPID(pid);
-      notify("killed payload %s", plugin.tid.c_str());
-      break;
-    }
+    /* tid is plugin TitleID, or raw-ELF stem (no ".elf"); PID file is
+     * /system_tmp/<tid>.PID written by orion_plugin_load. */
     char pbuf[256];
     snprintf(pbuf, sizeof(pbuf), "/system_tmp/%s.PID", plugin.tid.c_str());
     int f = open(pbuf, O_RDONLY);

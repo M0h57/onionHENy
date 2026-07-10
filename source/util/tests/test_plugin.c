@@ -87,6 +87,23 @@ static int test_pid_path(void) {
   return 0;
 }
 
+static int test_elf_key_from_name(void) {
+  char key[64];
+  TEST_ASSERT_TRUE(orion_plugin_elf_key_from_name("foo.elf", key, sizeof(key)));
+  TEST_ASSERT_STREQ("foo", key);
+  TEST_ASSERT_TRUE(
+      orion_plugin_elf_key_from_name("/data/OrionHEN/payloads/bar.elf", key,
+                                     sizeof(key)));
+  TEST_ASSERT_STREQ("bar", key);
+  TEST_ASSERT_TRUE(orion_plugin_elf_key_from_name("noext", key, sizeof(key)));
+  TEST_ASSERT_STREQ("noext", key);
+  /* Regression: bare ".elf" used to become launch path .../plugins/.elf */
+  TEST_ASSERT_TRUE(!orion_plugin_elf_key_from_name(".elf", key, sizeof(key)));
+  TEST_ASSERT_TRUE(!orion_plugin_elf_key_from_name(NULL, key, sizeof(key)));
+  TEST_ASSERT_TRUE(!orion_plugin_elf_key_from_name("", key, sizeof(key)));
+  return 0;
+}
+
 static int test_pid_file_roundtrip(void) {
   char path[256];
   TEST_ASSERT_EQ_INT(0, orion_test_write_temp_file(".PID", "", 0, path,
@@ -144,6 +161,7 @@ int test_plugin_suite(void) {
   failures += orion_test_run("plugin.package_elf_offset",
                              test_package_elf_offset);
   failures += orion_test_run("plugin.pid_path", test_pid_path);
+  failures += orion_test_run("plugin.elf_key_from_name", test_elf_key_from_name);
   failures += orion_test_run("plugin.pid_file_roundtrip",
                              test_pid_file_roundtrip);
   failures += orion_test_run("plugin.read_file", test_read_file);

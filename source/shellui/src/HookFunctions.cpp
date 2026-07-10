@@ -87,51 +87,81 @@ int sceNetCtlGetInfo(int number,  SceNetCtlInfo *info);
 int sceNetSend(int sockfd, const void *buf, size_t len, int flags);
 }
 
+/** Create MonoString on the *calling* domain (UI thread may not be Root_Domain). */
+static MonoString *mono_str_ui(const char *utf8) {
+  if (!utf8 || !mono_string_new)
+    return nullptr;
+  MonoDomain *dom =
+      (mono_domain_get ? mono_domain_get() : nullptr);
+  if (!dom)
+    dom = Root_Domain;
+  if (!dom)
+    return nullptr;
+  return mono_string_new(dom, utf8);
+}
+
 MonoString *GetString_Hook(MonoObject *Instance, MonoString *str) {
     if (!str || !Instance) {
+#if SHELL_DEBUG == 1
       shellui_log("GetString_Hook: Invalid Parameters");
-      return nullptr;
+#endif
+      /* Prefer original; never invent a string on a broken call. */
+      if (oGetString)
+        return oGetString(Instance, str);
+      return str;
     }
     std::string resourceName = Mono_to_String(str);
+#if SHELL_DEBUG == 1
     shellui_log("Resource Name: %s", resourceName.c_str());
+#endif
     if (resourceName == "msg_options") {
-      return mono_string_new(Root_Domain, "PKG 安装器选项");
+      return mono_str_ui("PKG 安装器选项");
     } else if (resourceName == "msg_installing") {
-      return mono_string_new(Root_Domain,
-                             "OrionHEN 正在安装所选 PKG");
+      return mono_str_ui("OrionHEN 正在安装所选 PKG");
     } else if (resourceName == "msg_yes") {
-      return mono_string_new(Root_Domain, "是");
+      return mono_str_ui("是");
     } else if (resourceName == "msg_no") {
-      return mono_string_new(Root_Domain, "否");
+      return mono_str_ui("否");
     } else if (resourceName == "msg_sort") {
-      return mono_string_new(Root_Domain, "OrionHEN PKG 排序");
+      return mono_str_ui("OrionHEN PKG 排序");
     } else if (resourceName == "msg_sort_name_az") {
-      return mono_string_new(Root_Domain, "名称（A-Z）");
+      return mono_str_ui("名称（A-Z）");
     } else if (resourceName == "msg_sort_name_za") {
-      return mono_string_new(Root_Domain, "名称（Z-A）");
+      return mono_str_ui("名称（Z-A）");
     } else if (resourceName == "msg_updated") {
-      return mono_string_new(Root_Domain, "已更新");
+      return mono_str_ui("已更新");
     } else if (resourceName == "msg_wait") {
-      return mono_string_new(Root_Domain, "请稍候...");
+      return mono_str_ui("请稍候...");
     }
     else if (resourceName == "msg_ok"){
-      return mono_string_new(Root_Domain, "确定");
+      return mono_str_ui("确定");
     }
     else if (resourceName == "msg_cancel_vb"){
-        return mono_string_new(Root_Domain, "取消");
+        return mono_str_ui("取消");
     }
     //else if (resourceName == "msg_deselect_all") {
-   //   return mono_string_new(Root_Domain, "取消全选"); // IDK WHY BUT ONLY 1 CAN BE ACTIVE OR SHELLUI CRASHES
+   //   return mono_str_ui("取消全选"); // IDK WHY BUT ONLY 1 CAN BE ACTIVE OR SHELLUI CRASHES
   //  }
     else if (resourceName == "msg_select_all") {
-      return mono_string_new(Root_Domain, "全选");
+      return mono_str_ui("全选");
     }
 
+    // XML title/description literals (e.g. "★OrionHEN 工具箱") are already valid
+    // MonoStrings. Re-allocating with mono_string_new(Root_Domain, ...) on the UI
+    // thread has crashed ShellUI (wrong domain / GC). Pass the original through.
     if (resourceName.rfind("msg_", 0) != 0) {
-      shellui_log("GetString_Hook: literal XML string, bypassing original localizer");
-      return mono_string_new(Root_Domain, resourceName.c_str());
+#if SHELL_DEBUG == 1
+      shellui_log("GetString_Hook: literal XML string, passthrough");
+#endif
+      return str;
     }
-    
+
+    if (!oGetString) {
+#if SHELL_DEBUG == 1
+      shellui_log("GetString_Hook: oGetString is null");
+#endif
+      return str;
+    }
     return oGetString(Instance, str);
   }
   
@@ -162,7 +192,7 @@ void patch_bundle_strings(unsigned char* buffer, int* size_ptr, int buffer_capac
   }
   
   // Keep this replacement equal-length for callers that only expose exact size.
-  int count = replace_all(buffer, size_ptr, buffer_capacity, "Debug Settings", "OrionHEN Tools");
+  int count = replace_all(buffer, size_ptr, buffer_capacity, "★Debug Settings", "★OrionHEN Tools");
 #if SHELL_DEBUG == 1
   if (count > 0) {
       shellui_log("patch_bundle_strings: Replaced %d occurrences of 'Debug Settings' with 'OrionHEN Tools'", count);
@@ -217,7 +247,12 @@ void ParseCheatID(const char* id, char* tid, int* cheat_id)
 }
 
 //
-// Scene has changed, stop Remote Play thread if is running
+// Scene has changed, stop Remote Play thread if is running.
+//
+// WARNING: Do not enable this detour on 11.600 until DetourFunction rewrites
+// RIP-relative prologues. Calling UpdateImposeStatusFlag_Orig jumps into the
+// memcpy trampoline and SIGSEGVs at trampoline+0x6 (see prx.cpp comment).
+// Remote-play cleanup lives in hook_manifest.cpp instead.
 //
 void UpdateImposeStatusFlag_hook(MonoObject* scene, MonoObject* frontActiveScene)
 {
@@ -281,7 +316,7 @@ MonoString * CxmlUri_Hook(MonoObject * Instance, MonoString * uri) {
         }
     }
    // shellui_log("CxmlUri_Hook: %s", icon.c_str());
-    return mono_string_new(Root_Domain, icon.c_str());
+    return mono_str_ui(icon.c_str());
   }
   else if (uri_string.rfind("//usb") != std::string::npos || uri_string.rfind("//data") != std::string::npos || uri_string.rfind("//user//data") != std::string::npos){
     //replace // with//
@@ -293,7 +328,7 @@ MonoString * CxmlUri_Hook(MonoObject * Instance, MonoString * uri) {
     #if SHELL_DEBUG==1 
     shellui_log("CxmlUri_Hook: %s", new_uri.c_str());
     #endif
-    return mono_string_new(Root_Domain, new_uri.c_str());
+    return mono_str_ui(new_uri.c_str());
   }
   return CxmlUri(Instance, uri);
 }

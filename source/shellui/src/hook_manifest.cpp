@@ -1,6 +1,7 @@
 /* Copyright (C) 2025 OrionHEN / LightningMods — P0 split. */
 
 #include "HookedFuncs.hpp"
+#include "RemotePlay.h"
 #include "ipc.hpp"
 #include "external_symbols.hpp"
 #include "shellui_state.hpp"
@@ -43,7 +44,15 @@ uint64_t GetManifestResourceStream_Hook(uint64_t inst, MonoString *FileName) {
       .cheats_shortcut_not_open = g_ui.cheats_shortcut_activated_not_open,
   });
 
+  /* Replace LayerManager.UpdateImposeStatusFlag hook (unsafe trampoline on
+   * 11.600): when navigating away from the remote-play settings page, stop the
+   * pairing registration thread. */
+  const bool was_remote_play = g_ui.is_remote_play;
   g_ui.apply_route_flags(route.flags);
+  if (was_remote_play && !g_ui.is_remote_play) {
+    shellui_log("[remote_play] left page — StopConfirmRegistLoop");
+    StopConfirmRegistLoop();
+  }
 
   if (route.page == toolbox::Page::RedirectOgDebug) {
     return GetManifestResourceStream_Original(

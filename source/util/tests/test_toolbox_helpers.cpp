@@ -40,7 +40,8 @@ static int test_plugin_name_accept(void) {
   TEST_ASSERT_TRUE(is_plugin_or_elf_name("foo.plugin"));
   TEST_ASSERT_TRUE(is_plugin_or_elf_name("bar.elf"));
   TEST_ASSERT_TRUE(is_plugin_or_elf_name("CUSA12345.elf"));
-  TEST_ASSERT_TRUE(is_plugin_or_elf_name("mixed.plugin.backup")); /* contains .plugin */
+  TEST_ASSERT_TRUE(is_plugin_or_elf_name("a.plugin"));
+  TEST_ASSERT_TRUE(is_plugin_or_elf_name("x.elf"));
   return 0;
 }
 
@@ -51,6 +52,25 @@ static int test_plugin_name_reject(void) {
   TEST_ASSERT_TRUE(!is_plugin_or_elf_name("foo.plugin.auto_start"));
   TEST_ASSERT_TRUE(!is_plugin_or_elf_name("bar.elf.auto_start"));
   TEST_ASSERT_TRUE(!is_plugin_or_elf_name("only.auto_start"));
+  /* bare extension / empty stem — was showing as a nameless ".elf" row */
+  TEST_ASSERT_TRUE(!is_plugin_or_elf_name(".elf"));
+  TEST_ASSERT_TRUE(!is_plugin_or_elf_name(".plugin"));
+  TEST_ASSERT_TRUE(!is_plugin_or_elf_name("."));
+  TEST_ASSERT_TRUE(!is_plugin_or_elf_name(".."));
+  /* must end with extension, not merely contain it */
+  TEST_ASSERT_TRUE(!is_plugin_or_elf_name("mixed.plugin.backup"));
+  TEST_ASSERT_TRUE(!is_plugin_or_elf_name("note.elf.txt"));
+  return 0;
+}
+
+static int test_elf_key_from_name(void) {
+  char key[64];
+  TEST_ASSERT_TRUE(elf_key_from_name("payload.elf", key, sizeof(key)));
+  TEST_ASSERT_STREQ("payload", key);
+  TEST_ASSERT_TRUE(
+      elf_key_from_name("/user/data/OrionHEN/payloads/x.elf", key, sizeof(key)));
+  TEST_ASSERT_STREQ("x", key);
+  TEST_ASSERT_TRUE(!elf_key_from_name(".elf", key, sizeof(key)));
   return 0;
 }
 
@@ -61,5 +81,6 @@ extern "C" int test_toolbox_helpers_suite(void) {
   fails += orion_test_run("toolbox.display_passthrough", test_display_passthrough);
   fails += orion_test_run("toolbox.plugin_name_accept", test_plugin_name_accept);
   fails += orion_test_run("toolbox.plugin_name_reject", test_plugin_name_reject);
+  fails += orion_test_run("toolbox.elf_key_from_name", test_elf_key_from_name);
   return fails;
 }

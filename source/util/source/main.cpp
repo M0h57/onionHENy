@@ -100,6 +100,9 @@ int main(void) {
     sceNetCtlInit();
     sceUserServiceInitialize(NULL);
     orion_log_configure("OrionHEN utils", "/data/OrionHEN/OrionHEN_util_daemon.log");
+    /* Real linked kernel export (not a dlsym function-pointer variable). */
+    orion_notify_set_send(reinterpret_cast<orion_notify_send_fn>(
+        sceKernelSendNotificationRequest));
     OrionHEN_log("util daemon entered");
 
     if (setjmp(g_catch_buf) == 0)

@@ -80,6 +80,12 @@ int32_t sceKernelSendNotificationRequest(int32_t device, void *req, size_t size,
   return 0;
 }
 
+/* Bind platform notify to the host stub (constructor runs before tests). */
+#include <orion/notify.h>
+__attribute__((constructor)) static void host_bind_notify_send(void) {
+  orion_notify_set_send(sceKernelSendNotificationRequest);
+}
+
 /* Fallback logger if a TU is compiled without liborion_platform log.c.
  * When log.c is linked, that definition wins if this is weak — but most
  * linkers take the first definition. Prefer always linking log.c and not

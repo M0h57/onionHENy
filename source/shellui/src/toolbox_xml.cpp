@@ -116,6 +116,15 @@ void append_plugin_entry(G& page, const std::string& directory, const char* file
   }
   shellui_log("Valid plugin file.");
 
+  /* Raw ELF: launch key = basename stem (must match util
+   * orion_plugin_elf_key_from_name → /system_tmp/<key>.PID). */
+  char elf_key[64] = {};
+  if (is_elf && !toolbox::elf_key_from_name(filename, elf_key, sizeof(elf_key))) {
+    shellui_log("Skipping ELF with invalid name: %s", filename);
+    return;
+  }
+  const char* tid = is_elf ? elf_key : header.titleID;
+
   const std::string shown_path = toolbox::display_path_for_ui(path);
   const std::string version_str =
       is_elf ? "" : ("(v" + std::string(header.plugin_version) + ")");
@@ -125,7 +134,6 @@ void append_plugin_entry(G& page, const std::string& directory, const char* file
 
   std::string second;
   if (plugins_xml) {
-    const char* tid = is_elf ? filename : header.titleID;
     second = "启动/停止 " + std::string(filename) + " (路径: " + shown_path + ") (" +
              tid + ")";
   } else {
@@ -136,7 +144,7 @@ void append_plugin_entry(G& page, const std::string& directory, const char* file
 
   Plugins entry;
   entry.shellui_path = path;
-  entry.tid = is_elf ? filename : header.titleID;
+  entry.tid = tid;
   entry.path = shown_path;
   entry.name = filename;
   entry.version = header.plugin_version;

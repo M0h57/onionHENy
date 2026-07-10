@@ -59,7 +59,8 @@ int (*sceKernelGetAppInfo)(pid_t pid, app_info_t *info) = nullptr;
 /* ====================================== Dynamic Mono Symbols ===================================*/
 MonoArray* (*mono_array_new)(MonoDomain* domain, MonoClass* eclass, uint32_t size) = nullptr;
 MonoString* (*mono_object_to_string)(MonoObject* obj, MonoObject** exc) = nullptr;
-void (*mono_gchandle_new)(MonoObject* obj, int pinned) = nullptr;
+uint32_t (*mono_gchandle_new)(MonoObject *obj, int pinned) = nullptr;
+void (*mono_gchandle_free)(uint32_t gchandle) = nullptr;
 MonoClass* (*mono_get_byte_class)() = nullptr;
 char* (*mono_array_addr_with_size)(MonoArray* array, int size, uintptr_t idx) = nullptr;
 uint64_t(*mono_aot_get_method)(MonoDomain* domain, MonoMethod* method) = nullptr;

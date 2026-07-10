@@ -183,9 +183,16 @@ std::string Mono_to_String(MonoString *str)
     return "";
   }
 
+  if (!mono_string_to_utf8)
+    return "";
+
   const char *c_str = mono_string_to_utf8(str);
+  if (!c_str)
+    return "";
+
   std::string ret(c_str);
-  mono_free((void *)c_str);
+  if (mono_free)
+    mono_free((void *)c_str);
   return ret;
 }
 
@@ -227,6 +234,10 @@ MonoObject *InvokeByDesc(MonoClass *p_Class, const char *p_MethodDesc, void *p_I
   return mono_runtime_invoke(s_ClassMethod, p_Instance, (void **)p_Args, nullptr);
 }
 
+/* One pin for the live toolbox MemoryStream; free on replace so rapid
+ * DebugSettings / notification opens do not accumulate pinned GC roots. */
+static uint32_t g_xml_stream_gchandle = 0;
+
 MonoObject *New_Mono_XML_From_String(std::string xml_doc)
 {
   shellui_log("[GMRS] New_Mono_XML_From_String: xml_size=%zu Root_Domain=%p MemoryStream_IO=%p",
@@ -257,25 +268,33 @@ MonoObject *New_Mono_XML_From_String(std::string xml_doc)
     shellui_log("[GMRS] New_Mono_XML_From_String: mono_array_addr_with_size returned null");
     return nullptr;
   }
-  int mprot = sceKernelMprotect(Array_addr, xml_doc.size() + 1, 0x7);
-  if (mprot != 0) {
-    shellui_log("[GMRS] New_Mono_XML_From_String: sceKernelMprotect failed ret=%d (continuing anyway)", mprot);
-  }
+  /* Do NOT mprotect mono heap pages. Array_addr is usually mid-page; mprotect
+   * rounds to page bounds and can change permissions on neighboring GC
+   * objects — intermittent SIGSEGV when opening DebugSettings quickly or from
+   * a notification (Hermes/RN still busy). Mono byte[] is already writable. */
   memcpy(Array_addr, xml_doc.data(), xml_doc.size());
 
-  MonoObject *MemoryStream_Instance = mono_object_new(Root_Domain, MemoryStream_IO);
-  if (!MemoryStream_Instance)
+  MonoObject *stream = mono_object_new(Root_Domain, MemoryStream_IO);
+  if (!stream)
   {
     MemoryStream_IO = nullptr;
     shellui_log("[GMRS] New_Mono_XML_From_String: Failed to create MemoryStream_Instance");
     return nullptr;
   }
   void *args[] = {Array};
-  InvokeByDesc(MemoryStream_IO, ":.ctor(byte[])", MemoryStream_Instance, args);
-  mono_gchandle_new(MemoryStream_Instance, 1);
+  InvokeByDesc(MemoryStream_IO, ":.ctor(byte[])", stream, args);
 
-  shellui_log("[GMRS] New_Mono_XML_From_String: ok instance=%p", (void *)MemoryStream_Instance);
-  return MemoryStream_Instance;
+  if (g_xml_stream_gchandle != 0 && mono_gchandle_free) {
+    mono_gchandle_free(g_xml_stream_gchandle);
+    g_xml_stream_gchandle = 0;
+  }
+  if (mono_gchandle_new) {
+    g_xml_stream_gchandle = mono_gchandle_new(stream, /*pinned=*/1);
+  }
+
+  shellui_log("[GMRS] New_Mono_XML_From_String: ok instance=%p gchandle=%u",
+              (void *)stream, g_xml_stream_gchandle);
+  return stream;
 }
 
 bool SetVersionString(const char *str)

@@ -4,101 +4,196 @@
 #include "HookedFuncs.hpp"
 #include "ipc.hpp"
 #include "external_symbols.hpp"
+#include <chrono>
 #include <string>
 
-static bool debug_settings_nav_redirecting = false;
+/*
+ * 11.6 navigation notes (NPXS40008 + Legacy UI3):
+ *
+ *   function=debug_settings     → RN DebugSettingsScreen  (no toolbox XML)
+ *   function=debug_settings_old → DebugSettingsOldScreen → Legacy SettingPage
+ *                                 (GetManifestResourceStream → toolbox XML)
+ *
+ * DO NOT use GoToURI / ItemzLaunchByUri for in-Settings redirects — it relaunches
+ * the RN settings app and drops ps5:settings:main (Back cannot return home).
+ *
+ * Use BootHelper.Boot for in-session navigation:
+ *   main → debug settings old → SettingPage
+ *
+ * Debounce only (short window). A sticky "pending" flag is wrong: UpdateNavigationState
+ * often never reports "DebugSettingsOldScreen" in ToString after a successful open, so
+ * the flag stayed true forever → 2nd GetModel no-ops + skips orig → blank RN page.
+ */
 
-static std::string MonoObjectToString(MonoObject* obj) {
-    if (!obj || !mono_object_get_class) {
-        return "";
-    }
+extern bool (*boot_orig)(MonoString *uri, int opt, MonoString *titleIdForBootAction);
+extern bool (*boot_orig_2)(MonoString *uri, int opt);
 
-    MonoClass* klass = mono_object_get_class(obj);
-    if (!klass) {
-        return "";
-    }
+static constexpr const char kLegacyDebugSettingsUri[] =
+    "pssettings:play?function=debug_settings_old";
 
-    MonoString* text = Invoke<MonoString*>(nullptr, klass, obj, "ToString");
-    if (!text) {
-        return "";
-    }
+/** Ignore duplicate GetModel + UpdateNavigationState within this window. */
+static constexpr auto kLegacyNavDebounce = std::chrono::milliseconds(750);
+static std::chrono::steady_clock::time_point g_last_legacy_nav{};
 
-    return Mono_to_String(text);
+static std::string MonoObjectToString(MonoObject *obj) {
+  if (!obj || !mono_object_get_class)
+    return "";
+
+  MonoClass *klass = mono_object_get_class(obj);
+  if (!klass)
+    return "";
+
+  MonoString *text = Invoke<MonoString *>(nullptr, klass, obj, "ToString");
+  if (!text)
+    return "";
+
+  return Mono_to_String(text);
 }
 
-void ReactNavigatorManager_UpdateNavigationState_Hook(MonoObject* instance, MonoObject* state) {
-    std::string state_text = MonoObjectToString(state);
-
-    if (state_text.find("DebugSettingsOldScreen") != std::string::npos ||
-        state_text.find("ps5:settings:debug settings old") != std::string::npos) {
-        debug_settings_nav_redirecting = false;
-    }
-
-    if (state_text.find("DebugSettingsScreen") != std::string::npos &&
-        state_text.find("DebugSettingsOldScreen") == std::string::npos &&
-        state_text.find("ps5:settings:debug settings old") == std::string::npos) {
-        if (!debug_settings_nav_redirecting) {
-            shellui_log("[DBG-NAV] DebugSettingsScreen route blocked before RN scene load; opening debug_settings_old");
-            debug_settings_nav_redirecting = true;
-            GoToURI("pssettings:play?function=debug_settings_old");
-        } else {
-            shellui_log("[DBG-NAV] DebugSettingsScreen route blocked before RN scene load; redirect already pending");
-        }
-        return;
-    }
-
-    if (ReactNavigatorManager_UpdateNavigationState_Orig) {
-        ReactNavigatorManager_UpdateNavigationState_Orig(instance, state);
-    }
+static bool within_legacy_nav_debounce() {
+  const auto now = std::chrono::steady_clock::now();
+  if (g_last_legacy_nav.time_since_epoch().count() != 0 &&
+      (now - g_last_legacy_nav) < kLegacyNavDebounce) {
+    return true;
+  }
+  g_last_legacy_nav = now;
+  return false;
 }
 
-void DebugSettings_GetModel_Hook(MonoObject* instance, MonoObject* param, MonoObject* promise) {
-    std::string param_text;
-    std::string page_id;
+static void clear_legacy_nav_debounce(const char *why) {
+  g_last_legacy_nav = {};
+  shellui_log("[DBG-NAV] debounce cleared (%s)", why);
+}
 
-    if (param && mono_object_get_class) {
-        MonoClass* param_class = mono_object_get_class(param);
-        if (param_class) {
-            MonoObject* page_token = Invoke<MonoObject*>(nullptr,
-                                                        param_class,
-                                                        param,
-                                                        "GetValue",
-                                                        mono_string_new(Root_Domain, "pageId"));
-            if (page_token) {
-                MonoClass* token_class = mono_object_get_class(page_token);
-                if (token_class) {
-                    MonoString* page_string = Invoke<MonoString*>(nullptr, token_class, page_token, "ToString");
-                    if (page_string) {
-                        page_id = Mono_to_String(page_string);
-                    }
-                }
-            }
+/** In-app navigate to legacy DebugSettingsOldScreen (not a full ShellUI re-launch). */
+static void navigate_legacy_debug_settings(const char *reason) {
+  if (within_legacy_nav_debounce()) {
+    shellui_log("[DBG-NAV] debounce skip (%s)", reason);
+    return;
+  }
 
-            MonoString* param_string = Invoke<MonoString*>(nullptr, param_class, param, "ToString");
-            if (param_string) {
-                param_text = Mono_to_String(param_string);
-            }
+  MonoDomain *dom = (mono_domain_get ? mono_domain_get() : nullptr);
+  if (!dom)
+    dom = Root_Domain;
+  if (!dom || !mono_string_new) {
+    shellui_log("[DBG-NAV] no domain; fallback GoToURI (%s)", reason);
+    GoToURI(kLegacyDebugSettingsUri);
+    return;
+  }
+
+  MonoString *uri = mono_string_new(dom, kLegacyDebugSettingsUri);
+  if (!uri) {
+    shellui_log("[DBG-NAV] mono_string_new failed; fallback GoToURI (%s)", reason);
+    GoToURI(kLegacyDebugSettingsUri);
+    return;
+  }
+
+  if (boot_orig) {
+    const bool ok = boot_orig(uri, 0, nullptr);
+    shellui_log("[DBG-NAV] BootHelper.Boot(3) → legacy (%s) ret=%d", reason, ok ? 1 : 0);
+    // If BootHelper failed, allow an immediate retry on next GetModel/nav tick.
+    if (!ok)
+      clear_legacy_nav_debounce("Boot(3) failed");
+    return;
+  }
+  if (boot_orig_2) {
+    const bool ok = boot_orig_2(uri, 0);
+    shellui_log("[DBG-NAV] BootHelper.Boot(2) → legacy (%s) ret=%d", reason, ok ? 1 : 0);
+    if (!ok)
+      clear_legacy_nav_debounce("Boot(2) failed");
+    return;
+  }
+
+  shellui_log("[DBG-NAV] BootHelper missing; fallback GoToURI (%s)", reason);
+  GoToURI(kLegacyDebugSettingsUri);
+}
+
+void ReactNavigatorManager_UpdateNavigationState_Hook(MonoObject *instance,
+                                                      MonoObject *state) {
+  std::string state_text = MonoObjectToString(state);
+
+  // Back on settings home → next toolbox open must not be debounced as "duplicate".
+  if (state_text.find("ps5:settings:main") != std::string::npos ||
+      state_text.find("CategoriesScreen") != std::string::npos) {
+    if (g_last_legacy_nav.time_since_epoch().count() != 0)
+      clear_legacy_nav_debounce("settings main/categories");
+  }
+
+  if (state_text.find("DebugSettingsOldScreen") != std::string::npos ||
+      state_text.find("ps5:settings:debug settings old") != std::string::npos) {
+    // Arrived on legacy host; keep short debounce so dual hooks don't double-Boot.
+    // (timestamp already set by navigate; do not clear here.)
+  }
+
+  // Categories type:screen → DebugSettingsScreen never hits BootHelper URI rewrite.
+  if (state_text.find("DebugSettingsScreen") != std::string::npos &&
+      state_text.find("DebugSettingsOldScreen") == std::string::npos &&
+      state_text.find("ps5:settings:debug settings old") == std::string::npos) {
+    shellui_log("[DBG-NAV] block DebugSettingsScreen state apply");
+    navigate_legacy_debug_settings("UpdateNavigationState");
+    // Do not apply RN DebugSettings native scene.
+    return;
+  }
+
+  if (ReactNavigatorManager_UpdateNavigationState_Orig)
+    ReactNavigatorManager_UpdateNavigationState_Orig(instance, state);
+}
+
+void DebugSettings_GetModel_Hook(MonoObject *instance, MonoObject *param,
+                                 MonoObject *promise) {
+  std::string param_text;
+  std::string page_id;
+
+  if (param && mono_object_get_class) {
+    MonoClass *param_class = mono_object_get_class(param);
+    if (param_class) {
+      MonoDomain *dom = (mono_domain_get ? mono_domain_get() : nullptr);
+      if (!dom)
+        dom = Root_Domain;
+      MonoString *page_key =
+          (dom && mono_string_new) ? mono_string_new(dom, "pageId") : nullptr;
+
+      if (page_key) {
+        MonoObject *page_token = Invoke<MonoObject *>(
+            nullptr, param_class, param, "GetValue", page_key);
+        if (page_token) {
+          MonoClass *token_class = mono_object_get_class(page_token);
+          if (token_class) {
+            MonoString *page_string =
+                Invoke<MonoString *>(nullptr, token_class, page_token, "ToString");
+            if (page_string)
+              page_id = Mono_to_String(page_string);
+          }
         }
-    }
+      }
 
-    if (!page_id.empty()) {
-        shellui_log("[DBG-GETMODEL] pageId=%s", page_id.c_str());
-    } else {
-        shellui_log("[DBG-GETMODEL] pageId=<empty>");
+      MonoString *param_string =
+          Invoke<MonoString *>(nullptr, param_class, param, "ToString");
+      if (param_string)
+        param_text = Mono_to_String(param_string);
     }
+  }
 
-    if (!param_text.empty()) {
-        shellui_log("[DBG-GETMODEL] param=%s", param_text.c_str());
-    } else {
-        shellui_log("[DBG-GETMODEL] param=<empty>");
-    }
+  if (!page_id.empty())
+    shellui_log("[DBG-GETMODEL] pageId=%s", page_id.c_str());
+  else
+    shellui_log("[DBG-GETMODEL] pageId=<empty>");
 
-    if (page_id == "id_debug_settings" || param_text.find("id_debug_settings") != std::string::npos) {
-        shellui_log("[DBG-GETMODEL] id_debug_settings detected, opening debug_settings_old");
-        GoToURI("pssettings:play?function=debug_settings_old");
-    }
+  if (!param_text.empty())
+    shellui_log("[DBG-GETMODEL] param=%s", param_text.c_str());
+  else
+    shellui_log("[DBG-GETMODEL] param=<empty>");
 
-    if (DebugSettings_GetModel_Orig) {
-        DebugSettings_GetModel_Orig(instance, param, promise);
-    }
+  // RN Debug Settings root — open legacy host; skip RN model (blank without data is OK
+  // only if BootHelper actually runs). Never leave a sticky "pending" that blocks later
+  // entries after the user has returned to main.
+  if (page_id == "id_debug_settings" ||
+      param_text.find("id_debug_settings") != std::string::npos) {
+    shellui_log("[DBG-GETMODEL] id_debug_settings → BootHelper legacy");
+    navigate_legacy_debug_settings("GetModel");
+    return;
+  }
+
+  if (DebugSettings_GetModel_Orig)
+    DebugSettings_GetModel_Orig(instance, param, promise);
 }
