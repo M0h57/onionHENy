@@ -47,3 +47,13 @@ Priority: json → shn → mc4 → ShnExt. No KCF/WMDW.
 | `>= 0x840` | kdirect |
 
 Code cave: `pt_attach_proc` + `pt_mmap` + `kernel_mprotect`.
+
+## Host tests (parser)
+
+No PS5 SDK required. Modeled after kylin-core host cheat tests:
+
+```bash
+cd source/util/tests && make test
+```
+
+See `source/util/tests/README.md`. Covers JSON/SHN/MC4/ShnExt parse + utils + fixtures.

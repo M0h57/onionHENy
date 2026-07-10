@@ -27,6 +27,7 @@ lib/libNineS.a
 lib/libhijacker.a
 libhijacker/libhijacker.a
 Makefile
+!util/tests/Makefile
 bootstrapper/Makefile
 hen.bin
 util/assets/shellui.elf

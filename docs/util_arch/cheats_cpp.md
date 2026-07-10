@@ -73,5 +73,16 @@ IPC handleIPC
 ## 扩展点
 
 - **新写内存后端**：实现 `IMemoryBackend`，在 `MemoryBackendFactory` 注册固件条件。
-- **新文件格式**：实现 `ICheatParser`，在 `CheatParserFactory::createByFormat` 注册扩展名；Repository 路径扫描列表同步扩展。
+- **新文件格式**：实现 `ICheatParser`，在 `CheatParserFactory::createByFormat` 注册扩展名；Repository 路径扫描列表同步扩展；补 `source/util/tests` host 用例。
 - **新 IPC 操作**：只扩 `CheatService` 公开方法，避免 IPC 直接碰 Applier/Backend。
+
+## Host 单元测试
+
+解析器可在 macOS/Linux 上测（无 PS5 SDK），参考 kylin-core `tests/test_cheat_*`：
+
+```bash
+cd source/util/tests && make test
+```
+
+覆盖：utils（hex/extract/brace）、Factory 路由、JSON/SHN/MC4 合成样例、真实 fixtures（json/shn/mc4/ShnExt）。  
+不覆盖：`CheatApplier` / 写内存（需目标机）。

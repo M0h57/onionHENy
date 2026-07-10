@@ -7,6 +7,7 @@
 
 # Build trees
 source/build/
+source/util/build/
 source/**/CMakeFiles/
 source/**/bin/
 source/CMakeCache.txt
