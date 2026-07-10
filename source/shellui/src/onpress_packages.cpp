@@ -3,8 +3,6 @@
 #include "external_symbols.hpp"
 #include <msg.hpp>
 
-extern bool is_6xx, is_3xx;
-
 static OnPressResult prefix_id_pkg(OnPressContext &ctx) {
   if (ctx.id.rfind("id_pkg_", 0) != 0) {
     return OnPressResult::NotMine;
@@ -20,13 +18,11 @@ static OnPressResult prefix_id_pkg(OnPressContext &ctx) {
     shellui_log("[Clicked %s] %s path: %s", selected_pkgs.id.c_str(),
                 selected_pkgs.name.c_str(), selected_pkgs.shellui_path.c_str());
 #endif
-    std::string dl_url;
-    if (is_6xx)
-      dl_url = "http://127.0.0.1:12800" + selected_pkgs.path;
-    else
-      dl_url = (selected_pkgs.path.rfind("/data") != std::string::npos)
-                   ? selected_pkgs.shellui_path
-                   : selected_pkgs.path;
+    // Prefer shellui-visible path for /data; otherwise install by path.
+    std::string dl_url =
+        (selected_pkgs.path.rfind("/data") != std::string::npos)
+            ? selected_pkgs.shellui_path
+            : selected_pkgs.path;
 
     playgo_info_t playgoinfo = {};
     pkg_info_t pkginfo = {};
@@ -41,8 +37,7 @@ static OnPressResult prefix_id_pkg(OnPressContext &ctx) {
     shellui_log("Installing package from: %s", metainfo.uri);
     int num = sceAppInstUtilInstallByPackage(&metainfo, &pkginfo, &playgoinfo);
     if (num != 0) {
-      notify("Failed to install %s\nError: 0x%X\nis DPIv2 enabled???",
-             selected_pkgs.name.c_str(), num);
+      notify("Failed to install %s\nError: 0x%X", selected_pkgs.name.c_str(), num);
     } else {
       notify("%s installation started successfully", selected_pkgs.name.c_str());
     }

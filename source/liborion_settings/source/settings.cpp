@@ -52,7 +52,6 @@ long atol_def(const char *s, long def) {
 
 void apply_parser(IniParser *parser, Settings *out) {
   out->DPI = atoi_def(ini_parser_get(parser, "Settings.DPI", "1"), 1) != 0;
-  out->DPI_v2 = atoi_def(ini_parser_get(parser, "Settings.DPI_v2", "0"), 0) != 0;
   out->toolbox_auto_start =
       atoi_def(ini_parser_get(parser, "Settings.toolbox_auto_start", "1"), 1) != 0;
   out->disable_toolbox_auto_start_for_rest_mode =
@@ -146,7 +145,6 @@ std::string settings_serialize(const Settings &in) {
   b += "[Settings]\n";
   b += "schema_version=" + std::to_string(kSettingsSchemaVersion) + "\n";
   b += "DPI=" + std::to_string(in.DPI ? 1 : 0) + "\n";
-  b += "DPI_v2=" + std::to_string(in.DPI_v2 ? 1 : 0) + "\n";
   b += "toolbox_auto_start=" + std::to_string(in.toolbox_auto_start ? 1 : 0) +
        "\n";
   b += "disable_toolbox_auto_start_for_rest_mode=" +

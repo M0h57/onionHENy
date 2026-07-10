@@ -59,8 +59,8 @@ extern bool is_handler_enabled;
 orion::Settings g_settings;
 atomic_bool g_legacy_cmd_server = false;
 atomic_bool g_legacy_cmd_server_exit = false;
-bool startDirectPKGInstaller(bool is_v2);
-void shutdownDirectPKGInstaller(bool is_v2);
+bool startDirectPKGInstaller(void);
+void shutdownDirectPKGInstaller(void);
 void start_ip_thread(void);
 void* runCommandNControlServer(void*);
 void patch_checker(void);
@@ -81,10 +81,7 @@ static void cleanup(void) {
     pthread_join(kernelrw_thread, NULL);
 
     if (g_settings.DPI)
-        shutdownDirectPKGInstaller(false);
-
-    if (g_settings.DPI_v2)
-        shutdownDirectPKGInstaller(true);
+        shutdownDirectPKGInstaller();
 
     exit(1);
 }
@@ -131,7 +128,6 @@ int main(void) {
     g_settings.DPI = true;
     g_settings.rest_mode_delay_seconds = 0;
     g_settings.toolbox_auto_start = true;
-    g_settings.DPI_v2 = false;
 	g_legacy_cmd_server_exit = false;
 
     unlink("/data/OrionHEN/OrionHEN_util_daemon.log");
@@ -181,11 +177,7 @@ int main(void) {
         no_network_rest_mode_action = false;
 
         if (g_settings.DPI) {
-            startDirectPKGInstaller(false);
-        }
-
-        if (g_settings.DPI_v2) {
-            startDirectPKGInstaller(true);
+            startDirectPKGInstaller();
         }
 
         pthread_create(&cmd_server, NULL, runCommandNControlServer, NULL);
@@ -199,10 +191,7 @@ int main(void) {
         pthread_join(cmd_server, NULL);
 
         if (g_settings.DPI)
-            shutdownDirectPKGInstaller(false);
-        
-        if (g_settings.DPI_v2)
-            shutdownDirectPKGInstaller(true);
+            shutdownDirectPKGInstaller();
 
         usleep(SLEEP_PERIOD);
     }

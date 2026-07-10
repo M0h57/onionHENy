@@ -45,7 +45,6 @@ inline constexpr int kSettingsSchemaVersion = 1;
 struct Settings {
   // --- Network / install ---
   bool DPI = true;
-  bool DPI_v2 = false;
 
   // --- Toolbox ---
   bool toolbox_auto_start = true;

@@ -27,7 +27,6 @@ static int test_defaults_and_serialize_keys(void) {
   TEST_ASSERT_TRUE(text.find("[Settings]") != std::string::npos);
   TEST_ASSERT_TRUE(text.find("schema_version=1") != std::string::npos);
   TEST_ASSERT_TRUE(text.find("DPI=1") != std::string::npos);
-  TEST_ASSERT_TRUE(text.find("DPI_v2=0") != std::string::npos);
   TEST_ASSERT_TRUE(text.find("toolbox_auto_start=1") != std::string::npos);
   TEST_ASSERT_TRUE(text.find("fan_threshold=77") != std::string::npos);
   TEST_ASSERT_TRUE(text.find("legacy_cmd_server=0") != std::string::npos);
@@ -41,7 +40,6 @@ static int test_roundtrip_file(void) {
 
   orion::Settings in{};
   in.DPI = false;
-  in.DPI_v2 = true;
   in.fan_threshold = 55;
   in.overlay_fps = true;
   in.legacy_cmd_server = true;
@@ -56,7 +54,6 @@ static int test_roundtrip_file(void) {
   TEST_ASSERT_TRUE(orion::settings_load_file(path.c_str(), &out));
 
   TEST_ASSERT_TRUE(out.DPI == false);
-  TEST_ASSERT_TRUE(out.DPI_v2 == true);
   TEST_ASSERT_EQ_INT(55, out.fan_threshold);
   TEST_ASSERT_TRUE(out.overlay_fps == true);
   TEST_ASSERT_TRUE(out.legacy_cmd_server == true);
@@ -111,7 +108,6 @@ static int test_full_schema_roundtrip(void) {
 
   orion::Settings in{};
   in.DPI = false;
-  in.DPI_v2 = true;
   in.toolbox_auto_start = false;
   in.disable_toolbox_auto_start_for_rest_mode = true;
   in.util_rest_kill = true;
@@ -141,7 +137,6 @@ static int test_full_schema_roundtrip(void) {
   TEST_ASSERT_TRUE(orion::settings_load_file(path.c_str(), &out));
 
   TEST_ASSERT_TRUE(out.DPI == in.DPI);
-  TEST_ASSERT_TRUE(out.DPI_v2 == in.DPI_v2);
   TEST_ASSERT_TRUE(out.toolbox_auto_start == in.toolbox_auto_start);
   TEST_ASSERT_TRUE(out.disable_toolbox_auto_start_for_rest_mode ==
                    in.disable_toolbox_auto_start_for_rest_mode);
@@ -176,14 +171,13 @@ static int test_partial_ini_keeps_defaults(void) {
   TEST_ASSERT_TRUE(!path.empty());
   FILE *f = fopen(path.c_str(), "w");
   TEST_ASSERT_TRUE(f != nullptr);
-  fputs("[Settings]\nDPI_v2=1\n", f);
+  fputs("[Settings]\nDPI=0\n", f);
   fclose(f);
 
   orion::Settings out{};
   TEST_ASSERT_TRUE(orion::settings_load_file(path.c_str(), &out));
-  /* unspecified keys stay at defaults */
-  TEST_ASSERT_TRUE(out.DPI == true);
-  TEST_ASSERT_TRUE(out.DPI_v2 == true);
+  /* specified key applied; unspecified keys stay at defaults */
+  TEST_ASSERT_TRUE(out.DPI == false);
   TEST_ASSERT_EQ_INT(77, out.fan_threshold);
   TEST_ASSERT_TRUE(out.toolbox_auto_start == true);
 

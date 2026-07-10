@@ -19,7 +19,6 @@
       <link id="id_game_package_installer" title="软件包安装器" file="PkgInstaller/data/pkginstaller.xml"/>
       <link id="id_game_custom_package_installer" title="★ 自定义后台软件包安装器" file="custompkginstaller.xml"/>
       <toggle_switch id="id_dpi_service" title="直接软件包安装器" second_title="通过网络安装 PKG，服务器端口 9090" value="0"/>
-      <toggle_switch id="id_DPI_v2_service" title="直接软件包安装器 V2" second_title="Web 安装：http://PS5_IP:12800" value="0"/>
       <link id="id_game_add_content_manager" title="附加内容管理器" file="Addcontent/data/addcontent.xml"/>
     </setting_list>
 

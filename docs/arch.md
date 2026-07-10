@@ -155,7 +155,6 @@ OrionHEN/
 | 服务 | 端口 / 入口 | 说明 |
 |------|-------------|------|
 | DPI | **9090** | Direct PKG Installer（TCP + JSON） |
-| DPI v2 | **12800** | WebUI 版 PKG 安装 |
 | Legacy CMD | **9028** | 旧版 hijacker 协议（app jailbreak 等） |
 | Cheats | IPC | flat-file cheat engine（flat `TITLE_VERSION.ext` + mdbg/kdirect）；详见 [util_arch](util_arch/) |
 | ShellCore / ShellUI 补丁 | — | 休息模式恢复、toolbox 激活等 |
@@ -171,7 +170,7 @@ OrionHEN/
 
 主要菜单能力：
 
-- 软件包安装（PKG 安装器、DPI / DPI v2）
+- 软件包安装（PKG 安装器、DPI）
 - 插件与内核（插件 ELF、kstuff 管理）
 - 游戏功能（金手指引擎、Remote Play、overlay）
 - 系统设置（Title ID、风扇、休息模式、外置 HDD、BD 激活）
@@ -356,7 +355,7 @@ struct IPCMessage {
 
 ### 4.3 网络服务
 
-- DPI 9090、DPI WebUI 12800
+- DPI 9090
 - Legacy CMD 9028
 - 外部 ELF 加载依赖 **9021 elfldr**
 
@@ -418,7 +417,6 @@ git submodule update --init --recursive
 | 库 | 典型用途 |
 |----|----------|
 | **libcurl** + **mbedtls** / **mbedx509** / **mbedcrypto** + **wolfssl** | HTTPS 下载（PKG、cheats、kstuff 等） |
-| **libmicrohttpd** | DPI v2 WebUI |
 | **libminizip** + **libz** + **libzstd** | 压缩/归档 |
 | **libpsl** | Public Suffix List（curl 依赖） |
 

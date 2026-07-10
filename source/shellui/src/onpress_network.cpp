@@ -9,24 +9,9 @@ static OnPressResult id_dpi_service(OnPressContext &ctx) {
     return OnPressResult::EarlyReturn;
   }
   DPI = !DPI;
-  if (!IPC_Client::getInstance(true).ToggleDPI(DPI, false)) {
+  if (!IPC_Client::getInstance(true).ToggleDPI(DPI)) {
     notify(DPI ? "DPI Server Failed to Start ..." : "DPI Server Failed to Stop ...");
     DPI = !DPI;
-  }
-  return OnPressResult::Handled;
-}
-
-static OnPressResult id_DPI_v2_service(OnPressContext &ctx) {
-  bool &DPI_v2 = g_settings.DPI_v2;
-  if (atoi(ctx.value.c_str()) == DPI_v2) {
-    shellui_log("DPI_v2 already %s", DPI_v2 ? "Enabled" : "Disabled");
-    return OnPressResult::EarlyReturn;
-  }
-  DPI_v2 = !DPI_v2;
-  if (!IPC_Client::getInstance(true).ToggleDPI(DPI_v2, true)) {
-    notify(DPI_v2 ? "DPI_v2 Server Failed to Start ..."
-                  : "DPI_v2 Server Failed to Stop ...");
-    DPI_v2 = !DPI_v2;
   }
   return OnPressResult::Handled;
 }
@@ -61,7 +46,6 @@ static OnPressResult id_disp_titleids(OnPressContext &ctx) {
 
 static const OnPressExactEntry kExact[] = {
     {"id_dpi_service", id_dpi_service},
-    {"id_DPI_v2_service", id_DPI_v2_service},
     {"id_debug_legacy_cmd", id_debug_legacy_cmd},
     {"id_disp_titleids", id_disp_titleids},
 };

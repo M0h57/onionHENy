@@ -26,7 +26,6 @@ bool if_exists(const char* path);
 
 int OnPreCreate_Hook(MonoObject* Instance, MonoObject* element) {
     bool& DPI = g_settings.DPI;
-    bool& DPI_v2 = g_settings.DPI_v2;
     MonoString* s_MonoText = nullptr;
 
     char tid[32] = { 0 };
@@ -126,9 +125,6 @@ int OnPreCreate_Hook(MonoObject* Instance, MonoObject* element) {
     }
     else if (id == "id_dpi_service") {
         s_MonoText = mono_string_new(Root_Domain, DPI ?  "1" : "0");
-    }
-    else if (id == "id_DPI_v2_service") {
-        s_MonoText = mono_string_new(Root_Domain, DPI_v2 ?  "1" : "0");
     }
     else if (id == "id_selected_cheats_repo") {
         s_MonoText = mono_string_new(Root_Domain, g_settings.selected_cheats_repo ? "1" : "0");

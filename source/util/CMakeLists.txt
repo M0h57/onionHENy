@@ -111,7 +111,6 @@ target_link_libraries(${PROJECT_NAME} PUBLIC
     z
     curl
     minizip
-    microhttpd
     psl
     zstd
     mbedtls

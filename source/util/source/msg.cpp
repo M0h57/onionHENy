@@ -60,7 +60,7 @@ extern uintptr_t code_addr;
 extern char ip_address[];
 
 
-bool startDirectPKGInstaller(bool is_v2);
+bool startDirectPKGInstaller(void);
 extern "C" int launchApp(const char *titleId);
 
 void activate_shellui_patch();

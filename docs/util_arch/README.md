@@ -31,7 +31,7 @@
            ┌───────────────────────────────┼───────────────────────────────┐
            ▼                               ▼                               ▼
     ShellUI / fps_elf               TCP DPI / CMD                    游戏进程
-    (Unix socket 客户端)            9090 / 12800 / 9028              mdbg|kdirect 写内存
+    (Unix socket 客户端)            9090 / 9028              mdbg|kdirect 写内存
 ```
 
 **典型客户端**：`shellui.elf`、`fps_elf` 通过 `IPC_Client(util_daemon=true)` 连 util socket。
@@ -65,12 +65,11 @@ main()
         │    → 可选 patch_checker()                │
         │                                           │
         ├─ startDirectPKGInstaller(false)  # DPI :9090
-        ├─ startDirectPKGInstaller(true)   # DPI v2 :12800
         ├─ pthread_create(cmd_server)      # Legacy CMD :9028
         ├─ LoadSettings() 再刷一次
         ├─ 金手指：ensure_dir + state_create
         ├─ pthread_join(cmd_server)        # 阻塞；CMD 退出则重启外围
-        ├─ shutdown DPI / DPI v2
+        ├─ shutdown DPI
         └─ usleep(SLEEP_PERIOD) → 回到循环 ────────┘
 ```
 
@@ -92,7 +91,7 @@ source/util/
 │   ├── common_utils.c           # OrionHEN_log / notify / ptrace attach / 通用工具
 │   ├── faulthandler.c           # 信号与崩溃落盘
 │   ├── http.c                   # curl 下载、zip 解压、cheats commit 检查
-│   ├── DirectPKGInstaller.cpp   # DPI / DPI v2 线程与 WebUI 资源
+│   ├── DirectPKGInstaller.cpp   # DPI 线程与 WebUI 资源
 │   ├── cpp_service.cpp          # IP 线程、CMD:9028、Toolbox/shellcore 修补
 │   ├── util_platform.c          # 共享平台：固件/版本/模块/读文件
 │   └── cheats/                  # 金手指领域（C++ 编排 + 解析 + C 适配）
@@ -139,7 +138,6 @@ CheatService ──► Repository / ParserFactory / Applier ──► util_platf
 | IPC client | `ipc_client`（每连接一个，detach） | 连接级 | 读 `IPCMessage` → `handleIPC` |
 | IP poll | `start_ip_thread` | 常驻 | 刷新本机 IP 字符串 |
 | DPI | `runDirectPKGInstaller` | 可启停 | TCP 9090 PKG 安装 |
-| DPI v2 | `DPI_v2` | 可启停 | HTTP 12800 WebUI + 安装 |
 | Legacy CMD | `runCommandNControlServer` | 随主循环 | TCP 9028 hijacker 协议 |
 
 故障：`faulthandler` 触发 `cleanup` → 关 DPI → `exit`。
@@ -168,7 +166,7 @@ struct IPCMessage {
 | 命令 | 作用 | 内部去向 |
 |------|------|----------|
 | `SHELLUI_ON_STANDBY` | ShellUI 休息模式标记 | 原子标志 `real_rest_mode_detected` |
-| `TOGGLE_DPI` | 启停 DPI / DPI v2 | `startDirectPKGInstaller` / `shutdown*` |
+| `TOGGLE_DPI` | 启停 DPI | `startDirectPKGInstaller` / `shutdown*` |
 | `DAEMON_PID` | 返回 util pid | `getpid` |
 | `GET_GAME_VER` | 游戏版本字符串 | param.json / param.sfo（msg 内实现） |
 | `GET_GAME_CHEAT` | 导出金手指列表 JSON 文件路径 | `CheatService::exportList` |
@@ -250,7 +248,6 @@ cheat_engine_runtime
 | 模式 | 端口 | 线程入口 |
 |------|------|----------|
 | v1 | **9090** | `runDirectPKGInstaller` |
-| v2 | **12800** | `DPI_v2`（内嵌 WebUI 资源 + install API） |
 
 由 main 配置与 IPC `TOGGLE_DPI` 控制启停。底层用 `SceAppInstUtil` 装 PKG。
 
@@ -324,7 +321,6 @@ IPC `DOWNLOAD_CHEATS`：zip → staging → `orion_cheat_flatten_install_tree` �
 | libhijacker | 内核原语、偏移（CMD/shellcore 路径） |
 | libcurl + mbedtls | HTTPS 下载 |
 | minizip | 解压 cheats zip |
-| microhttpd | DPI v2 Web |
 | keystone + cxxrt | ShnExt 汇编（`util/lib/`） |
 | AES/base64 third_party | MC4 / ShnExt 解密 |
 | miniz / sha256 | ShnExt 解压与密钥派生 |
@@ -343,7 +339,7 @@ IPC `DOWNLOAD_CHEATS`：zip → staging → `orion_cheat_flatten_install_tree` �
 | `/data/OrionHEN/kstuff.elf` | 下载的 kstuff |
 | `/system_tmp/util_first_boot` | 是否首启（影响 toolbox 自动） |
 
-`LoadSettings` 读取的主要键（节选）：`Settings.DPI`、`DPI_v2`、`toolbox_auto_start`、`legacy_cmd_server`、`disable_toolbox_auto_start_for_rest_mode`。
+`LoadSettings` 读取的主要键（节选）：`Settings.DPI`、`toolbox_auto_start`、`legacy_cmd_server`、`disable_toolbox_auto_start_for_rest_mode`。
 
 ---
 
