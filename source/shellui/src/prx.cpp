@@ -491,41 +491,66 @@ bool resolve_game_container(MonoImage* app_system) {
 }
 
 // ---------------------------------------------------------------------------
-// Phase 7: install hooks
+// Phase 7: install hooks (table-driven mono methods + special cases)
 // ---------------------------------------------------------------------------
+
+/** Mono method hook descriptor; `orig` is address of the typed trampoline ptr. */
+struct MonoHookSpec {
+  const char* name;
+  MonoImage* image;
+  const char* name_space;
+  const char* klass;
+  const char* method;
+  int argc;
+  void* hook;
+  void** orig; // &SomeOrigFn
+  bool required;
+};
+
+bool install_mono_hook(const MonoHookSpec& h) {
+  const uint64_t addr =
+      Get_Address_of_Method(h.image, h.name_space, h.klass, h.method, h.argc);
+  if (!addr) {
+    shellui_log("Hook target missing: %s", h.name);
+    if (h.required)
+      notify("Failed to find hook target");
+    return !h.required;
+  }
+  void* tramp = DetourFunction(addr, h.hook);
+  if (!tramp) {
+    shellui_log("Detour failed: %s", h.name);
+    if (h.required)
+      notify("Failed to install hook");
+    return !h.required;
+  }
+  if (h.orig)
+    *h.orig = tramp;
+  return true;
+}
+
+bool install_optional_diag(const char* tag, MonoImage* image, const char* ns,
+                           const char* klass, const char* method, int argc,
+                           void* hook, void** orig) {
+  const uint64_t addr = Get_Address_of_Method(image, ns, klass, method, argc);
+  if (!addr) {
+    shellui_log("%s not found", tag);
+    return false;
+  }
+  void* tramp = DetourFunction(addr, hook);
+  if (orig)
+    *orig = tramp;
+  shellui_log(tramp ? "%s hooked" : "%s failed to detour", tag);
+  return tramp != nullptr;
+}
 
 bool install_hooks(const ShellImages& img, void* read_fn) {
   char probe[kMprotectProbeSize];
-  has_hv_bypass =
-      (sceKernelMprotect(probe, sizeof(probe), kProtRwx) == 0);
+  has_hv_bypass = (sceKernelMprotect(probe, sizeof(probe), kProtRwx) == 0);
   shellui_log("has_hv_bypass=%d (mprotect for detours)", has_hv_bypass ? 1 : 0);
 
   Patch_Main_thread_Check(img.core);
 
-  // --- PUI render ---
-  OnRender_orig = reinterpret_cast<void (*)(MonoObject*)>(DetourFunction(
-      Get_Address_of_Method(img.pui, "Sce.PlayStation.PUI", "Application", "Update", 0),
-      reinterpret_cast<void*>(&OnRender_Hook)));
-
-  // --- Navigation (optional diagnostics) ---
-  {
-    uint64_t addr = Get_Address_of_Method(
-        img.react_pui, "ReactNative.Views.UI3.View", "ReactNavigatorManager",
-        "UpdateNavigationState", 1);
-    if (addr) {
-      ReactNavigatorManager_UpdateNavigationState_Orig =
-          reinterpret_cast<void (*)(MonoObject*, MonoObject*)>(
-              DetourFunction(addr, reinterpret_cast<void*>(
-                                       &ReactNavigatorManager_UpdateNavigationState_Hook)));
-      shellui_log(ReactNavigatorManager_UpdateNavigationState_Orig
-                      ? "[DBG-NAV] UpdateNavigationState hooked"
-                      : "[DBG-NAV] failed to detour UpdateNavigationState");
-    } else {
-      shellui_log("[DBG-NAV] UpdateNavigationState not found");
-    }
-  }
-
-  // --- Registry (required) ---
+  // --- Native (required) ---
   if (!sceRegMgrGetInt) {
     notify("Failed to find sceRegMgrGetInt");
     return false;
@@ -535,172 +560,138 @@ bool install_hooks(const ShellImages& img, void* read_fn) {
                              reinterpret_cast<void*>(&sceRegMgrGetInt_hook),
                              sceRegMgrGetInt, true))
     return false;
-
-  // --- libc read (required) ---
   if (!install_detour_native("read", read_fn, reinterpret_cast<void*>(&read_hook),
                              read_orig, true))
     return false;
 
-  // --- Option menu createJson (required) ---
-  {
-    uint64_t addr = Get_Address_of_Method(
-        img.rn_shell, "ReactNative.Modules.ShellUI.HomeUI", "OptionMenu", "createJson",
-        8);
-    if (!install_detour("OptionMenu.createJson", addr,
-                        reinterpret_cast<void*>(&createJson_hook), createJson, true))
+  // --- Standard mono hooks ---
+  // UI3_dec / Settings types use runtime-decoded namespace strings.
+  const MonoHookSpec mono_hooks[] = {
+      {"PUI.Application.Update", img.pui, "Sce.PlayStation.PUI", "Application",
+       "Update", 0, reinterpret_cast<void*>(&OnRender_Hook),
+       reinterpret_cast<void**>(&OnRender_orig), false},
+      {"OptionMenu.createJson", img.rn_shell, "ReactNative.Modules.ShellUI.HomeUI",
+       "OptionMenu", "createJson", 8, reinterpret_cast<void*>(&createJson_hook),
+       reinterpret_cast<void**>(&createJson), true},
+      {"LayerManager.UpdateImposeStatusFlag", img.app_system,
+       "Sce.Vsh.ShellUI.AppSystem", "LayerManager", "UpdateImposeStatusFlag", 2,
+       reinterpret_cast<void*>(&UpdateImposeStatusFlag_hook),
+       reinterpret_cast<void**>(&UpdateImposeStatusFlag_Orig), false},
+      {"GamePad.GetData", img.core, "Sce.PlayStation.Core.Input", "GamePad", "GetData",
+       1, reinterpret_cast<void*>(&GetData_hook), reinterpret_cast<void**>(&GetData),
+       true},
+      {"SettingsPlugin.CxmlUri", img.legacy, UI3_dec.c_str(), "SettingsPlugin",
+       "CxmlUri", 1, reinterpret_cast<void*>(&CxmlUri_Hook),
+       reinterpret_cast<void**>(&CxmlUri), false},
+      {"SettingPage.OnPressed", img.legacy, UI3_dec.c_str(), "SettingPage", "OnPressed",
+       2, reinterpret_cast<void*>(&OnPress_Hook), reinterpret_cast<void**>(&oOnPress),
+       false},
+      {"SettingPage.OnCreating", img.legacy, UI3_dec.c_str(), "SettingPage",
+       "OnCreating", 1, reinterpret_cast<void*>(&OnPreCreate_Hook),
+       reinterpret_cast<void**>(&oOnPreCreate), false},
+      {"SettingsPlugin.GetString", img.legacy, UI3_dec.c_str(), "SettingsPlugin",
+       "GetString", 1, reinterpret_cast<void*>(&GetString_Hook),
+       reinterpret_cast<void**>(&oGetString), true},
+      {"EventManager.OnShareButton", img.capture_menu, "Sce.Vsh.ShellUI.CaptureMenu",
+       "EventManager", "OnShareButton", 1, reinterpret_cast<void*>(&OnShareButton),
+       reinterpret_cast<void**>(&OnShareButton_orig), false},
+      {"PowerManager.Terminate", img.app_system, "Sce.Vsh.ShellUI.AppSystem",
+       "PowerManager", "Terminate", 0, reinterpret_cast<void*>(&Terminate),
+       reinterpret_cast<void**>(&oTerminate), false},
+  };
+
+  for (const MonoHookSpec& h : mono_hooks) {
+    if (!install_mono_hook(h))
       return false;
   }
 
-  // --- DebugSettings.GetModel (optional) ---
-  {
-    uint64_t addr = Get_Address_of_Method(
-        img.rn_shell, "ReactNative.Modules.ShellUI.Settings", "DebugSettingsModule",
-        "GetModel", 2);
-    if (addr) {
-      DebugSettings_GetModel_Orig =
-          reinterpret_cast<void (*)(MonoObject*, MonoObject*, MonoObject*)>(
-              DetourFunction(addr, reinterpret_cast<void*>(&DebugSettings_GetModel_Hook)));
-      shellui_log(DebugSettings_GetModel_Orig
-                      ? "[DBG-GETMODEL] GetModel hooked"
-                      : "[DBG-GETMODEL] failed to detour GetModel");
-    } else {
-      shellui_log("[DBG-GETMODEL] GetModel not found");
-    }
-  }
+  // --- Optional diagnostics (log only) ---
+  (void)install_optional_diag(
+      "[DBG-NAV] UpdateNavigationState", img.react_pui, "ReactNative.Views.UI3.View",
+      "ReactNavigatorManager", "UpdateNavigationState", 1,
+      reinterpret_cast<void*>(&ReactNavigatorManager_UpdateNavigationState_Hook),
+      reinterpret_cast<void**>(&ReactNavigatorManager_UpdateNavigationState_Orig));
 
-  // --- LncUtil (optional when image missing) ---
+  (void)install_optional_diag(
+      "[DBG-GETMODEL] GetModel", img.rn_shell, "ReactNative.Modules.ShellUI.Settings",
+      "DebugSettingsModule", "GetModel", 2,
+      reinterpret_cast<void*>(&DebugSettings_GetModel_Hook),
+      reinterpret_cast<void**>(&DebugSettings_GetModel_Orig));
+
+  // --- LncUtil (optional image) ---
   if (img.lnc) {
-    (void)install_detour(
-        "LncUtilWrapper.LaunchApp",
-        Get_Address_of_Method(img.lnc, "Sce.Vsh.LncUtil", "LncUtilWrapper", "LaunchApp",
-                              4),
-        reinterpret_cast<void*>(&LaunchApp), LaunchApp_orig, false);
-
-    void* kill_tramp = DetourFunction(
-        Get_Address_of_Method(img.lnc, "Sce.Vsh.LncUtil", "LncUtilWrapper",
-                              "KillAppWithReason", 2),
-        reinterpret_cast<void*>(&KillAppWithReason_Hook));
-    if (!kill_tramp)
+    (void)install_mono_hook(
+        {"LncUtilWrapper.LaunchApp", img.lnc, "Sce.Vsh.LncUtil", "LncUtilWrapper",
+         "LaunchApp", 4, reinterpret_cast<void*>(&LaunchApp),
+         reinterpret_cast<void**>(&LaunchApp_orig), false});
+    const uint64_t kill_addr = Get_Address_of_Method(
+        img.lnc, "Sce.Vsh.LncUtil", "LncUtilWrapper", "KillAppWithReason", 2);
+    if (kill_addr &&
+        !DetourFunction(kill_addr, reinterpret_cast<void*>(&KillAppWithReason_Hook)))
       notify("Failed to detour KillAppWithReason");
   }
 
-  // --- Impose / GamePad ---
-  (void)install_detour(
-      "LayerManager.UpdateImposeStatusFlag",
-      Get_Address_of_Method(img.app_system, "Sce.Vsh.ShellUI.AppSystem", "LayerManager",
-                            "UpdateImposeStatusFlag", 2),
-      reinterpret_cast<void*>(&UpdateImposeStatusFlag_hook), UpdateImposeStatusFlag_Orig,
-      false);
-
-  if (!install_detour("GamePad.GetData",
-                      Get_Address_of_Method(img.core, "Sce.PlayStation.Core.Input",
-                                            "GamePad", "GetData", 1),
-                      reinterpret_cast<void*>(&GetData_hook), GetData, true))
-    return false;
-
-  // --- Settings UI hooks ---
-  (void)install_detour(
-      "SettingsPlugin.CxmlUri",
-      Get_Address_of_Method(img.legacy, UI3_dec.c_str(), "SettingsPlugin", "CxmlUri", 1),
-      reinterpret_cast<void*>(&CxmlUri_Hook), CxmlUri, false);
-
-  // Bundle decrypt; fall back to ioctl detour if the Mono method is unavailable
-  {
-    const uint64_t addr = Get_Address_of_Method(
-        img.react_pui, "ReactNative.PlayStation.Security", "JavaScriptBundleDecryptor",
-        "Decrypt", 5);
-    (void)install_detour("JavaScriptBundleDecryptor.Decrypt", addr,
-                         reinterpret_cast<void*>(&CallDecrypt), CallDecrypt_orig, false);
-    if (!CallDecrypt_orig) {
-      if (!ioctl) {
-        notify("Failed to find decrypt workaround");
-        return false;
-      }
-      shellui_log("Found ioctl at %p", ioctl);
-      DetourFunction(reinterpret_cast<uintptr_t>(ioctl),
-                     reinterpret_cast<void*>(&ioctl_hook));
-      shellui_log("Detoured ioctl to ioctl_hook");
+  // --- Bundle decrypt; fall back to ioctl ---
+  (void)install_mono_hook(
+      {"JavaScriptBundleDecryptor.Decrypt", img.react_pui,
+       "ReactNative.PlayStation.Security", "JavaScriptBundleDecryptor", "Decrypt", 5,
+       reinterpret_cast<void*>(&CallDecrypt), reinterpret_cast<void**>(&CallDecrypt_orig),
+       false});
+  if (!CallDecrypt_orig) {
+    if (!ioctl) {
+      notify("Failed to find decrypt workaround");
+      return false;
     }
+    shellui_log("Found ioctl at %p", ioctl);
+    DetourFunction(reinterpret_cast<uintptr_t>(ioctl),
+                   reinterpret_cast<void*>(&ioctl_hook));
+    shellui_log("Detoured ioctl to ioctl_hook");
   }
 
-  (void)install_detour(
-      "SettingPage.OnPressed",
-      Get_Address_of_Method(img.legacy, UI3_dec.c_str(), "SettingPage", "OnPressed", 2),
-      reinterpret_cast<void*>(&OnPress_Hook), oOnPress, false);
-
-  // BootHelper.Boot: try 3-arg then 2-arg signature
-  {
-    const uint64_t boot3 = Get_Address_of_Method(
-        img.app_system, "Sce.Vsh.ShellUI.AppSystem", "BootHelper", "Boot", 3);
-    (void)install_detour("BootHelper.Boot(3)", boot3,
-                         reinterpret_cast<void*>(&uri_boot_hook), boot_orig, false);
-    if (!boot_orig) {
-      const uint64_t boot2 = Get_Address_of_Method(
-          img.app_system, "Sce.Vsh.ShellUI.AppSystem", "BootHelper", "Boot", 2);
-      (void)install_detour("BootHelper.Boot(2)", boot2,
-                           reinterpret_cast<void*>(&uri_boot_hook_2), boot_orig_2, false);
-      if (!boot_orig_2)
-        notify("failed to detour BootHelper.Boot");
-    }
+  // --- BootHelper.Boot: 3-arg then 2-arg ---
+  if (!install_mono_hook({"BootHelper.Boot(3)", img.app_system, "Sce.Vsh.ShellUI.AppSystem",
+                          "BootHelper", "Boot", 3, reinterpret_cast<void*>(&uri_boot_hook),
+                          reinterpret_cast<void**>(&boot_orig), false}) ||
+      !boot_orig) {
+    if (!install_mono_hook(
+            {"BootHelper.Boot(2)", img.app_system, "Sce.Vsh.ShellUI.AppSystem",
+             "BootHelper", "Boot", 2, reinterpret_cast<void*>(&uri_boot_hook_2),
+             reinterpret_cast<void**>(&boot_orig_2), false}) ||
+        !boot_orig_2)
+      notify("failed to detour BootHelper.Boot");
   }
 
-  // CaptureScreen: 4-arg (old) then 5-arg (new)
-  {
-    const uint64_t cap4 = Get_Address_of_Method(
-        img.capture_menu, "Sce.Vsh.ShellUI.CaptureMenu", "CaptureController",
-        "CaptureScreen", 4);
-    (void)install_detour("CaptureScreen(4)", cap4,
-                         reinterpret_cast<void*>(&CaptureScreen_old),
-                         CaptureScreen_orig_old, false);
-    if (!CaptureScreen_orig_old) {
-      const uint64_t cap5 = Get_Address_of_Method(
-          img.capture_menu, "Sce.Vsh.ShellUI.CaptureMenu", "CaptureController",
-          "CaptureScreen", 5);
-      (void)install_detour("CaptureScreen(5)", cap5,
-                           reinterpret_cast<void*>(&CaptureScreen_new),
-                           CaptureScreen_orig_new, false);
-      if (!CaptureScreen_orig_new)
-        notify("Failed to detour CaptureScreen");
-    }
+  // --- CaptureScreen: 4-arg then 5-arg ---
+  if (!install_mono_hook(
+          {"CaptureScreen(4)", img.capture_menu, "Sce.Vsh.ShellUI.CaptureMenu",
+           "CaptureController", "CaptureScreen", 4,
+           reinterpret_cast<void*>(&CaptureScreen_old),
+           reinterpret_cast<void**>(&CaptureScreen_orig_old), false}) ||
+      !CaptureScreen_orig_old) {
+    if (!install_mono_hook(
+            {"CaptureScreen(5)", img.capture_menu, "Sce.Vsh.ShellUI.CaptureMenu",
+             "CaptureController", "CaptureScreen", 5,
+             reinterpret_cast<void*>(&CaptureScreen_new),
+             reinterpret_cast<void**>(&CaptureScreen_orig_new), false}) ||
+        !CaptureScreen_orig_new)
+      notify("Failed to detour CaptureScreen");
   }
 
-  (void)install_detour(
-      "EventManager.OnShareButton",
-      Get_Address_of_Method(img.capture_menu, "Sce.Vsh.ShellUI.CaptureMenu",
-                            "EventManager", "OnShareButton", 1),
-      reinterpret_cast<void*>(&OnShareButton), OnShareButton_orig, false);
-
-  (void)install_detour(
-      "SettingPage.OnCreating",
-      Get_Address_of_Method(img.legacy, UI3_dec.c_str(), "SettingPage", "OnCreating", 1),
-      reinterpret_cast<void*>(&OnPreCreate_Hook), oOnPreCreate, false);
-
-  if (!install_detour(
-          "SettingsPlugin.GetString",
-          Get_Address_of_Method(img.legacy, UI3_dec.c_str(), "SettingsPlugin", "GetString",
-                                1),
-          reinterpret_cast<void*>(&GetString_Hook), oGetString, true))
-    return false;
-
-  // GetManifestResourceStream: Assembly on 3.xx, RuntimeAssembly otherwise
+  // --- GetManifestResourceStream (class name differs on 3.xx) ---
   {
     const char* klass = is_3xx ? "Assembly" : "RuntimeAssembly";
-    uint64_t method = Get_Address_of_Method(img.mscorlib, "System.Reflection", klass,
-                                            "GetManifestResourceStream", 1);
+    const uint64_t method = Get_Address_of_Method(
+        img.mscorlib, "System.Reflection", klass, "GetManifestResourceStream", 1);
     if (!method) {
       notify("Failed to get master address");
       return false;
     }
-    (void)install_detour("GetManifestResourceStream", method,
-                         reinterpret_cast<void*>(&GetManifestResourceStream_Hook),
-                         GetManifestResourceStream_Original, false);
+    (void)install_mono_hook(
+        {"GetManifestResourceStream", img.mscorlib, "System.Reflection", klass,
+         "GetManifestResourceStream", 1,
+         reinterpret_cast<void*>(&GetManifestResourceStream_Hook),
+         reinterpret_cast<void**>(&GetManifestResourceStream_Original), false});
   }
-
-  (void)install_detour(
-      "PowerManager.Terminate",
-      Get_Address_of_Method(img.app_system, "Sce.Vsh.ShellUI.AppSystem", "PowerManager",
-                            "Terminate", 0),
-      reinterpret_cast<void*>(&Terminate), oTerminate, false);
 
   return true;
 }

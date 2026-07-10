@@ -260,177 +260,182 @@ ssize_t read_hook(int fd, void* buf, size_t count) {
 }
 
 int get_ip_address(char* ip_address);
-void OnRender_Hook(MonoObject* instance)
-{
-    static bool Do_Once = false;
-    static unsigned int Idle_Thread_ID[8];
-    static int Current_Bank = 0;
 
-    // Separate labels for text and values
-    static MonoObject* gpu_temp_value = nullptr;
-    static MonoObject* gpu_usage_value = nullptr;
+namespace {
 
-    static MonoObject* cpu_temp_value = nullptr;
-    static MonoObject* cpu_usage_value = nullptr;
+constexpr int kMaxProcThreads = 3072;
+constexpr int kCpuCores = 8;
+constexpr int kOverlayUpdateIntervalFrames = 60;
+constexpr int kOverlayFontSize = 22;
+constexpr int kClockIdRealtime = 4;
+constexpr int kVmSystem = 1;
+constexpr int kPageTableRam = 1;
+constexpr int kPageTableVram = 2;
 
-    static MonoObject* ram_value = nullptr;
-    static MonoObject* fps_value = nullptr;
-
-
-    char GPU_TEMP[32];
-    char GPU_USAGE[32];
-    char CPU_TEMP[32];
-    char CPU_USAGE[120];
-    char RAM_STR[32];
-
-    static int wait = 0;
-    int SOC_temp = 0;
-    int CPU_temp = 0;
-
-    if (!Do_Once)
-    {
-#if 1
-        fps_string.store("LOADING");
-#else
-        fps_string.store("NOT SUPPORTED IN THIS BUILD");
-#endif
-	//	shellui_log("string %s", fps_string.load().c_str());
-        int Thread_Count = 3072;
-        if (!sceKernelGetCpuUsage((Proc_Stats*)&Stat_Data, (int*)&Thread_Count) && Thread_Count > 0)
-        {
-            char Thread_Name[0x40];
-            int Core_Count = 0;
-            for (int i = 0; i < Thread_Count; i++)
-            {
-                if (!sceKernelGetThreadName(Stat_Data[i].td_tid, Thread_Name) && sscanf(Thread_Name, "SceIdleCpu%d", &Core_Count) == 1 && Core_Count <= 7)
-                {
-                    Idle_Thread_ID[Core_Count] = Stat_Data[i].td_tid;
-                }
-            }
-        }
-
-        rootWidget = Get_Property<MonoObject*>(pui_img, "Sce.PlayStation.PUI.UI2", "Scene", Game, "RootWidget");
-        font = CreateUIFont(22, 0, 0);           // Regular font for values
-
-        // GPU row - Green label (BOLD), Orange values - Better spacing
-        if (g_settings.overlay_cpu) {
-            CreateGameWidget(CREATE_CPU_OVERLAY);
-        }
-        if (g_settings.overlay_ram) {
-            CreateGameWidget(CREATE_RAM_OVERLAY);
-        }
-        if (g_settings.overlay_gpu) {
-            CreateGameWidget(CREATE_GPU_OVERLAY);
-        }
-        if (g_settings.overlay_fps) {
-            CreateGameWidget(CREATE_FPS_OVERLAY);
-        }
-		if (g_settings.overlay_ip) {
-			CreateGameWidget(CREATE_IP_OVERLAY);
-		}
-
-        Do_Once = true;
-    }
-
-
-    if (wait <= 0) {
-
-
-        // Get CPU usage
-        while (g_settings.overlay_cpu || g_all_cpu_usage) {
-            gThread_Data[Current_Bank].Thread_Count = 3072;
-            if (!sceKernelGetCpuUsage((Proc_Stats*)&gThread_Data[Current_Bank].Threads, &gThread_Data[Current_Bank].Thread_Count))
-            {
-                Thread_Count = gThread_Data[Current_Bank].Thread_Count;
-                sceKernelClockGettime(4, &gThread_Data[Current_Bank].current_time);
-                Current_Bank = !Current_Bank;
-
-                if (gThread_Data[Current_Bank].Thread_Count <= 0)
-                    continue;
-
-                calc_usage(Idle_Thread_ID, &gThread_Data[!Current_Bank], &gThread_Data[Current_Bank], Usage);
-
-                if (g_all_cpu_usage) {
-                    snprintf(CPU_USAGE, sizeof(CPU_USAGE), "%2.0f%% %2.0f%% %2.0f%% %2.0f%% %2.0f%% %2.0f%% %2.0f%% %2.0f%%",Usage[0], Usage[1], Usage[2], Usage[3], Usage[4], Usage[5], Usage[6], Usage[7]);
-                    break;
-                }
-
-                // Calculate average CPU usage
-                float avg_cpu = 0;
-                for (int i = 0; i < 8; i++) {
-                    avg_cpu += Usage[i];
-                }
-                avg_cpu /= 8.0f;
-
-                snprintf(CPU_USAGE, sizeof(CPU_USAGE), "%.0f%%", avg_cpu);
-                break;
-            }
-        }
-
-        // Get RAM info
-        if (g_settings.overlay_ram)
-        {
-            Get_Page_Table_Stats(1, 1, &RAM.Used, &RAM.Free, &RAM.Total);
-            snprintf(RAM_STR, sizeof(RAM_STR), "%u MB", RAM.Used);
-        }
-
-        // Get GPU usage (estimate based on VRAM usage)
-        if (g_settings.overlay_gpu) 
-        {
-            // Get temperatures
-            sceKernelGetSocSensorTemperature(0, &SOC_temp);
-            snprintf(GPU_TEMP, sizeof(GPU_TEMP), "%dC", SOC_temp);
-            Get_Page_Table_Stats(1, 2, &VRAM.Used, &VRAM.Free, &VRAM.Total);
-            VRAM.Percentage = (((float)VRAM.Used / (float)VRAM.Total) * 100.0f);
-            snprintf(GPU_USAGE, sizeof(GPU_USAGE), "%.0f%%", VRAM.Percentage);
-        }
-        if(g_settings.overlay_ip)
-        {
-			char ip_address[64];
-            get_ip_address(&ip_address[0]);
-            MonoObject* ip_value = Invoke<MonoObject*>(pui_img, mono_class_from_name(pui_img, "Sce.PlayStation.PUI.UI2", "Widget"), Get_Property<MonoObject*>(pui_img, "Sce.PlayStation.PUI.UI2", "Scene", Game, "RootWidget"), "FindWidgetByName", mono_string_new(Root_Domain, "id_ip_value"));
-            Set_Property(mono_class_from_name(pui_img, "Sce.PlayStation.PUI.UI2", "Label"), ip_value, "Text", mono_string_new(Root_Domain, ip_address));
-		}
-
-        if (g_settings.overlay_gpu) {
-            // Update GPU values
-            gpu_temp_value = Invoke<MonoObject*>(pui_img, mono_class_from_name(pui_img, "Sce.PlayStation.PUI.UI2", "Widget"), Get_Property<MonoObject*>(pui_img, "Sce.PlayStation.PUI.UI2", "Scene", Game, "RootWidget"), "FindWidgetByName", mono_string_new(Root_Domain, "id_gpu_temp_value"));
-            Set_Property(mono_class_from_name(pui_img, "Sce.PlayStation.PUI.UI2", "Label"), gpu_temp_value, "Text", mono_string_new(Root_Domain, GPU_TEMP));
-
-            gpu_usage_value = Invoke<MonoObject*>(pui_img, mono_class_from_name(pui_img, "Sce.PlayStation.PUI.UI2", "Widget"), Get_Property<MonoObject*>(pui_img, "Sce.PlayStation.PUI.UI2", "Scene", Game, "RootWidget"), "FindWidgetByName", mono_string_new(Root_Domain, "id_gpu_usage_value"));
-            Set_Property(mono_class_from_name(pui_img, "Sce.PlayStation.PUI.UI2", "Label"), gpu_usage_value, "Text", mono_string_new(Root_Domain, GPU_USAGE));
-        }
-        if (g_settings.overlay_cpu || g_all_cpu_usage) {
-            sceKernelGetCpuTemperature(&CPU_temp);
-            // Format temperature strings
-            snprintf(CPU_TEMP, sizeof(CPU_TEMP), "%dC", CPU_temp);
-            // Update CPU values
-            cpu_temp_value = Invoke<MonoObject*>(pui_img, mono_class_from_name(pui_img, "Sce.PlayStation.PUI.UI2", "Widget"), Get_Property<MonoObject*>(pui_img, "Sce.PlayStation.PUI.UI2", "Scene", Game, "RootWidget"), "FindWidgetByName", mono_string_new(Root_Domain, "id_cpu_temp_value"));
-            Set_Property(mono_class_from_name(pui_img, "Sce.PlayStation.PUI.UI2", "Label"), cpu_temp_value, "Text", mono_string_new(Root_Domain, CPU_TEMP));
-
-            cpu_usage_value = Invoke<MonoObject*>(pui_img, mono_class_from_name(pui_img, "Sce.PlayStation.PUI.UI2", "Widget"), Get_Property<MonoObject*>(pui_img, "Sce.PlayStation.PUI.UI2", "Scene", Game, "RootWidget"), "FindWidgetByName", mono_string_new(Root_Domain, "id_cpu_usage_value"));
-            Set_Property(mono_class_from_name(pui_img, "Sce.PlayStation.PUI.UI2", "Label"), cpu_usage_value, "Text", mono_string_new(Root_Domain, CPU_USAGE));
-        }
-        if(g_settings.overlay_ram) 
-        {
-            // Update RAM value
-            ram_value = Invoke<MonoObject*>(pui_img, mono_class_from_name(pui_img, "Sce.PlayStation.PUI.UI2", "Widget"), Get_Property<MonoObject*>(pui_img, "Sce.PlayStation.PUI.UI2", "Scene", Game, "RootWidget"), "FindWidgetByName", mono_string_new(Root_Domain, "id_ram_value"));
-            Set_Property(mono_class_from_name(pui_img, "Sce.PlayStation.PUI.UI2", "Label"), ram_value, "Text", mono_string_new(Root_Domain, RAM_STR));
-		}
-        if (g_settings.overlay_fps) {
-            // Update FPS value
-            std::string current_fps = fps_string.load();
-            fps_value = Invoke<MonoObject*>(pui_img, mono_class_from_name(pui_img, "Sce.PlayStation.PUI.UI2", "Widget"), Get_Property<MonoObject*>(pui_img, "Sce.PlayStation.PUI.UI2", "Scene", Game, "RootWidget"), "FindWidgetByName", mono_string_new(Root_Domain, "id_fps_value"));
-            Set_Property(mono_class_from_name(pui_img, "Sce.PlayStation.PUI.UI2", "Label"), fps_value, "Text", mono_string_new(Root_Domain, current_fps.c_str()));
-        }
-        wait = 60; // Update every 60 frames
-    }
-    else {
-        wait--;
-    }
-
-    OnRender_orig(instance);
+void set_label_text(const char* widget_name, const char* text) {
+  MonoObject* root = Get_Property<MonoObject*>(pui_img, "Sce.PlayStation.PUI.UI2",
+                                               "Scene", Game, "RootWidget");
+  MonoClass* widget_cls =
+      mono_class_from_name(pui_img, "Sce.PlayStation.PUI.UI2", "Widget");
+  MonoClass* label_cls =
+      mono_class_from_name(pui_img, "Sce.PlayStation.PUI.UI2", "Label");
+  MonoObject* label = Invoke<MonoObject*>(
+      pui_img, widget_cls, root, "FindWidgetByName",
+      mono_string_new(Root_Domain, widget_name));
+  if (label)
+    Set_Property(label_cls, label, "Text", mono_string_new(Root_Domain, text));
 }
 
+void discover_idle_thread_ids(unsigned int idle_tid[kCpuCores]) {
+  int count = kMaxProcThreads;
+  if (sceKernelGetCpuUsage(reinterpret_cast<Proc_Stats*>(&Stat_Data), &count) ||
+      count <= 0)
+    return;
 
+  char thread_name[0x40];
+  int core = 0;
+  for (int i = 0; i < count; i++) {
+    if (!sceKernelGetThreadName(Stat_Data[i].td_tid, thread_name) &&
+        sscanf(thread_name, "SceIdleCpu%d", &core) == 1 && core >= 0 &&
+        core < kCpuCores) {
+      idle_tid[core] = Stat_Data[i].td_tid;
+    }
+  }
+}
+
+void init_overlay_once(unsigned int idle_tid[kCpuCores]) {
+  fps_string.store("LOADING");
+  discover_idle_thread_ids(idle_tid);
+
+  rootWidget = Get_Property<MonoObject*>(pui_img, "Sce.PlayStation.PUI.UI2", "Scene",
+                                         Game, "RootWidget");
+  font = CreateUIFont(kOverlayFontSize, 0, 0);
+
+  if (g_settings.overlay_cpu)
+    CreateGameWidget(CREATE_CPU_OVERLAY);
+  if (g_settings.overlay_ram)
+    CreateGameWidget(CREATE_RAM_OVERLAY);
+  if (g_settings.overlay_gpu)
+    CreateGameWidget(CREATE_GPU_OVERLAY);
+  if (g_settings.overlay_fps)
+    CreateGameWidget(CREATE_FPS_OVERLAY);
+  if (g_settings.overlay_ip)
+    CreateGameWidget(CREATE_IP_OVERLAY);
+}
+
+/** Sample CPU into Usage[]; formats CPU_USAGE. Returns false if sampling skipped. */
+bool sample_cpu_usage(unsigned int idle_tid[kCpuCores], int& current_bank,
+                      char* cpu_usage, size_t cpu_usage_sz) {
+  if (!g_settings.overlay_cpu && !g_all_cpu_usage)
+    return false;
+
+  // Legacy path: retry until a dual-bank sample succeeds.
+  while (true) {
+    gThread_Data[current_bank].Thread_Count = kMaxProcThreads;
+    if (sceKernelGetCpuUsage(
+            reinterpret_cast<Proc_Stats*>(&gThread_Data[current_bank].Threads),
+            &gThread_Data[current_bank].Thread_Count))
+      continue;
+
+    Thread_Count = gThread_Data[current_bank].Thread_Count;
+    sceKernelClockGettime(kClockIdRealtime, &gThread_Data[current_bank].current_time);
+    current_bank = !current_bank;
+
+    if (gThread_Data[current_bank].Thread_Count <= 0)
+      continue;
+
+    calc_usage(idle_tid, &gThread_Data[!current_bank], &gThread_Data[current_bank],
+               Usage);
+
+    if (g_all_cpu_usage) {
+      snprintf(cpu_usage, cpu_usage_sz,
+               "%2.0f%% %2.0f%% %2.0f%% %2.0f%% %2.0f%% %2.0f%% %2.0f%% %2.0f%%",
+               Usage[0], Usage[1], Usage[2], Usage[3], Usage[4], Usage[5], Usage[6],
+               Usage[7]);
+    } else {
+      float avg = 0.f;
+      for (int i = 0; i < kCpuCores; i++)
+        avg += Usage[i];
+      avg /= static_cast<float>(kCpuCores);
+      snprintf(cpu_usage, cpu_usage_sz, "%.0f%%", avg);
+    }
+    return true;
+  }
+}
+
+void update_overlay_metrics(unsigned int idle_tid[kCpuCores], int& current_bank) {
+  char gpu_temp[32] = {};
+  char gpu_usage[32] = {};
+  char cpu_temp[32] = {};
+  char cpu_usage[120] = {};
+  char ram_str[32] = {};
+
+  sample_cpu_usage(idle_tid, current_bank, cpu_usage, sizeof(cpu_usage));
+
+  if (g_settings.overlay_ram) {
+    Get_Page_Table_Stats(kVmSystem, kPageTableRam, &RAM.Used, &RAM.Free, &RAM.Total);
+    snprintf(ram_str, sizeof(ram_str), "%u MB", RAM.Used);
+  }
+
+  if (g_settings.overlay_gpu) {
+    int soc_temp = 0;
+    sceKernelGetSocSensorTemperature(0, &soc_temp);
+    snprintf(gpu_temp, sizeof(gpu_temp), "%dC", soc_temp);
+    Get_Page_Table_Stats(kVmSystem, kPageTableVram, &VRAM.Used, &VRAM.Free,
+                         &VRAM.Total);
+    VRAM.Percentage =
+        (VRAM.Total > 0) ? ((float)VRAM.Used / (float)VRAM.Total) * 100.0f : 0.f;
+    snprintf(gpu_usage, sizeof(gpu_usage), "%.0f%%", VRAM.Percentage);
+  }
+
+  if (g_settings.overlay_ip) {
+    char ip_address[64] = {};
+    get_ip_address(ip_address);
+    set_label_text("id_ip_value", ip_address);
+  }
+
+  if (g_settings.overlay_gpu) {
+    set_label_text("id_gpu_temp_value", gpu_temp);
+    set_label_text("id_gpu_usage_value", gpu_usage);
+  }
+
+  if (g_settings.overlay_cpu || g_all_cpu_usage) {
+    int cpu_t = 0;
+    sceKernelGetCpuTemperature(&cpu_t);
+    snprintf(cpu_temp, sizeof(cpu_temp), "%dC", cpu_t);
+    set_label_text("id_cpu_temp_value", cpu_temp);
+    set_label_text("id_cpu_usage_value", cpu_usage);
+  }
+
+  if (g_settings.overlay_ram)
+    set_label_text("id_ram_value", ram_str);
+
+  if (g_settings.overlay_fps) {
+    const std::string current_fps = fps_string.load();
+    set_label_text("id_fps_value", current_fps.c_str());
+  }
+}
+
+} // namespace
+
+void OnRender_Hook(MonoObject* instance) {
+  static bool inited = false;
+  static unsigned int idle_thread_id[kCpuCores] = {};
+  static int current_bank = 0;
+  static int frames_until_update = 0;
+
+  if (!inited) {
+    init_overlay_once(idle_thread_id);
+    inited = true;
+  }
+
+  if (frames_until_update <= 0) {
+    update_overlay_metrics(idle_thread_id, current_bank);
+    frames_until_update = kOverlayUpdateIntervalFrames;
+  } else {
+    frames_until_update--;
+  }
+
+  OnRender_orig(instance);
+}
 

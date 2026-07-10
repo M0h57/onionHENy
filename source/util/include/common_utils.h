@@ -100,13 +100,8 @@ extern orion::Settings g_settings;
 extern atomic_bool g_legacy_cmd_server;
 extern atomic_bool g_legacy_cmd_server_exit;
 /*================ SETTINGS ==============*/
-// Define your custom header structure for clarity
-typedef struct
-{
-	char prefix[15];  // "OrionHEN_PLUGIN" + null terminator
-	char titleID[10]; // 4 uppercase letters, 5 numbers, and a null terminator
-	char plugin_version[5];
-} CustomPluginHeader;
+/* Plugin package header + load helpers (shared). */
+#include <orion/plugin.h>
 
 /* load_plugin: see extern "C" block below */
 
