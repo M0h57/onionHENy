@@ -19,14 +19,11 @@ along with this program; see the file COPYING. If not, see
 #include <unistd.h>
 
 /**
- * libelfldr — in-process ELF spawn for daemons/util (OrionHEN).
+ * Bootstrapper-local ELF loader helpers.
  *
- * Path: rfork SceSpZeroConf + int3 @ main (aligned with third_party/elfldr).
- * API: (cwd, stdio, elf, name); cwd unused. Not the 9021 socksrv binary.
- *
- * IMPORTANT: bootstrapper must NOT use this rfork path — it crashes shell
- * services when called from a payload. Bootstrapper keeps its own
- * sceKernelSpawn-based elfldr.c under bootstrapper/source/.
+ * OrionHEN runtime process launch is handled by an external elfldr service on
+ * port 9021. This header remains for bootstrapper privilege and legacy loader
+ * helpers implemented under bootstrapper/source/.
  */
 
 pid_t elfldr_find_pid(const char* name);

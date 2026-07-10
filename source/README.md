@@ -8,13 +8,13 @@ OrionHEN is based on etaHEN’s open-source release. See the [root README](../RE
 
 | Path | Description |
 |------|-------------|
-| `bootstrapper/` | Main payload bootstrapper + Byepervisor |
+| `bootstrapper/` | Main payload bootstrapper |
 | `daemon/` | Main daemon |
 | `util/` | Utility daemon (FTP, PKG, …) |
 | `shellui/` | Toolbox / ShellUI hooks |
 | `fps_elf/` | FPS overlay PRX |
 | `unpacker/` | Payload unpacker |
-| `libhijacker/`, `libelfldr/`, `libNineS/`, `libNidResolver/`, `libSelfDecryptor/` | Internal static libs |
+| `libhijacker/`, `libNineS/`, `libNidResolver/` | Internal static libs |
 | `extern/` | Third-party sources (cJSON, pugixml, tiny-json, 7zip-sdk, …) |
 | `include/` | Shared headers |
 | `lib/` | Prebuilt link libraries (static + PS5 stubs) + `backtrace.cpp` |

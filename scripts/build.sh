@@ -11,8 +11,8 @@
 #
 # Usage:
 #   export PS5_PAYLOAD_SDK=/path/to/ps5-payload-sdk
-#   ./scripts/build.sh
-#   ./scripts/build.sh --clean
+#   ./scripts/build.sh              # cleans previous outputs first
+#   ./scripts/build.sh --clean      # same as default; kept for compatibility
 #   ./scripts/build.sh --fw 0x3000000 --jobs 8
 #   ./scripts/build.sh --stub-missing   # compile-only placeholders for missing vendor ELFs
 #
@@ -28,7 +28,6 @@ PS5_PAYLOAD_SDK="${PS5_PAYLOAD_SDK:-${PS5SDK:-}}"
 V_FW="${V_FW:-0x3000000}"
 BUILD_TYPE="${BUILD_TYPE:-Debug}"
 JOBS="${JOBS:-}"
-CLEAN=0
 CONFIGURE_ONLY=0
 STUB_MISSING=0
 SKIP_UNPACKER=0
@@ -58,7 +57,7 @@ OrionHEN build pipeline
 Usage: $(basename "$0") [options]
 
 Options:
-  --clean              Remove build dir and reconfigure
+  --clean              Accepted for compatibility; builds are cleaned by default
   --configure-only     Only run CMake configure
   --fw <hex>           PS5_FW_VERSION / V_FW (default: ${V_FW})
   --jobs <n>           Parallel build jobs (default: ${JOBS})
@@ -82,7 +81,7 @@ Third-party (git submodules under third_party/ + release downloads):
   See third_party/README.md and scripts/sync_vendor.sh
 
   kstuff.elf              <- EchoStretch/kstuff-lite
-  third_party/elfldr      <- source reference for libelfldr (not packaged as 9021)
+  third_party/elfldr      <- optional source reference for the external 9021 loader
 
   Removed: elfldr.elf (9021), ps5debug, app-dumper, Byepervisor/hen, Discord RPC
 
@@ -94,7 +93,7 @@ EOF
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
-    --clean) CLEAN=1; shift ;;
+    --clean) shift ;;
     --configure-only) CONFIGURE_ONLY=1; shift ;;
     --fw) V_FW="$2"; shift 2 ;;
     --jobs) JOBS="$2"; shift 2 ;;
@@ -249,6 +248,33 @@ stage_vendor() {
 # ---------------------------------------------------------------------------
 # Configure
 # ---------------------------------------------------------------------------
+clean_build_artifacts() {
+  log "Cleaning previous build outputs"
+
+  case "${BUILD}" in
+    ""|"/"|"/Users"|"/Users/${USER:-}"|"${ROOT}"|"${SOURCE}")
+      die "refusing to clean unsafe build dir: ${BUILD}"
+      ;;
+  esac
+
+  rm -rf "${BUILD}"
+
+  rm -f \
+    "${SOURCE}/shellui/assets/etaHEN_toolbox.sxml" \
+    "${SOURCE}/shellui/assets/etaHEN_Lite.sxml" \
+    "${SOURCE}/daemon/assets/shellui.elf" \
+    "${SOURCE}/daemon/assets/fps_elf.elf" \
+    "${BIN}/daemon.elf" \
+    "${BIN}/util.elf" \
+    "${BIN}/bootstrapper.elf" \
+    "${BIN}/bootstrapper.elf.lzma" \
+    "${BIN}/bootstrapper.elf.lzma.size" \
+    "${BIN}/test.elf" \
+    "${BIN}/etaHEN.elf"
+
+  ok "old build outputs removed"
+}
+
 configure() {
   log "Configure (${BUILD_TYPE}, V_FW=${V_FW})"
   mkdir -p "${BUILD}"
@@ -281,11 +307,7 @@ main() {
   echo "  TYPE     = ${BUILD_TYPE}"
   echo "  JOBS     = ${JOBS}"
 
-  if [[ "${CLEAN}" -eq 1 ]]; then
-    log "Clean ${BUILD}"
-    rm -rf "${BUILD}"
-  fi
-
+  clean_build_artifacts
   ensure_incbin_links
   ensure_sdk_libcxx
   configure
@@ -301,7 +323,6 @@ main() {
     NidResolver \
     hijacker \
     NineS \
-    elfldr \
     shellui \
     fps_elf
 
