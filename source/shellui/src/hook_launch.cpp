@@ -161,11 +161,11 @@ void createJson_hook(MonoObject* inst, MonoObject* array, MonoString* id, MonoSt
 
     // Only extract and update titleId if one is found in the current URL
     std::string extracted_tid = extractTIDFromURI(Mono_to_String(actionUrl));
-    if (!extracted_tid.empty() && extracted_tid != current_menu_tid) {
-        current_menu_tid = extracted_tid;
+    if (!extracted_tid.empty() && extracted_tid != g_ui.current_menu_tid) {
+        g_ui.current_menu_tid = extracted_tid;
 #if SHELL_DEBUG==1
-        //notify("Current menu titleId: %s", current_menu_tid.c_str());
-        shellui_log("Updated menu titleId: %s", current_menu_tid.c_str());
+        //notify("Current menu titleId: %s", g_ui.current_menu_tid.c_str());
+        shellui_log("Updated menu titleId: %s", g_ui.current_menu_tid.c_str());
 #endif
     }
 #if 1
@@ -181,7 +181,7 @@ void createJson_hook(MonoObject* inst, MonoObject* array, MonoString* id, MonoSt
     }
 
     if(id_str == "MENU_ID_INTELLECTUAL_PROPERTY_NOTICES"){
-        std::string uri = "psappinst:pat-uninstall?titleid=" + current_menu_tid;
+        std::string uri = "psappinst:pat-uninstall?titleid=" + g_ui.current_menu_tid;
         createJson(inst, array, mono_string_new(Root_Domain, "MENU_ID_REMOVE_UPDATE"), mono_string_new(Root_Domain, "★ 删除"), mono_string_new(Root_Domain, uri.c_str()), actionId, nullptr, subMenu, enable);
         return;
     }

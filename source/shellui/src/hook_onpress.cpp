@@ -57,7 +57,7 @@ int OnPress_Hook(MonoObject *Instance, MonoObject *element, MonoObject *e) {
 
   bool is_orionhen_pl = (ctx.id.rfind("id_orionhen_pl_loader_", 0) == 0);
 
-  if (ctx.id.rfind("id_cheat_", 0) == 0 && !is_current_game_open) {
+  if (ctx.id.rfind("id_cheat_", 0) == 0 && !g_ui.is_current_game_open) {
     notify("The Game is not running, to activate cheats launch the game first");
 #if SHELL_DEBUG == 1
     shellui_log("Failed to activate %s, game is not running", ctx.id.c_str());

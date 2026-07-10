@@ -40,7 +40,7 @@ static OnPressResult id_overlay_cpu(OnPressContext &ctx) {
     return OnPressResult::EarlyReturn;
   }
   if (!atoi(ctx.value.c_str())) {
-    if (!g_all_cpu_usage) {
+    if (!g_ui.all_cpu_usage) {
       RemoveGameWidget(REMOVE_CPU_OVERLAY);
     } else {
       notify("To disable CPU overlay, please disable the All CPU usage option first");
@@ -69,14 +69,14 @@ static OnPressResult id_overlay_ip(OnPressContext &ctx) {
 }
 
 static OnPressResult id_all_cpu_usage(OnPressContext &ctx) {
-  if (g_all_cpu_usage == atoi(ctx.value.c_str())) {
+  if (g_ui.all_cpu_usage == atoi(ctx.value.c_str())) {
     return OnPressResult::EarlyReturn;
   }
   if (!g_settings.overlay_cpu) {
     notify("To change CPU overlay mode, please enable the CPU overlay first");
     return OnPressResult::EarlyReturn;
   }
-  g_all_cpu_usage = !g_all_cpu_usage;
+  g_ui.all_cpu_usage = !g_ui.all_cpu_usage;
   return OnPressResult::Handled;
 }
 

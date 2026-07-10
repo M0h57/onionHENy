@@ -74,8 +74,7 @@ DecryptRnpsBundle_t DecryptRnpsBundle = NULL;
 /* ================================= HOOKED GLOBAL VARS ============================================= */
 MonoClass* MemoryStream_IO = nullptr;
 
-// UI runtime state (flags, lists, cheat map): g_ui in shellui_state.hpp / shellui_globals.cpp
-// Access via aliases is_plugin, plugins_list, cheatEnabledMap, …
+// UI runtime state: g_ui (shellui_state.hpp / shellui_globals.cpp)
 
 int usbpath();
 #define MAX_CHEATS 256
@@ -224,18 +223,18 @@ void UpdateImposeStatusFlag_hook(MonoObject* scene, MonoObject* frontActiveScene
         shellui_log("Scene or frontActiveScene is null, returning...");
         return;
     }
-    if (!is_remote_play && IsRunningConfirmRegistLoop)
+    if (!g_ui.is_remote_play && IsRunningConfirmRegistLoop)
     {
         StopConfirmRegistLoop();
     }
 
-    if (is_remote_play)
+    if (g_ui.is_remote_play)
     {
         //
         // If the scene is switching, means that we exiting from the current state, a state machine would be good here
         // otherwise we would need to reverse the SceneBase     
         //
-        is_remote_play = false; 
+        g_ui.is_remote_play = false; 
     }
 
     UpdateImposeStatusFlag_Orig(scene, frontActiveScene);
@@ -258,15 +257,15 @@ MonoString * CxmlUri_Hook(MonoObject * Instance, MonoString * uri) {
   ///shellui_log("CxmlUri_Hook: %s", uri_string.c_str());
   if (uri_string.rfind("tex_game_icon") != std::string::npos) {
     //shellui_log("CxmlUri_Hook: Returning store icon");
-    std::string icon = "/user/appmeta/" + running_tid + "/icon0.png";
+    std::string icon = "/user/appmeta/" + g_ui.running_tid + "/icon0.png";
     if(!if_exists(icon.c_str())){
-        icon = "/user/appmeta/external/" + running_tid + "/icon0.png";
+        icon = "/user/appmeta/external/" + g_ui.running_tid + "/icon0.png";
 
         if(!if_exists(icon.c_str())){ // pirated PS5 Games
-           std::string game_src = "/system_ex/app/" + running_tid + "/sce_sys/icon0.png"; // shellui cant access this path
-           icon = "/user/appmeta/" + running_tid;
+           std::string game_src = "/system_ex/app/" + g_ui.running_tid + "/sce_sys/icon0.png"; // shellui cant access this path
+           icon = "/user/appmeta/" + g_ui.running_tid;
            mkdir(icon.c_str(), 0777);
-           icon = "/user/appmeta/" + running_tid + "/icon0.png";
+           icon = "/user/appmeta/" + g_ui.running_tid + "/icon0.png";
            IPC_Client::getInstance(false).CopyFile(game_src, icon);
         }
     }

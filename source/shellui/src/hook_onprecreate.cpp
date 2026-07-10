@@ -46,7 +46,7 @@ const ExactValueEntry kExactValues[] = {
      +[]() -> std::string { return bool_str(g_settings.overlay_fps); }},
     {"id_overlay_ip",
      +[]() -> std::string { return bool_str(g_settings.overlay_ip); }},
-    {"id_all_cpu_usage", +[]() -> std::string { return bool_str(g_all_cpu_usage); }},
+    {"id_all_cpu_usage", +[]() -> std::string { return bool_str(g_ui.all_cpu_usage); }},
     {"id_overlay_cpu",
      +[]() -> std::string { return bool_str(g_settings.overlay_cpu); }},
     {"id_overlay_ram",
@@ -146,7 +146,7 @@ bool try_exact_value(const std::string& id, std::string& out) {
 }
 
 bool try_plugin_list_value(const std::string& id, std::string& out) {
-  for (const auto& plugin : plugins_list) {
+  for (const auto& plugin : g_ui.plugins_list) {
     if (plugin.id != id)
       continue;
     out = bool_str(sceSystemServiceGetAppId(plugin.tid.c_str()) > 0);
@@ -156,7 +156,7 @@ bool try_plugin_list_value(const std::string& id, std::string& out) {
 }
 
 bool try_auto_plugin_value(const std::string& id, std::string& out) {
-  for (const auto& plugin : auto_list) {
+  for (const auto& plugin : g_ui.auto_list) {
     if (plugin.id != id)
       continue;
     const std::string auto_path = plugin.shellui_path + ".auto_start";
@@ -170,13 +170,13 @@ bool try_cheat_value(const std::string& id, std::string& out) {
   // Historical match: substring "id_cheat_" anywhere in id.
   if (id.find("id_cheat_") == std::string::npos)
     return false;
-  if (!is_current_game_open)
+  if (!g_ui.is_current_game_open)
     return false;
 
   char tid[32] = {};
   int cheat_id = 0;
   ParseCheatID(id.c_str(), tid, &cheat_id);
-  out = bool_str(cheatEnabledMap[cheat_id] != 0);
+  out = bool_str(g_ui.get_cheat_enabled(cheat_id));
   return true;
 }
 

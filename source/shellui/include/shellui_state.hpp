@@ -1,14 +1,16 @@
 /* Copyright (C) 2025 OrionHEN / LightningMods
  *
- * Toolbox / settings UI runtime state — progressive consolidation of former
- * free globals (is_*, lists, cheat map). Prefer g_ui.* at new call sites.
+ * Toolbox / settings UI runtime state. All ShellUI session state lives on g_ui.
  */
 #pragma once
 
 #include "shellui_types.hpp"
+#include "toolbox_route.hpp"
 
 #include <atomic>
+#include <cstring>
 #include <string>
+#include <string_view>
 #include <vector>
 
 /** Settings page / resource-stream context for ShellUI hooks. */
@@ -32,7 +34,7 @@ struct ToolboxUiState {
   bool is_current_game_open = true;
   std::string current_menu_tid;
   std::string current_cheat_tid;
-  int cheat_enabled_map[256]{};
+  int cheat_enabled_map[toolbox::kCheatMapSize]{};
 
   // Dynamic lists filled by generate_*_xml
   std::vector<Plugins> plugins_list;
@@ -47,40 +49,43 @@ struct ToolboxUiState {
 
   std::atomic_bool cheat_action_in_progress{false};
   std::atomic_bool download_kstuff_thread_in_progress{false};
+
+  /** Copy route flags into this session (after toolbox::resolve_resource). */
+  void apply_route_flags(const toolbox::RouteFlags &f) {
+    is_plugin = f.is_plugin;
+    is_su_menu = f.is_su_menu;
+    is_debug_settings = f.is_debug_settings;
+    is_cheats = f.is_cheats;
+    is_auto_plugin = f.is_auto_plugin;
+    is_remote_play = f.is_remote_play;
+    is_plapps = f.is_plapps;
+  }
+
+  void clear_cheat_shortcuts() {
+    cheats_shortcut_activated = false;
+    cheats_shortcut_activated_not_open = false;
+  }
+
+  bool any_cheat_shortcut() const {
+    return cheats_shortcut_activated || cheats_shortcut_activated_not_open;
+  }
+
+  /** Reset cheat toggles when switching title; returns true if map cleared. */
+  bool reset_cheats_if_tid_changed(std::string_view new_tid) {
+    return toolbox::reset_cheat_map_if_tid_changed(
+        current_cheat_tid, cheat_enabled_map, toolbox::kCheatMapSize, new_tid);
+  }
+
+  void set_cheat_enabled(int cheat_id, bool enabled) {
+    toolbox::set_cheat_enabled(cheat_enabled_map, toolbox::kCheatMapSize,
+                               cheat_id, enabled);
+  }
+
+  bool get_cheat_enabled(int cheat_id) const {
+    return toolbox::get_cheat_enabled(cheat_enabled_map, toolbox::kCheatMapSize,
+                                      cheat_id);
+  }
 };
 
 /** Single process-wide UI state for shellui.elf. */
 extern ToolboxUiState g_ui;
-
-/*
- * Compatibility references — same storage as g_ui members.
- * Prefer g_ui.field in new code.
- */
-extern bool &is_plugin;
-extern bool &is_su_menu;
-extern bool &is_debug_settings;
-extern bool &is_cheats;
-extern bool &is_auto_plugin;
-extern bool &is_remote_play;
-extern bool &is_plapps;
-extern bool &cheats_shortcut_activated;
-extern bool &cheats_shortcut_activated_not_open;
-extern bool &is_game_open;
-extern bool &is_current_game_open;
-extern bool &g_all_cpu_usage;
-
-extern std::string &running_tid;
-extern std::string &current_menu_tid;
-extern std::string &currentCheatTID;
-extern std::string &remote_play_info;
-
-extern std::vector<GameEntry> &games_list;
-extern std::vector<Plugins> &plugins_list;
-extern std::vector<Plugins> &auto_list;
-extern std::vector<Payloads_Apps> &payloads_apps_list;
-
-/** Points at g_ui.cheat_enabled_map[0]. */
-extern int *const cheatEnabledMap;
-
-extern std::atomic_bool &cheat_action_in_progress;
-extern std::atomic_bool &download_kstuff_thread_in_progress;

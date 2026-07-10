@@ -102,9 +102,9 @@ bool read_plugin_header(const std::string& path, CustomPluginHeader& header) {
 
 bool is_plugin_or_elf_name(const char* name) {
   const bool is_elf = strstr(name, ".elf") != nullptr;
-  const bool is_plugin = strstr(name, ".plugin") != nullptr;
+  const bool is_plugin_ext = strstr(name, ".plugin") != nullptr;
   const bool is_auto = strstr(name, ".auto_start") != nullptr;
-  return (is_plugin || is_elf) && !is_auto;
+  return (is_plugin_ext || is_elf) && !is_auto;
 }
 
 template <typename G>
@@ -157,9 +157,9 @@ void append_plugin_entry(G& page, const std::string& directory, const char* file
   entry.version = header.plugin_version;
   entry.id = id;
   if (plugins_xml)
-    plugins_list.push_back(entry);
+    g_ui.plugins_list.push_back(entry);
   else
-    auto_list.push_back(entry);
+    g_ui.auto_list.push_back(entry);
 }
 
 template <typename G>
@@ -185,7 +185,7 @@ void append_homebrew_game(G& page, const std::string& game_dir, const char* dir_
   game.dir_name = dir_name;
   game.icon_path = icon_path;
   game.id = "id_orionhen_pl_loader_" + title_id + "_" + std::to_string(random_num);
-  games_list.push_back(game);
+  g_ui.games_list.push_back(game);
 
   page.button(game.id, "(" + title_id + ") " + title,
               shown_path + " | 版本: " + ver, std::nullopt, icon_path);
@@ -267,7 +267,7 @@ void append_cheat_entries(G& page, cJSON* root, const std::string& tid,
       page.button(id_attr, name, "为 " + game_name + " 启用/禁用 " + name, desc,
                   "tex_game_icon");
     }
-    cheatEnabledMap[id] = enabled;
+    g_ui.set_cheat_enabled(id, enabled);
   }
 }
 
@@ -302,17 +302,17 @@ void generate_remote_play_xml(std::string& xml_buffer) {
   GetEncodedAccountID(AccountID, dec_account_id);
   shellui_log("Get encoded account id ==> %s", AccountID);
 
-  remote_play_info = "账号 ID: " + std::string(AccountID);
+  g_ui.remote_play_info = "账号 ID: " + std::string(AccountID);
   {
     std::stringstream ss;
     ss << std::hex << std::uppercase << dec_account_id;
-    remote_play_info += "\n解码后账号 ID: " + ss.str();
+    g_ui.remote_play_info += "\n解码后账号 ID: " + ss.str();
   }
 
   const uint32_t pinCode = GeneratePINCode();
   shellui_log("Pin code => %d", pinCode);
   sprintf(pin_code, "PIN 码  : %04d %04d    ", pinCode / 10000, pinCode % 10000);
-  remote_play_info += "\n" + std::string(pin_code);
+  g_ui.remote_play_info += "\n" + std::string(pin_code);
   shellui_log("Pin code str => %s", pin_code);
 
   page.label("id_pin", pin_code, ps5ui::Style::Center)
@@ -371,36 +371,36 @@ void generate_cheats_xml(std::string& new_xml, std::string& not_open_tid,
       running_as_debug_settings ? "id_debug_settings" : "id_cheat_title";
 
   int appid = -1;
-  is_game_open = Get_Running_App_TID(running_tid, appid);
-  is_current_game_open =
-      is_game_open &&
-      running_tid == (show_while_not_open ? not_open_tid : running_tid);
+  g_ui.is_game_open = Get_Running_App_TID(g_ui.running_tid, appid);
+  g_ui.is_current_game_open =
+      g_ui.is_game_open &&
+      g_ui.running_tid == (show_while_not_open ? not_open_tid : g_ui.running_tid);
 
-  if (!is_game_open && !show_while_not_open) {
+  if (!g_ui.is_game_open && !show_while_not_open) {
     ps5ui::Page page(list_id, "OrionHEN 金手指 - 当前没有打开的游戏");
     append_download_cheats_block(page);
     new_xml = page.build();
     return;
   }
 
-  running_tid = show_while_not_open ? not_open_tid : running_tid;
+  g_ui.running_tid = show_while_not_open ? not_open_tid : g_ui.running_tid;
   IPC_Client& client = IPC_Client::getInstance(true);
 
   std::string game_ver;
-  if (!client.GameVerFromTid(running_tid, game_ver))
+  if (!client.GameVerFromTid(g_ui.running_tid, game_ver))
     game_ver = "无法检测补丁版本";
 
   ps5ui::Page page(list_id,
-                   "OrionHEN 金手指 - " + running_tid + " - " + game_ver);
+                   "OrionHEN 金手指 - " + g_ui.running_tid + " - " + game_ver);
 
-  if (!is_game_open && show_while_not_open) {
+  if (!g_ui.is_game_open && show_while_not_open) {
     page.label("id_cheat_disclaimer",
-               running_tid + " 当前未运行，除非打开游戏否则无法激活任何金手指",
+               g_ui.running_tid + " 当前未运行，除非打开游戏否则无法激活任何金手指",
                ps5ui::Style::Center);
   }
 
   std::string cheat_path;
-  if (!client.GetGameCheats(running_tid, game_ver, cheat_path)) {
+  if (!client.GetGameCheats(g_ui.running_tid, game_ver, cheat_path)) {
     append_download_cheats_block(page);
     new_xml = page.build();
     return;
@@ -427,8 +427,8 @@ void generate_cheats_xml(std::string& new_xml, std::string& not_open_tid,
   const std::string authors = join_authors(res_json.get());
   page.label("credits", "金手指作者: " + authors, ps5ui::Style::Center);
 
-  append_cheat_entries(page, res_json.get(), running_tid, game_name,
-                       is_game_open && is_current_game_open);
+  append_cheat_entries(page, res_json.get(), g_ui.running_tid, game_name,
+                       g_ui.is_game_open && g_ui.is_current_game_open);
   new_xml = page.build();
 }
 

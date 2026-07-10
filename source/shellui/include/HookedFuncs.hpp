@@ -334,7 +334,6 @@ extern  std::string uilib_dll;
 extern  std::string plugin_xml;
 extern  std::string debug_settings_xml;
 extern  std::string remote_play_xml;
-// plugins_list / is_game_open / … → shellui_state.hpp (g_ui + aliases)
 extern MonoImage* pui_img;
 extern MonoImage* AppSystem_img;
 extern MonoObject* Game;

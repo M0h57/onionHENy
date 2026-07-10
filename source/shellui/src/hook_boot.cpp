@@ -37,14 +37,14 @@ bool handle_uri_boot_common(MonoString* uri, int opt, MonoString* titleIdForBoot
 #if SHELL_DEBUG==1
       shellui_log("cheats_shortcut URI detected");
 #endif
-      cheats_shortcut_activated = true;
+      g_ui.cheats_shortcut_activated = true;
       return true; // Signal to redirect
     }
     else if(uri_string == "OrionHEN?Cheats_not_open") {
 #if SHELL_DEBUG==1
       shellui_log("cheats_shortcut (not open) URI detected");
 #endif
-      cheats_shortcut_activated_not_open = true;
+      g_ui.cheats_shortcut_activated_not_open = true;
       return true;
     }
     else if (uri_string == "OrionHEN?Dump") {

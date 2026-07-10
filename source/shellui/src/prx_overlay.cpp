@@ -326,7 +326,7 @@ void init_overlay_once(unsigned int idle_tid[kCpuCores]) {
 /** Sample CPU into Usage[]; formats CPU_USAGE. Returns false if sampling skipped. */
 bool sample_cpu_usage(unsigned int idle_tid[kCpuCores], int& current_bank,
                       char* cpu_usage, size_t cpu_usage_sz) {
-  if (!g_settings.overlay_cpu && !g_all_cpu_usage)
+  if (!g_settings.overlay_cpu && !g_ui.all_cpu_usage)
     return false;
 
   // Legacy path: retry until a dual-bank sample succeeds.
@@ -347,7 +347,7 @@ bool sample_cpu_usage(unsigned int idle_tid[kCpuCores], int& current_bank,
     calc_usage(idle_tid, &gThread_Data[!current_bank], &gThread_Data[current_bank],
                Usage);
 
-    if (g_all_cpu_usage) {
+    if (g_ui.all_cpu_usage) {
       snprintf(cpu_usage, cpu_usage_sz,
                "%2.0f%% %2.0f%% %2.0f%% %2.0f%% %2.0f%% %2.0f%% %2.0f%% %2.0f%%",
                Usage[0], Usage[1], Usage[2], Usage[3], Usage[4], Usage[5], Usage[6],
@@ -399,7 +399,7 @@ void update_overlay_metrics(unsigned int idle_tid[kCpuCores], int& current_bank)
     set_label_text("id_gpu_usage_value", gpu_usage);
   }
 
-  if (g_settings.overlay_cpu || g_all_cpu_usage) {
+  if (g_settings.overlay_cpu || g_ui.all_cpu_usage) {
     int cpu_t = 0;
     sceKernelGetCpuTemperature(&cpu_t);
     snprintf(cpu_temp, sizeof(cpu_temp), "%dC", cpu_t);

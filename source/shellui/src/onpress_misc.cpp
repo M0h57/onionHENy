@@ -47,7 +47,7 @@ static OnPressResult id_save_rp_info(OnPressContext &ctx) {
     notify("Failed to open Remote Play info file");
     return OnPressResult::EarlyReturn;
   }
-  rp_file << remote_play_info;
+  rp_file << g_ui.remote_play_info;
   rp_file.close();
   notify("Remote Play info saved to /mnt%s", usb_rp_path.c_str());
   return OnPressResult::Handled;

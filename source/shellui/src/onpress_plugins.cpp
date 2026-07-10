@@ -15,10 +15,10 @@ static OnPressResult prefix_id_plugin(OnPressContext &ctx) {
   if (ctx.id.rfind("id_plugin", 0) != 0) {
     return OnPressResult::NotMine;
   }
-  if (plugins_list.empty()) {
+  if (g_ui.plugins_list.empty()) {
     return OnPressResult::Handled;
   }
-  for (auto plugin : plugins_list) {
+  for (auto plugin : g_ui.plugins_list) {
     if (plugin.id != ctx.id) {
       continue;
     }
@@ -73,10 +73,10 @@ static OnPressResult prefix_id_auto_plugin(OnPressContext &ctx) {
   if (ctx.id.rfind("id_auto_plugin", 0) != 0) {
     return OnPressResult::NotMine;
   }
-  if (auto_list.empty()) {
+  if (g_ui.auto_list.empty()) {
     return OnPressResult::Handled;
   }
-  for (auto plugin : auto_list) {
+  for (auto plugin : g_ui.auto_list) {
     if (plugin.id != ctx.id) {
       continue;
     }

@@ -22,32 +22,32 @@ void* load_plugin_thread(void* args) {
     return nullptr;
 }
 void* download_cheats_thr(void*){
-    if(cheat_action_in_progress){
+    if(g_ui.cheat_action_in_progress){
         notify("Cheat action already in progress, please wait for it to complete...");
         pthread_exit(nullptr);
         return nullptr;
     }
-    cheat_action_in_progress = true;
+    g_ui.cheat_action_in_progress = true;
     notify("Preparing to download the %s cheats repo...", g_settings.selected_cheats_repo == CHEATS_REPO_ORIONHEN ? "OrionHEN PS5" : "GoldHEN PS4");
     IPC_Client& util_ipc = IPC_Client::getInstance(true);
     // daemon shows notification when done
     util_ipc.Cheats_Action(DOWNLOAD_CHEATS, g_settings.selected_cheats_repo);
     
-    cheat_action_in_progress = false;
+    g_ui.cheat_action_in_progress = false;
     pthread_exit(nullptr);
     return nullptr;
 }
 
 void* kstuff_download_thread(void* args) {
-    if (download_kstuff_thread_in_progress) {
+    if (g_ui.download_kstuff_thread_in_progress) {
         notify("Download action already in progress, please wait for it to complete...");
         pthread_exit(nullptr);
         return nullptr;
     }
-    download_kstuff_thread_in_progress = true;
+    g_ui.download_kstuff_thread_in_progress = true;
     IPC_Client& util_ipc = IPC_Client::getInstance(true);
     shellui_log("Ret: 0x%X", util_ipc.DownloadKstuff());
-    download_kstuff_thread_in_progress = false;
+    g_ui.download_kstuff_thread_in_progress = false;
     pthread_exit(nullptr);
     return nullptr;
 }

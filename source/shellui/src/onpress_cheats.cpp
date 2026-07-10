@@ -12,7 +12,7 @@ static OnPressResult prefix_id_cheat(OnPressContext &ctx) {
   if (ctx.id.rfind("id_cheat_", 0) != 0) {
     return OnPressResult::NotMine;
   }
-  if (!is_current_game_open) {
+  if (!g_ui.is_current_game_open) {
     notify("The Game is not running, to activate cheats launch the game first");
     shellui_log("Failed to activate %s, game is not running", ctx.id.c_str());
     return OnPressResult::EarlyReturn;
@@ -32,10 +32,9 @@ static OnPressResult prefix_id_cheat(OnPressContext &ctx) {
   shellui_log("Got proc for %s, tid %s, pid %i", ctx.id.c_str(), tid, pid);
   if (IPC_Client::getInstance(true).ToggleGameCheat(pid, tid, cheat_id,
                                                     cheat_name)) {
-    (void)toolbox::reset_cheat_map_if_tid_changed(currentCheatTID, cheatEnabledMap,
-                                                  MAX_CHEATS, tid);
+    (void)g_ui.reset_cheats_if_tid_changed(tid);
     const bool enabled = ctx.value == "1";
-    toolbox::set_cheat_enabled(cheatEnabledMap, MAX_CHEATS, cheat_id, enabled);
+    g_ui.set_cheat_enabled(cheat_id, enabled);
     notify("★ %s [%s] ★", cheat_name.c_str(), enabled ? "ON" : "OFF");
   } else {
     notify("[ERROR] Failed to activate %s", cheat_name.c_str());

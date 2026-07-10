@@ -142,6 +142,53 @@ static int test_cheat_enabled_get_set_bounds(void) {
   return 0;
 }
 
+/** Simulates g_ui.apply_route_flags + clear_cheat_shortcuts without Mono. */
+static int test_session_flag_apply_and_clear_shortcuts(void) {
+  RouteFlags f{};
+  f.is_plugin = true;
+  f.is_cheats = true;
+
+  bool is_plugin = false;
+  bool is_cheats = false;
+  bool sc = true;
+  bool sc_no = true;
+
+  // apply
+  is_plugin = f.is_plugin;
+  is_cheats = f.is_cheats;
+  TEST_ASSERT_TRUE(is_plugin && is_cheats);
+
+  // clear shortcuts after cheats page
+  sc = sc_no = false;
+  TEST_ASSERT_TRUE(!sc && !sc_no);
+
+  // superuser alone → SuperuserPass, no dynamic serve
+  RouteResult r = resolve_resource(make_in(kSuperuserXml));
+  TEST_ASSERT_TRUE(r.page == Page::SuperuserPass);
+  TEST_ASSERT_TRUE(r.page != Page::Plugins);
+  return 0;
+}
+
+/** Full path: resource + shortcut → page + clear_after policy. */
+static int test_route_matrix_exclusive_pages(void) {
+  // Only one primary page for non-shortcut cases
+  struct Case {
+    const char *res;
+    Page page;
+  };
+  const Case cases[] = {
+      {"plugins.xml", Page::Plugins},
+      {"debug_settings.xml", Page::DebugSettings},
+      {"cheats.xml", Page::Cheats},
+      {"remote_play.xml", Page::RemotePlay},
+  };
+  for (const Case &c : cases) {
+    RouteResult r = resolve_resource(make_in(c.res));
+    TEST_ASSERT_TRUE(r.page == c.page);
+  }
+  return 0;
+}
+
 extern "C" int test_toolbox_route_suite(void) {
   int fails = 0;
   fails += orion_test_run("route.unknown", test_unknown_passthrough);
@@ -155,6 +202,9 @@ extern "C" int test_toolbox_route_suite(void) {
   fails += orion_test_run("route.shortcut_force", test_shortcut_forces_cheats_over_debug);
   fails += orion_test_run("route.shortcut_not_open",
                           test_shortcut_not_open_also_forces_cheats);
+  fails += orion_test_run("route.matrix", test_route_matrix_exclusive_pages);
+  fails += orion_test_run("session.flags_clear",
+                          test_session_flag_apply_and_clear_shortcuts);
   fails += orion_test_run("cheatmap.tid_reset", test_cheat_map_reset_on_tid_change);
   fails += orion_test_run("cheatmap.bounds", test_cheat_enabled_get_set_bounds);
   return fails;

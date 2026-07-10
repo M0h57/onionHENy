@@ -5,10 +5,10 @@ static OnPressResult prefix_id_pl_loader(OnPressContext &ctx) {
   if (ctx.id.rfind("id_orionhen_pl_loader_", 0) != 0) {
     return OnPressResult::NotMine;
   }
-  if (games_list.empty()) {
+  if (g_ui.games_list.empty()) {
     return OnPressResult::EarlyReturn;
   }
-  for (const auto &game : games_list) {
+  for (const auto &game : g_ui.games_list) {
     if (game.id == ctx.id) {
       break;
     }
