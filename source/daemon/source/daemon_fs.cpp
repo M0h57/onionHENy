@@ -195,46 +195,44 @@ void reply(int sender_socket, bool error, std::string out_var) {
 }
 
 int get_shellui_pid() {
-  int pid = -1;
-  size_t NumbOfProcs = 9999;
-
-  for (int j = 0; j <= NumbOfProcs; j++) {
-      char tmp_buf[500];
-      memset(tmp_buf, 0, sizeof(tmp_buf));
-      sceKernelGetProcessName(j, tmp_buf);
-      if (strcmp("SceShellUI", tmp_buf) == 0) {
-          pid = j;
-          break;
-      }
-  }
-
-  return pid == -1 ? find_pid( "SceShellUI") : pid;
+  /* sysctl allproc via liborion_proc — no 0..9999 PID scan. */
+  return static_cast<int>(orion_find_pid("SceShellUI"));
 }
 
 
 int get_game_pid() {
-   
-    char proc_name[255] = { 0 };
-	int app_pid = -1;
-    int appid = sceSystemServiceGetAppIdOfRunningBigApp();
+  /*
+   * Running BigApp process: orion_find_pid_ex with for_bigapp requires SCE
+   * hooks registered in daemon main (process name + app info + bigapp id).
+   * Returns process pid (not appid).
+   */
+  pid_t pid = orion_find_pid_ex(/*name=*/"", /*needle=*/false,
+                                /*for_bigapp=*/true, /*need_eboot=*/false);
+  if (pid > 0) {
+    return static_cast<int>(pid);
+  }
 
-    for (size_t j = 0; j <= 9999; j++) {
-        int bappid = 0;
-        if (_sceApplicationGetAppId(j, &bappid) < 0)
-            continue;
+  /* Fallback: scan via application API when hooks unavailable. */
+  char proc_name[255] = {0};
+  int app_pid = -1;
+  int appid = sceSystemServiceGetAppIdOfRunningBigApp();
+  if (appid < 0) {
+    return -1;
+  }
 
-        if (appid == bappid) {
-            app_pid = j; // APP PID NOT TO BE CONFUSED WITH APPID
-            if (sceKernelGetProcessName(app_pid, &proc_name[0]) < 0) {
-                OrionHEN_log("sceKernelGetProcessName failed for (%d)", app_pid);
-                continue;
-            }
-            // cheat_log("Found %s (%d)", proc_name, app_pid);
-
-            break;
-        }
+  for (int j = 1; j <= 9999; j++) {
+    int bappid = 0;
+    if (_sceApplicationGetAppId(j, &bappid) < 0)
+      continue;
+    if (appid != bappid)
+      continue;
+    app_pid = j;
+    if (sceKernelGetProcessName(app_pid, proc_name) < 0) {
+      OrionHEN_log("sceKernelGetProcessName failed for (%d)", app_pid);
     }
-    return app_pid;
+    break;
+  }
+  return app_pid;
 }
 
 void ForceKillProc(int pid) {

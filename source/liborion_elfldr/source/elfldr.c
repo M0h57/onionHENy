@@ -35,9 +35,9 @@ along with this program; see the file COPYING. If not, see
 
 #include <ps5/kernel.h>
 
-#include "../include/elfldr.h"
-#include "../include/log.h"
-#include "../include/pt.h"
+#include <orion/elfldr.h>
+#include <orion/elfldr_log.h>
+#include <orion/pt.h>
 
 
 #ifndef IPV6_2292PKTOPTIONS
@@ -119,8 +119,11 @@ elfldr_load(pid_t pid, uint8_t *elf) {
 
   int error = 0;
 
-  // Compute size of virtual memory region.
+  // Compute size of virtual memory region (PT_LOAD only).
   for(int i=0; i<ehdr->e_phnum; i++) {
+    if(phdr[i].p_type != PT_LOAD) {
+      continue;
+    }
     if(phdr[i].p_vaddr < min_vaddr) {
       min_vaddr = phdr[i].p_vaddr;
     }
@@ -200,6 +203,7 @@ elfldr_load(pid_t pid, uint8_t *elf) {
                          ROUND_PG(phdr[i].p_memsz),
                          PFLAGS(phdr[i].p_flags))) {
 	LOG_PERROR("kernel_mprotect");
+	error = 1;
       }
     } else {
       if(pt_mprotect(pid, ctx.base_addr + phdr[i].p_vaddr,
@@ -313,37 +317,31 @@ elfldr_payload_args(pid_t pid) {
 /**
  * Prepare registers of a process for execution of an ELF.
  **/
-// static int
-// elfldr_prepare_exec(pid_t pid, uint8_t *elf) {
-//   intptr_t entry;
-//   intptr_t args;
-//   struct reg r;
+/**
+ * Escape jail and raise privileges (bootstrapper / self-elevate path).
+ * Does not use ptrace — safe to call on self without attach.
+ **/
+int
+elfldr_raise_privileges(pid_t pid) {
+  static const uint8_t caps[16] = {0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,
+				   0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff};
+  intptr_t vnode;
 
-//   if(pt_getregs(pid, &r)) {
-//     LOG_PERROR("pt_getregs");
-//     return -1;
-//   }
+  if(!(vnode=kernel_get_root_vnode())) {
+    return -1;
+  }
+  if(kernel_set_proc_rootdir(pid, vnode)) {
+    return -1;
+  }
+  if(kernel_set_proc_jaildir(pid, 0)) {
+    return -1;
+  }
+  if(kernel_set_ucred_uid(pid, 0)) {
+    return -1;
+  }
+  if(kernel_set_ucred_caps(pid, caps)) {
+    return -1;
+  }
 
-//   if(!(entry=elfldr_load(pid, elf))) {
-//     LOG_PUTS("elfldr_load failed");
-//     return -1;
-//   }
-
-//   if(!(args=elfldr_payload_args(pid))) {
-//     LOG_PUTS("elfldr_payload_args failed");
-//     return -1;
-//   }
-
-//   pt_setlong(pid, r.r_rsp-8, r.r_rip);
-//   r.r_rsp -= 8;
-//   r.r_rip = entry;
-//   r.r_rdi = args;
-
-//   if(pt_setregs(pid, &r)) {
-//     LOG_PERROR("pt_setregs");
-//     pt_detach(pid, SIGKILL);
-//     return -1;
-//   }
-
-//   return 0;
-// }
+  return 0;
+}

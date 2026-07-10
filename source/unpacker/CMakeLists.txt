@@ -62,7 +62,8 @@ set(LZMA_LIB ${D_SRC}/../../extern/7zip-sdk/C/LzmaLib.c ${D_SRC}/../../extern/7z
 				${D_SRC}/../../extern/7zip-sdk/C/Threads.c
 				${D_SRC}/../../extern/7zip-sdk/C/LzFindOpt.c)
 
-file(GLOB SrcFiles ${D_SRC}/*.c  ${D_SRC}/../include/*.h ${LZMA_LIB})
+# main.c only — dead local pt/elfldr clones removed (spawn is remote 9021).
+set(SrcFiles ${D_SRC}/main.c ${LZMA_LIB})
 
 set(CMAKE_C_FLAGS "--target=x86_64-sie-ps5 -DPPR -DPS5 -DPS5_FW_VERSION=${V_FW} ")
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-keyword-macro -fPIC -fPIE -march=znver2 -Wall -Werror -fstack-protector-all")

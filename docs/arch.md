@@ -97,6 +97,7 @@ OrionHEN/
 │   ├── fps_elf/      # 游戏 overlay
 │   ├── unpacker/     # 最终 OrionHEN.elf
 │   ├── libhijacker/ libNineS/ libNidResolver/
+│   ├── liborion_*    # 共享：ipc/settings/proc/platform/ready/detour/plugin/playtime/elfldr
 │   ├── extern/       # 第三方源码
 │   ├── include/ lib/ # 公共头文件与预编译库
 │   └── vendor/       # 同步后的 kstuff 等
@@ -188,7 +189,8 @@ OrionHEN/
 | 库 | 作用 |
 |----|------|
 | **libhijacker** | 进程劫持、kernel R/W、spawner、调试、通知；依赖 NidResolver |
-| **libNineS** | ptrace attach、ELF 注入目标进程（ShellUI Toolbox 路径） |
+| **liborion_elfldr** | **唯一** ptrace/`pt_*` + inject 侧 `elfldr_load` / `elfldr_payload_args` / `elfldr_raise_privileges`；**authid 不在每条 ptrace 上翻转**（由 inject 入口一次提权） |
+| **libNineS** | 进程注入编排（`inject_elf` / stager）；**pt/elfldr 实现来自 liborion_elfldr** |
 | **libNidResolver** | PS5 模块 NID 解析（SHA1 等） |
 | **liborion_ipc** | **客户端**（injectee 双单例）+ **服务端传输环**（`ipc_server`：listen/accept/loop/reply）；daemon/util/shellui/fps 共用 |
 | **liborion_settings** | 统一 `config.ini` schema；各进程以 `orion::Settings g_settings` 为真相源 |
@@ -197,7 +199,7 @@ OrionHEN/
 | **liborion_platform** | 平台叶子：`if_exists` / `touch_file` / `rmtree`、`OrionHEN_log`（可配置 tag/路径）、`orion_notify`；修一处全树受益 |
 | **liborion_ready** | 跨进程 ready/runtime 标记（`/system_tmp/orion_ready/<name>` + wait/timeout）；替代固定 sleep 与 ad-hoc 文件旗 |
 | **orion/lnc.h** | 共享 LNC 启动 ABI（`LncAppParam` / `Flag` / 错误码）；daemon `launcher.hpp` 仅为 shim |
-| **libNineS** | ptrace 注入；**proc/ucred 走 liborion_proc**（不再自带副本） |
+| **libNineS** | ptrace 注入编排；**proc/ucred → liborion_proc**；**pt/elfldr → liborion_elfldr** |
 
 #### Daemon 模块（加深后）
 

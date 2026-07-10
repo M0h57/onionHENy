@@ -20,10 +20,13 @@ pid_t orion_find_pid(const char *name);
 pid_t orion_find_pid_substr(const char *substr);
 
 /**
- * Extended lookup used by ShellUI toolbox / cheats.
+ * Extended lookup used by ShellUI toolbox / cheats / daemon inject.
  * @param needle     if true, substring match process name; else exact.
- * @param for_bigapp if true, match running big-app (requires host SCE helpers).
+ * @param for_bigapp if true, match running big-app (requires host SCE helpers
+ *                   via orion_proc_set_sce_hooks).
  * @param need_eboot if true with for_bigapp, require eboot-style name match.
+ * Pass name="" + for_bigapp=true + need_eboot=false for "any process of the
+ * running BigApp" (daemon get_game_pid).
  */
 pid_t orion_find_pid_ex(const char *name, bool needle, bool for_bigapp,
                         bool need_eboot);

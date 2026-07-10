@@ -18,9 +18,9 @@
 extern bool (*boot_orig)(MonoString* uri, int opt, MonoString* titleIdForBootAction);
 extern bool (*boot_orig_2)(MonoString* uri, int opt);
 #include "shellui_state.hpp"
+#include <orion/platform.h>
 
 std::string Mono_to_String(MonoString *str);
-bool if_exists(const char* path);
 
 bool handle_uri_boot_common(MonoString* uri, int opt, MonoString* titleIdForBootAction) {
     std::string uri_string = Mono_to_String(uri);

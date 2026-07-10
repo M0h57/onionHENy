@@ -22,7 +22,6 @@ along with this program; see the file COPYING. If not, see
 #include <freebsd-helper.h>
 #include <libgen.h>
 #include <ps5/klog.h>
-#include "pt.h"
 #include <orion/platform.h>
 #include <orion/proc_query.h>
 #include <orion/plugin.h>
@@ -48,50 +47,10 @@ atomic_bool not_connected = false;
 #define SCE_NET_CTL_ERROR_NOT_CONNECTED 0x80412108
 #define SCE_NET_CTL_ERROR_NOT_AVAIL 0x80412109
 
-/* OrionHEN: no local spawn — plugins launch via external elfldr :9021. */
-
- static int
-     sys_ptrace(int request, pid_t pid, caddr_t addr, int data) {
-     pid_t mypid = getpid();
-     uint64_t authid;
-     int ret;
-
-     if (!(authid = kernel_get_ucred_authid(mypid))) {
-         return -1;
-     }
-     if (kernel_set_ucred_authid(mypid, 0x4800000000010003l)) {
-         return -1;
-     }
-
-     ret = (int)syscall(SYS_ptrace, request, pid, addr, data);
-
-     if (kernel_set_ucred_authid(mypid, authid)) {
-         return -1;
-     }
-
-     return ret;
- }
-
-
- int pt_detach_proc(pid_t pid, int sig) {
-     if (sys_ptrace(PT_DETACH, pid, 0, sig) == -1) {
-         return -1;
-     }
-
-     return 0;
- }
-
- int pt_attach_proc(pid_t pid) {
-     if (sys_ptrace(PT_ATTACH, pid, 0, 0) == -1) {
-         return -1;
-     }
-
-     if (waitpid(pid, 0, 0) == -1) {
-         return -1;
-     }
-
-     return 0;
- }
+/* OrionHEN: no local spawn — plugins launch via external elfldr :9021.
+ * ptrace attach/mmap: liborion_elfldr (pt_attach / pt_mmap). Authid is raised
+ * once in util main (DEBUG_AUTHID), not flipped per ptrace call.
+ */
 
 int get_ip_address(char *ip_address)
 {

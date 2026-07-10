@@ -1,0 +1,220 @@
+# OrionHEN 架构审计报告
+
+基于 `docs/arch.md`、`docs/util_arch/` 与 `source/` 源码的静态审计。项目整体方向正确（双守护进程、`liborion_*` 抽公共库、ready 协议替代固定 sleep），主要风险集中在 **协议边界、标志生命周期、并发、注入/加载路径的实现漂移**。
+
+> 审计日期：2026-07-10  
+> 范围：`source/` 第一方代码（daemon / util / shellui / bootstrapper / fps_elf / liborion_* / libhijacker / libNineS），对照 `docs/arch.md`。
+
+---
+
+## 1. 模块地图与关联关系
+
+```text
+OrionHEN.elf (unpacker / LZMA)
+        │
+        ▼
+bootstrapper.elf ──9021──► util.elf ──► kstuff.elf ──► daemon.elf
+                              │                           │
+                              │ Unix IPC                  │ ptrace inject
+                              │ 0x8*                      ├─► shellui → SceShellUI
+                              │                           └─► fps_elf → 游戏
+                              │
+              shellui / fps ──┼── crit: /system_tmp/OrionHEN_crit_service (0x9*)
+                              └── util: /system_tmp/OrionHEN_util_service (0x8*)
+```
+
+| 层 | 模块 | 职责 |
+|----|------|------|
+| 启动链 | unpacker → bootstrapper | 解压、写盘、顺序拉起 |
+| Critical | daemon | Toolbox/FPS 注入、FS IPC、util 看门狗 |
+| Utility | util | 金手指、下载、9028、重业务 |
+| UI | shellui / fps_elf | Mono 注入 / overlay |
+| 共享库 | `liborion_{ipc,settings,proc,platform,ready,detour,plugin,playtime}` | 协议/配置/进程/平台叶子能力 |
+| 注入原语 | libhijacker / libNineS / libNidResolver | 劫持、ptrace ELF 注入、NID |
+
+**依赖方向（目标态，大体已落地）：**
+
+```text
+shellui/fps ──► orion_ipc / settings / detour / ready
+daemon/util ──► orion_ipc / settings / proc / platform / ready
+cheats      ──► util_platform + pt/mdbg/kernel
+NineS       ──► orion_proc（不再自带 proc 副本）
+```
+
+**运行时环状耦合（有意，但脆弱）：**
+
+- util ↔ daemon（rest 后 toolbox 再注入 vs util 看门狗）
+- daemon → shellui（inject）
+- shellui → 双 daemon（IPC）
+
+任一侧挂掉都会卡住 rest 恢复。
+
+---
+
+## 2. 架构 Bad Smell（结构债）
+
+### 2.1 共享层「抽了一半」
+
+| 已共享 | 仍散落在各模块 |
+|--------|----------------|
+| log/notify/fs (`liborion_platform`) | shellui 本地 `if_exists` 前向声明；bootstrapper 自有 notify 包装 |
+| IPC 传输环 | 业务仍在 `daemon/util ipc_handle`（合理），但 **JSON 拼装/recv 语义** 仍脆弱 |
+| Settings schema | 三套 `LoadSettings` 契约（void/bool/mtime） |
+| proc 查询 | 尚可；elfldr/pt **三份分叉副本** |
+
+**elfldr/pt 三叉戟（高维护成本 + 行为漂移）：**
+
+- `bootstrapper/source/{elfldr,pt}.c`
+- `libNineS/src/{elfldr,pt}.c`
+- `unpacker/source/{elfldr,pt}.c`
+
+NineS 已避免 per-call authid 翻转；bootstrapper/util attach 仍在翻转。util 金手指走 `pt_attach_proc`（翻转）+ NineS `pt_mmap`（不翻转）——**同一条路径两套策略**。
+
+### 2.2 Settings：单 schema、三份真相
+
+- 进程内各有一份 `g_settings`（daemon / util / shellui）——多进程可接受。
+- **同一进程内无锁**，IPC 写 + jailbreak 线程读 → 数据竞争。
+- Fan IPC 只改内存，不 `settings_save`；与 shellui 磁盘双写 twin 模型不一致。
+- util：`void LoadSettings()` 定义 vs 多处 `bool LoadSettings()` 声明（ODR/潜在 UB）。
+- daemon mtime 缓存：只盯「第一个存在的 path」，双路径不同步时可能误跳过重载。
+
+### 2.3 Ready 标志语义泄漏
+
+文档称 `util_booted` 用于 rest-mode 延迟；**实现里冷启动几乎总会命中**：
+
+1. util 先起 → `orion_ready_signal(util)` → 立刻 `signal(util_booted)`
+2. daemon 再起 → `cmd_enable_toolbox` 见 `util_booted` → `sleep(rest_mode_delay_seconds)`
+
+结果：`Rest_Mode_Delay_Seconds` 会拖慢 **首次** Toolbox 注入，表现为「toolbox 卡很久」。
+
+Bootstrapper 只 clear util/kstuff/daemon/toolbox，**不清** `util_booted` / `fps_overlay` → 同 boot 再跑 HEN 时标志粘滞。
+
+### 2.4 浅模块 / 胖入口
+
+- `shellui/src/prx.cpp` ~800+ 行、`toolbox_xml.cpp`、`daemon main` 仍偏厚；onpress 已表驱动，但生命周期/钩子入口仍难测。
+- `util_platform` 是金手指正确 seam；daemon 侧 `get_*_pid` 仍是 0..9999 盲扫，未完全收敛到 `liborion_proc`。
+- `BREW_LAST_RET`、`BREW_UTIL_TEST_CONNECTION` 等协议位 **名义存在、语义残废**（见下节）。
+
+### 2.5 测试覆盖偏斜
+
+- util 有 host 单测（settings/ready/cheats 等）——好。
+- daemon inject、IPC 传输、elfldr 分叉、shellui 并发 IPC **几乎无对等测试**。  
+  接口复杂、实现重的路径（注入、ptrace）反而不在可测 seam 上。
+
+---
+
+## 3. 可能的 BUG（按严重度）
+
+### 高
+
+| # | 位置 | 问题 |
+|---|------|------|
+| 1 | `daemon_inject.cpp` `cmd_enable_fps` / `_new` | **`SuspendApp(appid)` 把 appid 当 pid**。注释已写清 “APP PID NOT TO BE CONFUSED WITH APPID”，却在解析 pid 前 suspend；`_new` 甚至 **suspend 错 id、resume 对 pid**。可致停错进程或挂起失败。 |
+| 2 | `util/cpp_service.cpp` ~141；`daemon_jailbreak.cpp` ~164 | Jailbreak 重试条件 **`isProcessAlive` 逻辑反了**：进程存活时立刻 break（日志却写 “process died”）；应 `!isProcessAlive`。首次 `getHijacker` 失败即放弃，存活目标几乎无法重试。 |
+| 3 | 同上 `cpp_service` 循环后 | `spawned->jailbreak(true)` **无空指针检查**；失败路径仍 notify “granted jailbreak”。 |
+| 4 | `liborion_ipc` `ipc_server.cpp` | 单次 `recv` 无组帧/`MSG_WAITALL`；短读 + `std::string(msg)` 可能未保证 NUL → 脏命令/崩溃。 |
+| 5 | `ipc_server.hpp` `ipc_format_reply_body` | `out_var` **未 JSON 转义**；金手指状态、路径含 `"` `\` 时客户端解析失败。 |
+| 6 | `daemon/ipc_handle.cpp` STAT/COPY/DELETE | `string_item` 默认 `nullptr`，缺 key 时 **`stat(NULL)` / `rmtree(NULL)`**（仅 CHMOD 有检查）。 |
+| 7 | `MemoryBackends.cpp` `mapCodeCaveCommon` | `pt_mmap` **无 `MAP_FIXED`** 却要求返回地址 == `page_start` → code cave 回退基本必然失败。 |
+| 8 | `bootstrapper/elfldr.c:672` | `e_shnum * sizeof(Elf64_Ehdr)` 应为 **`Elf64_Shdr`** → section 表缓冲 undersize / OOB。 |
+| 9 | `liborion_detour/Detour.cpp` | `mprotect` 失败只打日志，仍写 jump → 注入崩溃。 |
+| 10 | NineS `elfldr.c` | `kernel_mprotect` 失败 **不设 error**（bootstrapper 会）；注入「成功」但段权限错误。 |
+| 11 | shellui 多线程共用 `IPC_Client` 单例 | 无 mutex；hook/background/onpress 并发 send/recv → 串包、25s 超时。 |
+| 12 | `util_booted` + rest delay | 冷启动首次 toolbox 被 rest 延迟；用户体感「卡死」。 |
+
+### 中
+
+| # | 位置 | 问题 |
+|---|------|------|
+| 13 | Fan IPC | 只改 `g_settings` 内存，不落盘；reload/重启回退旧阈值。 |
+| 14 | `BREW_LAST_RET` | `last_ipc_error` 局部恒 `false`，永远「成功」。 |
+| 15 | `BREW_UTIL_TEST_CONNECTION` | 枚举/测试有，**util 无 case** → health check 恒失败。 |
+| 16 | sticky ready | `util_booted`/`fps_overlay` 同 boot 再加载 HEN 不清理 → 误触发 patch_checker / FPS 注入。 |
+| 17 | util 看门狗 | 重启 util 失败 5 次后 **永久不再试**（直到 daemon 重启）。 |
+| 18 | `g_settings` / `is_handler_enabled` | 跨线程非原子读写。 |
+| 19 | 双路 toolbox 激活 | util rest 路径 `EnableToolbox` IPC + daemon 自注入，可能双 ptrace ShellUI（arch 已警告此类问题）。 |
+| 20 | Cheat 多 patch | 中途失败不回滚已写补丁 → 半启用状态。 |
+| 21 | `KILL_DAEMON` | `exit` 在 `reply` 前 → 客户端挂到超时。 |
+| 22 | `ini.h` | `sprintf` 拼 key、`strncpy` 可不 NUL；畸形 config 可污染 settings。 |
+| 23 | `common_utils.c` IP 错误路径 | `memcpy(..., "IP NOT FOUND", sizeof(ip_address))` 读越界短字面量。 |
+| 24 | ParseCheatID | `sscanf %[^_]` 无宽度，tid 缓冲可能溢出。 |
+
+### 低 / 气味
+
+- `OrionHEN_log("size %lu", size_buf)` 打的是指针不是字符串。
+- dumper `sprintf` 无 size 参数。
+- REMOUNT 路径校验逻辑怪异（短路径且不含 `/user` 才拒），不是可靠 allowlist。
+- 大量 UNUSED 命令仍进 default/失败回复——兼容有意，但无 capability 协商。
+
+---
+
+## 4. 文档 vs 代码偏差
+
+| `docs/arch.md` 说法 | 实际 |
+|---------------------|------|
+| `util_booted` 仅 rest/toolbox 延迟 | 冷启动首次 inject 也吃 delay |
+| §3.3 仍以 `toolbox_online` 为主 | 主路径是 `/system_tmp/orion_ready/toolbox`，legacy 仅兼容 |
+| 仓库布局列不全 | 缺少整组 `liborion_*` |
+| 「IPC 协议稳定」 | 线格式稳定；转义/组帧/空 path **不稳** |
+| util 可崩溃恢复 | 有 9021 重启，但 5 次后静默放弃 |
+| Runtime atomics 仅 legacy_cmd | settings/fan/`is_handler_enabled` 不是 |
+
+---
+
+## 5. 优先整改建议（按杠杆）
+
+1. **立刻修明确逻辑错误**
+   - FPS：先 `get_game_pid` / 解析 pid，再 `SuspendApp(pid)` / `ResumeApp(pid)`
+   - Jailbreak：`!isProcessAlive` + null check 后再 `jailbreak`
+   - Code cave：`MAP_FIXED` 或按返回 VA 写
+   - elfldr：`sizeof(Elf64_Shdr)`；mprotect 失败 fail-closed
+
+2. **IPC 硬化**（一处修、全树受益）
+   - 全帧 recv + 强制 NUL
+   - cJSON 转义 reply
+   - path 全 null-check
+   - 补 `BREW_UTIL_TEST_CONNECTION`；修或删 `BREW_LAST_RET`
+   - shellui：`IPC_Client` 加 mutex 或每调用独立连接
+
+3. **Ready / Settings 语义收口**
+   - rest delay 只绑 rest 信号，不要绑 `util_booted`
+   - bootstrapper clear `util_booted` + `fps_overlay`
+   - 统一 `LoadSettings` 契约；fan 走 `settings_save`
+   - `g_settings` 快照或读写锁
+
+4. **加深模块（架构债）** — **已落地（2026-07-10）**
+   - 单一 `liborion_elfldr`（合并三份 pt/elfldr，统一 authid 策略）
+   - 删除 shellui 本地 `if_exists` 前向声明；走 `orion/platform`
+   - daemon `get_shellui_pid` / `get_game_pid` 收敛到 `orion_proc`
+
+5. **补测**
+   - IPC 组帧/转义/null path 的 host 测试
+   - ready 冷启动时序测试（util 先 booted → daemon 不应 sleep rest delay）
+   - jailbreak 重试条件单元测试
+
+---
+
+## 6. 结论
+
+架构骨架（双 daemon、共享 `liborion_*`、util 承载重 IO、ready 协议）是清晰且在向深模块演进的。
+
+当前最危险的不是「缺库」，而是：
+
+1. **进程标识混用（appid vs pid）**
+2. **存活检测条件写反 + 空指针 jailbreak**
+3. **IPC 未组帧/未转义 + shellui 并发单连接**
+4. **ready/settings 生命周期与文档不符**
+5. **elfldr/pt/detour 失败未 fail-closed + 三份漂移**
+
+建议修复顺序：先做 **#1–#3 高优先级 bug 一批**（行为修正、风险低、用户体感最大），再做 IPC 硬化与 ready 语义。
+
+---
+
+## 相关文档
+
+| 文档 | 说明 |
+|------|------|
+| [arch.md](arch.md) | 总体架构 |
+| [util_arch/README.md](util_arch/README.md) | util 守护进程架构 |
+| [shellui-injection.md](shellui-injection.md) | ShellUI 注入路径 |
+| [../source/README.md](../source/README.md) | 源码树与构建 |

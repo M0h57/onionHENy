@@ -19,12 +19,12 @@
 #include <string>
 
 #include "shellui_state.hpp"
+#include <orion/platform.h>
 
 extern int (*oOnPreCreate)(MonoObject* Instance, MonoObject* element);
 extern MonoMethod* set_value_method;
 
 std::string GetPropertyValue(MonoObject* element, const char* propertyName);
-bool if_exists(const char* path);
 void ParseCheatID(const char* id, char* tid, int* cheat_id);
 
 namespace {

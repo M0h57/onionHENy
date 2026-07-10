@@ -75,6 +75,14 @@ typedef struct {
     char unkstr[1024];        // 0x82D
   } OrbisNotificationRequest; // Size = 0xC30
 
+typedef struct app_info {
+  uint32_t app_id;
+  uint64_t unknown1;
+  uint32_t app_type;
+  char title_id[10];
+  char unknown2[0x3c];
+} app_info_t;
+
 // External C declarations
 extern "C" {
     int sceKernelSendNotificationRequest(int32_t device,
@@ -84,6 +92,7 @@ extern "C" {
     int sceUserServiceGetUserName(const int userId, char *userName, const size_t size);
     uint64_t sceKernelGetProcessTime();
     int sceSystemServiceGetAppId(const char *title_id);
+    int sceSystemServiceGetAppIdOfRunningBigApp(void);
     int scePadSetProcessPrivilege(int priv);
 
     int sceUserServiceGetForegroundUser(int *userId);
@@ -103,6 +112,7 @@ extern "C" {
     int sceKernelMprotect(void *addr, size_t len, int prot);
     ssize_t _read(int, void *, size_t);
     int sceKernelGetProcessName(int pid, char *name);
+    int sceKernelGetAppInfo(int pid, app_info_t *info);
     void free(void *);
     int sceShellCoreUtilRequestEjectDevice(const char *path);
 
@@ -341,6 +351,16 @@ int main() {
   is_800 = (fw_ver >= 0x800);
 
   LoadSettings();
+
+  /* liborion_proc big-app / name lookups used by get_game_pid / inject paths. */
+  orion_proc_set_sce_hooks(
+      [](int pid, char *name) -> int {
+        return sceKernelGetProcessName(pid, name);
+      },
+      [](pid_t pid, void *info) -> int {
+        return sceKernelGetAppInfo(pid, static_cast<app_info_t *>(info));
+      },
+      []() -> int { return sceSystemServiceGetAppIdOfRunningBigApp(); });
 
   get_ip_address(&buz[0]);
   start_worker_threads(&fifo_thr, &pt_thr, &msg_thr);

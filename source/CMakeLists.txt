@@ -24,6 +24,8 @@ add_subdirectory(liborion_settings)
 add_subdirectory(liborion_detour)
 add_subdirectory(liborion_ready)
 add_subdirectory(liborion_playtime)
+# Shared ptrace + ELF inject (authid elevated once at inject entry, not per syscall).
+add_subdirectory(liborion_elfldr)
 add_subdirectory(libNineS)
 add_subdirectory(shellui)
 add_subdirectory(fps_elf)
