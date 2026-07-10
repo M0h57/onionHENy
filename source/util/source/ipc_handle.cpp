@@ -33,7 +33,7 @@ extern pthread_t cmd_server;
 void* runCommandNControlServer(void*);
 extern atomic_bool no_network_rest_mode_action, real_rest_mode_detected;
 extern bool is_handler_enabled;
-// g_settings / global_conf from common_utils.h; concurrent CMD flags:
+// g_settings from common_utils.h; concurrent CMD flags:
 extern atomic_bool g_legacy_cmd_server;
 extern atomic_bool g_legacy_cmd_server_exit;
 

@@ -133,7 +133,6 @@ typedef struct notify_request
 #ifdef __cplusplus
 #include <orion/settings.hpp>
 extern orion::Settings g_settings;
-#define global_conf g_settings
 #endif
 extern atomic_bool g_legacy_cmd_server;
 extern atomic_bool g_legacy_cmd_server_exit;
@@ -190,34 +189,8 @@ typedef struct
 } OrbisNotificationRequest;	 // Size = 0xC30
 
 
-#define SCE_LNC_UTIL_ERROR_ALREADY_RUNNING 0x8094000c
-#define SCE_LNC_ERROR_APP_NOT_FOUND 0x80940031
+#include <orion/lnc.h>
 
-typedef enum {
-    Flag_None = 0,
-    SkipLaunchCheck = 1,
-    SkipResumeCheck = 1,
-    SkipSystemUpdateCheck = 2,
-    RebootPatchInstall = 4,
-    VRMode = 8,
-    NonVRMode = 16,
-	Pft = 32UL,
-	RaIsConfirmed = 64UL,
-	ShellUICheck = 128UL
-} Flag;
-
-
-typedef struct {
-    uint32_t sz;
-    int user_id;
-    uint32_t app_opt;
-    uint64_t crash_report;
-    Flag check_flag;
-} LncAppParam;
-
-int sceUserServiceGetForegroundUser(int *userId);
-int sceLncUtilLaunchApp(const char* tid, const char* argv[], LncAppParam* param);
-uint32_t sceLncUtilKillApp(uint32_t appId);
 bool copyFile(const char *source, const char *destination);
 
 int32_t sceKernelSendNotificationRequest(int32_t device, OrbisNotificationRequest *req, size_t size, int32_t blocking);

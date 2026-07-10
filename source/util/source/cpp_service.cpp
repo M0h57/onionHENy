@@ -859,8 +859,8 @@ void check_addr_change(void) {
         } else if (rest_mode_action && !no_network_patched && !not_connected &&
                   real_rest_mode_detected) {
             LoadSettings();
-            OrionHEN_log("sleeping for %lld secs", global_conf.rest_mode_delay_seconds);
-            sleep(global_conf.rest_mode_delay_seconds);
+            OrionHEN_log("sleeping for %lld secs", g_settings.rest_mode_delay_seconds);
+            sleep(g_settings.rest_mode_delay_seconds);
             notify(true, "Coming out of Rest Mode detected, restarting server(s)");
             OrionHEN_log("waiting for logged in user");
             
@@ -872,7 +872,7 @@ void check_addr_change(void) {
             OrionHEN_log("Coming out rest mode, activating patches");
             
 
-            if (global_conf.toolbox_auto_start  && !global_conf.disable_toolbox_auto_start_for_rest_mode && !enable_toolbox()) {
+            if (g_settings.toolbox_auto_start  && !g_settings.disable_toolbox_auto_start_for_rest_mode && !enable_toolbox()) {
                 notify(true, "Failed to inject toolbox");
             }
         }
@@ -909,12 +909,12 @@ void patch_checker() {
     }
 
     LoadSettings();
-    if(global_conf.disable_toolbox_auto_start_for_rest_mode){
+    if(g_settings.disable_toolbox_auto_start_for_rest_mode){
         OrionHEN_log("Toolbox auto start for rest mode is disabled");
         return;
     }
-    OrionHEN_log("sleeping for %lld secs", global_conf.rest_mode_delay_seconds);
-    sleep(global_conf.rest_mode_delay_seconds);
+    OrionHEN_log("sleeping for %lld secs", g_settings.rest_mode_delay_seconds);
+    sleep(g_settings.rest_mode_delay_seconds);
 
     notify(true, "(No Network) Coming out of Rest Mode detected\nre-activating "
                 "the OrionHEN toolbox...");

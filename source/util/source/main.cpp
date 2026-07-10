@@ -17,6 +17,7 @@ along with this program; see the file COPYING. If not, see
 #include "ipc.hpp"
 #include "cheats/CheatService.hpp"
 #include <orion/settings.hpp>
+#include <orion/ready.h>
 extern "C" {
 #include "freebsd-helper.h"
 }
@@ -104,10 +105,10 @@ static void cleanup(void) {
 
     pthread_join(kernelrw_thread, NULL);
 
-    if (global_conf.DPI)
+    if (g_settings.DPI)
         shutdownDirectPKGInstaller(false);
 
-    if (global_conf.DPI_v2)
+    if (g_settings.DPI_v2)
         shutdownDirectPKGInstaller(true);
 
     exit(1);
@@ -151,11 +152,11 @@ int main(void) {
     set_proc_authid(getpid(), DEBUG_AUTHID);
 
 
-    global_conf.allow_data_in_sandbox = false;
-    global_conf.DPI = true;
-    global_conf.rest_mode_delay_seconds = 0;
-    global_conf.toolbox_auto_start = true;
-    global_conf.DPI_v2 = false;
+    g_settings.allow_data_in_sandbox = false;
+    g_settings.DPI = true;
+    g_settings.rest_mode_delay_seconds = 0;
+    g_settings.toolbox_auto_start = true;
+    g_settings.DPI_v2 = false;
 	g_legacy_cmd_server_exit = false;
 
     unlink("/data/OrionHEN/OrionHEN_util_daemon.log");
@@ -169,20 +170,22 @@ int main(void) {
 
     start_ip_thread();
     pthread_create(&ipc_server, NULL, IPC_loop, NULL);
+    /* IPC thread is up — publish ready for bootstrapper/daemon consumers */
+    orion_ready_signal(ORION_READY_UTIL);
 
     if (!IniliatizeHTTP()) {
         OrionHEN_log("Failed to initialize HTTP lib");
         notify(true, "Failed to initialize the HTTP lib, downloading cheats will not work");
     }
 
-    if (global_conf.toolbox_auto_start && if_exists("/system_tmp/util_first_boot")) {
+    if (g_settings.toolbox_auto_start && if_exists("/system_tmp/util_first_boot")) {
         OrionHEN_log("not First boot detected, activating toolbox");
         patch_checker();
     }
 
     for (;;) {
         // for rest mode we wait til we can restart everything
-        if (global_conf.toolbox_auto_start && get_ip_address(&tmp_buf[0]) < 0) {
+        if (g_settings.toolbox_auto_start && get_ip_address(&tmp_buf[0]) < 0) {
             sleep(1);
 
             bool fail1 = get_ip_address(&tmp_buf[0]) < 0;
@@ -202,11 +205,11 @@ int main(void) {
         }
         no_network_rest_mode_action = false;
 
-        if (global_conf.DPI) {
+        if (g_settings.DPI) {
             startDirectPKGInstaller(false);
         }
 
-        if (global_conf.DPI_v2) {
+        if (g_settings.DPI_v2) {
             startDirectPKGInstaller(true);
         }
 
@@ -220,10 +223,10 @@ int main(void) {
 
         pthread_join(cmd_server, NULL);
 
-        if (global_conf.DPI)
+        if (g_settings.DPI)
             shutdownDirectPKGInstaller(false);
         
-        if (global_conf.DPI_v2)
+        if (g_settings.DPI_v2)
             shutdownDirectPKGInstaller(true);
 
         usleep(SLEEP_PERIOD);
