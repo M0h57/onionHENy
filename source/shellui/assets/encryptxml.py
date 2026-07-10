@@ -18,4 +18,4 @@ if __name__ == '__main__':
     key_base64 = 'U0lTVFIwX0lfU0VFX1lPVQ=='  # Base64 encoded key string
     
     # Use the Base64 string directly as the key
-    xor_encrypt('shellui/assets/etaHEN_toolbox.xml', 'shellui/assets/etaHEN_toolbox.sxml', key_base64)
+    xor_encrypt('shellui/assets/OrionHEN_toolbox.xml', 'shellui/assets/OrionHEN_toolbox.sxml', key_base64)

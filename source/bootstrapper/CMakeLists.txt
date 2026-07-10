@@ -51,7 +51,7 @@ message("========== build: ${PROJECT_NAME} ==========")
 
 
 # Byepervisor removed from OrionHEN — bootstrapper sources only
-file(GLOB SrcFiles ${D_SRC}/*.c ${D_SRC}/*.cpp ${D_SRC}/../include/*.h ${D_SRC}/../include/*.hpp ${D_SRC}/*.s ${D_SRC}/../../extern/tiny-json/*.cpp ${D_SRC}/../../extern/tiny-json/*.hpp ${D_SRC}/../../extern/cJSON/*.cpp ${D_SRC}/../../extern/cJSON/*.hpp ${D_SRC}/../../lib/backtrace.cpp)
+file(GLOB SrcFiles ${D_SRC}/*.c ${D_SRC}/*.cpp ${D_SRC}/../include/*.h ${D_SRC}/../include/*.hpp ${D_SRC}/*.s ${D_SRC}/../../extern/cJSON/*.cpp ${D_SRC}/../../extern/cJSON/*.hpp ${D_SRC}/../../lib/backtrace.cpp)
 
 set(CMAKE_C_FLAGS "--target=x86_64-sie-ps5 -DPPR -DPS5 -DPS5_FW_VERSION=${V_FW} ")
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-keyword-macro -fPIC -fPIE -march=znver2 -Wall -Werror -fstack-protector-all")
@@ -64,7 +64,7 @@ target_sources(${PROJECT_NAME} PRIVATE ${SrcFiles})
 set_source_files_properties(
 	${D_SRC}/daemon.c
 	PROPERTIES OBJECT_DEPENDS
-		"${PROJECT_ROOT}/bin/daemon.elf;${PROJECT_ROOT}/bin/util.elf;${D_CWD}/assets/kstuff.elf;${D_CWD}/assets/etahen_sicon.png;${D_CWD}/assets/icon_xml_package.png;${D_CWD}/assets/icon_xml_plugins.png;${D_CWD}/assets/icon_xml_game.png;${D_CWD}/assets/icon_xml_network.png;${D_CWD}/assets/icon_xml_settings.png;${D_CWD}/assets/icon_xml_shortcuts.png;${D_CWD}/assets/icon_xml_debug.png;${D_CWD}/assets/icon_xml_about.png"
+		"${PROJECT_ROOT}/bin/daemon.elf;${PROJECT_ROOT}/bin/util.elf;${D_CWD}/assets/kstuff.elf;${D_CWD}/assets/orionhen_sicon.png;${D_CWD}/assets/icon_xml_package.png;${D_CWD}/assets/icon_xml_plugins.png;${D_CWD}/assets/icon_xml_game.png;${D_CWD}/assets/icon_xml_network.png;${D_CWD}/assets/icon_xml_settings.png;${D_CWD}/assets/icon_xml_shortcuts.png;${D_CWD}/assets/icon_xml_debug.png;${D_CWD}/assets/icon_xml_about.png"
 )
 # elfldr.c still provides elfldr_raise_privileges; launches go via 9021 (elfldr_remote.c).
 target_include_directories(${PROJECT_NAME} PRIVATE "${D_CWD}/include")

@@ -5,5 +5,5 @@
 
 # Paths relative to this file (shellui/src/) so .incbin works under CMake/Ninja
 toolbox_start:
-.incbin "../assets/etaHEN_toolbox.sxml"
+.incbin "../assets/OrionHEN_toolbox.sxml"
 toolbox_end:

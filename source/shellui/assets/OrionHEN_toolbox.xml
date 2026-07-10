@@ -16,7 +16,7 @@
 
     <!-- ========== 1. 软件包安装 ========== -->
     <!-- 用途：安装 PKG / 附加内容（本地与远程安装方式放一起） -->
-    <setting_list id="id_group_pkg" title="软件包安装" second_title="安装 PKG 与附加内容" icon="//user//data//etaHEN//assets//icon_xml_package.png" initial_focus_to="id_game_package_installer">
+    <setting_list id="id_group_pkg" title="软件包安装" second_title="安装 PKG 与附加内容" icon="//user//data//OrionHEN//assets//icon_xml_package.png" initial_focus_to="id_game_package_installer">
       <link id="id_game_package_installer" title="软件包安装器" file="PkgInstaller/data/pkginstaller.xml"/>
       <link id="id_game_custom_package_installer" title="★ 自定义后台软件包安装器" file="custompkginstaller.xml"/>
       <toggle_switch id="id_dpi_service" title="直接软件包安装器" second_title="通过网络安装 PKG，服务器端口 9090" value="0"/>
@@ -26,7 +26,7 @@
 
     <!-- ========== 2. 插件与内核 ========== -->
     <!-- 用途：加载/管理运行在 HEN 之上的扩展与内核组件 -->
-    <setting_list id="id_group_plugins" title="插件与内核" second_title="插件、Payload 与 Kstuff" icon="//user//data//etaHEN//assets//icon_xml_plugins.png" initial_focus_to="id_plugins">
+    <setting_list id="id_group_plugins" title="插件与内核" second_title="插件、Payload 与 Kstuff" icon="//user//data//OrionHEN//assets//icon_xml_plugins.png" initial_focus_to="id_plugins">
       <link id="id_plugins" title="插件 / Payload ELF" file="plugins.xml"/>
       <setting_list id="id_kstuff_opts" title="Kstuff" second_title="内核补丁组件管理" initial_focus_to="id_kstuff_autoload">
         <toggle_switch id="id_kstuff_autoload" title="OrionHEN 启动时自动加载 Kstuff" value="0"/>
@@ -37,7 +37,7 @@
 
     <!-- ========== 3. 游戏功能 ========== -->
     <!-- 用途：针对游戏本体的功能（金手指、远程游玩、游戏内显示） -->
-    <setting_list id="id_group_game" title="游戏功能" second_title="金手指、远程游玩与游戏内覆盖层" icon="//user//data//etaHEN//assets//icon_xml_game.png" initial_focus_to="id_cheats">
+    <setting_list id="id_group_game" title="游戏功能" second_title="金手指、远程游玩与游戏内覆盖层" icon="//user//data//OrionHEN//assets//icon_xml_game.png" initial_focus_to="id_cheats">
       <link id="id_cheats" title="金手指（开发中）" file="cheats.xml"/>
       <link id="remote_play" title="远程游玩" file="remote_play.xml"/>
       <toggle_switch id="id_custom_game_opts" title="OrionHEN 游戏选项" second_title="在游戏选项菜单中显示 OrionHEN 相关选项（金手指、转储等）" value="1"/>
@@ -59,7 +59,7 @@
 
     <!-- ========== 4. 网络服务 ========== -->
     <!-- 用途：常驻网络守护进程（传输/日志），与“安装”分开 -->
-    <setting_list id="id_services" title="网络服务" second_title="FTP 与内核日志服务" icon="//user//data//etaHEN//assets//icon_xml_network.png" initial_focus_to="id_ftp_service">
+    <setting_list id="id_services" title="网络服务" second_title="FTP 与内核日志服务" icon="//user//data//OrionHEN//assets//icon_xml_network.png" initial_focus_to="id_ftp_service">
       <toggle_switch id="id_ftp_service" title="FTP" second_title="FTP 服务器端口 1337" value="0"/>
       <toggle_switch id="id_ftp_dev_access" title="允许 FTP 访问 /dev 目录" second_title="扩展 FTP 可访问路径（需先开启 FTP）" value="0"/>
       <toggle_switch id="id_klog_service" title="Klog" second_title="内核日志服务器端口 9081" value="0"/>
@@ -67,7 +67,7 @@
 
     <!-- ========== 5. 系统设置 ========== -->
     <!-- 用途：主机权限、硬件、存储与稳定性相关配置 -->
-    <setting_list id="id_group_system" title="系统设置" second_title="权限、硬件、存储与休息模式" icon="//user//data//etaHEN//assets//icon_xml_settings.png" initial_focus_to="id_data_sb">
+    <setting_list id="id_group_system" title="系统设置" second_title="权限、硬件、存储与休息模式" icon="//user//data//OrionHEN//assets//icon_xml_settings.png" initial_focus_to="id_data_sb">
       <toggle_switch id="id_data_sb" title="允许应用沙盒访问 /data" second_title="应用内可访问 /data 目录" confirm="更改将在下次重启后生效" value="1"/>
       <toggle_switch id="id_disp_titleids" title="在主菜单显示 Title ID" second_title="零售机可用，但仅在工具箱激活时显示" value="0"/>
       <toggle_switch id="id_auto_eject" title="OrionHEN 启动时自动弹出光盘" description="OrionHEN 完全启动后自动弹出已插入的光盘，适用于 BD-J 或 LUA 漏洞利用" confirm="更改将在下次重启后生效" value="0"/>
@@ -90,7 +90,7 @@
 
     <!-- ========== 6. 启动与快捷键 ========== -->
     <!-- 用途：如何进入工具箱、HEN 起来后默认打开什么 -->
-    <setting_list id="id_utils" title="启动与快捷键" second_title="启动行为与手柄快捷键" icon="//user//data//etaHEN//assets//icon_xml_shortcuts.png" initial_focus_to="id_start_opt">
+    <setting_list id="id_utils" title="启动与快捷键" second_title="启动行为与手柄快捷键" icon="//user//data//OrionHEN//assets//icon_xml_shortcuts.png" initial_focus_to="id_start_opt">
       <list id="id_start_opt" title="OrionHEN 加载后自动打开" confirm="更改将在下次重启后生效" confirm_phrase="确定, 取消">
         <list_item id="id_start_opt_1" title="无" value="0"/>
         <list_item id="id_start_opt_1" title="主菜单" value="1"/>
@@ -119,7 +119,7 @@
 
     <!-- ========== 7. 调试选项 ========== -->
     <!-- 用途：开发调试、环境切换、TestKit 专用 -->
-    <setting_list id="id_group_debug" title="调试选项" second_title="越狱调试、环境与 TestKit" icon="//user//data//etaHEN//assets//icon_xml_debug.png" initial_focus_to="id_debug_jb">
+    <setting_list id="id_group_debug" title="调试选项" second_title="越狱调试、环境与 TestKit" icon="//user//data//OrionHEN//assets//icon_xml_debug.png" initial_focus_to="id_debug_jb">
       <toggle_switch id="id_debug_jb" title="应用越狱通知" second_title="在越狱应用时显示通知" value="0"/>
       <toggle_switch id="id_debug_legacy_cmd" title="旧版越狱命令服务器" second_title="需要网络；应用可通过 Socket 请求越狱" value="0"/>
       <text_field id="id_np_env" title="NP 环境" key="/NP/env"
@@ -129,7 +129,7 @@
     </setting_list>
 
     <!-- ========== 8. 关于 ========== -->
-    <setting_list id="id_orionhen_credit_options" title="关于" second_title="致谢、捐赠与项目信息" icon="//user//data//etaHEN//assets//icon_xml_about.png" style="center">
+    <setting_list id="id_orionhen_credit_options" title="关于" second_title="致谢、捐赠与项目信息" icon="//user//data//OrionHEN//assets//icon_xml_about.png" style="center">
       <setting_list id="id_donation_methods" title="支持本项目" second_title="喜欢这个项目吗？欢迎捐赠支持">
         <label id="id_method_info" title="★ 捐赠方式" style="center"/>
         <label id="id_method_1" title="- GitHub Sponsors  | https://github.com/sponsors/LightningMods" style="center"/>
