@@ -52,22 +52,6 @@ typedef struct IniParser_t {
     int count = 0;
 } IniParser;
 
-enum PupStatus {
-    PUP_EXPIRATION_STATUS_OK = 0,
-    PUP_EXPIRATION_STATUS_EXPIRED = 1,
-    PUP_EXPIRATION_STATUS_EXPIRING = 2,
-
-    PUP_EXPIRATION_MAX_EXPIRING_TIME = 259199, // 3 days
-    PUP_EXPIRATION_1_DAY = 159199
-};
-
-enum TrailExpireOpt {
-    TRIAL_EXPIREING_OFF = 0,
-    TRIAL_EXPIREING_1_DAY = 1,
-    TRIAL_EXPIREING_2_DAYS = 2,
-    TRIAL_EXPIRED,
-};
-
 enum RemoveWidget {
     REMOVE_GPU_OVERLAY,
     REMOVE_CPU_OVERLAY,
@@ -185,7 +169,6 @@ typedef struct OrionHENSettings_t
     bool libhijacker_cheats = false;
 
 
-    bool testkit = false;
     bool allow_data_sandbox = false;
     bool util_rest_kill = false;
     bool game_rest_kill = false;
@@ -203,8 +186,6 @@ typedef struct OrionHENSettings_t
     bool overlay_ip = false;
     bool all_cpu_usage = false;
     int start_option = 0;
-    int trial_soft_expire_time = 0;
-    int kit_panel_info = 0;
     uint64_t rest_delay_seconds = 0;
     bool enable_fan_speed = false;
     int fan_threshold = 77;
@@ -393,7 +374,6 @@ bool SaveSettings();
 bool SetVersionString(const char* str);
 int SendShelluiNotify();
 void Terminate();
-bool Start_Kit_Hooks();
 extern int (*Orig_AppInstUtilInstallByPackage)(MonoString* uri, MonoString* ex_uri, MonoString* playgo_scenario_id, MonoString* content_id, MonoString* content_name, MonoString* icon_url, uint32_t slot, bool is_playgo_enabled, MonoObject* pkg_info, MonoArray* languages, MonoArray* playgo_scenario_ids, MonoArray* content_ids);
 
 template <typename result>
@@ -545,9 +525,6 @@ extern bool (*CheckRemotePlayRestriction_Orig)(MonoObject* instance);
 extern void (*oTerminate)(void);
 extern void (*UpdateImposeStatusFlag_Orig)(MonoObject* scene, MonoObject* frontActiveScene);
 
-extern int (*GetHwSerialNumber)(MonoArray* serial);
-extern int (*GetHwModelName)(MonoArray* serial);
-extern int (*PupExpirationGetStatus)(PupStatus& status, uint32_t& time);
 extern bool (*boot_orig)(MonoString* uri, int opt, MonoString* titleIdForBootAction);
 extern bool (*boot_orig_2)(MonoString* uri, int opt);
 extern GamePadData (*GetData)(int deviceIndex);

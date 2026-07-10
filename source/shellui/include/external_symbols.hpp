@@ -595,7 +595,6 @@ extern MonoObject* (*mono_object_new_specific)(MonoVTable* vtable);//mono_object
 extern MonoClass* (*mono_object_get_class)(MonoObject* obj);
 extern MonoString *(*mono_object_to_string)(MonoObject *obj, MonoObject **exc);
 extern void (*mono_raise_exception)(MonoObject *exception);
-extern MonoString* (*getIpMacHost)(uint64_t inst, SceNetIfName name);
 
 
 extern int (*sceShellUIUtilInitialize)(void);

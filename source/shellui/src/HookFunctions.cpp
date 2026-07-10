@@ -50,10 +50,6 @@ bool (*CheckRemotePlayRestriction_Orig)(MonoObject* instance) = nullptr;
 void (*oTerminate)(void) = nullptr;
 GamePadData (*GetData)(int deviceIndex) = nullptr;
 
-int (*GetHwSerialNumber)(MonoArray* serial) = nullptr;
-int (*GetHwModelName)(MonoArray* serial) = nullptr;
-int (*PupExpirationGetStatus)(PupStatus& status, uint32_t& time) = nullptr;
-MonoString* (*getIpMacHost)(uint64_t inst, SceNetIfName name) = nullptr;
 bool (*boot_orig)(MonoString* uri, int opt, MonoString* titleIdForBootAction) = nullptr;
 void (*OnShareButton_orig)(MonoObject* data) = nullptr;
 bool (*boot_orig_2)(MonoString* uri, int opt) = nullptr;
@@ -90,7 +86,6 @@ bool is_custom_pkg = false;
 bool is_debug_settings = false;
 bool is_cheats = false;
 bool is_auto_plugin = false;
-bool is_tk_menu = false;
 bool is_remote_play = false;
 bool is_plapps = false;
 bool cheats_shortcut_activated = false;
@@ -346,280 +341,6 @@ void CallDecrypt(unsigned char* bundleData, int bundleOffset, int bundleSize, in
 
 
 
-extern "C" int sceKernelGetSocSensorTemperature(int numb, int *temp);
-
-extern "C" int sceNetGetIfList(SceNetIfName ifName_num, SceNetIfList* ifListArray, int n);
-
-MonoString* Hook_getIpMacHost(uint64_t inst, SceNetIfName name) {
-
-    char ip_address[32];
-    char full_text[400];
-    int temp = 0;
-
-
-    if(!inst) {
-        shellui_log("inst is null");
-    }
-
-  //  shellui_log("Hook_getIpMacHost: inst: %llx, name: %d", inst, name);
-
-    if (global_conf.kit_panel_info == 3) { // OFF
-
-        return getIpMacHost(inst, name);
-    }
-
-    SceNetIfList ifArray[1];
-    sceNetGetIfList(name, ifArray, 1);
-    
-    // Extract IP address bytes from the s_addr value
-    uint8_t bytes[4];
-    bytes[0] = (ifArray[0].addrs[0].addr.s_addr) & 0xFF;
-    bytes[1] = (ifArray[0].addrs[0].addr.s_addr >> 8) & 0xFF;
-    bytes[2] = (ifArray[0].addrs[0].addr.s_addr >> 16) & 0xFF;
-    bytes[3] = (ifArray[0].addrs[0].addr.s_addr >> 24) & 0xFF;
-    
-    // Format the IP address as a string
-    sprintf(ip_address, "%d.%d.%d.%d", bytes[0], bytes[1], bytes[2], bytes[3]);
-
-    if(name == SCE_NET_IF_NAME_DBG0 ){
-        return mono_string_new(Root_Domain, std::string(std::string("IP (DEV): ") + std::string(ip_address) + "\n").c_str());
-    }
-
-    //SCE_NET_IF_NAME_PHYSICAL
-
-    snprintf(full_text, sizeof(full_text), "OrionHEN 版本: %s\nIP: %s", OrionHEN_VERSION, ip_address);
-    if (global_conf.kit_panel_info == 0 || sceKernelGetSocSensorTemperature(0, &temp)) { // ON (ONLY)
-        return mono_string_new(Root_Domain, full_text);
-    }
-
-
-    snprintf(full_text, sizeof(full_text), "%s\nAPU Temp: %d °C", full_text, temp);
-    if (global_conf.kit_panel_info == 1) { // ON + temp
-        return mono_string_new(Root_Domain, full_text);
-    }
-
-    snprintf(full_text, sizeof(full_text), "%s\nDPI: 9090", full_text);
-    return mono_string_new(Root_Domain, full_text);
-}
-
-
-int PupExpirationGetStatus_hook(PupStatus& status, uint32_t& time) {
-    int opt = global_conf.trial_soft_expire_time;
-
-    time = 0;
-    if (opt == TRIAL_EXPIREING_OFF) {
-        status = PUP_EXPIRATION_STATUS_OK;
-    }
-    else if (opt == TRIAL_EXPIREING_1_DAY) {
-        status = PUP_EXPIRATION_STATUS_EXPIRING;
-        time = PUP_EXPIRATION_1_DAY;
-    }
-    else if (opt == TRIAL_EXPIREING_2_DAYS) {
-        status = PUP_EXPIRATION_STATUS_EXPIRING;
-        time = PUP_EXPIRATION_MAX_EXPIRING_TIME;
-    }
-    else if (opt == TRIAL_EXPIRED) {
-        status = PUP_EXPIRATION_STATUS_EXPIRED;
-    }
-
-    return 0;
-}
-
-int Hook_GetHwSerialNumber(MonoArray* serial) {
-    // Ensure there's an array to work with
-
- //   shellui_log("Hook_GetHwSerialNumber: serial: %llx", serial);
-    mono_array_set(serial, uint8_t, 0, '1');
-    mono_array_set(serial, uint8_t, 1, '3');
-    mono_array_set(serial, uint8_t, 2, '3');
-    mono_array_set(serial, uint8_t, 3, '7');
-
-    // Return a success status
-    return SCE_OK;
-}
-
-
-int Hook_GetHwModelName(MonoArray* serial) {
-    // Ensure there's an array to work with
-
-
-   // shellui_log("Hook_GetHwModelName: serial: %p", serial);
-    mono_array_set(serial, uint8_t, 0, 'e');
-    mono_array_set(serial, uint8_t, 1, 't');
-    mono_array_set(serial, uint8_t, 2, 'a');
-    mono_array_set(serial, uint8_t, 3, 'H');
-    mono_array_set(serial, uint8_t, 4, 'E');
-    mono_array_set(serial, uint8_t, 5, 'N');
-    mono_array_set(serial, uint8_t, 6, ' ');
-    
-#if SHELL_DEBUG == 1
-    mono_array_set(serial, uint8_t, 7, '(');
-    mono_array_set(serial, uint8_t, 8, 'D');
-    mono_array_set(serial, uint8_t, 9, 'E');
-    mono_array_set(serial, uint8_t, 10, 'V');
-    mono_array_set(serial, uint8_t, 11, ')');
-#else
-    mono_array_set(serial, uint8_t, 7, '(');
-    mono_array_set(serial, uint8_t, 8, 'K');
-    mono_array_set(serial, uint8_t, 9, 'I');
-    mono_array_set(serial, uint8_t, 10,'T');
-    mono_array_set(serial, uint8_t, 11, ')');
-#endif
-
-    // Return a success status
-    return SCE_OK;
-}
-
-
-/*================================NOT USED ================================*/
-int (*GetIfList)(SceNetIfName name, MonoArray* ifListArray, int n) = nullptr;
-
-int Hook_GetIfList(SceNetIfName name, MonoArray* ifListArray, int n) {
-
-   // shellui_log("Hook_GetIfList: name: %d, n: %d", name, n);
-    if(!ifListArray){
-        shellui_log("ifListArray is null");
-    
-    }
-
-    if(global_conf.kit_panel_info == 3) // OFF
-       return -1;
-    else
-		return GetIfList(name, ifListArray, n);
-}
-
-extern MonoString* (*getIpMacHost)(uint64_t inst, SceNetIfName name);
-
-MonoString* Hook_getIpMacHost(uint64_t inst, SceNetIfName name);
-
-bool Toggle_Devkit_Panel(int pot) {
-
-    // leaving this here but it crashes past 3.00
-    if (false) {
-        MonoAssembly* SysBridge_Assembly = mono_domain_assembly_open(Root_Domain, "/system_ex/common_ex/lib/Sce.Vsh.SysBridge.dll");
-        if(!SysBridge_Assembly){
-            shellui_log("Failed to open SysBridge Assembly");
-            return false;
-        }
-        MonoImage* SysBridge_img = mono_assembly_get_image(SysBridge_Assembly);
-        if (!SysBridge_img) {
-           shellui_log("Failed to get ReactNativeShellApp image");
-           return false;
-        }
-    
-        GetIfList = (int (*)(SceNetIfName name, MonoArray * ifListArray, int n))DetourFunction(Get_Address_of_Method(SysBridge_img, "Sce.Vsh.SysBridge", "Net", "GetIfList", 3), (void*)&Hook_GetIfList);
-        if (!GetIfList) {
-            notify("Failed to detour Func GetIfList");
-            return false;
-        }
-    }
-    
-    if(!getIpMacHost){
-        
-        MonoAssembly* Assembly = mono_domain_assembly_open(Root_Domain, "/system_ex/common_ex/lib/Sce.Vsh.ShellUI.ReactNativeShellApp.dll");
-        if(!Assembly) {
-            shellui_log("Failed to open ReactNativeShellApp Assembly");
-            return false;
-        }
-
-        MonoImage* ReactNativeShellApp_image = mono_assembly_get_image(Assembly);
-
-        if (!ReactNativeShellApp_image) {
-           shellui_log("Failed to get ReactNativeShellApp image");
-           return false;
-        }
-
-
-        getIpMacHost = (MonoString * (*)(uint64_t inst, SceNetIfName name))DetourFunction(Get_Address_of_Method(ReactNativeShellApp_image, "ReactNative.Components.ShellUI.HomeUI", "DebugInfoView", "getIpMacHost", 1), (void*)&Hook_getIpMacHost);
-        if (!getIpMacHost) {
-            notify("Failed to detour Func getIpMacHost");
-            return false;
-        }
-
-    }
-
-	global_conf.kit_panel_info = pot;
-
-    return true;
-
-}
-int DevActGetRemainingTime(int* time){
-    *time = INT_MAX-1;
-    return 0;
-} 
-
-//GetHwModelNam
-bool Start_Kit_Hooks() {
-    //Sce.Vsh.SysBridge.dll
-    MonoAssembly* KernelSysWrapper_Assembly = mono_domain_assembly_open(Root_Domain, "/system_ex/common_ex/lib/Sce.Vsh.KernelSysWrapper.dll");
-
-    MonoImage* KernelSysWrapper_img = mono_assembly_get_image(KernelSysWrapper_Assembly);
-
-    if (!KernelSysWrapper_img) {
-        shellui_log("Failed to get ReactNativeShellApp image");
-        return false;
-    }
-
-    if(if_exists("/system_tmp/actipatched")){
-       void* unused = DetourFunction(Get_Address_of_Method(KernelSysWrapper_img, "Sce.Vsh", "KernelSysWrapperSbl", "DevActGetRemainingTime", 1), (void*)&DevActGetRemainingTime);
-       if (!unused) {
-           notify("Failed to detour Func DevActGetRemainingTime");
-           return false;
-       }
-    }
-
-
-
-    PupExpirationGetStatus = (int (*)(PupStatus & status, uint32_t & time))DetourFunction(Get_Address_of_Method(KernelSysWrapper_img, "Sce.Vsh", "KernelSysWrapperSbl", "PupExpirationGetStatus", 2), (void*)&PupExpirationGetStatus_hook);
-    if (!PupExpirationGetStatus) {
-        notify("Failed to detour Func PupExpirationGetStatus");
-        return false;
-    }
-
-    MonoAssembly* SysBridge_Assembly = mono_domain_assembly_open(Root_Domain, "/system_ex/common_ex/lib/Sce.Vsh.SysBridge.dll");
-    MonoImage* SysBridge_img = mono_assembly_get_image(SysBridge_Assembly);
-    if (!SysBridge_img) {
-        shellui_log("Failed to get ReactNativeShellApp image");
-        return false;
-    }
-
-
-#if SHELL_DEBUG == 1
-    GetHwSerialNumber = (int (*)(MonoArray * serial))DetourFunction(Get_Address_of_Method(SysBridge_img, "Sce.Vsh.SysBridge", "Kernel", "GetHwSerialNumber", 1), (void*)&Hook_GetHwSerialNumber);
-    if (!GetHwSerialNumber) {
-        notify("Failed to detour Func GetHwSerialNumber");
-        return false;
-    }
-#endif
-
-  //GetManufacturingMode
-
-    GetHwModelName = (int (*)(MonoArray * serial))DetourFunction(Get_Address_of_Method(SysBridge_img, "Sce.Vsh.SysBridge", "Kernel", "GetHwModelName", 1), (void*)&Hook_GetHwModelName);
-    if (!GetHwModelName) {
-        notify("Failed to detour Func GetHwModelName");
-        return false;
-    }
-
-    MonoAssembly* Assembly = mono_domain_assembly_open(Root_Domain, "/system_ex/common_ex/lib/Sce.Vsh.ShellUI.ReactNativeShellApp.dll");
-
-    MonoImage* ReactNativeShellApp_image = mono_assembly_get_image(Assembly);
-
-    if (!ReactNativeShellApp_image) {
-        shellui_log("Failed to get ReactNativeShellApp image");
-        return false;
-    }
-
-    getIpMacHost = (MonoString * (*)(uint64_t inst, SceNetIfName name))DetourFunction(Get_Address_of_Method(ReactNativeShellApp_image, "ReactNative.Components.ShellUI.HomeUI", "DebugInfoView", "getIpMacHost", 1), (void*)&Hook_getIpMacHost);
-    if (!getIpMacHost) {
-        notify("Failed to detour Func getIpMacHost");
-        return false;
-    }
-
-    Toggle_Devkit_Panel(global_conf.kit_panel_info);
-	shellui_log("We are all set captain!");
-	return true;
-
-}
 void ParseCheatID(const char* id, char* tid, int* cheat_id)
 {
     sscanf(id, "id_cheat_%[^_]_%d", tid, cheat_id);
@@ -720,8 +441,6 @@ int OnPress_Hook(MonoObject* Instance, MonoObject* element, MonoObject* e)
     int& StartOption = global_conf.start_option;
     bool& util_rest_kill = global_conf.util_rest_kill;
     bool& game_rest_kill = global_conf.game_rest_kill;
-    int& trial_expire = global_conf.trial_soft_expire_time;
-    int& kit_panel = global_conf.kit_panel_info;
     uint64_t& delay_secs = global_conf.rest_delay_seconds;
     bool& DPI_v2 = global_conf.DPI_v2;
     bool& dis_tids = global_conf.display_tids;
@@ -1261,17 +980,6 @@ int OnPress_Hook(MonoObject* Instance, MonoObject* element, MonoObject* e)
         selected_cheats_repo = static_cast<cheats_repo_source>(atoi(value.c_str()));
         shellui_log("Selected cheats repo: %s", selected_cheats_repo == CHEATS_REPO_ORIONHEN ? "OrionHEN PS5" : "GoldHEN PS4");
     }
-    else if (id == "id_trial_soft") {
-	      	trial_expire = atoi(value.c_str());
-    }
-    else if (id == "id_kit_panel") {
-	    	kit_panel = atoi(value.c_str());
-        shellui_log("Kit Panel: %d", kit_panel);
-
-        if (!Toggle_Devkit_Panel(kit_panel)) {
-		      	notify("Failed to toggle devkit panel");
-        }
-    }
     else if (id == "id_data_sb") {
         if (atoi(value.c_str()) == Data_SB) {
             shellui_log("Data Sandbox already %s", Data_SB ? "Enabled" : "Disabled");
@@ -1543,7 +1251,6 @@ uint64_t GetManifestResourceStream_Hook(uint64_t inst, MonoString* FileName) {
     is_debug_settings = (resourceName == debug_settings_xml);
     is_cheats = (resourceName == cheats_xml);
     is_auto_plugin = (resourceName == "Sce.Vsh.ShellUI.Legacy.src.Sce.Vsh.ShellUI.Settings.Plugins.auto_plugins.xml");
-  	is_tk_menu = (resourceName == "Sce.Vsh.ShellUI.Legacy.src.Sce.Vsh.ShellUI.Settings.Plugins.testkit_menu.xml");
     is_plapps = (resourceName == "Sce.Vsh.ShellUI.Legacy.src.Sce.Vsh.ShellUI.Settings.Plugins.plapps.xml");
 	is_custom_pkg = (resourceName == "Sce.Vsh.ShellUI.Legacy.src.Sce.Vsh.ShellUI.Settings.Plugins.custompkginstaller.xml");
 	is_su_menu = (resourceName == "Sce.Vsh.ShellUI.Legacy.src.Sce.Vsh.ShellUI.Settings.Plugins.superuser.xml");
@@ -1562,7 +1269,7 @@ uint64_t GetManifestResourceStream_Hook(uint64_t inst, MonoString* FileName) {
         return GetManifestResourceStream_Original(inst, mono_string_new(Root_Domain, debug_settings_xml.c_str()));
     }
 
-    if (!is_plugin && !is_debug_settings && !is_cheats && !is_auto_plugin && !is_tk_menu && !is_remote_play && !is_plapps && !is_su_menu && !is_custom_pkg) {
+    if (!is_plugin && !is_debug_settings && !is_cheats && !is_auto_plugin && !is_remote_play && !is_plapps && !is_su_menu && !is_custom_pkg) {
         return GetManifestResourceStream_Original(inst, FileName);
     }
 
@@ -1586,42 +1293,6 @@ uint64_t GetManifestResourceStream_Hook(uint64_t inst, MonoString* FileName) {
     if (is_debug_settings) {
         LoadSettings();
         new_xml_string = dec_xml_str;
-    }
-	else if (is_tk_menu) {
-
-        
-	     	new_xml_string  = "<?xml version=\"1.0\" encoding=\"UTF-8\" ?>\n"
-            "<system_settings version=\"1.0\" plugin=\"debug_settings_plugin\">\n" 
-            "\n<setting_list id=\"id_testkit_menu\" title=\"TestKit 菜单\">\n";
-
-		    IPC_Client& main_ipc = IPC_Client::getInstance(false);
-
-        if (main_ipc.IsTestKit()) {
-            new_xml_string += R"(<list id="id_kit_panel" title="主机信息覆盖层" >)";
-            new_xml_string += R"(<list_item id="id_kit_panel_1" title="开启 [自定义]" value="0" />)";
-            new_xml_string += R"(<list_item id="id_kit_panel_2" title="开启 + APU 温度" value="1" />)";
-            new_xml_string += R"(<list_item id="id_kit_panel_3" title="开启 + 服务端口 + 温度" value="2" />)";
-            new_xml_string += R"(<list_item id="id_kit_panel_4" title="关闭" value="3" />)";
-            new_xml_string += R"( </list>)";
-
-            new_xml_string += R"(<list id="id_trial_soft" title="试用系统软件到期覆盖层" >)";
-            new_xml_string += R"(<list_item id="id_trial_soft_off" title="关闭" value="0" />)";
-            new_xml_string += R"(<list_item id="id_trial_soft_1" title="(开启) 1 天" value="1" />)";
-            new_xml_string += R"(<list_item id="id_trial_soft_2" title="(开启) 2 天" value="2" />)";
-            new_xml_string += R"(<list_item id="id_trial_soft_3" title="(开启) 已过期" value="3" />)";
-		      	new_xml_string += R"( </list>)";
-
-            new_xml_string += R"( <list id="id_controller_pad_usable_ps4_device" title="在原生游戏中为 PS4 启用手柄" key="/DEVENV/TOOL/pad_usable_ps4_device" confirm="需要重启系统才能应用此设置。&#xa;离开 ★调试设置 时系统将自动重启。" confirm_phrase="确定,取消">)";
-            new_xml_string += R"( <list_item id="id_controller_pad_usable_ps4_device_off" title="关闭" value="0"/>)";
-            new_xml_string += R"( <list_item id="id_controller_pad_usable_ps4_device_on" title="开启" value="1"/>)";
-            new_xml_string += R"( </list>)";
-            new_xml_string += R"( <link id="id_og_debug" title="原版调试设置" file="og_debug.xml"/> )";
-        }
-        else {
-			      new_xml_string += R"(<label id="id_testkit_494990" title="★ 此菜单在零售机上暂不可用" style="center"/>)";
-        }
-
-		    new_xml_string += "\n</setting_list>\n</system_settings>";
     }
     else if (is_plugin) {
        // shellui_log("Plugins clicked");
@@ -1797,12 +1468,6 @@ int OnPreCreate_Hook(MonoObject* Instance, MonoObject* element) {
     }
     else if (id == "id_start_opt") {
         s_MonoText = mono_string_new(Root_Domain, std::to_string(global_conf.start_option).c_str());
-    }
-    else if (id == "id_trial_soft") {
-        s_MonoText = mono_string_new(Root_Domain, std::to_string(global_conf.trial_soft_expire_time).c_str());
-    }
-    else if (id == "id_kit_panel") {
-        s_MonoText = mono_string_new(Root_Domain, std::to_string(global_conf.kit_panel_info).c_str());
     }
     else if (id == "id_data_sb") {
         s_MonoText = mono_string_new(Root_Domain, global_conf.allow_data_sandbox ? "1" : "0");

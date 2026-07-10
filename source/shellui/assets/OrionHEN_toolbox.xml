@@ -8,7 +8,7 @@
     3. 游戏功能   — 玩游戏过程中用到的能力
     4. 系统设置   — 主机行为、权限、存储与硬件
     5. 启动与快捷键 — 如何打开工具箱 / 启动后做什么
-    6. 调试选项   — 开发调试与 TestKit
+    6. 调试选项   — 开发调试
     7. 关于
   -->
   <setting_list id="id_debug_settings" title="★OrionHEN 工具箱" initial_focus_to="id_group_pkg">
@@ -109,14 +109,13 @@
     </setting_list>
 
     <!-- ========== 6. 调试选项 ========== -->
-    <!-- 用途：开发调试、环境切换、TestKit 专用 -->
-    <setting_list id="id_group_debug" title="调试选项" second_title="越狱调试、环境与 TestKit" icon="//user//data//OrionHEN//assets//icon_xml_debug.png" initial_focus_to="id_debug_jb">
+    <!-- 用途：开发调试与环境切换 -->
+    <setting_list id="id_group_debug" title="调试选项" second_title="越狱调试与环境" icon="//user//data//OrionHEN//assets//icon_xml_debug.png" initial_focus_to="id_debug_jb">
       <toggle_switch id="id_debug_jb" title="应用越狱通知" second_title="在越狱应用时显示通知" value="0"/>
       <toggle_switch id="id_debug_legacy_cmd" title="旧版越狱命令服务器" second_title="需要网络；应用可通过 Socket 请求越狱" value="0"/>
       <text_field id="id_np_env" title="NP 环境" key="/NP/env"
           keyboard_type="basic_latin" min_length="1" max_length="16"
           confirm="系统将重启以应用此设置。" confirm_phrase="确定,取消"/>
-      <link id="id_testkit_menu" title="TestKit 菜单" file="testkit_menu.xml"/>
     </setting_list>
 
     <!-- ========== 7. 关于 ========== -->
@@ -154,11 +153,11 @@
         <label id="id_project_4" title="Kstuff by sleirsgoevy" style="center"/>
         <label id="id_project_5" title="7-Zip LZMA - https://www.7-zip.org/sdk.html" style="center"/>
         <label id="id_project_6" title="Libhijacker by astrelsky - https://github.com/astrelsky/libhijacker" style="center"/>
-        <label id="id_project_7" title="Tiny-json - https://github.com/rafagafe/tiny-json" style="center"/>
-        <label id="id_project_8" title="PS5-SELF-Decrypter by Specter - https://github.com/Cryptogenic/PS5-SELF-Decrypter" style="center"/>
-        <label id="id_project_9" title="PS5Debug by CTN - https://github.com/GoldHEN/ps5debug" style="center"/>
-        <label id="id_project_10" title="LibNineS - https://github.com/buzzer-re/NineS" style="center"/>
-        <label id="id_project_11" title="Libmicrohttpd - https://www.gnu.org/software/libmicrohttpd/" style="center"/>
+        <label id="id_project_7" title="PS5-SELF-Decrypter by Specter - https://github.com/Cryptogenic/PS5-SELF-Decrypter" style="center"/>
+        <label id="id_project_8" title="PS5Debug by CTN - https://github.com/GoldHEN/ps5debug" style="center"/>
+        <label id="id_project_9" title="LibNineS - https://github.com/buzzer-re/NineS" style="center"/>
+        <label id="id_project_10" title="Libmicrohttpd - https://www.gnu.org/software/libmicrohttpd/" style="center"/>
+        <label id="id_project_11" title="cJSON - https://github.com/DaveGamble/cJSON" style="center"/>
       </setting_list>
     </setting_list>
 

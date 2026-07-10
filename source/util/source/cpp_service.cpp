@@ -931,7 +931,4 @@ void patch_checker() {
     real_rest_mode_detected = false;
 }
 
-bool patchShellActi() {
 
-   return false;
-}

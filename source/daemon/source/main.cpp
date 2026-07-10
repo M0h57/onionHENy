@@ -122,7 +122,6 @@ void notify(bool show_watermark, const char *text, ...);
 bool touch_file(const char *destfile);
 int launchApp(const char *titleId);
 int get_ip_address(char *ip_address);
-bool sceKernelIsTestKit();
 int ItemzLaunchByUri(const char *uri);
 bool enable_toolbox();
 void sig_handler(int signo);
@@ -137,15 +136,6 @@ extern void makenewapp();
 // External function declarations
 extern void *IPC_loop(void *);
 extern bool is_handler_enabled;
-
-// Whitelist for PSIDs
-const char *whitelisted_psids[] = {
-    "b345df7d4c77618d40f19a90e438ad87", 
-    "ab535275b7196e7e7d43f4f9e7806724",
-    "d376c7780b960e5182d326ba3aa2d7a3", 
-    "a8d89ad976b5cb912837ad29b0cc4610",      
-    "177e09480b40816a1caca5151565daa5"
-};
 
 // Function implementations
 void OrionHEN_log(const char *fmt, ...) {
@@ -236,33 +226,6 @@ void sig_handler(int signo) {
     exit(1);
 }
 
-bool sceKernelIsTestKit() {
-    uint8_t s_PsId[16] = {0};
-
-    size_t v2 = 16;
-    if (sysctlbyname("machdep.openpsid_for_sys", &s_PsId, &v2, 0, 0) < 0) {
-        printf("sceKernelGetOpenPsIdForSystem failed\n");
-        return true;
-    }
-
-    char psid_buf[255] = {0};
-
-    for (int i = 0; i < 16; i++) {
-        snprintf(psid_buf + strlen(psid_buf), 255 - strlen(psid_buf), "%02x",
-                s_PsId[i]);
-    }
-
-    for (int i = 0; i < sizeof(whitelisted_psids) / sizeof(whitelisted_psids[0]);
-        i++) {
-        if (strcmp(psid_buf, whitelisted_psids[i]) == 0) {
-            return false; // report not testkit if is whitelisted
-        }
-    }
-
-    return if_exists("/system/priv/lib/libSceDeci5Ttyp.sprx");
-}
-
-
 int (*sceShellUIUtilInitialize)(void) = nullptr;
 int (*sceShellUIUtilLaunchByUri)(const char* uri, SceShellUIUtilLaunchByUriParam* Param) = nullptr;
 #define KERNEL_DLSYM(handle, sym) \
@@ -330,15 +293,6 @@ int main() {
 
 
     LoadSettings();
-
-#if 0
-    // Check if running on a test kit
-    if (sceKernelIsTestKit()) {
-        OrionHEN_log("no NO NO");
-        return -1;
-        raise(SIGSEGV);
-    }
-#endif
 
     // Start threads
     get_ip_address(&buz[0]);

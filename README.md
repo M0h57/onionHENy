@@ -160,7 +160,6 @@ Common ports: exploit elfldr **9020** and runtime elfldr **9021**. OrionHEN does
 - [Toolbox] Remote Play menu
 - [Toolbox] Plugin / payload ELF menu with auto-start
 - [Toolbox] External HDD menu
-- [Toolbox] TestKit menu
 - [Toolbox] Kstuff menu
 - [Toolbox] Game overlay menu
 - [Toolbox] Cheats menu (WIP)
@@ -213,7 +212,6 @@ Settings file: **`/data/OrionHEN/config.ini`** (created on first run).
 | `Util_rest_kill` | Kill util daemon on rest | 0 |
 | `Game_rest_kill` | Kill open game on rest | 0 |
 | `disable_toolbox_auto_start_for_rest_mode` | Disable toolbox autostart after rest | 0 |
-| `testkit` | TestKit mode | 0 |
 | `Display_tids` | Show title IDs | 0 |
 | `APP_JB_Debug_Msg` | App jailbreak debug messages | 0 |
 | `OrionHEN_Game_Options` | Game options menu | 1 |

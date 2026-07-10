@@ -52,7 +52,7 @@ MonoImage * react_common_img = nullptr;
 
 bool hooked = false;
 bool has_hv_bypass = false;
-bool is_testkit = false;
+
 
 extern "C" long ptr_syscall = 0;
 
@@ -1242,14 +1242,6 @@ int main(int argc, char const *argv[]) {
       notify("Failed to detour Func Set 10");
     }
 
-    IPC_Client & main_ipc = IPC_Client::getInstance(false);
-    is_testkit = main_ipc.IsTestKit();
-    if (is_testkit) {
-      shellui_log("TestKit Detected, applying shellui testkit hooks");
-      Start_Kit_Hooks();
-    } else {
-      shellui_log("Not TestKit (or TESTKIT_CHECK IPC failed) — skipping kit hooks");
-    }
 #if 0
     Orig_ReloadApp = (void(*)(MonoString*))DetourFunction(Get_Address_of_Method(react_common_img, "ReactNative.Vsh.Common", "ReactApplicationSceneManager", "ReloadApp", 1), (void * )&ReloadApp);
     if (!Orig_ReloadApp) {

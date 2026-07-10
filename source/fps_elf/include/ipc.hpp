@@ -43,7 +43,7 @@ enum Cheat_Actions {
   RELOAD_CHEATS,
 };
 
-extern bool is_testkit, cheats_shortcut_activate;
+extern bool cheats_shortcut_activate;
 pid_t find_pid(const char *name, bool needle, bool for_bigapp,
                bool need_eboot = false);
 static void game_log(const char *fmt, ...) {
@@ -413,18 +413,6 @@ public:
     if (!IPCSendCommand(BREW_UTIL_SHELLUI_ON_STANDBY, ipc_msg, json)) {
       game_log("Failed to launch plugin");
     }
-  }
-
-  bool IsTestKit() {
-    if (util_daemon) {
-      game_log("This IPC command is NOT in the util daemon");
-      return false;
-    }
-    std::string ipc_msg;
-    if (!IPCSendCommand(BREW_TESTKIT_CHECK, ipc_msg)) {
-      return false;
-    }
-    return true;
   }
 
   void Reload_Daemon_Settings() {

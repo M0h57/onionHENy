@@ -46,7 +46,7 @@ enum Cheat_Actions {
   RELOAD_CHEATS,
 };
 
-extern bool is_testkit, cheats_shortcut_activate;
+extern bool cheats_shortcut_activate;
 pid_t find_pid(const char *name, bool needle, bool for_bigapp,
                bool need_eboot = false);
 static void shellui_log(const char *fmt, ...) {
@@ -65,10 +65,7 @@ static void shellui_log(const char *fmt, ...) {
     buffer[DAEMON_BUFF_MAX - 2] = '\n';
     buffer[DAEMON_BUFF_MAX - 1] = '\0';
   }
-  if (!is_testkit)
-	  klog_printf(buffer);
-  else
-    printf("%s", buffer);
+  klog_printf(buffer);
 }
 
 static int MainDaemonSocket = -1;
@@ -421,18 +418,6 @@ public:
     if (!IPCSendCommand(BREW_UTIL_SHELLUI_ON_STANDBY, ipc_msg, json)) {
       shellui_log("Failed to launch plugin");
     }
-  }
-
-  bool IsTestKit() {
-    if (util_daemon) {
-      shellui_log("This IPC command is NOT in the util daemon");
-      return false;
-    }
-    std::string ipc_msg;
-    if (!IPCSendCommand(BREW_TESTKIT_CHECK, ipc_msg)) {
-      return false;
-    }
-    return true;
   }
 
   void Reload_Daemon_Settings() {

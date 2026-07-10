@@ -554,7 +554,6 @@ bool LoadSettings()
 
     const char *DPI_str = ini_parser_get(&parser, "Settings.DPI", "0");
     const char *libhijacker_cheats_str = ini_parser_get(&parser, "Settings.libhijacker_cheats", "0");
-    const char *testkit_str = ini_parser_get(&parser, "Settings.testkit", "0");
     const char *allow_data_n_sandbox = ini_parser_get(&parser, "Settings.Allow_data_in_sandbox", "1");
     const char *start_option = ini_parser_get(&parser, "Settings.StartOption", "0");
     const char *Delay_seconds = ini_parser_get(&parser, "Settings.Rest_Mode_Delay_Seconds", "0");
@@ -587,7 +586,6 @@ bool LoadSettings()
     global_conf.rest_delay_seconds = Delay_seconds ? atol(Delay_seconds) : 0;
     global_conf.DPI = DPI_str ? atoi(DPI_str) : 0;
     global_conf.libhijacker_cheats = libhijacker_cheats_str ? atoi(libhijacker_cheats_str) : 0;
-    global_conf.testkit = testkit_str ? atoi(testkit_str) : 0;
     global_conf.allow_data_sandbox = allow_data_n_sandbox ? atoi(allow_data_n_sandbox) : 0;
     global_conf.start_option = start_option ? atoi(start_option) : 0;
     global_conf.toolbox_auto_start = toolbox_auto_start ? atoi(toolbox_auto_start) : 0;
@@ -686,7 +684,6 @@ bool SaveSettings()
   // Construct the settings string
   std::string buff = "[Settings]\n";
   buff += "libhijacker_cheats=" + std::to_string(global_conf.libhijacker_cheats) + "\n";
-  buff += "testkit=" + std::to_string(global_conf.testkit) + "\n";
   buff += "DPI=" + std::to_string(global_conf.DPI) + "\n";
   buff += "Allow_data_in_sandbox=" + std::to_string(global_conf.allow_data_sandbox) + "\n";
   buff += "StartOption=" + std::to_string(global_conf.start_option) + "\n";

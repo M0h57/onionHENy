@@ -26,7 +26,6 @@ enum StartOpts {
 struct daemon_settings {
   bool libhijacker_cheats = false;
 
-  bool is_testkit = false;
   bool allow_data = false; /* sandbox /data patch removed from OrionHEN */
   bool DPIv2 = false;
   bool elf_loader = true;

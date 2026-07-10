@@ -142,9 +142,7 @@ OrionHEN/
 主要能力：
 
 - 重挂载、拷贝/删除目录、stat、chmod
-- 目录解密（SELF 等）
 - 启用 Toolbox
-- TestKit 检查
 - 风扇阈值调整
 - 强制杀进程 / 杀守护进程
 
@@ -178,7 +176,7 @@ OrionHEN/
 - 游戏功能（金手指 WIP、Remote Play、overlay）
 - 系统设置（Title ID、风扇、休息模式、外置 HDD、BD 激活）
 - 启动与快捷键
-- 调试 / TestKit / 关于
+- 调试 / 关于
 
 注入路径详见 [shellui-injection.md](shellui-injection.md)。
 
@@ -240,8 +238,7 @@ struct IPCMessage {
 **Critical（daemon，约 `0x9000000`）：**
 
 - `BREW_REMOUNT_FOLDER` / `BREW_STAT_CMD` / `BREW_COPY_*` / `BREW_DELETE_DIR`
-- `BREW_DECRYPT_DIR` / `BREW_CHMOD_DIR`
-- `BREW_ENABLE_TOOLBOX` / `BREW_TESTKIT_CHECK`
+- `BREW_CHMOD_DIR` / `BREW_ENABLE_TOOLBOX`
 - `BREW_ADJUST_FAN_SPEED`
 - `BREW_KILL_DAEMON` / `BREW_FORCE_KILL_PID`
 
@@ -256,6 +253,8 @@ struct IPCMessage {
 
 **已废弃但保留序号（兼容旧客户端）：**
 
+- `BREW_UNUSED_DECRYPT_DIR`（原 DECRYPT_DIR，SELF 目录解密已移除）
+- `BREW_UNUSED_TESTKIT_CHECK`（原 TESTKIT_CHECK；客户端改为本地探测）
 - `BREW_UTIL_UNUSED_FTP`（原 TOGGLE_FTP）
 - `BREW_UTIL_UNUSED_KLOG`（原 TOGGLE_KLOG）
 - `BREW_UTIL_LAUNCH_ELFLDR`（9021 服务不再内嵌）
@@ -289,7 +288,7 @@ struct IPCMessage {
 
 - Debug Settings 替代菜单
 - Rest Mode / Remote Play / 插件与 payload 管理
-- 外置 HDD、TestKit、kstuff 菜单
+- 外置 HDD、kstuff 菜单
 - 游戏选项、Title ID、手柄快捷键
 - Blu-ray 激活、BD-J/Lua exploit 自动弹碟
 - 游戏 overlay
@@ -316,7 +315,7 @@ struct IPCMessage {
 | ps5debug / app-dumper | 不再内嵌 |
 | Byepervisor / hen.bin | 1.xx–2.xx HV 路径不打包 |
 | Discord RPC | 已移除 |
-| libSelfDecryptor | FTP/解密备选路径已移除；daemon 仍有本地 decrypt |
+| libSelfDecryptor | 已移除；SELF 目录解密 IPC 亦已移除 |
 | 沙盒内 `/data` 可见性补丁 | 仅路径可见，非越狱，已移除 |
 
 ---
@@ -350,7 +349,6 @@ git submodule update --init --recursive
 |----|------|
 | **7zip-sdk (LZMA)** | unpacker 解压 bootstrapper |
 | **cJSON** | JSON（通知、DPI、IPC 载荷等） |
-| **tiny-json** | 轻量 JSON 解析 |
 | **pugixml-1.15** | XML（util 侧） |
 | **pfd_sfo_tools** | PFD/SFO 相关工具源码 |
 | **mc4decrypter** | 金手指 MC4 解密（AES/base64） |

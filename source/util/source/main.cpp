@@ -136,14 +136,6 @@ void LoadSettings(void) {
         }
     }
 }
-bool patchShellActi();
-
-bool sceKernelIsTestKit() {
-    //printf("PSID (%s) Not whitelisted\n", psid_buf);
-    return if_exists("/system/priv/lib/libSceDeci5Ttyp.sprx");
-}
-bool patchShellCoreTEST();
-  
 int main(void) {
     pthread_t ipc_server = 0, cheat_cache = 0;
     char tmp_buf[200];
@@ -177,18 +169,10 @@ int main(void) {
     unlink("/data/OrionHEN/OrionHEN_util_crash.log");
 
     OrionHEN_log("=========== starting OrionHEN Utilities... ===========");
-   // if(!sceKernelIsTestKit())
-   //     patchShellCoreTEST();
 
     LoadSettings();
 
-    if(sceKernelIsTestKit()){
-       OrionHEN_log("Kit detected, patching acti time...");
-       patchShellActi();
-    }
-    /* Allow_data_in_sandbox / patchShellCore removed from OrionHEN:
-     * it only forced /data visibility inside app sandboxes (not jailbreak).
-     * Not needed for util/daemon/toolbox; dropped to avoid ShellCore noise. */
+    /* Allow_data_in_sandbox / patchShellCore / TestKit acti patch removed. */
 
     start_ip_thread();
     pthread_create(&ipc_server, NULL, IPC_loop, NULL);

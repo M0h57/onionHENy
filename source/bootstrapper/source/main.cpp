@@ -977,51 +977,6 @@ void free_plugin_files(char **plugin_files) {
   free((void *)plugin_files);
 }
 
-bool sceKernelIsTestKit() {
-  uint8_t s_PsId[16] = {0};
-
-  size_t v2 = 16;
-  if (sysctlbyname("machdep.openpsid_for_sys", &s_PsId, &v2, 0, 0) < 0) {
-    printf("sceKernelGetOpenPsIdForSystem failed\n");
-    return true;
-  }
-
-  char psid_buf[255] = {0};
-
-  for (int i = 0; i < 16; i++) {
-    snprintf(psid_buf + strlen(psid_buf), 255 - strlen(psid_buf), "%02x",
-             s_PsId[i]);
-  }
-
-  const char *whitelisted_psids[] = {
-      "b345df7d4c77618d40f19a90e438ad87",
-      "ab535275b7196e7e7d43f4f9e7806724",
-      "d376c7780b960e5182d326ba3aa2d7a3",
-      "a8d89ad976b5cb912837ad29b0cc4610",
-      "177e09480b40816a1caca5151565daa5",
-           
-
-  };
-
-#if 0
-  printf("PSID: %s\n", psid_buf);
-  char buff[300];
-  snprintf(buff, sizeof buff, "PSID: %s", psid_buf);
-  notify(buff);
-#endif
-
-  for (int i = 0; i < sizeof(whitelisted_psids) / sizeof(whitelisted_psids[0]);
-       i++) {
-    if (strcmp(psid_buf, whitelisted_psids[i]) == 0) {
-      // printf("PSID (%s) whitelisted\n", psid_buf);
-      return false; // report not testkit if is whitelisted
-    }
-  }
-
-  // printf("PSID (%s) Not whitelisted\n", psid_buf);
-  return if_exists("/system/priv/lib/libSceDeci5Ttyp.sprx");
-}
-
 int main(void) {
   // ptrace(PT_ATTACH, pid, 0, 0);
   /// clearFramePointer();
@@ -1035,14 +990,6 @@ int main(void) {
     notify("Unable to raise privileges");
     return -1;
   }
-
-#if 0
-  if (sceKernelIsTestKit()) {
-    notify("support dropped for testkits if you donated to my ko-fi and are NOT andrew send me a message");
-    return 0;
-  }
-#endif
-
 
   klog_printf("   Success!\n");
   if(if_exists("/data/I_want_logging_for_orionhen")){
