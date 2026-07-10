@@ -2,6 +2,7 @@
  * Crit daemon IPC command dispatch.
  * Transport (listen/accept/thread) stays in msg.cpp.
  */
+#include "daemon_ops.hpp"
 #include "ipc.hpp"
 #include <orion/platform.h>
 #include "../../extern/cJSON/orion_cjson.hpp"
@@ -19,20 +20,11 @@
 #include <strings.h>
 
 extern orion::Settings g_settings;
-extern bool is_handler_enabled;
 
-void reply(int sender_socket, bool error, std::string out_var = "Nothing");
-void LoadSettings();
 bool copyRecursive(const char *source, const char *destination);
 bool copyFile(const char *source, const char *destination, bool for_dumper);
 void calculateSize(uint64_t size, char *result);
 uint64_t calculateTotalSize(const char *path);
-int change_permissions_recursive(const char *path);
-bool test_sb_file(const char *filename);
-bool cmd_enable_toolbox();
-void ForceKillProc(int pid);
-bool remount(const char *dev, const char *path, int mnt_flag);
-bool set_fan_threshold(int temp);
 extern "C" int unmount(const char *path, int flags);
 
 void handleIPC(clientArgs *client, std::string &inputStr,

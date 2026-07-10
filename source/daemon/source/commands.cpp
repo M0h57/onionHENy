@@ -23,6 +23,8 @@ along with this program; see the file COPYING. If not, see
 #include "hijacker.hpp"
 #include "launcher.hpp"
 #include "globalconf.hpp"
+#include "daemon_ops.hpp"
+#include <orion/ready.h>
 #include "ipc.hpp"
 #include "../../extern/cJSON/orion_cjson.hpp"
 
@@ -460,11 +462,7 @@ bool Open_Utility_Elf(const char *path, uint8_t **buffer) {
   *buffer = buf; // Pass the buffer back to the caller
   return true;
 }
-bool cmd_enable_fps(int appid);
-void LoadSettings();
 extern bool is_800;
-bool set_fan_threshold(int THRESHOLDTEMP);
-bool cmd_enable_fps_new(int appid);
 void *fifo_and_dumper_thread(void *args) noexcept {
   char *json_str = nullptr;
   std::string tid, sandbox_dir_base;
@@ -510,7 +508,8 @@ void *fifo_and_dumper_thread(void *args) noexcept {
     }
 
 
-    if( if_exists("/system_tmp/fps_enabled") && (tid.rfind("CUSA") != std::string::npos || tid.rfind("SCUS") != std::string::npos)){
+    if (orion_ready_is_set(ORION_FLAG_FPS_OVERLAY) &&
+        (tid.rfind("CUSA") != std::string::npos || tid.rfind("SCUS") != std::string::npos)) {
         // cmd_enable_fps(bappid);
         if(is_800)
           cmd_enable_fps_new(bappid);

@@ -1,0 +1,33 @@
+/* Copyright (C) 2025 OrionHEN / LightningMods
+ *
+ * Daemon domain ops — settings, FS, inject. msg.cpp only owns IPC_loop.
+ */
+#pragma once
+
+#include <string>
+#include <sys/types.h>
+#include <msg.hpp>
+#include <orion/ipc_server.hpp>
+
+// clientArgs alias
+using clientArgs = orion::IpcClientArgs;
+
+extern bool is_handler_enabled;
+
+void LoadSettings();
+
+void reply(int sender_socket, bool error, std::string out_var = "Nothing");
+bool remount(const char *dev, const char *path, int mnt_flag);
+int change_permissions_recursive(const char *path);
+bool test_sb_file(const char *filename);
+int get_shellui_pid();
+int get_game_pid();
+void ForceKillProc(int pid);
+bool set_fan_threshold(int temp);
+
+bool cmd_enable_toolbox();
+bool cmd_enable_fps(int appid);
+bool cmd_enable_fps_new(int appid);
+
+void *IPC_loop(void *args);
+void handleIPC(clientArgs *client, std::string &inputStr, DaemonCommands command);

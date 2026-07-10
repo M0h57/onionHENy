@@ -19,6 +19,7 @@ along with this program; see the file COPYING. If not, see
 #include <orion/ucred.h>
 #include <orion/proc_query.h>
 #include <orion/platform.h>
+#include "daemon_ops.hpp"
 #include <stdio.h>
 #include <stdarg.h>
 #include <stddef.h>
@@ -212,8 +213,6 @@ int ItemzLaunchByUri(const char* uri) {
     return sceShellUIUtilLaunchByUri(uri, &Param);
 }
 
-bool cmd_enable_toolbox();
-void LoadSettings();
 bool is_800 = false;
 int main() {
   orion_log_configure("OrionHEN", "/data/OrionHEN/OrionHEN.log");
