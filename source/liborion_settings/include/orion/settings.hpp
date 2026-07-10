@@ -43,9 +43,6 @@ inline constexpr const char *kConfigPathShellui = "/user/data/OrionHEN/config.in
 inline constexpr int kSettingsSchemaVersion = 1;
 
 struct Settings {
-  // --- Network / install ---
-  bool DPI = true;
-
   // --- Toolbox ---
   bool toolbox_auto_start = true;
   bool disable_toolbox_auto_start_for_rest_mode = false;

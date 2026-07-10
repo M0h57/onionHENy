@@ -25,8 +25,7 @@ bool g_all_cpu_usage = false;
 
 std::vector<GameEntry> games_list;
 std::vector<Plugins> plugins_list, auto_list;
-std::vector<Payloads_Apps> payloads_apps_list, custom_pkg_list;
-Payloads_Apps custom_pkg_path = { .path = "/data/OrionHEN/pkgs" };
+std::vector<Payloads_Apps> payloads_apps_list;
 
 std::string running_tid;
 bool is_game_open = true;

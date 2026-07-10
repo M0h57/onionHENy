@@ -10,7 +10,7 @@
 
 extern MonoClass* MemoryStream_IO;
 extern MonoObject* MemoryStream_Instance;
-extern bool is_plugin, is_su_menu, is_custom_pkg, is_debug_settings, is_cheats;
+extern bool is_plugin, is_su_menu, is_debug_settings, is_cheats;
 extern bool is_auto_plugin, is_remote_play, is_plapps;
 extern bool cheats_shortcut_activated, cheats_shortcut_activated_not_open;
 extern std::string current_menu_tid;
@@ -19,7 +19,6 @@ extern std::string dec_xml_str, UI3_dec, legacy_dec;
 void generate_plugin_xml(std::string& xml_buffer, bool plugins_xml);
 void generate_remote_play_xml(std::string& xml_buffer);
 void generate_plapps_xml(std::string& new_xml);
-void generate_custom_pkg_xml(std::string& xml_buffer);
 void generate_cheats_xml(std::string &new_xml, std::string& not_open_tid, bool running_as_debug_settings, bool show_while_not_open);
 
 uint64_t GetManifestResourceStream_Hook(uint64_t inst, MonoString* FileName) {
@@ -36,7 +35,6 @@ uint64_t GetManifestResourceStream_Hook(uint64_t inst, MonoString* FileName) {
     is_cheats = (resourceName == cheats_xml);
     is_auto_plugin = (resourceName == "Sce.Vsh.ShellUI.Legacy.src.Sce.Vsh.ShellUI.Settings.Plugins.auto_plugins.xml");
     is_plapps = (resourceName == "Sce.Vsh.ShellUI.Legacy.src.Sce.Vsh.ShellUI.Settings.Plugins.plapps.xml");
-	is_custom_pkg = (resourceName == "Sce.Vsh.ShellUI.Legacy.src.Sce.Vsh.ShellUI.Settings.Plugins.custompkginstaller.xml");
 	is_su_menu = (resourceName == "Sce.Vsh.ShellUI.Legacy.src.Sce.Vsh.ShellUI.Settings.Plugins.superuser.xml");
     
     is_remote_play = (resourceName == remote_play_xml);
@@ -53,7 +51,7 @@ uint64_t GetManifestResourceStream_Hook(uint64_t inst, MonoString* FileName) {
         return GetManifestResourceStream_Original(inst, mono_string_new(Root_Domain, debug_settings_xml.c_str()));
     }
 
-    if (!is_plugin && !is_debug_settings && !is_cheats && !is_auto_plugin && !is_remote_play && !is_plapps && !is_su_menu && !is_custom_pkg) {
+    if (!is_plugin && !is_debug_settings && !is_cheats && !is_auto_plugin && !is_remote_play && !is_plapps && !is_su_menu) {
         return GetManifestResourceStream_Original(inst, FileName);
     }
 
@@ -86,25 +84,6 @@ uint64_t GetManifestResourceStream_Hook(uint64_t inst, MonoString* FileName) {
         }
         generate_plugin_xml(new_xml_string, true);
        // shellui_log("Plugins XML: %s", new_xml_string.c_str());
-    }
-    else if (is_custom_pkg) {
-
-        if (!custom_pkg_list.empty()) {
-            custom_pkg_list.clear();
-            //shellui_log("Custom Pkg Installers found");
-        }
-        generate_custom_pkg_xml(new_xml_string);
-       // shellui_log("Custom Pkg Installers XML: %s", new_xml_string.c_str());
-	}
-    else if (is_su_menu) {
-#if 0
-        if (!su_list.empty()) {
-            su_list.clear();
-            //shellui_log("Superuser apps found");
-        }
-        generate_su_xml(new_xml_string);
-        // shellui_log("Superuser apps XML: %s", new_xml_string.c_str());
-#endif
     }
     else if (is_cheats) {
         generate_cheats_xml(new_xml_string, current_menu_tid, (cheats_shortcut_activated || cheats_shortcut_activated_not_open), cheats_shortcut_activated_not_open);

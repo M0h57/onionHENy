@@ -321,7 +321,7 @@ extern int (*__sys_regmgr_call)(long, long, int*, int*, long);
 /* ================================= HOOKED MONO FUNCS ============================================= */
 extern  std::vector<Plugins> plugins_list;
 extern  std::vector<Plugins> auto_list;
-extern  std::vector<Payloads_Apps> payloads_apps_list, custom_pkg_list;
+extern std::vector<Payloads_Apps> payloads_apps_list;
 extern  std::string dec_xml_str;
 extern  std::string cheats_xml;
 extern  std::string UI3_dec;
@@ -331,7 +331,6 @@ extern  std::string uilib;
 extern  std::string Sysinfo;
 extern  std::string display_info;
 extern  std::string uilib_dll;
-extern Payloads_Apps custom_pkg_path;
 
 extern  std::string plugin_xml;
 extern  std::string debug_settings_xml;
@@ -384,6 +383,5 @@ int rnps_decrypt_block(void* buffer, int size);
 int ioctl_hook (int fd, unsigned long request, void *argp);
 int LaunchApp(MonoString* titleId, uint64_t* args, int argsSize, LaunchAppParam *param);
 int sceRegMgrGetInt_hook(long regid, int* out_val);
-void generate_custom_pkg_xml(std::string& xml_buffer);
 void createJson_hook(MonoObject* inst, MonoObject* array, MonoString* id, MonoString* label = nullptr, MonoString* actionUrl = nullptr, MonoString* actionId = nullptr, MonoString* messageId = nullptr, MonoObject* subMenu = nullptr, bool enable = true);
 /* ================================= HOOKED MONO FUNCS ============================================= */

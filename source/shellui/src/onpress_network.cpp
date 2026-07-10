@@ -1,20 +1,6 @@
-/* Copyright (C) 2025 OrionHEN / LightningMods — OnPress network/DPI domain */
+/* Copyright (C) 2025 OrionHEN / LightningMods — OnPress network domain */
 #include "onpress.hpp"
 #include <cstdlib>
-
-static OnPressResult id_dpi_service(OnPressContext &ctx) {
-  bool &DPI = g_settings.DPI;
-  if (atoi(ctx.value.c_str()) == DPI) {
-    shellui_log("DPI already %s", DPI ? "Enabled" : "Disabled");
-    return OnPressResult::EarlyReturn;
-  }
-  DPI = !DPI;
-  if (!IPC_Client::getInstance(true).ToggleDPI(DPI)) {
-    notify(DPI ? "DPI Server Failed to Start ..." : "DPI Server Failed to Stop ...");
-    DPI = !DPI;
-  }
-  return OnPressResult::Handled;
-}
 
 static OnPressResult id_debug_legacy_cmd(OnPressContext &ctx) {
   if (atoi(ctx.value.c_str()) == g_settings.legacy_cmd_server) {
@@ -45,7 +31,6 @@ static OnPressResult id_disp_titleids(OnPressContext &ctx) {
 }
 
 static const OnPressExactEntry kExact[] = {
-    {"id_dpi_service", id_dpi_service},
     {"id_debug_legacy_cmd", id_debug_legacy_cmd},
     {"id_disp_titleids", id_disp_titleids},
 };

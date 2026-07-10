@@ -34,11 +34,6 @@ static OnPressResult id_delete_kstuff(OnPressContext &ctx) {
   return OnPressResult::Handled;
 }
 
-static OnPressResult id_change_custom_pkg_path(OnPressContext &ctx) {
-  custom_pkg_path.path = ctx.value;
-  return OnPressResult::Handled;
-}
-
 static OnPressResult id_save_rp_info(OnPressContext &ctx) {
   (void)ctx;
   if (usbpath() == -1) {
@@ -84,7 +79,6 @@ static const OnPressExactEntry kExact[] = {
     {"id_download_kstuff", id_download_kstuff},
     {"id_kstuff_autoload", id_kstuff_autoload},
     {"id_delete_kstuff", id_delete_kstuff},
-    {"id_change_custom_pkg_path", id_change_custom_pkg_path},
     {"id_save_rp_info", id_save_rp_info},
     {"id_lm_test", id_lm_test},
     {"id_orionhen_credits", id_orionhen_credits},

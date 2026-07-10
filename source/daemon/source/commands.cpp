@@ -143,7 +143,6 @@ bool enable_toolbox();
 bool isUserLoggedIn();
 bool Open_Utility_Elf(const char *path, uint8_t **buffer);
 void *fifo_and_dumper_thread(void *args) noexcept;
-void *runDirectPKGInstaller(void *args);
 void activate_shellui_patch(void);
 
 // Local ABIs that used to leak through the junk globalconf.hpp dump.

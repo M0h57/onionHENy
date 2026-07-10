@@ -26,7 +26,6 @@ static int test_defaults_and_serialize_keys(void) {
 
   TEST_ASSERT_TRUE(text.find("[Settings]") != std::string::npos);
   TEST_ASSERT_TRUE(text.find("schema_version=1") != std::string::npos);
-  TEST_ASSERT_TRUE(text.find("DPI=1") != std::string::npos);
   TEST_ASSERT_TRUE(text.find("toolbox_auto_start=1") != std::string::npos);
   TEST_ASSERT_TRUE(text.find("fan_threshold=77") != std::string::npos);
   TEST_ASSERT_TRUE(text.find("legacy_cmd_server=0") != std::string::npos);
@@ -39,7 +38,6 @@ static int test_roundtrip_file(void) {
   TEST_ASSERT_TRUE(!path.empty());
 
   orion::Settings in{};
-  in.DPI = false;
   in.fan_threshold = 55;
   in.overlay_fps = true;
   in.legacy_cmd_server = true;
@@ -53,7 +51,6 @@ static int test_roundtrip_file(void) {
   orion::Settings out{};
   TEST_ASSERT_TRUE(orion::settings_load_file(path.c_str(), &out));
 
-  TEST_ASSERT_TRUE(out.DPI == false);
   TEST_ASSERT_EQ_INT(55, out.fan_threshold);
   TEST_ASSERT_TRUE(out.overlay_fps == true);
   TEST_ASSERT_TRUE(out.legacy_cmd_server == true);
@@ -73,7 +70,6 @@ static int test_legacy_key_debug_legacy_cmd_server(void) {
 
   const char *body =
       "[Settings]\n"
-      "DPI=0\n"
       "debug_legacy_cmd_server=1\n";
   FILE *f = fopen(path.c_str(), "w");
   TEST_ASSERT_TRUE(f != nullptr);
@@ -83,7 +79,6 @@ static int test_legacy_key_debug_legacy_cmd_server(void) {
   orion::Settings out{};
   TEST_ASSERT_TRUE(orion::settings_load_file(path.c_str(), &out));
   TEST_ASSERT_TRUE(out.legacy_cmd_server == true);
-  TEST_ASSERT_TRUE(out.DPI == false);
 
   unlink(path.c_str());
   return 0;
@@ -91,13 +86,11 @@ static int test_legacy_key_debug_legacy_cmd_server(void) {
 
 static int test_missing_file_defaults(void) {
   orion::Settings out{};
-  out.DPI = false;
   out.fan_threshold = 1;
   TEST_ASSERT_TRUE(
       !orion::settings_load_file("/tmp/orion-settings-does-not-exist-xyz.ini",
                                  &out));
   /* load_file resets to defaults even on failure */
-  TEST_ASSERT_TRUE(out.DPI == true);
   TEST_ASSERT_EQ_INT(77, out.fan_threshold);
   return 0;
 }
@@ -107,7 +100,6 @@ static int test_full_schema_roundtrip(void) {
   TEST_ASSERT_TRUE(!path.empty());
 
   orion::Settings in{};
-  in.DPI = false;
   in.toolbox_auto_start = false;
   in.disable_toolbox_auto_start_for_rest_mode = true;
   in.util_rest_kill = true;
@@ -136,7 +128,6 @@ static int test_full_schema_roundtrip(void) {
   orion::Settings out{};
   TEST_ASSERT_TRUE(orion::settings_load_file(path.c_str(), &out));
 
-  TEST_ASSERT_TRUE(out.DPI == in.DPI);
   TEST_ASSERT_TRUE(out.toolbox_auto_start == in.toolbox_auto_start);
   TEST_ASSERT_TRUE(out.disable_toolbox_auto_start_for_rest_mode ==
                    in.disable_toolbox_auto_start_for_rest_mode);
@@ -171,15 +162,14 @@ static int test_partial_ini_keeps_defaults(void) {
   TEST_ASSERT_TRUE(!path.empty());
   FILE *f = fopen(path.c_str(), "w");
   TEST_ASSERT_TRUE(f != nullptr);
-  fputs("[Settings]\nDPI=0\n", f);
+  fputs("[Settings]\ntoolbox_auto_start=0\n", f);
   fclose(f);
 
   orion::Settings out{};
   TEST_ASSERT_TRUE(orion::settings_load_file(path.c_str(), &out));
   /* specified key applied; unspecified keys stay at defaults */
-  TEST_ASSERT_TRUE(out.DPI == false);
+  TEST_ASSERT_TRUE(out.toolbox_auto_start == false);
   TEST_ASSERT_EQ_INT(77, out.fan_threshold);
-  TEST_ASSERT_TRUE(out.toolbox_auto_start == true);
 
   unlink(path.c_str());
   return 0;
@@ -205,10 +195,8 @@ static int test_empty_file_loads_defaults(void) {
   fclose(f);
 
   orion::Settings out{};
-  out.DPI = false;
   /* empty file: load may succeed or fall back — either way defaults applied */
   (void)orion::settings_load_file(path.c_str(), &out);
-  TEST_ASSERT_TRUE(out.DPI == true);
   TEST_ASSERT_EQ_INT(77, out.fan_threshold);
   unlink(path.c_str());
   return 0;

@@ -20,12 +20,11 @@ extern MonoMethod* set_value_method;
 extern int cheatEnabledMap[];
 extern std::string currentCheatTID;
 
-extern bool is_plugin, is_su_menu, is_custom_pkg, is_debug_settings, is_cheats, is_auto_plugin, is_remote_play, is_plapps;
+extern bool is_plugin, is_su_menu, is_debug_settings, is_cheats, is_auto_plugin, is_remote_play, is_plapps;
 std::string GetPropertyValue(MonoObject* element, const char* propertyName);
 bool if_exists(const char* path);
 
 int OnPreCreate_Hook(MonoObject* Instance, MonoObject* element) {
-    bool& DPI = g_settings.DPI;
     MonoString* s_MonoText = nullptr;
 
     char tid[32] = { 0 };
@@ -122,9 +121,6 @@ int OnPreCreate_Hook(MonoObject* Instance, MonoObject* element) {
     }
     else if (id == "id_enable_fan_speed"){
         s_MonoText = mono_string_new(Root_Domain, g_settings.enable_fan_speed ? "1" : "0");
-    }
-    else if (id == "id_dpi_service") {
-        s_MonoText = mono_string_new(Root_Domain, DPI ?  "1" : "0");
     }
     else if (id == "id_selected_cheats_repo") {
         s_MonoText = mono_string_new(Root_Domain, g_settings.selected_cheats_repo ? "1" : "0");

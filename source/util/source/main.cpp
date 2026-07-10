@@ -59,14 +59,11 @@ extern bool is_handler_enabled;
 orion::Settings g_settings;
 atomic_bool g_legacy_cmd_server = false;
 atomic_bool g_legacy_cmd_server_exit = false;
-bool startDirectPKGInstaller(void);
-void shutdownDirectPKGInstaller(void);
 void start_ip_thread(void);
 void* runCommandNControlServer(void*);
 void patch_checker(void);
 void* IPC_loop(void* args);
 bool shellui_patch(void);
-void* runDirectPKGInstaller(void* args);
 
 extern atomic_bool no_network_rest_mode_action;
 extern pthread_t kernelrw_thread;
@@ -79,9 +76,6 @@ static void cleanup(void) {
     orion_notify(true, "OrionHEN utilities daemon has crashed...\n\nAttemping to recover...");
 
     pthread_join(kernelrw_thread, NULL);
-
-    if (g_settings.DPI)
-        shutdownDirectPKGInstaller();
 
     exit(1);
 }
@@ -125,7 +119,6 @@ int main(void) {
     set_proc_authid(getpid(), DEBUG_AUTHID);
 
 
-    g_settings.DPI = true;
     g_settings.rest_mode_delay_seconds = 0;
     g_settings.toolbox_auto_start = true;
 	g_legacy_cmd_server_exit = false;
@@ -176,10 +169,6 @@ int main(void) {
         }
         no_network_rest_mode_action = false;
 
-        if (g_settings.DPI) {
-            startDirectPKGInstaller();
-        }
-
         pthread_create(&cmd_server, NULL, runCommandNControlServer, NULL);
         OrionHEN_log("loading settings...");
         LoadSettings();
@@ -189,9 +178,6 @@ int main(void) {
         orion::cheats::CheatService::instance().ensureDir();
 
         pthread_join(cmd_server, NULL);
-
-        if (g_settings.DPI)
-            shutdownDirectPKGInstaller();
 
         usleep(SLEEP_PERIOD);
     }

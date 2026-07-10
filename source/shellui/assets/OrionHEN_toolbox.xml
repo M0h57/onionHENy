@@ -14,11 +14,9 @@
   <setting_list id="id_debug_settings" title="★OrionHEN 工具箱" initial_focus_to="id_group_pkg">
 
     <!-- ========== 1. 软件包安装 ========== -->
-    <!-- 用途：安装 PKG / 附加内容（本地与远程安装方式放一起） -->
+    <!-- 用途：安装 PKG / 附加内容（系统 PkgInstaller 与附加内容） -->
     <setting_list id="id_group_pkg" title="软件包安装" second_title="安装 PKG 与附加内容" icon="//user//data//OrionHEN//assets//icon_xml_package.png" initial_focus_to="id_game_package_installer">
       <link id="id_game_package_installer" title="软件包安装器" file="PkgInstaller/data/pkginstaller.xml"/>
-      <link id="id_game_custom_package_installer" title="★ 自定义后台软件包安装器" file="custompkginstaller.xml"/>
-      <toggle_switch id="id_dpi_service" title="直接软件包安装器" second_title="通过网络安装 PKG，服务器端口 9090" value="0"/>
       <link id="id_game_add_content_manager" title="附加内容管理器" file="Addcontent/data/addcontent.xml"/>
     </setting_list>
 

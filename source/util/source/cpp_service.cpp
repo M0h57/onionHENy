@@ -89,7 +89,6 @@ extern atomic_bool not_connected;
 
 // Function forward declarations
 void *krw_server(void *args);
-bool RunDPIThread();
 bool LoadSettings();
 void check_addr_change(void);
 int get_ip_address(char *ip_address);

@@ -84,7 +84,6 @@ int usbpath();
 
 bool is_plugin = false;
 bool is_su_menu = false;
-bool is_custom_pkg = false;
 bool is_debug_settings = false;
 bool is_cheats = false;
 bool is_auto_plugin = false;

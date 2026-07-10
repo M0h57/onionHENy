@@ -32,7 +32,7 @@ static int test_crit_command_base_and_order(void) {
 static int test_util_command_base(void) {
   TEST_ASSERT_EQ_U64(0x8000000u, static_cast<unsigned>(BREW_UTIL_TEST_CONNECTION));
   TEST_ASSERT_EQ_U64(0x8000002u, static_cast<unsigned>(BREW_UTIL_RETURN_VALUE));
-  TEST_ASSERT_TRUE(static_cast<unsigned>(BREW_UTIL_TOGGLE_DPI) >
+  TEST_ASSERT_TRUE(static_cast<unsigned>(BREW_UTIL_UNUSED_DPI) >
                    static_cast<unsigned>(BREW_UTIL_RETURN_VALUE));
   return 0;
 }

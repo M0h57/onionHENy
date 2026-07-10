@@ -47,7 +47,7 @@ enum DaemonCommands : unsigned int {
   BREW_UTIL_DAEMON_PID,
   BREW_UTIL_UNUSED_FTP,  // was BREW_UTIL_TOGGLE_FTP (service removed)
   BREW_UTIL_UNUSED_KLOG, // was BREW_UTIL_TOGGLE_KLOG (service removed)
-  BREW_UTIL_TOGGLE_DPI,
+  BREW_UTIL_UNUSED_DPI, // was TOGGLE_DPI (DirectPKGInstaller removed)
   BREW_UTIL_LAUNCH_PLUGIN,
   BREW_UTIL_SHELLUI_ON_STANDBY,
   BREW_UTIL_GET_GAME_VER,

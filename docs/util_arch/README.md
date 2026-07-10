@@ -30,8 +30,8 @@
                                     └──────┬───────┘
            ┌───────────────────────────────┼───────────────────────────────┐
            ▼                               ▼                               ▼
-    ShellUI / fps_elf               TCP DPI / CMD                    游戏进程
-    (Unix socket 客户端)            9090 / 9028              mdbg|kdirect 写内存
+    ShellUI / fps_elf               TCP CMD                    游戏进程
+    (Unix socket 客户端)            9028              mdbg|kdirect 写内存
 ```
 
 **典型客户端**：`shellui.elf`、`fps_elf` 通过 `IPC_Client(util_daemon=true)` 连 util socket。
@@ -50,7 +50,7 @@ main()
  ├─ 3. fault_handler_init(cleanup)          # faulthandler.c
  ├─ 4. payload_get_args() → kernel_base
  ├─ 5. set_proc_authid(self, DEBUG_AUTHID) # 提权本进程
- ├─ 6. 默认 global_conf（DPI on 等）
+ ├─ 6. 默认 global_conf
  ├─ 7. unlink 旧 util 日志
  ├─ 8. LoadSettings()                      # /data/OrionHEN/config.ini
  ├─ 9. start_ip_thread()                   # cpp_service：后台刷本机 IP
@@ -64,19 +64,17 @@ main()
         │    → sleep / 探测 rest mode              │
         │    → 可选 patch_checker()                │
         │                                           │
-        ├─ startDirectPKGInstaller(false)  # DPI :9090
         ├─ pthread_create(cmd_server)      # Legacy CMD :9028
         ├─ LoadSettings() 再刷一次
         ├─ 金手指：ensure_dir + state_create
         ├─ pthread_join(cmd_server)        # 阻塞；CMD 退出则重启外围
-        ├─ shutdown DPI
         └─ usleep(SLEEP_PERIOD) → 回到循环 ────────┘
 ```
 
 要点：
 
 - **IPC 线程先于主循环启动**，且不随 rest/网络重启销毁。
-- **CMD 服务器**在主循环里 `join`：网络恢复 / rest 后会整段重拉 DPI + CMD + 金手指初始化。
+- **CMD 服务器**在主循环里 `join`：网络恢复 / rest 后会整段重拉 CMD + 金手指初始化。
 - 金手指 **service 状态**挂在全局 `g_cheat_service`，主循环里只做 ensure_dir / create，不反复 destroy。
 
 ---
@@ -91,7 +89,6 @@ source/util/
 │   ├── common_utils.c           # OrionHEN_log / notify / ptrace attach / 通用工具
 │   ├── faulthandler.c           # 信号与崩溃落盘
 │   ├── http.c                   # curl 下载、zip 解压、cheats commit 检查
-│   ├── DirectPKGInstaller.cpp   # DPI 线程与 WebUI 资源
 │   ├── cpp_service.cpp          # IP 线程、CMD:9028、Toolbox/shellcore 修补
 │   ├── util_platform.c          # 共享平台：固件/版本/模块/读文件
 │   └── cheats/                  # 金手指领域（C++ 编排 + 解析 + C 适配）
@@ -113,15 +110,14 @@ source/util/
 | Logging / notify | `common_utils.c` | 几乎全部 |
 | Platform | `util_platform.c` | cheats、可被其它业务复用 |
 | HTTP | `http.c` | msg（下载 cheats/kstuff） |
-| DPI | `DirectPKGInstaller.cpp` | main 循环、IPC toggle |
 | CMD / Toolbox | `cpp_service.cpp` | main 循环、IPC legacy toggle |
 | Cheats | `cheats/*` | msg IPC |
 
 **依赖原则（目标态）**：
 
 ```text
-main ──► msg / DPI / CMD / cheats(init)
-msg  ──► CheatService / http / DPI / common_utils
+main ──► msg / CMD / cheats(init)
+msg  ──► CheatService / http / common_utils
 CheatService ──► Repository / ParserFactory / Applier ──► util_platform + pt/mdbg/kernel
 ```
 
@@ -133,14 +129,13 @@ CheatService ──► Repository / ParserFactory / Applier ──► util_platf
 
 | 线程 | 创建位置 | 生命周期 | 作用 |
 |------|----------|----------|------|
-| main | `main` | 进程 | 主循环、join CMD、启停 DPI |
+| main | `main` | 进程 | 主循环、join CMD |
 | IPC accept | `IPC_loop` | 常驻 | accept Unix 连接 |
 | IPC client | `ipc_client`（每连接一个，detach） | 连接级 | 读 `IPCMessage` → `handleIPC` |
 | IP poll | `start_ip_thread` | 常驻 | 刷新本机 IP 字符串 |
-| DPI | `runDirectPKGInstaller` | 可启停 | TCP 9090 PKG 安装 |
 | Legacy CMD | `runCommandNControlServer` | 随主循环 | TCP 9028 hijacker 协议 |
 
-故障：`faulthandler` 触发 `cleanup` → 关 DPI → `exit`。
+故障：`faulthandler` 触发 `cleanup` → cleanup → `exit`。
 
 ---
 
@@ -166,7 +161,6 @@ struct IPCMessage {
 | 命令 | 作用 | 内部去向 |
 |------|------|----------|
 | `SHELLUI_ON_STANDBY` | ShellUI 休息模式标记 | 原子标志 `real_rest_mode_detected` |
-| `TOGGLE_DPI` | 启停 DPI | `startDirectPKGInstaller` / `shutdown*` |
 | `DAEMON_PID` | 返回 util pid | `getpid` |
 | `GET_GAME_VER` | 游戏版本字符串 | param.json / param.sfo（msg 内实现） |
 | `GET_GAME_CHEAT` | 导出金手指列表 JSON 文件路径 | `CheatService::exportList` |
@@ -243,13 +237,6 @@ cheat_engine_runtime
 
 调用方主要是 **IPC 下载 cheats / kstuff**。
 
-### 6.4 DPI（`DirectPKGInstaller.cpp`）
-
-| 模式 | 端口 | 线程入口 |
-|------|------|----------|
-| v1 | **9090** | `runDirectPKGInstaller` |
-
-由 main 配置与 IPC `TOGGLE_DPI` 控制启停。底层用 `SceAppInstUtil` 装 PKG。
 
 ### 6.5 CMD / Toolbox（`cpp_service.cpp`）
 
@@ -331,7 +318,7 @@ IPC `DOWNLOAD_CHEATS`：zip → staging → `orion_cheat_flatten_install_tree` �
 
 | 路径 | 用途 |
 |------|------|
-| `/data/OrionHEN/config.ini` | DPI、toolbox、legacy CMD 等 |
+| `/data/OrionHEN/config.ini` | toolbox、legacy CMD 等 |
 | `/data/OrionHEN/cheats/` | 金手指 flat 文件 |
 | `/data/OrionHEN/cheats_staging/` | 下载解压临时区 |
 | `/user/data/OrionHEN/<tid>_cheats` | ShellUI 消费的列表 JSON |
@@ -339,7 +326,7 @@ IPC `DOWNLOAD_CHEATS`：zip → staging → `orion_cheat_flatten_install_tree` �
 | `/data/OrionHEN/kstuff.elf` | 下载的 kstuff |
 | `/system_tmp/util_first_boot` | 是否首启（影响 toolbox 自动） |
 
-`LoadSettings` 读取的主要键（节选）：`Settings.DPI`、`toolbox_auto_start`、`legacy_cmd_server`、`disable_toolbox_auto_start_for_rest_mode`。
+`LoadSettings` 读取的主要键（节选）：`toolbox_auto_start`、`legacy_cmd_server`、`disable_toolbox_auto_start_for_rest_mode`。
 
 ---
 
@@ -353,7 +340,6 @@ IPC `DOWNLOAD_CHEATS`：zip → staging → `orion_cheat_flatten_install_tree` �
 | 新金手指格式 | `ICheatParser` + `CheatParserFactory::createByFormat` |
 | 写内存策略 | `IMemoryBackend.hpp` / `MemoryBackends.cpp` |
 | 版本/模块/固件 | `util_platform.c` |
-| DPI 端口/安装 | `DirectPKGInstaller.cpp` |
 | 9028 协议 | `cpp_service.cpp` |
 | 下载/zip | `http.c` |
 | 日志 | `common_utils.c` → `OrionHEN_log` |

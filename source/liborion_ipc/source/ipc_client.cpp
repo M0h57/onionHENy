@@ -486,19 +486,6 @@ bool IPC_Client::Set_Fan_Threshold(int temp, bool enabled) {
   return true;
 }
 
-bool IPC_Client::ToggleDPI(bool turn_on) {
-  if (!require_util("ToggleDPI")) {
-    return false;
-  }
-  cJSON *j = cJSON_CreateObject();
-  cJSON_AddNumberToObject(j, "toggle", turn_on ? 1 : 0);  std::string json = json_object_str(j);
-  std::string ipc_msg;
-  if (!IPCSendCommand(BREW_UTIL_TOGGLE_DPI, ipc_msg, json)) {
-    shellui_log("Failed to toggle DPI");
-    return false;
-  }
-  return true;
-}
 
 bool IPC_Client::EnableToolbox() {
   if (!require_crit("EnableToolbox")) {

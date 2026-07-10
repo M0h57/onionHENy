@@ -36,7 +36,7 @@ OrionHEN 是 PS5 的 All-in-One Homebrew Enabler，基于 **etaHEN**（Lightning
 ┌───────────────┬────────────────┬──────────────────┐
 │  util.elf     │  kstuff.elf    │  daemon.elf      │
 │  工具服务守护 │  fself / fpkg  │  核心守护进程    │
-│  DPI / Cheats │  内核补丁      │  ShellUI 注入    │
+│  Cheats      │  内核补丁      │  ShellUI 注入    │
 └───────┬───────┴───────┬────────┴────────┬─────────┘
         │               │                 │
         │               │                 ▼
@@ -92,7 +92,7 @@ OrionHEN/
 ├── source/           # CMake 主工程
 │   ├── bootstrapper/ # 启动器
 │   ├── daemon/       # 核心守护
-│   ├── util/         # 工具守护（DPI、金手指、IPC 等）
+│   ├── util/         # 工具守护（金手指、IPC 等）
 │   ├── shellui/      # Toolbox
 │   ├── fps_elf/      # 游戏 overlay
 │   ├── unpacker/     # 最终 OrionHEN.elf
@@ -154,7 +154,6 @@ OrionHEN/
 
 | 服务 | 端口 / 入口 | 说明 |
 |------|-------------|------|
-| DPI | **9090** | Direct PKG Installer（TCP + JSON） |
 | Legacy CMD | **9028** | 旧版 hijacker 协议（app jailbreak 等） |
 | Cheats | IPC | flat-file cheat engine（flat `TITLE_VERSION.ext` + mdbg/kdirect）；详见 [util_arch](util_arch/) |
 | ShellCore / ShellUI 补丁 | — | 休息模式恢复、toolbox 激活等 |
@@ -170,7 +169,7 @@ OrionHEN/
 
 主要菜单能力：
 
-- 软件包安装（PKG 安装器、DPI）
+- 软件包安装（系统 PkgInstaller UI）
 - 插件与内核（插件 ELF、kstuff 管理）
 - 游戏功能（金手指引擎、Remote Play、overlay）
 - 系统设置（Title ID、风扇、休息模式、外置 HDD、BD 激活）
@@ -303,7 +302,7 @@ struct IPCMessage {
 
 **Util（约 `0x8000000`）：**
 
-- `BREW_UTIL_TOGGLE_DPI` / `BREW_UTIL_LAUNCH_PLUGIN`
+- `BREW_UTIL_LAUNCH_PLUGIN`
 - `BREW_UTIL_GET_GAME_VER` / `BREW_UTIL_GET_GAME_CHEAT` / `BREW_UTIL_TOGGLE_CHEAT`
 - `BREW_UTIL_DOWNLOAD_CHEATS`（`RELOAD_CHEATS` 已移除，热重载靠文件签名）
 - `BREW_UTIL_DOWNLOAD_KSTUFF`
@@ -355,14 +354,13 @@ struct IPCMessage {
 
 ### 4.3 网络服务
 
-- DPI 9090
 - Legacy CMD 9028
 - 外部 ELF 加载依赖 **9021 elfldr**
 
 ### 4.4 扩展
 
 - 自定义插件（兼容 [etaHEN SDK](https://github.com/LightningMods/etaHEN-SDK)）
-- `config.ini` 驱动的开关（DPI、overlay、快捷键等）
+- `config.ini` 驱动的开关（overlay、快捷键等）
 
 ### 4.5 已移除
 
@@ -407,7 +405,7 @@ git submodule update --init --recursive
 | 库 | 用途 |
 |----|------|
 | **7zip-sdk (LZMA)** | unpacker 解压 bootstrapper |
-| **cJSON** | JSON（通知、DPI、IPC 载荷等） |
+| **cJSON** | JSON（通知、IPC 载荷等） |
 | **pugixml-1.15** | XML（util 侧） |
 | **pfd_sfo_tools** | PFD/SFO 相关工具源码 |
 | **cheat engine** | 金手指解析/热重载/内存补丁（JSON/SHN/MC4/ShnExt，mdbg+kdirect；无 KCF/WMDW） |

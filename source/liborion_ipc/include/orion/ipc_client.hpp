@@ -89,7 +89,6 @@ public:
   bool Launch_Elfldr();
   bool Cheats_Action(Cheat_Actions act, int repo = 0);
   bool Set_Fan_Threshold(int temp, bool enabled);
-  bool ToggleDPI(bool turn_on);
   /** Crit: inject ShellUI toolbox (BREW_ENABLE_TOOLBOX). */
   bool EnableToolbox();
 

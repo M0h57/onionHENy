@@ -35,8 +35,6 @@ extern bool is_current_game_open;
 extern std::string remote_play_info;
 extern std::vector<GameEntry> games_list;
 extern std::vector<Plugins> plugins_list, auto_list;
-extern std::vector<Payloads_Apps> custom_pkg_list;
-extern Payloads_Apps custom_pkg_path;
 
 bool is_valid_plugin(CustomPluginHeader &header)
 {
@@ -146,72 +144,6 @@ close:
   // shellui_log("%s\n", xml_buffer.c_str());
 }
 
-void generate_custom_pkg_xml(std::string& xml_buffer)
-{
-    std::string converted = custom_pkg_path.path;
-
-    // Replace /mnt/xxx with /xxx
-    size_t pos = converted.find("/mnt/");
-    if (pos != std::string::npos) {
-        converted.replace(pos, 5, "/");  // Replace "/mnt/" with "/"
-    }
-
-    // Replace /data with /user/data
-    pos = 0;
-    while ((pos = converted.find("/data", pos)) != std::string::npos) {
-        converted.replace(pos, 5, "/user/data");
-        pos += 10;  // Skip past the replacement
-    }
-
-    custom_pkg_path.shellui_path = converted;
-
-    shellui_log("Custom PKG Path for ShellUI: %s", custom_pkg_path.shellui_path.c_str());
-
-    struct dirent* entry;
-    int pkg_id = 1;
-    int pkg_count = 0;
-
-    xml_buffer = "<?xml version=\"1.0\" encoding=\"UTF-8\" ?>\n"
-        "<system_settings version=\"1.0\" plugin=\"debug_settings_plugin\">\n"
-        "\n";
-
-    xml_buffer += "<setting_list id=\"custom_pkg_install\" title=\"★ 自定义 PKG 安装器 ( " + custom_pkg_path.path + " )\">\n";
-    xml_buffer += "<text_field id=\"id_change_custom_pkg_path\" title=\"自定义 PKG 搜索路径\" keyboard_type=\"url\" confirm=\"请返回后重新进入以刷新\" min_length=\"1\" max_length=\"255\"/>\n";
-
-    DIR* dir = opendir(custom_pkg_path.shellui_path.c_str());
-    if (!dir) {
-        shellui_log("Failed to open custom PKG directory: %s", custom_pkg_path.shellui_path.c_str());
-        xml_buffer += "<label id=\"id_no_pkgs\" title=\"未找到 PKG - 路径: " + custom_pkg_path.path + "\"/>\n";
-        xml_buffer += "</setting_list>\n</system_settings>";
-        return;
-    }
-
-    while ((entry = readdir(dir)) != nullptr) {
-        if (strstr(entry->d_name, ".pkg") != nullptr) {
-            std::string pkg_path = std::string(custom_pkg_path.path) + "/" + entry->d_name;
-            std::string id = "id_pkg_" + std::to_string(pkg_id++);
-
-            xml_buffer += "<button id=\"" + id + "\" title=\"" + entry->d_name + "\" description=\"" + pkg_path + "\"/>\n";
-            pkg_count++;
-
-            Payloads_Apps new_pkg;
-            new_pkg.name = entry->d_name;
-            new_pkg.path = pkg_path;
-            new_pkg.shellui_path = std::string(custom_pkg_path.shellui_path) + "/" + entry->d_name;
-            new_pkg.id = id;
-            custom_pkg_list.push_back(new_pkg);
-
-            shellui_log("Found PKG: %s", pkg_path.c_str());
-        }
-    }
-    closedir(dir);
-
-    if (pkg_count == 0) {
-        xml_buffer += "<label id=\"id_no_pkgs\" title=\"未找到 PKG - 路径: " + custom_pkg_path.path + "\"/>\n";
-    }
-
-    xml_buffer += "</setting_list>\n</system_settings>";
-}
 void generate_plugin_xml(std::string &xml_buffer, bool plugins_xml)
 {
   struct dirent *entry;

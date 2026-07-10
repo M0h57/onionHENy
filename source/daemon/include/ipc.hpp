@@ -46,7 +46,7 @@ extern "C"
 
 }
 
-/*==================== DPI =========================*/
+/*==================== AppInst PKG types =========================*/
 #define PLAYGOSCENARIOID_SIZE 3
 #define CONTENTID_SIZE 0x30
 #define LANGUAGE_SIZE 8
@@ -90,7 +90,7 @@ typedef struct {
 } OrbisKernelSwVersion;
 extern "C" int sceKernelGetProsperoSystemSwVersion(OrbisKernelSwVersion *sw);
 
-/*==================== DPI =========================*/
+/*==================== AppInst PKG types =========================*/
 
 extern "C"  int sceAppInstUtilInstallByPackage(MetaInfo *arg1, SceAppInstallPkgInfo *pkg_info, PlayGoInfo *arg2);
 extern "C"  int sceAppInstUtilInitialize(void);

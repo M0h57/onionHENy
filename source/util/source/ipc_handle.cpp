@@ -39,8 +39,6 @@ extern atomic_bool g_legacy_cmd_server;
 extern atomic_bool g_legacy_cmd_server_exit;
 
 void reply(int sender_socket, bool error, std::string out_var = "Nothing");
-bool startDirectPKGInstaller(void);
-void shutdownDirectPKGInstaller(void);
 bool LoadSettings();
 extern "C" {
 bool load_plugin(const char *path);
@@ -87,23 +85,10 @@ void handleIPC(clientArgs *client, std::string &inputStr,
     OrionHEN_log("FTP/Klog toggle: unsupported (services removed)");
     reply(sender_app, true);
     break;
-  case BREW_UTIL_TOGGLE_DPI: {
-    bool turn_on = orion_cjson::bool_item(my_json.get(), "toggle");
-    OrionHEN_log("DPI toggle: %d", turn_on);
-    if (turn_on) {
-      if (startDirectPKGInstaller()) {
-        orion_notify(true, "Direct PKG Installer Server Started\nIP: %s Port: 9090",
-                     ip_address);
-        reply(sender_app, false);
-      } else
-        reply(sender_app, true);
-    } else {
-      shutdownDirectPKGInstaller();
-      orion_notify(true, "Direct PKG Installer Server Stopped");
-      reply(sender_app, false);
-    }
+  case BREW_UTIL_UNUSED_DPI:
+    OrionHEN_log("DPI toggle: unsupported (DirectPKGInstaller removed)");
+    reply(sender_app, true);
     break;
-  }
   case BREW_UTIL_DAEMON_PID: {
     snprintf(temp, sizeof(temp), "%d", getpid());
     reply(sender_app, false, temp);

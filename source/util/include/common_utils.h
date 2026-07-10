@@ -50,7 +50,7 @@ along with this program; see the file COPYING. If not, see
 /* Rest-mode loop sleep (was in tcp.h with the removed klog/ftp helpers) */
 #define SLEEP_PERIOD 1000000
 
-/*==================== DPI =========================*/
+/*==================== AppInst PKG types =========================*/
 #define PLAYGOSCENARIOID_SIZE 3
 #define CONTENTID_SIZE 0x30
 #define LANGUAGE_SIZE 8
@@ -85,7 +85,7 @@ typedef struct
 	content_id_t content_ids[NUM_IDS];
     long unknown[810];
 } PlayGoInfo;
-/*==================== DPI =========================*/
+/*==================== AppInst PKG types =========================*/
 
 /*================== Networking =================*/
 typedef struct SceNetEtherAddr
@@ -211,7 +211,6 @@ bool load_plugin(const char *path);
 bool download_file(const char *url, const char *dst);
 bool check_for_new_commit(int repo);
 bool extract_zip(const char *zip_path, const char *extract_dir);
-void shutdownDirectPKGInstaller(void);
 #ifdef __cplusplus
 }
 #endif

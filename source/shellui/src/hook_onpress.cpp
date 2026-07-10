@@ -55,7 +55,6 @@ int OnPress_Hook(MonoObject *Instance, MonoObject *element, MonoObject *e) {
   ctx.value = GetPropertyValue(element, "Value");
   ctx.title = GetPropertyValue(element, "Title");
 
-  bool is_cust_pkg = (ctx.id.rfind("id_pkg_", 0) == 0);
   bool is_orionhen_pl = (ctx.id.rfind("id_orionhen_pl_loader_", 0) == 0);
 
   if (ctx.id.rfind("id_cheat_", 0) == 0 && !is_current_game_open) {
@@ -69,7 +68,7 @@ int OnPress_Hook(MonoObject *Instance, MonoObject *element, MonoObject *e) {
   bool isExcludedId =
       std::find(excludedIds.begin(), excludedIds.end(), ctx.id) !=
       excludedIds.end();
-  if (ctx.value.empty() && !isExcludedId && !is_cust_pkg && !is_orionhen_pl) {
+  if (ctx.value.empty() && !isExcludedId && !is_orionhen_pl) {
 #if SHELL_DEBUG == 1
     shellui_log("[LM HOOK] OnPress_Hook: Id: %s has no value set",
                 ctx.id.c_str());
