@@ -1313,7 +1313,7 @@ void generate_cheats_xml(std::string &new_xml, std::string& not_open_tid, bool r
                  </list>
                 <button id="id_dl_cheats" title="下载/更新金手指" second_title="从所选 GitHub 仓库下载最新金手指"/>)";
 
-  std::string reload_cheats = R"(<button id="id_reload_cheats" title="缓存并重新加载金手指列表" second_title="添加到 /data/OrionHEN/cheats/扩展名 的新金手指将被缓存并重新加载列表"/>)";
+  std::string reload_cheats = R"(<button id="id_reload_cheats" title="重新扫描金手指目录" second_title="新金手指请放到 /data/OrionHEN/cheats/ 下，命名为 TITLEID_VERSION.ext（json/shn/mc4/ShnExt）"/>)";
   //
 
   new_xml =

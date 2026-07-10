@@ -157,7 +157,7 @@ OrionHEN/
 | DPI | **9090** | Direct PKG Installer（TCP + JSON） |
 | DPI v2 | **12800** | WebUI 版 PKG 安装 |
 | Legacy CMD | **9028** | 旧版 hijacker 协议（app jailbreak 等） |
-| Cheats | IPC | CheatManager + mc4 解密 |
+| Cheats | IPC | flat-file cheat engine（flat `TITLE_VERSION.ext` + mdbg/kdirect） |
 | ShellCore / ShellUI 补丁 | — | 休息模式恢复、toolbox 激活等 |
 
 > **已移除：** FTP（1337）、Klog 网络服务（9081）。  
@@ -173,7 +173,7 @@ OrionHEN/
 
 - 软件包安装（PKG 安装器、DPI / DPI v2）
 - 插件与内核（插件 ELF、kstuff 管理）
-- 游戏功能（金手指 WIP、Remote Play、overlay）
+- 游戏功能（金手指引擎、Remote Play、overlay）
 - 系统设置（Title ID、风扇、休息模式、外置 HDD、BD 激活）
 - 启动与快捷键
 - 调试 / 关于
@@ -292,7 +292,7 @@ struct IPCMessage {
 - 游戏选项、Title ID、手柄快捷键
 - Blu-ray 激活、BD-J/Lua exploit 自动弹碟
 - 游戏 overlay
-- 金手指（WIP）
+- 金手指（flat 文件 + mdbg/kdirect）
 
 ### 4.3 网络服务
 
@@ -351,7 +351,7 @@ git submodule update --init --recursive
 | **cJSON** | JSON（通知、DPI、IPC 载荷等） |
 | **pugixml-1.15** | XML（util 侧） |
 | **pfd_sfo_tools** | PFD/SFO 相关工具源码 |
-| **mc4decrypter** | 金手指 MC4 解密（AES/base64） |
+| **cheat engine** | 金手指解析/热重载/内存补丁（JSON/SHN/MC4/ShnExt，mdbg+kdirect；无 KCF/WMDW） |
 
 ### 5.4 预编译静态库（`source/lib/*.a`）
 

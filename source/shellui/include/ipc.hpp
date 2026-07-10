@@ -389,7 +389,8 @@ public:
   }
 
   bool ToggleGameCheat(int pid, const std::string &tid, int cheat_index,
-                       std::string &cheat_enabled) {
+                       std::string &cheat_enabled,
+                       const std::string &version = "") {
     if (!util_daemon) {
       shellui_log("This IPC command is NOT in the main daemon");
       return false;
@@ -398,7 +399,8 @@ public:
     std::string ipc_msg;
     std::string json = R"({"tid": ")" + tid + R"(", "cheat_id" : )" +
                        std::to_string(cheat_index) + R"(, "pid" : )" +
-                       std::to_string(pid) + "}";
+                       std::to_string(pid) + R"(, "version": ")" + version +
+                       R"("})";
 
     if (!IPCSendCommand(BREW_UTIL_TOGGLE_CHEAT, cheat_enabled, json)) {
       shellui_log("Failed to enable cheats for %s", tid.c_str());
