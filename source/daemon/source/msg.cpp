@@ -17,6 +17,8 @@ along with this program; see the file COPYING. If not, see
 #include "ipc.hpp"
 #include "../../extern/cJSON/orion_cjson.hpp"
 #include "globalconf.hpp"
+#include <orion/settings.hpp>
+#include <orion/ipc_server.hpp>
 #include <atomic>
 #include <msg.hpp>
 #include <pthread.h>
@@ -38,8 +40,6 @@ along with this program; see the file COPYING. If not, see
 #include <ps5/kernel.h>
 #include <sys/user.h>
 #include <vector>
-#include "../../include/ini.h"
-
 #include "dbg/dbg.hpp"
 #include "elf/elf.hpp"
 #include "hijacker/hijacker.hpp"
@@ -87,7 +87,7 @@ int _sceApplicationGetAppId(int pid, int* appid);
 bool is_handler_enabled = true;
 using namespace std;
 extern pthread_t cheat_thr;
-extern struct daemon_settings global_conf;
+extern orion::Settings g_settings;
 extern atomic_bool shortcut_activated;
 
 int launchApp(const char *titleId);
@@ -124,7 +124,7 @@ struct NonStupidIovec {
 constexpr NonStupidIovec operator""_iov(const char *str, unsigned long len) {
   return {str, len + 1};
 }
-static bool remount(const char *dev, const char *path, int mnt_flag) {
+bool remount(const char *dev, const char *path, int mnt_flag) {
   NonStupidIovec iov[]{
       "fstype"_iov, "nullfs"_iov, "fspath"_iov, {path},
       "target"_iov, {dev},        "rw"_iov,     {nullptr, 0},
@@ -236,79 +236,51 @@ struct ConfigState {
 ConfigState config_state;
 
 void LoadSettings() {
-  struct stat file_stat;
-  const char* config_path = "/data/OrionHEN/config.ini";
-  
-  // Check if file exists and get its modification time
-  if (stat(config_path, &file_stat) != 0) {
-    // File doesn't exist, create default config
-    OrionHEN_log("[Daemon] Config file not found. Creating default...");
-    std::string ini_file(
-      "[Settings]\nAllow_data_in_sandbox=0\nDPI=0\ntoolbox_auto_start=1\nDPI_v2=0\nAPP_JB_Debug_Msg=0\nauto_eject_disc=0\n");
-    int fd = open(config_path, O_WRONLY | O_CREAT | O_TRUNC, 0777);
-    if (fd >= 0) {
-      write(fd, ini_file.c_str(), ini_file.length());
-      close(fd);
+  struct stat file_stat {};
+  const char *paths[] = {orion::kConfigPathPrimary, orion::kConfigPathShellui};
+
+  // Prefer primary; fall back to shellui path for mtime / create.
+  const char *config_path = nullptr;
+  for (const char *p : paths) {
+    if (stat(p, &file_stat) == 0) {
+      config_path = p;
+      break;
+    }
+  }
+
+  if (!config_path) {
+    OrionHEN_log("[Daemon] Config file not found. Creating default schema...");
+    if (orion::settings_ensure_default()) {
       notify(true, "OrionHEN config created! @ /data/OrionHEN/config.ini");
       config_state.last_modified = 0;
     }
+    // Apply defaults even if create failed.
+    orion::Settings s{};
+    orion::settings_load(&s);
+    g_settings = s;
     return;
   }
-  
+
   // Only reload if file has been modified since last load
   if (file_stat.st_mtime <= config_state.last_modified) {
-    return; // File hasn't changed, skip reload
+    return;
   }
-  
-  // File has changed, proceed with loading
-  OrionHEN_log("[Daemon] Loading Settings...");
-  
-  IniParser parser;
-  if (ini_parser_load(&parser, config_path)) {
-    OrionHEN_log("[Daemon] Reading Settings...");
-    
-    const char * libhijacker_cheats_str =
-      ini_parser_get(&parser, "Settings.libhijacker_cheats", "0");
-    const char * start_option =
-      ini_parser_get(&parser, "Settings.StartOption", "0");
-    const char * DPI_v2 = ini_parser_get(&parser, "Settings.DPI_v2", "0");
-    const char * auto_eject_disc =
-      ini_parser_get(&parser, "Settings.auto_eject_disc", "0");
-    const char* fan_threshold =
-      ini_parser_get(&parser, "Settings.fan_threshold", "77");
-    const char* enable_fan_speed =
-      ini_parser_get(&parser, "Settings.enable_fan_speed", "0");
-    const char* overlay_fps =
-      ini_parser_get(&parser, "Settings.overlay_fps", "0");
 
-    OrionHEN_log("fan_threshold: %s", fan_threshold);
-    OrionHEN_log("enable_fan_speed: %s", enable_fan_speed);
-    
-    global_conf.fan_threshold = fan_threshold ? atoi(fan_threshold) : 77;
-    global_conf.enable_fan_speed = enable_fan_speed ? atoi(enable_fan_speed) : 0;
-    global_conf.overlay_fps = overlay_fps ? atoi(overlay_fps) : 0;
-    global_conf.libhijacker_cheats =
-      libhijacker_cheats_str ? atoi(libhijacker_cheats_str) : 0;
-    global_conf.start_opt =
-      start_option ? (StartOpts) atoi(start_option) : NONE;
-    global_conf.DPIv2 = DPI_v2 ? atoi(DPI_v2) : 0;
-    global_conf.toolbox_auto_start =
-      atoi(ini_parser_get(&parser, "Settings.toolbox_auto_start", "1"));
-
-    global_conf.seconds =
-      atol(ini_parser_get(&parser, "Settings.Rest_Mode_Delay_Seconds", "0"));
-    global_conf.debug_app_jb_msg =
-      atoi(ini_parser_get(&parser, "Settings.APP_JB_Debug_Msg", "0"));
-    global_conf.auto_eject_disc = auto_eject_disc ? atoi(auto_eject_disc) : 0;
-
-    if (if_exists("/mnt/usb0/toolbox_auto_start"))
-      global_conf.toolbox_auto_start = false;
-    
-    // Update last modified time after successful load
-    config_state.last_modified = file_stat.st_mtime;
-  } else {
+  OrionHEN_log("[Daemon] Loading Settings from shared schema...");
+  orion::Settings s{};
+  if (!orion::settings_load(&s)) {
     notify(true, "Failed to Read the Settings file");
+    return;
   }
+
+  OrionHEN_log("[Daemon] Reading Settings from %s",
+               orion::settings_last_loaded_path());
+  OrionHEN_log("fan_threshold: %d", s.fan_threshold);
+  OrionHEN_log("enable_fan_speed: %d", s.enable_fan_speed ? 1 : 0);
+
+  g_settings = s;
+
+  config_state.last_modified = file_stat.st_mtime;
 }
 
 static pid_t find_pid(const char *name) {
@@ -352,56 +324,28 @@ static pid_t find_pid(const char *name) {
 
 
 int networkListen(const char *soc_path) {
-  struct sockaddr_un server;
-  unlink(soc_path);
-  OrionHEN_log("[Daemon] Deleted Socket...");
-  int s = socket(AF_UNIX, SOCK_STREAM, 0);
-  if (s < 0) {
-    OrionHEN_log("[Daemon] Socket failed! %s", strerror(errno));
-    return INVAIL;
-  }
-
-  memset(&server, 0, sizeof(server));
-  server.sun_family = AF_UNIX;
-  strcpy(server.sun_path, soc_path);
-
-  int r = bind(s, (struct sockaddr *)&server, SUN_LEN(&server));
-  if (r < 0) {
-    OrionHEN_log("[Daemon] Bind failed! %s", strerror(errno));
-    return INVAIL;
-  }
-
-  //OrionHEN_log("Socket has name %s", server.sun_path);
-
-  r = listen(s, 100);
-  if (r < 0) {
-    OrionHEN_log("[Daemon] listen failed! %s", strerror(errno));
-    return INVAIL;
-  }
-
-  return s;
+  return orion::ipc_network_listen(soc_path);
 }
 
 int networkAccept(int socket) {
-  //touch_file("/system_tmp/IPC_init");
-  return accept(socket, 0, 0);
+  return orion::ipc_network_accept(socket);
 }
 
 int networkReceiveData(int socket, void *buffer, int32_t size) {
-  int nu = recv(socket, buffer, size, 0);
-  OrionHEN_log("got %i bytes", nu);
-  return nu;
+  return orion::ipc_network_recv(socket, buffer, size);
 }
 
 int networkSendData(int socket, void *buffer, int32_t size) {
-  return send(socket, buffer, size, MSG_NOSIGNAL);
+  return orion::ipc_network_send(socket, buffer, size);
 }
 
 int networkSendDebugData(void *buffer, int32_t size) {
   return networkSendData(DaemonSocket, buffer, size);
 }
 
-int networkCloseConnection(int socket) { return close(socket); }
+int networkCloseConnection(int socket) {
+  return orion::ipc_network_close(socket);
+}
 
 int networkCloseDebugConnection() {
   return networkCloseConnection(DaemonSocket);
@@ -476,23 +420,7 @@ bool if_exists(const char *path);
 
 
 void reply(int sender_socket, bool error, std::string out_var = "Nothing") {
-
-  std::string inputStr = "{\"res\":" + std::to_string(error ? -1 : 0) +
-                         ", \"var\":\"" + out_var + "\"}";
-
-  IPCMessage outputMessage;
-  outputMessage.cmd = BREW_RETURN_VALUE;
-  outputMessage.error = error ? -1 : 0;
-  OrionHEN_log("error: %d", outputMessage.error);
-  bzero(outputMessage.msg, sizeof(outputMessage.msg));
-  if (!inputStr.empty()) {
-    strncpy(outputMessage.msg, inputStr.c_str(), sizeof(outputMessage.msg) - 1);
-    // Null-terminate the destination array
-    outputMessage.msg[sizeof(outputMessage.msg) - 1] = '\0';
-  }
-
-  networkSendData(sender_socket, reinterpret_cast<void *>(&outputMessage),
-                  sizeof(outputMessage));
+  orion::ipc_reply(sender_socket, BREW_RETURN_VALUE, error, out_var);
 }
 
 int get_shellui_pid() {
@@ -866,8 +794,8 @@ bool cmd_enable_toolbox(){
     OrionHEN_log("Activating toolbox...");
     if (if_exists("/system_tmp/util_first_boot")) {
       LoadSettings();
-      OrionHEN_log("sleeping for %llu", global_conf.seconds);
-      sleep(global_conf.seconds);
+      OrionHEN_log("sleeping for %llu", g_settings.rest_mode_delay_seconds);
+      sleep(g_settings.rest_mode_delay_seconds);
     }
 
     /* ShellUI needs a moment after kstuff trophy patches */
@@ -900,317 +828,29 @@ bool cmd_enable_toolbox(){
 
     return true;
 }
-void handleIPC(struct clientArgs *client, std::string &inputStr,
-               DaemonCommands command) {
+/* handleIPC → ipc_handle.cpp */
+void handleIPC(clientArgs *client, std::string &inputStr,
+               DaemonCommands command);
 
-  int sender_app = client->socket;
-
-  struct stat buffer;
-  std::string path_buf, path_buf2, json_path;
-  const char *path = nullptr, *dest = nullptr;
-  char size_buf[0x255];
-  bool last_ipc_error = false;
-
-  std::string out_var = "Nothing"; // default send var
-
-  OrionHEN_log("Received IPC command 0x%X", command);
-
-  orion_cjson::Root my_json(inputStr);
-  if (!my_json) {
-    OrionHEN_log("Error parsing JSON");
-    notify(true, "Error parsing JSON");
-    reply(sender_app, true);
-    return;
-  }
-
-  switch (command) {
-  case BREW_TEST_CONNECTION: {
-    reply(sender_app, false, out_var);
-    break;
-  }
-  case BREW_ENABLE_TOOLBOX: {
-    if(cmd_enable_toolbox()){
-        reply(sender_app, false);
-    } else {
-        reply(sender_app, true);
-    }
-    break;
-  }
-  case BREW_LAST_RET: {
-    reply(sender_app, last_ipc_error, last_ipc_error ? "1" : "0");
-    break;
-  }
-  case BREW_UNUSED_DECRYPT_DIR:
-    /* SELF directory decrypt removed from OrionHEN. */
-    OrionHEN_log("BREW_DECRYPT_DIR: unsupported (removed)");
-    reply(sender_app, true);
-    break;
-  case BREW_UNUSED_TESTKIT_CHECK:
-    /* Prefer local probe in clients; keep ordinal for IPC compatibility. */
-    OrionHEN_log("BREW_TESTKIT_CHECK: unsupported (removed)");
-    reply(sender_app, true);
-    break;
-  case BREW_REMOUNT_FOLDER:
-    path_buf = std::string(orion_cjson::string_item(my_json.get(), "mount_dest", ""));
-    path_buf2 = std::string(orion_cjson::string_item(my_json.get(), "mount_src", ""));
-    json_path = path_buf + "/sce_sys/param.json";
-    OrionHEN_log("change dir selected, %s", path_buf2.c_str());
-
-    if(path_buf.rfind("/user") == std::string::npos && path_buf.length() <= strlen("/system_ex/app/")) {
-      notify(true, "Invalid path of size %d", path_buf.length());
-      reply(sender_app, true);
-      break;
-    }
-
-    mkdir(path_buf.c_str(), 0777);
-
-    if (if_exists(json_path.c_str())) {
-      OrionHEN_log("param.json exists, trying to unmount");
-      int retries = 0;
-      do {
-        if (retries == 0)
-          OrionHEN_log("unmounting .....");
-        else
-          OrionHEN_log("retrying attempt unmounting %d | prev. error %s", retries, strerror(errno));
-
-        if (retries >= 20) {
-          notify(true, "Failed to unmount | error %s",
-                 strerror(errno));
-          reply(sender_app, true);
-          break;
-        }
-        retries++;
-
-      } while (unmount(path_buf.c_str(), MNT_FORCE) < 0);
-    }
-
-    if (!remount(path_buf2.c_str(), path_buf.c_str(), MNT_FORCE)) {
-      if (errno == EBADF || errno == EPERM ||
-          errno == EIO) { // if anyone repots a game not mounting til the 2nd
-                          // time look at this
-        OrionHEN_log("trying to unmount");
-        unmount(path_buf.c_str(), MNT_FORCE);
-      }
-      if (!remount(path_buf2.c_str(), path_buf.c_str(), MNT_UPDATE)) {
-        notify(true, "remount error: %s\nPath: %s", strerror(errno),
-               path_buf2.c_str());
-        OrionHEN_log("remount error: %s Path: %s", strerror(errno),
-                   path_buf2.c_str());
-        reply(sender_app, true);
-        break;
-      } 
-    }
-
-    reply(sender_app, false);
-    break;
-  case BREW_STAT_CMD: {
-    path = orion_cjson::string_item(my_json.get(), "path");
-    if (stat(path, &buffer) == 0) {
-      snprintf(size_buf, sizeof(size_buf), "%ld", buffer.st_size);
-      OrionHEN_log("%s exists | size %s", path, size_buf);
-      reply(sender_app, false, size_buf);
-    } else {
-      OrionHEN_log("error for %s | %s", path, strerror(errno));
-      reply(sender_app, true);
-    }
-    break;
-  }
-  case BREW_CALC_DIR_SIZE: {
-    uint64_t size = calculateTotalSize(orion_cjson::string_item(my_json.get(), "path"));
-    snprintf(size_buf, sizeof(size_buf), "%lu", size);
-    OrionHEN_log("size %lu", size_buf);
-    reply(sender_app, false, size_buf);
-    break;
-  }
-  case BREW_COPY_FILE: {
-    path = orion_cjson::string_item(my_json.get(), "path");
-    dest = orion_cjson::string_item(my_json.get(), "dest");
-    if (copyFile(path, dest, false)) {
-      reply(sender_app, false);
-    } else {
-      OrionHEN_log("error for %s | %s", path, strerror(errno));
-      reply(sender_app, true);
-    }
-    break;
-  }
-  case BREW_COPY_DIR: {
-    path = orion_cjson::string_item(my_json.get(), "path");
-    dest = orion_cjson::string_item(my_json.get(), "dest");
-    snprintf(size_buf, sizeof(size_buf), "%lu", calculateTotalSize(path));
-    if (copyRecursive(path, dest)) {
-      reply(sender_app, false, size_buf);
-    } else {
-      OrionHEN_log("error for %s | %s", path, strerror(errno));
-      reply(sender_app, true);
-    }
-    break;
-  }
-  case BREW_DELETE_DIR: {
-    path = orion_cjson::string_item(my_json.get(), "path");
-    if (rmtree(path)) {
-      reply(sender_app, false);
-    } else {
-      reply(sender_app, true);
-    }
-    break;
-  }
-  case BREW_TEST_SB_FILE: {
-    reply(sender_app, !test_sb_file(orion_cjson::string_item(my_json.get(), "path")));
-    break;
-  }
-  case BREW_DAEMON_PID: {
-    snprintf(size_buf, sizeof(size_buf), "%d", getpid());
-    reply(sender_app, false, size_buf);
-    break;
-  }
-  case BREW_UNUSED_1: {
-    // This command is not used anymore but kept for backwards compatibility
-    notify(true, "This command is not used anymore");
-    reply(sender_app, true);
-    break;
-  }
-  case BREW_ADJUST_FAN_SPEED: {
-    int speed = orion_cjson::int_item(my_json.get(), "speed");
-    int enabled = orion_cjson::int_item(my_json.get(), "enabled");
-    OrionHEN_log("Adjusting Fan Speed to: %d", speed);
-    if (speed < 0 || speed > 100) {
-      notify(true, "Invalid fan speed: %d. Must be between 0 and 100.", speed);
-      reply(sender_app, true);
-      break;
-    }
-
-    global_conf.enable_fan_speed = enabled;
-
-    if (!enabled) {
-      notify(true, "Fan speed adjustment is disabled.");
-      set_fan_threshold(77);
-      reply(sender_app, false);
-      break;
-    }
-
-    if (set_fan_threshold(speed)) {
-      notify(true, "Fan threshold adjusted to %i°C.", speed);
-      global_conf.fan_threshold = speed;
-      reply(sender_app, false);
-    } else {
-      notify(true, "Failed to adjust fan speed.");
-      reply(sender_app, true);
-    }
-    break;
-  }
-  case BREW_KILL_DAEMON:{
-    is_handler_enabled = false;
-    exit(1337);
-    kill(getpid(), SIGKILL);
-    reply(sender_app, false);
-    break;
-  }
-  case BREW_FORCE_KILL_PID: {
-    int pid = orion_cjson::int_item(my_json.get(), "pid");
-    if (pid < 0) {
-      OrionHEN_log("Invalid PID: %d", pid);
-      reply(sender_app, true);
-      break;
-    }
-
-    ForceKillProc(pid);
-    reply(sender_app, false);
-    break;
-  }
-  case BREW_RELOAD_SETTINGS: {
-    LoadSettings();
-    notify(true, "Reloaded Settings");
-    reply(sender_app, false);
-    break;
-  }
-  case BREW_CHMOD_DIR: {
-	OrionHEN_log("BREW_CHMOD_DIR called");
-    path = orion_cjson::string_item(my_json.get(), "path");
-    if(!path) {
-      OrionHEN_log("Invalid path for chmod");
-      reply(sender_app, true);
-      break;
-	}
-   // kernel_set_ucred_authid(getpid(), 0x4801000000000013L);
-	  change_permissions_recursive(path);
-	  reply(sender_app, false);
-    break;
-  }
-  default:
-    notify(true, "Unknown command 0x%X", command);
-    reply(sender_app, true);
-    break;
-  }
+static void handleIPC_adapt(orion::IpcClientArgs *client, std::string &msg,
+                            DaemonCommands cmd) {
+  handleIPC(client, msg, cmd);
 }
 
-void *ipc_client(void *args) {
-  struct clientArgs *client = (struct clientArgs *)args;
-  OrionHEN_log("[Daemon IPC] Thread created for Socket %i", client->socket);
-
-  uint32_t readSize = 0;
-  IPCMessage ipcMessage; // Create an IPCMessage struct to store received data
-
-  while ((readSize = networkReceiveData(client->socket,
-                                        reinterpret_cast<void *>(&ipcMessage),
-                                        sizeof(ipcMessage))) > 0) {
-    if (ipcMessage.magic == 0xDEADBABE) {
-      // Handle IPCMessage
-      std::string message = ipcMessage.msg; // Retrieve the string message
-      handleIPC(client, message, ipcMessage.cmd);
-    } else {
-      OrionHEN_log("[Daemon IPC][client %i] Invalid magic number",
-                 client->cl_nmb);
-      ipcMessage.error = -1;
-      networkSendData(client->socket, reinterpret_cast<void *>(&ipcMessage),
-                      sizeof(ipcMessage));
-    }
-  }
-
-  OrionHEN_log(
-      "[Daemon IPC][client %i] IPC Connection disconnected, Shutting down ...",
-      client->cl_nmb);
-
-  networkCloseConnection(client->socket);
-  delete client;
-  pthread_exit(NULL);
-
-  return NULL;
+static void ipc_server_log_line(const char *line) {
+  OrionHEN_log("%s", line);
 }
+
+static orion::IpcServerOptions g_crit_ipc_opts = {
+    CRIT_IPC_SOC,
+    handleIPC_adapt,
+    BREW_RETURN_VALUE,
+    true,
+    "crit",
+};
 
 void *IPC_loop(void *args) {
-  // Listen on port
-  int serverSocket = networkListen(CRIT_IPC_SOC);
-  if (serverSocket < 0) {
-    OrionHEN_log("[Daemon IPC] networkListen error %s", strerror(errno));
-    return nullptr;
-  }
-
-  // Keep accepting client connections
-  int cli_new = 0;
-  while (true) {
-    // Accept a client connection
-    int clientSocket = networkAccept(serverSocket);
-    if (clientSocket < 0) {
-      OrionHEN_log("[Daemon IPC] networkAccept error %s", strerror(errno));
-      break; // Breaking out of the loop on error to cleanup
-    }
-
-    OrionHEN_log("[Daemon IPC] Connection Accepted");
-    OrionHEN_log("[Daemon IPC] cl_nmb %i", cli_new);
-
-    // Build data to send to thread
-    auto clientParams = new clientArgs();
-    clientParams->ip = "localhost";
-    clientParams->socket = clientSocket;
-    clientParams->cl_nmb = cli_new;
-
-    OrionHEN_log("[Daemon IPC] clientParams->cl_nmb %i", clientParams->cl_nmb);
-    pthread_t ipc_thread;
-    pthread_create(&ipc_thread, NULL, ipc_client, clientParams);
-    cli_new++;
-  }
-
-  // Cleanup
-  networkCloseConnection(serverSocket);
-  return nullptr;
+  (void)args;
+  orion::ipc_server_set_log(ipc_server_log_line);
+  return orion::ipc_server_loop(&g_crit_ipc_opts);
 }

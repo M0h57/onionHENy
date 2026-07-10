@@ -17,12 +17,8 @@ along with this program; see the file COPYING. If not, see
 #pragma once
 #include <string>
 #include <msg.hpp>
-struct clientArgs {
-    std::string ip;
-    int socket;
-    int cl_nmb;
-
-};
+#include <orion/ipc_server.hpp>
+// clientArgs = orion::IpcClientArgs (see ipc_server.hpp)
 extern bool show_notification;
 #ifdef __cplusplus
 #define restrict // Define restrict as empty for C++

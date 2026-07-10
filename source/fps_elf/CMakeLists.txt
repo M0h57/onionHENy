@@ -58,9 +58,15 @@ set(CMAKE_CXX_FLAGS "${CMAKE_C_FLAGS} -DDEBUG -gfull -gdwarf-2 -O0 -pedantic -pe
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O0 ")
 
 target_sources(${PROJECT_NAME} PRIVATE ${SrcFiles})
-target_include_directories(${PROJECT_NAME} PRIVATE "${D_CWD}/include")
+add_dependencies(${PROJECT_NAME} orion_ipc orion_detour orion_proc)
+target_include_directories(${PROJECT_NAME} PRIVATE
+	"${D_CWD}/include"
+	"${PROJECT_ROOT}/liborion_ipc/include"
+	"${PROJECT_ROOT}/liborion_detour/include"
+	"${PROJECT_ROOT}/liborion_proc/include"
+)
 target_link_directories	(${PROJECT_NAME} PUBLIC "${PROJECT_ROOT}/lib")
-target_link_libraries	(${PROJECT_NAME} PUBLIC kernel SceGnmDriver)
+target_link_libraries	(${PROJECT_NAME} PUBLIC orion_detour orion_proc orion_ipc kernel SceGnmDriver)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 # Add post-build command

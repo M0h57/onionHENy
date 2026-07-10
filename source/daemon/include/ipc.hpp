@@ -21,13 +21,8 @@ along with this program; see the file COPYING. If not, see
 #include <sys/mman.h>
 #include <string>
 #include <msg.hpp>
-
-struct clientArgs {
-    std::string ip;
-    int socket;
-    int cl_nmb;
-
-};
+#include <orion/ipc_server.hpp>
+// clientArgs = orion::IpcClientArgs (see ipc_server.hpp)
 
 #include <sys/types.h>
 #include <sys/stat.h>

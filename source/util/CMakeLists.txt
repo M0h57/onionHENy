@@ -68,6 +68,8 @@ set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O0")
 target_sources(${PROJECT_NAME} PRIVATE ${SrcFiles} "${PROJECT_ROOT}/lib/elfldr_remote.c")
 target_include_directories(${PROJECT_NAME} PRIVATE
   "${D_CWD}/include"
+  "${PROJECT_ROOT}/liborion_settings/include"
+  "${PROJECT_ROOT}/liborion_ipc/include"
 )
 # CBC for MC4 / ShnExt AES; no KCF/WMDW
 target_compile_definitions(${PROJECT_NAME} PRIVATE CBC=1)
@@ -76,9 +78,11 @@ target_link_directories(${PROJECT_NAME} PUBLIC
   "${D_CWD}/lib"
   "${D_CWD}/lib/keystone_cxxrt"
 )
-add_dependencies(${PROJECT_NAME} hijacker NineS)
+add_dependencies(${PROJECT_NAME} hijacker NineS orion_settings orion_ipc)
 # keystone: ShnExt ASM only
 target_link_libraries(${PROJECT_NAME} PUBLIC
+    orion_ipc
+    orion_settings
     keystone
     c++
     c++abi
