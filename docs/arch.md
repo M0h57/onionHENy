@@ -192,6 +192,28 @@ OrionHEN/
 | **libhijacker** | 进程劫持、kernel R/W、spawner、调试、通知；依赖 NidResolver |
 | **libNineS** | ptrace attach、ELF 注入目标进程（ShellUI Toolbox 路径） |
 | **libNidResolver** | PS5 模块 NID 解析（SHA1 等） |
+| **liborion_ipc** | **客户端**（injectee 双单例）+ **服务端传输环**（`ipc_server`：listen/accept/loop/reply）；daemon/util/shellui/fps 共用 |
+| **liborion_settings** | 统一 `config.ini` schema；各进程以 `orion::Settings g_settings` 为真相源 |
+| **liborion_detour** | 共享 Detour + hde64 钩子栈；shellui / fps_elf 共用 |
+| **liborion_proc** | 共享 proc/ucred（allproc 遍历、dynlib、authid）；shellui / fps_elf 共用 |
+
+#### IPC 分层（加深后）
+
+```
+msg.hpp          协议：路径、magic、命令枚举、IPCMessage
+ipc_server.*     传输：Unix listen/accept/recv/send + 线程环 + reply
+handleIPC (进程) 业务：crit 与 util 各自命令表
+ipc_client.*     注入侧客户端
+```
+
+#### 配置分层
+
+```
+orion::Settings  持久化 schema（单文件双路径）
+g_settings       各进程持有的 Settings 实例
+运行时原子量     仅 util：g_legacy_cmd_server / g_legacy_cmd_server_exit（热路径）
+OverlayLayout    仅 shellui：由 overlay_pos 派生的像素坐标
+```
 
 ### 2.8 主机工具（`scripts/`）
 
