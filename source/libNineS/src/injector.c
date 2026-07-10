@@ -289,7 +289,7 @@ module_info_t* load_remote_library(pid_t pid, const char* library_path, const ch
 
     while (retries <= max_retries)
     {
-        module = get_module_handle(pid, library_name);
+        module = get_module_info(pid, library_name);
         if (!module)
         {
             usleep(500);

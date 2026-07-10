@@ -31,7 +31,14 @@ include_directories	(SYSTEM "${PS5_PAYLOAD_SDK}/include")
 
 set(D_SRC ${D_CWD}/src)
 
-file(GLOB SrcFiles ${D_SRC}/*.c ${D_SRC}../include/*.h)
+set(SrcFiles
+  ${D_SRC}/elfldr.c
+  ${D_SRC}/injector.c
+  ${D_SRC}/main.c
+  ${D_SRC}/notify.c
+  ${D_SRC}/pt.c
+)
+# proc.c / ucred.c removed — symbols come from liborion_proc
 
 add_library(${PROJECT_NAME} STATIC ${SrcFiles})
 set_target_properties(${PROJECT_NAME} PROPERTIES OUTPUT_NAME "${PROJECT_NAME}")
@@ -48,5 +55,20 @@ set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -D_POSIX_SOURCE -D_POSIX_C_SOURCE=200112 -D_
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fno-builtin -nostdlib -Wall") #  -nostartfiles
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fPIC")
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -gfull -O3 -march=znver2 -Wall -Werror")
-target_include_directories(${PROJECT_NAME} PRIVATE "${D_CWD}/include")
+target_include_directories(${PROJECT_NAME} PRIVATE
+  "${D_CWD}/include"
+  "${CMAKE_SOURCE_DIR}/liborion_proc/include"
+  "${CMAKE_SOURCE_DIR}/include"
+)
+# When built as subproject of source/, CMAKE_SOURCE_DIR is source/
+# Prefer PROJECT_ROOT if parent set it.
+if(DEFINED PROJECT_ROOT)
+  target_include_directories(${PROJECT_NAME} PRIVATE
+    "${PROJECT_ROOT}/liborion_proc/include"
+    "${PROJECT_ROOT}/include"
+  )
+endif()
+if(TARGET orion_proc)
+  add_dependencies(${PROJECT_NAME} orion_proc)
+endif()
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
