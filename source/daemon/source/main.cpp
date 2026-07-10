@@ -123,16 +123,13 @@ uintptr_t kernel_base = 0;
 
 // Function declarations
 int launchApp(const char *titleId);
-int get_ip_address(char *ip_address);
 int ItemzLaunchByUri(const char *uri);
 bool enable_toolbox();
 void sig_handler(int signo);
-void *fifo_and_dumper_thread(void *args);
-void *Play_time_thread(void *args) noexcept;
 void patch_checker();
 int elfldr_raise_privileges(pid_t pid);
 extern void makenewapp();
-extern void *IPC_loop(void *);
+// Play_time_thread / fifo_and_dumper_thread / get_ip_address / IPC_loop: daemon_ops.hpp
 extern bool is_handler_enabled;
 
 namespace {

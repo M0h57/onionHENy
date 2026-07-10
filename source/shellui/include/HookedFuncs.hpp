@@ -319,9 +319,8 @@ extern DecryptRnpsBundle_t DecryptRnpsBundle;
 extern int (*__sys_regmgr_call)(long, long, int*, int*, long);
 
 /* ================================= HOOKED MONO FUNCS ============================================= */
-extern  std::vector<Plugins> plugins_list;
-extern  std::vector<Plugins> auto_list;
-extern std::vector<Payloads_Apps> payloads_apps_list;
+#include "shellui_state.hpp"
+
 extern  std::string dec_xml_str;
 extern  std::string cheats_xml;
 extern  std::string UI3_dec;
@@ -335,8 +334,7 @@ extern  std::string uilib_dll;
 extern  std::string plugin_xml;
 extern  std::string debug_settings_xml;
 extern  std::string remote_play_xml;
-extern  bool is_game_open;
-extern  bool is_current_game_open;
+// plugins_list / is_game_open / … → shellui_state.hpp (g_ui + aliases)
 extern MonoImage* pui_img;
 extern MonoImage* AppSystem_img;
 extern MonoObject* Game;

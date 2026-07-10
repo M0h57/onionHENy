@@ -1,13 +1,12 @@
 /* Copyright (C) 2025 OrionHEN / LightningMods — OnPress cheats domain */
 #include "onpress.hpp"
+#include "shellui_state.hpp"
+#include "toolbox_route.hpp"
 #include <cstring>
 
 #define MAX_CHEATS 256
 
 void ParseCheatID(const char *id, char *tid, int *cheat_id);
-extern bool is_current_game_open;
-extern int cheatEnabledMap[];
-extern std::string currentCheatTID;
 
 static OnPressResult prefix_id_cheat(OnPressContext &ctx) {
   if (ctx.id.rfind("id_cheat_", 0) != 0) {
@@ -33,12 +32,10 @@ static OnPressResult prefix_id_cheat(OnPressContext &ctx) {
   shellui_log("Got proc for %s, tid %s, pid %i", ctx.id.c_str(), tid, pid);
   if (IPC_Client::getInstance(true).ToggleGameCheat(pid, tid, cheat_id,
                                                     cheat_name)) {
-    if (currentCheatTID != tid) {
-      currentCheatTID = tid;
-      bzero(cheatEnabledMap, MAX_CHEATS);
-    }
-    bool enabled = ctx.value == "1";
-    cheatEnabledMap[cheat_id] = enabled;
+    (void)toolbox::reset_cheat_map_if_tid_changed(currentCheatTID, cheatEnabledMap,
+                                                  MAX_CHEATS, tid);
+    const bool enabled = ctx.value == "1";
+    toolbox::set_cheat_enabled(cheatEnabledMap, MAX_CHEATS, cheat_id, enabled);
     notify("★ %s [%s] ★", cheat_name.c_str(), enabled ? "ON" : "OFF");
   } else {
     notify("[ERROR] Failed to activate %s", cheat_name.c_str());

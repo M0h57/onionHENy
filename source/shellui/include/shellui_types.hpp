@@ -105,7 +105,7 @@ struct GameEntry {
     std::string id;
 };
 
-extern std::vector<GameEntry> games_list;
+// games_list / g_all_cpu_usage: see shellui_state.hpp (ToolboxUiState)
 enum Cheats_Shortcut{
     CHEATS_SC_OFF = 0,
     R3_L3,
@@ -149,7 +149,7 @@ struct OverlayLayout {
     float overlay_ip_y = 110.0f;
 };
 extern OverlayLayout g_overlay_layout;
-extern bool g_all_cpu_usage;
+// g_all_cpu_usage → shellui_state.hpp
 
 typedef struct
 {

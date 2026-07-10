@@ -7,7 +7,7 @@
 #include <vector>
 
 extern int (*oOnPress)(MonoObject *Instance, MonoObject *element, MonoObject *e);
-extern bool is_current_game_open;
+#include "shellui_state.hpp"
 
 static OnPressResult try_exact(const OnPressExactEntry *table, size_t n,
                                OnPressContext &ctx) {

@@ -17,7 +17,7 @@
 
 extern bool (*boot_orig)(MonoString* uri, int opt, MonoString* titleIdForBootAction);
 extern bool (*boot_orig_2)(MonoString* uri, int opt);
-extern bool cheats_shortcut_activated, cheats_shortcut_activated_not_open;
+#include "shellui_state.hpp"
 
 std::string Mono_to_String(MonoString *str);
 bool if_exists(const char* path);

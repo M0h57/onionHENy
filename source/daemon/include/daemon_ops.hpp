@@ -31,3 +31,14 @@ bool cmd_enable_fps_new(int appid);
 
 void *IPC_loop(void *args);
 void handleIPC(clientArgs *client, std::string &inputStr, DaemonCommands command);
+
+/* ---- shared helpers (daemon_utils.cpp) ---- */
+bool GetFileContents(const char *path, char **buffer);
+int get_ip_address(char *ip_address);
+bool Get_Running_App_TID(std::string &title_id, int &BigAppid);
+bool isUserLoggedIn();
+bool Open_Utility_Elf(const char *path, uint8_t **buffer);
+
+/* ---- background threads ---- */
+void *Play_time_thread(void *args) noexcept;       // daemon_playtime.cpp
+void *fifo_and_dumper_thread(void *args) noexcept; // daemon_jailbreak.cpp

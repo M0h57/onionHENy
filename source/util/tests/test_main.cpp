@@ -9,6 +9,7 @@ extern "C" int test_platform_log_suite(void);
 extern "C" int test_platform_notify_suite(void);
 extern "C" int test_msg_protocol_suite(void);
 extern "C" int test_ps5_settings_ui_suite(void);
+extern "C" int test_toolbox_route_suite(void);
 
 int main() {
   int failures = 0;
@@ -22,6 +23,7 @@ int main() {
   failures += test_platform_notify_suite();
   failures += test_msg_protocol_suite();
   failures += test_ps5_settings_ui_suite();
+  failures += test_toolbox_route_suite();
 
   if (failures == 0) {
     std::fprintf(stderr, "All util host tests passed.\n");

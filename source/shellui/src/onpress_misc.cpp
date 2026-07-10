@@ -6,7 +6,6 @@
 
 void *kstuff_download_thread(void *args);
 void *download_cheats_thr(void *);
-extern std::string remote_play_info;
 
 static OnPressResult id_download_kstuff(OnPressContext &ctx) {
   (void)ctx;

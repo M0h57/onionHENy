@@ -38,7 +38,6 @@ extern "C"{
 }
 
 extern bool is_6xx, is_3xx;
-extern std::string running_tid;
 /* ================================= ORIG HOOKED MONO FUNCS ============================================= */
 int (*oOnPress)(MonoObject* Instance, MonoObject* element, MonoObject* e) = nullptr;
 int (*oOnPreCreate)(MonoObject* Instance, MonoObject* element) = nullptr;
@@ -75,25 +74,11 @@ DecryptRnpsBundle_t DecryptRnpsBundle = NULL;
 /* ================================= HOOKED GLOBAL VARS ============================================= */
 MonoClass* MemoryStream_IO = nullptr;
 
-std::atomic_bool cheat_action_in_progress(false);
-std::atomic_bool download_kstuff_thread_in_progress(false);
+// UI runtime state (flags, lists, cheat map): g_ui in shellui_state.hpp / shellui_globals.cpp
+// Access via aliases is_plugin, plugins_list, cheatEnabledMap, …
 
-std::string current_menu_tid;
 int usbpath();
 #define MAX_CHEATS 256
-
-bool is_plugin = false;
-bool is_su_menu = false;
-bool is_debug_settings = false;
-bool is_cheats = false;
-bool is_auto_plugin = false;
-bool is_remote_play = false;
-bool is_plapps = false;
-bool cheats_shortcut_activated = false;
-bool cheats_shortcut_activated_not_open = false;
-
-extern int cheatEnabledMap[MAX_CHEATS]; // holds the current activated/deactivated cheats, used for onPreCreateHook
-std::string currentCheatTID; // holds current title ID being cheated, this is used to reset the map above
 
 
 // widgets → shellui_overlay_widgets.cpp

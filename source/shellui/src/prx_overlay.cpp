@@ -14,7 +14,7 @@ extern MonoObject* rootWidget;
 extern MonoObject* font;
 extern OverlayLayout g_overlay_layout;
 extern orion::Settings g_settings;
-extern bool g_all_cpu_usage;
+#include "shellui_state.hpp"
 void RemoveGameWidget(RemoveWidget widget);
 void CreateGameWidget(CreateWidget widget);
 MonoObject* CreateLabel(const char* name, float x, float y, const char* text, MonoObject* fontObj, int horzAlign, int vertAlign, float r, float g, float b, float a);

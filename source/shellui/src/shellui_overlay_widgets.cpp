@@ -10,8 +10,8 @@ extern MonoObject* Game;
 extern MonoObject* rootWidget;
 extern MonoObject* font;
 extern OverlayLayout g_overlay_layout;
+#include "shellui_state.hpp"
 extern orion::Settings g_settings;
-extern bool g_all_cpu_usage;
 MonoObject* CreateLabel(const char* name, float x, float y, const char* text, MonoObject* fontObj, int horzAlign, int vertAlign, float r, float g, float b, float a);
 void Widget_Append_Child(MonoObject* widget, MonoObject* child);
 MonoObject* CreateUIFont(int size, int style, int weight);

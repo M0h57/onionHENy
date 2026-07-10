@@ -54,7 +54,8 @@ PROD_CXX_SRCS := \
 	$(UTIL_ROOT)/source/cheats/CheatParserFactory.cpp \
 	$(REPO_ROOT)/source/extern/cJSON/cJSON.cpp \
 	$(REPO_ROOT)/source/liborion_settings/source/settings.cpp \
-	$(REPO_ROOT)/source/shellui/src/ps5_settings_ui.cpp
+	$(REPO_ROOT)/source/shellui/src/ps5_settings_ui.cpp \
+	$(REPO_ROOT)/source/shellui/src/toolbox_route.cpp
 
 TEST_C_SRCS := \
 	test_harness.c \
@@ -71,6 +72,7 @@ TEST_CXX_SRCS := \
 	test_settings.cpp \
 	test_msg_protocol.cpp \
 	test_ps5_settings_ui.cpp \
+	test_toolbox_route.cpp \
 	test_main.cpp
 
 PROD_C_OBJS := $(patsubst $(UTIL_ROOT)/%.c,$(BUILD_DIR)/prod/%.o,$(filter $(UTIL_ROOT)/%,$(PROD_C_SRCS)))
@@ -83,6 +85,7 @@ PROD_CXX_OBJS := $(patsubst $(UTIL_ROOT)/%.cpp,$(BUILD_DIR)/prod/%.o,$(filter $(
 PROD_CXX_OBJS += $(BUILD_DIR)/prod/extern/cJSON.o
 PROD_CXX_OBJS += $(BUILD_DIR)/prod/liborion_settings/settings.o
 PROD_CXX_OBJS += $(BUILD_DIR)/prod/shellui/ps5_settings_ui.o
+PROD_CXX_OBJS += $(BUILD_DIR)/prod/shellui/toolbox_route.o
 
 TEST_C_OBJS := $(patsubst %.c,$(BUILD_DIR)/tests/%.o,$(TEST_C_SRCS))
 TEST_CXX_OBJS := $(patsubst %.cpp,$(BUILD_DIR)/tests/%.o,$(TEST_CXX_SRCS))
@@ -128,6 +131,10 @@ $(BUILD_DIR)/prod/liborion_settings/settings.o: $(REPO_ROOT)/source/liborion_set
 	$(HOST_CXX) $(CXXFLAGS) -c -o $@ $<
 
 $(BUILD_DIR)/prod/shellui/ps5_settings_ui.o: $(REPO_ROOT)/source/shellui/src/ps5_settings_ui.cpp | $(BUILD_DIR)
+	@mkdir -p $(dir $@)
+	$(HOST_CXX) $(CXXFLAGS) -c -o $@ $<
+
+$(BUILD_DIR)/prod/shellui/toolbox_route.o: $(REPO_ROOT)/source/shellui/src/toolbox_route.cpp | $(BUILD_DIR)
 	@mkdir -p $(dir $@)
 	$(HOST_CXX) $(CXXFLAGS) -c -o $@ $<
 

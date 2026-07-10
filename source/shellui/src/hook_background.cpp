@@ -6,9 +6,7 @@
 #include <atomic>
 #include <string>
 
-extern std::atomic_bool cheat_action_in_progress;
-extern std::atomic_bool download_kstuff_thread_in_progress;
-extern std::string remote_play_info;
+#include "shellui_state.hpp"
 
 void* load_plugin_thread(void* args) {
     Plugins *plugin = (Plugins*)args;

@@ -18,16 +18,10 @@
 #include <algorithm>
 #include <string>
 
+#include "shellui_state.hpp"
+
 extern int (*oOnPreCreate)(MonoObject* Instance, MonoObject* element);
 extern MonoMethod* set_value_method;
-extern int cheatEnabledMap[];
-extern std::string currentCheatTID;
-
-extern bool is_plugin, is_su_menu, is_debug_settings, is_cheats, is_auto_plugin,
-    is_remote_play, is_plapps;
-extern bool is_current_game_open;
-extern std::vector<Plugins> plugins_list, auto_list;
-extern bool g_all_cpu_usage;
 
 std::string GetPropertyValue(MonoObject* element, const char* propertyName);
 bool if_exists(const char* path);

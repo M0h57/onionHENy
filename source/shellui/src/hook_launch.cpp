@@ -8,7 +8,7 @@
 #include <string>
 #include <fstream>
 
-extern std::string current_menu_tid;
+#include "shellui_state.hpp"
 #include <cstring>
 
 void save_appid(int value, const char* filename) {

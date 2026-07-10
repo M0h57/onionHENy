@@ -27,17 +27,12 @@
 #include <vector>
 #include <string>
 
+#include "shellui_state.hpp"
+
 int usbpath();
 void escapeXML(std::string& input);
 bool is_valid_plugin(CustomPluginHeader& header);
 bool Get_Running_App_TID(std::string& title_id, int& BigAppid);
-extern int cheatEnabledMap[256];
-extern std::string running_tid;
-extern bool is_game_open;
-extern bool is_current_game_open;
-extern std::string remote_play_info;
-extern std::vector<GameEntry> games_list;
-extern std::vector<Plugins> plugins_list, auto_list;
 
 bool is_valid_plugin(CustomPluginHeader& header) {
   if (strncmp(header.prefix, "OrionHEN_PLUGIN", 14) != 0) {
