@@ -126,6 +126,11 @@ MonoString *GetString_Hook(MonoObject *Instance, MonoString *str) {
     else if (resourceName == "msg_select_all") {
       return mono_string_new(Root_Domain, "全选");
     }
+
+    if (resourceName.rfind("msg_", 0) != 0) {
+      shellui_log("GetString_Hook: literal XML string, bypassing original localizer");
+      return mono_string_new(Root_Domain, resourceName.c_str());
+    }
     
     return oGetString(Instance, str);
   }
@@ -151,18 +156,16 @@ error:
     return -1;
 }
 
-void patch_bundle_strings(unsigned char* buffer, int* size_ptr, int actual_size) {
+void patch_bundle_strings(unsigned char* buffer, int* size_ptr, int buffer_capacity) {
   if (!buffer || !size_ptr) {
       return;
   }
   
-  // Replace "Debug Settings" with "OrionHEN 工具箱"
-  // Note: replacement must not exceed original length when patching in-place buffers.
-  // "OrionHEN Toolbox" is same length as original English branding used previously.
-  int count = replace_all(buffer, size_ptr, actual_size, "Debug Settings", "OrionHEN 工具箱");
+  // Keep this replacement equal-length for callers that only expose exact size.
+  int count = replace_all(buffer, size_ptr, buffer_capacity, "Debug Settings", "OrionHEN Tools");
 #if SHELL_DEBUG == 1
   if (count > 0) {
-      shellui_log("patch_bundle_strings: Replaced %d occurrences of 'Debug Settings' with 'OrionHEN 工具箱'", count);
+      shellui_log("patch_bundle_strings: Replaced %d occurrences of 'Debug Settings' with 'OrionHEN Tools'", count);
   } else {
       shellui_log("patch_bundle_strings: No occurrences of 'Debug Settings' found");
   }
@@ -170,8 +173,7 @@ void patch_bundle_strings(unsigned char* buffer, int* size_ptr, int actual_size)
   (void)count;
 #endif
   
-  // Replace "icon_setting" with "orionhen_sicon"
-  replace_all(buffer, size_ptr, actual_size, "icon_setting", "orionhen_sicon");
+  replace_all(buffer, size_ptr, buffer_capacity, "icon_setting", "orionh_sicon");
 }
 
 int ioctl_hook(int fd, unsigned long request, void *argp) {
@@ -219,13 +221,20 @@ void ParseCheatID(const char* id, char* tid, int* cheat_id)
 //
 void UpdateImposeStatusFlag_hook(MonoObject* scene, MonoObject* frontActiveScene)
 {
+    shellui_log("[DBG-UIS] enter scene=%p front=%p orig=%p remote=%d confirm=%d",
+                scene, frontActiveScene,
+                reinterpret_cast<void*>(UpdateImposeStatusFlag_Orig),
+                g_ui.is_remote_play ? 1 : 0,
+                IsRunningConfirmRegistLoop ? 1 : 0);
     if(!frontActiveScene || !scene) {
         shellui_log("Scene or frontActiveScene is null, returning...");
         return;
     }
     if (!g_ui.is_remote_play && IsRunningConfirmRegistLoop)
     {
+        shellui_log("[DBG-UIS] stopping confirm loop");
         StopConfirmRegistLoop();
+        shellui_log("[DBG-UIS] stopped confirm loop");
     }
 
     if (g_ui.is_remote_play)
@@ -237,7 +246,9 @@ void UpdateImposeStatusFlag_hook(MonoObject* scene, MonoObject* frontActiveScene
         g_ui.is_remote_play = false; 
     }
 
+    shellui_log("[DBG-UIS] calling original");
     UpdateImposeStatusFlag_Orig(scene, frontActiveScene);
+    shellui_log("[DBG-UIS] original returned");
 }
 
 

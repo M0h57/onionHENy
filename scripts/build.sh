@@ -272,6 +272,20 @@ clean_build_artifacts() {
     "${BIN}/test.elf" \
     "${BIN}/OrionHEN.elf"
 
+  rm -f \
+    "${SOURCE}/lib/libNidResolver.a" \
+    "${SOURCE}/lib/libNineS.a" \
+    "${SOURCE}/lib/libhijacker.a" \
+    "${SOURCE}/lib/liborion_detour.a" \
+    "${SOURCE}/lib/liborion_elfldr.a" \
+    "${SOURCE}/lib/liborion_ipc.a" \
+    "${SOURCE}/lib/liborion_platform.a" \
+    "${SOURCE}/lib/liborion_playtime.a" \
+    "${SOURCE}/lib/liborion_plugin.a" \
+    "${SOURCE}/lib/liborion_proc.a" \
+    "${SOURCE}/lib/liborion_ready.a" \
+    "${SOURCE}/lib/liborion_settings.a"
+
   ok "old build outputs removed"
 }
 

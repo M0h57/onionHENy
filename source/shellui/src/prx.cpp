@@ -574,10 +574,11 @@ bool install_hooks(const ShellImages& img, void* read_fn) {
       {"OptionMenu.createJson", img.rn_shell, "ReactNative.Modules.ShellUI.HomeUI",
        "OptionMenu", "createJson", 8, reinterpret_cast<void*>(&createJson_hook),
        reinterpret_cast<void**>(&createJson), true},
-      {"LayerManager.UpdateImposeStatusFlag", img.app_system,
-       "Sce.Vsh.ShellUI.AppSystem", "LayerManager", "UpdateImposeStatusFlag", 2,
-       reinterpret_cast<void*>(&UpdateImposeStatusFlag_hook),
-       reinterpret_cast<void**>(&UpdateImposeStatusFlag_Orig), false},
+      /*
+       * Disabled: on 11.600 this method's prologue is not safe for the
+       * current trampoline copier. Calling UpdateImposeStatusFlag_Orig jumps
+       * into the copied stub and faults at trampoline+0x6.
+       */
       {"GamePad.GetData", img.core, "Sce.PlayStation.Core.Input", "GamePad", "GetData",
        1, reinterpret_cast<void*>(&GetData_hook), reinterpret_cast<void**>(&GetData),
        true},

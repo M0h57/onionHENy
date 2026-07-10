@@ -379,9 +379,17 @@ static void cleanup(void);
       write_blob_file("/system_ex/rnps/apps/NPXS40008/assets/src/modules/categoriesList/assets/texture/orionhen_sicon.png",
                       &sicon_start, sicon_size);
     }
+    if (!if_exists("/system_ex/rnps/apps/NPXS40008/assets/src/modules/categoriesList/assets/texture/orionh_sicon.png")) {
+      write_blob_file("/system_ex/rnps/apps/NPXS40008/assets/src/modules/categoriesList/assets/texture/orionh_sicon.png",
+                      &sicon_start, sicon_size);
+    }
  
     if (!if_exists("/mnt/rnps/apps/NPXS40008/assets/src/modules/categoriesList/assets/texture/orionhen_sicon.png")) {
       write_blob_file("/mnt/rnps/apps/NPXS40008/assets/src/modules/categoriesList/assets/texture/orionhen_sicon.png",
+                      &sicon_start, sicon_size);
+    }
+    if (!if_exists("/mnt/rnps/apps/NPXS40008/assets/src/modules/categoriesList/assets/texture/orionh_sicon.png")) {
+      write_blob_file("/mnt/rnps/apps/NPXS40008/assets/src/modules/categoriesList/assets/texture/orionh_sicon.png",
                       &sicon_start, sicon_size);
     }
 }

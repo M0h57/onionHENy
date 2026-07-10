@@ -94,11 +94,11 @@ void DebugSettings_GetModel_Hook(MonoObject* instance, MonoObject* param, MonoOb
     }
 
     if (page_id == "id_debug_settings" || param_text.find("id_debug_settings") != std::string::npos) {
-        shellui_log("[DBG-GETMODEL] id_debug_settings reached RN model; navigation-state redirect did not catch this path");
+        shellui_log("[DBG-GETMODEL] id_debug_settings detected, opening debug_settings_old");
+        GoToURI("pssettings:play?function=debug_settings_old");
     }
 
     if (DebugSettings_GetModel_Orig) {
         DebugSettings_GetModel_Orig(instance, param, promise);
     }
 }
-

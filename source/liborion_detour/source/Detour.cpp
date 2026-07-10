@@ -27,9 +27,20 @@ along with this program; see the file COPYING. If not, see
 #include <sys/mman.h>
 #include <ps5/kernel.h>
 
-extern "C" int sceKernelMprotect(void *addr, size_t len, int prot);
+/*
+ * Host (shellui / fps_elf) exports sceKernelMprotect as a *function pointer*
+ * filled by dlsym — not as a real code symbol. Declaring it as
+ *   extern "C" int sceKernelMprotect(...);
+ * makes the linker resolve CALL to the data object (.bss). Executing the
+ * pointer bytes as instructions → SIGILL right after "Hooking …".
+ *
+ * be62388 Detour lived in shellui and called through that pointer via
+ * external_symbols.hpp; keep the same shape here.
+ */
+extern int (*sceKernelMprotect)(void *addr, size_t len, int prot)
+    __attribute__((weak));
 
-// Optional: host may set this for HV-bypass environments (shellui).
+// Optional: host sets true when userland mprotect works (kstuff HV path).
 extern bool has_hv_bypass __attribute__((weak));
 
 namespace {
@@ -40,15 +51,25 @@ uintptr_t page_align_down(uintptr_t addr) {
   return addr & ~static_cast<uintptr_t>(PAGE_MASK);
 }
 
+int mprotect_user(void *addr, size_t len) {
+  if (sceKernelMprotect == nullptr) {
+    return -1;
+  }
+  return sceKernelMprotect(addr, len, kProtRwx);
+}
+
 int mprotect_rwx(void *addr, size_t len) {
   if (!addr || len == 0) {
     return -1;
   }
+  /* Same policy as be62388 shellui Detour, plus kernel fallback on failure. */
   const bool hv = (&has_hv_bypass != nullptr) && has_hv_bypass;
   if (hv) {
-    return sceKernelMprotect(addr, len, kProtRwx);
-  }
-  if (sceKernelMprotect(addr, len, kProtRwx) >= 0) {
+    if (mprotect_user(addr, len) >= 0) {
+      return 0;
+    }
+    /* Probe succeeded earlier; still fall back if this page rejects userland. */
+  } else if (mprotect_user(addr, len) >= 0) {
     return 0;
   }
   return kernel_mprotect(getpid(), reinterpret_cast<uint64_t>(addr), len,
@@ -155,5 +176,7 @@ void *DetourFunction(uint64_t address, void *destination) {
               reinterpret_cast<void *>(address + InstructionSize));
   PatchInJump(address, destination);
 
+  shellui_log("DetourFunction: target=%#02lx hook=%p trampoline=%p size=%u",
+              address, destination, executableAddress, InstructionSize);
   return executableAddress;
 }
