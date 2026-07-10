@@ -429,19 +429,19 @@ void OnRender_Hook(MonoObject* instance)
         font = CreateUIFont(22, 0, 0);           // Regular font for values
 
         // GPU row - Green label (BOLD), Orange values - Better spacing
-        if (global_conf.overlay_cpu) {
+        if (g_settings.overlay_cpu) {
             CreateGameWidget(CREATE_CPU_OVERLAY);
         }
-        if (global_conf.overlay_ram) {
+        if (g_settings.overlay_ram) {
             CreateGameWidget(CREATE_RAM_OVERLAY);
         }
-        if (global_conf.overlay_gpu) {
+        if (g_settings.overlay_gpu) {
             CreateGameWidget(CREATE_GPU_OVERLAY);
         }
-        if (global_conf.overlay_fps) {
+        if (g_settings.overlay_fps) {
             CreateGameWidget(CREATE_FPS_OVERLAY);
         }
-		if (global_conf.overlay_ip) {
+		if (g_settings.overlay_ip) {
 			CreateGameWidget(CREATE_IP_OVERLAY);
 		}
 
@@ -453,7 +453,7 @@ void OnRender_Hook(MonoObject* instance)
 
 
         // Get CPU usage
-        while (global_conf.overlay_cpu || global_conf.all_cpu_usage) {
+        while (g_settings.overlay_cpu || g_all_cpu_usage) {
             gThread_Data[Current_Bank].Thread_Count = 3072;
             if (!sceKernelGetCpuUsage((Proc_Stats*)&gThread_Data[Current_Bank].Threads, &gThread_Data[Current_Bank].Thread_Count))
             {
@@ -466,7 +466,7 @@ void OnRender_Hook(MonoObject* instance)
 
                 calc_usage(Idle_Thread_ID, &gThread_Data[!Current_Bank], &gThread_Data[Current_Bank], Usage);
 
-                if (global_conf.all_cpu_usage) {
+                if (g_all_cpu_usage) {
                     snprintf(CPU_USAGE, sizeof(CPU_USAGE), "%2.0f%% %2.0f%% %2.0f%% %2.0f%% %2.0f%% %2.0f%% %2.0f%% %2.0f%%",Usage[0], Usage[1], Usage[2], Usage[3], Usage[4], Usage[5], Usage[6], Usage[7]);
                     break;
                 }
@@ -484,14 +484,14 @@ void OnRender_Hook(MonoObject* instance)
         }
 
         // Get RAM info
-        if (global_conf.overlay_ram)
+        if (g_settings.overlay_ram)
         {
             Get_Page_Table_Stats(1, 1, &RAM.Used, &RAM.Free, &RAM.Total);
             snprintf(RAM_STR, sizeof(RAM_STR), "%u MB", RAM.Used);
         }
 
         // Get GPU usage (estimate based on VRAM usage)
-        if (global_conf.overlay_gpu) 
+        if (g_settings.overlay_gpu) 
         {
             // Get temperatures
             sceKernelGetSocSensorTemperature(0, &SOC_temp);
@@ -500,7 +500,7 @@ void OnRender_Hook(MonoObject* instance)
             VRAM.Percentage = (((float)VRAM.Used / (float)VRAM.Total) * 100.0f);
             snprintf(GPU_USAGE, sizeof(GPU_USAGE), "%.0f%%", VRAM.Percentage);
         }
-        if(global_conf.overlay_ip)
+        if(g_settings.overlay_ip)
         {
 			char ip_address[64];
             get_ip_address(&ip_address[0]);
@@ -508,7 +508,7 @@ void OnRender_Hook(MonoObject* instance)
             Set_Property(mono_class_from_name(pui_img, "Sce.PlayStation.PUI.UI2", "Label"), ip_value, "Text", mono_string_new(Root_Domain, ip_address));
 		}
 
-        if (global_conf.overlay_gpu) {
+        if (g_settings.overlay_gpu) {
             // Update GPU values
             gpu_temp_value = Invoke<MonoObject*>(pui_img, mono_class_from_name(pui_img, "Sce.PlayStation.PUI.UI2", "Widget"), Get_Property<MonoObject*>(pui_img, "Sce.PlayStation.PUI.UI2", "Scene", Game, "RootWidget"), "FindWidgetByName", mono_string_new(Root_Domain, "id_gpu_temp_value"));
             Set_Property(mono_class_from_name(pui_img, "Sce.PlayStation.PUI.UI2", "Label"), gpu_temp_value, "Text", mono_string_new(Root_Domain, GPU_TEMP));
@@ -516,7 +516,7 @@ void OnRender_Hook(MonoObject* instance)
             gpu_usage_value = Invoke<MonoObject*>(pui_img, mono_class_from_name(pui_img, "Sce.PlayStation.PUI.UI2", "Widget"), Get_Property<MonoObject*>(pui_img, "Sce.PlayStation.PUI.UI2", "Scene", Game, "RootWidget"), "FindWidgetByName", mono_string_new(Root_Domain, "id_gpu_usage_value"));
             Set_Property(mono_class_from_name(pui_img, "Sce.PlayStation.PUI.UI2", "Label"), gpu_usage_value, "Text", mono_string_new(Root_Domain, GPU_USAGE));
         }
-        if (global_conf.overlay_cpu || global_conf.all_cpu_usage) {
+        if (g_settings.overlay_cpu || g_all_cpu_usage) {
             sceKernelGetCpuTemperature(&CPU_temp);
             // Format temperature strings
             snprintf(CPU_TEMP, sizeof(CPU_TEMP), "%dC", CPU_temp);
@@ -527,13 +527,13 @@ void OnRender_Hook(MonoObject* instance)
             cpu_usage_value = Invoke<MonoObject*>(pui_img, mono_class_from_name(pui_img, "Sce.PlayStation.PUI.UI2", "Widget"), Get_Property<MonoObject*>(pui_img, "Sce.PlayStation.PUI.UI2", "Scene", Game, "RootWidget"), "FindWidgetByName", mono_string_new(Root_Domain, "id_cpu_usage_value"));
             Set_Property(mono_class_from_name(pui_img, "Sce.PlayStation.PUI.UI2", "Label"), cpu_usage_value, "Text", mono_string_new(Root_Domain, CPU_USAGE));
         }
-        if(global_conf.overlay_ram) 
+        if(g_settings.overlay_ram) 
         {
             // Update RAM value
             ram_value = Invoke<MonoObject*>(pui_img, mono_class_from_name(pui_img, "Sce.PlayStation.PUI.UI2", "Widget"), Get_Property<MonoObject*>(pui_img, "Sce.PlayStation.PUI.UI2", "Scene", Game, "RootWidget"), "FindWidgetByName", mono_string_new(Root_Domain, "id_ram_value"));
             Set_Property(mono_class_from_name(pui_img, "Sce.PlayStation.PUI.UI2", "Label"), ram_value, "Text", mono_string_new(Root_Domain, RAM_STR));
 		}
-        if (global_conf.overlay_fps) {
+        if (g_settings.overlay_fps) {
             // Update FPS value
             std::string current_fps = fps_string.load();
             fps_value = Invoke<MonoObject*>(pui_img, mono_class_from_name(pui_img, "Sce.PlayStation.PUI.UI2", "Widget"), Get_Property<MonoObject*>(pui_img, "Sce.PlayStation.PUI.UI2", "Scene", Game, "RootWidget"), "FindWidgetByName", mono_string_new(Root_Domain, "id_fps_value"));
@@ -1256,7 +1256,7 @@ int main(int argc, char const *argv[]) {
     //
     // Continue
     //
-    if(global_conf.display_tids)
+    if(g_settings.display_tids)
        ReloadRNPSApp("NPXS40002"); // home screen tid
 
     // shellui_log("Decrypted Data: %s", dec_xml_str.c_str());

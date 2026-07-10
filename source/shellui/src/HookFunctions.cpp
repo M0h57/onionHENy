@@ -37,6 +37,7 @@ extern "C"{
 }
 
 extern bool is_6xx, is_3xx;
+extern std::string running_tid;
 /* ================================= ORIG HOOKED MONO FUNCS ============================================= */
 int (*oOnPress)(MonoObject* Instance, MonoObject* element, MonoObject* e) = nullptr;
 int (*oOnPreCreate)(MonoObject* Instance, MonoObject* element) = nullptr;
@@ -143,58 +144,58 @@ void CreateGameWidget(CreateWidget widget) {
     switch (widget) {
     case CREATE_GPU_OVERLAY:
         configs = {
-            {"id_gpu_label", global_conf.overlay_gpu_x, global_conf.overlay_gpu_y, "GPU", 1, 0.0f, 1.0f, 0.0f, 1.0f},        // Green + Bold
-            {"id_gpu_temp_value", global_conf.overlay_gpu_x + 70.0f, global_conf.overlay_gpu_y, "--C", 0, 1.0f, 0.6f, 0.0f, 1.0f},   // Orange
-            {"id_gpu_usage_value", global_conf.overlay_gpu_x + 115.0f, global_conf.overlay_gpu_y, "--%", 0, 1.0f, 0.6f, 0.0f, 1.0f}  // Orange
+            {"id_gpu_label", g_overlay_layout.overlay_gpu_x, g_overlay_layout.overlay_gpu_y, "GPU", 1, 0.0f, 1.0f, 0.0f, 1.0f},        // Green + Bold
+            {"id_gpu_temp_value", g_overlay_layout.overlay_gpu_x + 70.0f, g_overlay_layout.overlay_gpu_y, "--C", 0, 1.0f, 0.6f, 0.0f, 1.0f},   // Orange
+            {"id_gpu_usage_value", g_overlay_layout.overlay_gpu_x + 115.0f, g_overlay_layout.overlay_gpu_y, "--%", 0, 1.0f, 0.6f, 0.0f, 1.0f}  // Orange
         };
         break;
 
     case CREATE_CPU_OVERLAY:
         configs = {
-            {"id_cpu_label", global_conf.overlay_cpu_x, global_conf.overlay_cpu_y, "CPU", 1, 0.0f, 1.0f, 1.0f, 1.0f},        // Cyan + Bold
-            {"id_cpu_temp_value", global_conf.overlay_cpu_x + 70.0f, global_conf.overlay_cpu_y, "--C", 0, 1.0f, 0.6f, 0.0f, 1.0f},   // Orange
-            {"id_cpu_usage_value", global_conf.overlay_cpu_x + 115.0f, global_conf.overlay_cpu_y, "--%", 0, 1.0f, 0.6f, 0.0f, 1.0f}  // Orange
+            {"id_cpu_label", g_overlay_layout.overlay_cpu_x, g_overlay_layout.overlay_cpu_y, "CPU", 1, 0.0f, 1.0f, 1.0f, 1.0f},        // Cyan + Bold
+            {"id_cpu_temp_value", g_overlay_layout.overlay_cpu_x + 70.0f, g_overlay_layout.overlay_cpu_y, "--C", 0, 1.0f, 0.6f, 0.0f, 1.0f},   // Orange
+            {"id_cpu_usage_value", g_overlay_layout.overlay_cpu_x + 115.0f, g_overlay_layout.overlay_cpu_y, "--%", 0, 1.0f, 0.6f, 0.0f, 1.0f}  // Orange
         };
         break;
 
     case CREATE_RAM_OVERLAY:
         configs = {
-            {"id_ram_label", global_conf.overlay_ram_x, global_conf.overlay_ram_y, "RAM", 1, 0.0f, 1.0f, 1.0f, 1.0f},        // Cyan + Bold
-            {"id_ram_value", global_conf.overlay_ram_x + 70.0f, global_conf.overlay_ram_y, "----- MB", 0, 1.0f, 0.6f, 0.0f, 1.0f}    // Orange
+            {"id_ram_label", g_overlay_layout.overlay_ram_x, g_overlay_layout.overlay_ram_y, "RAM", 1, 0.0f, 1.0f, 1.0f, 1.0f},        // Cyan + Bold
+            {"id_ram_value", g_overlay_layout.overlay_ram_x + 70.0f, g_overlay_layout.overlay_ram_y, "----- MB", 0, 1.0f, 0.6f, 0.0f, 1.0f}    // Orange
         };
         break;
 
     case CREATE_FPS_OVERLAY:
         configs = {
-            {"id_fps_label", global_conf.overlay_fps_x, global_conf.overlay_fps_y, "FPS:", 1, 1.0f, 0.0f, 1.0f, 1.0f},       // Magenta + Bold
-            {"id_fps_value", global_conf.overlay_fps_x + 70.0f, global_conf.overlay_fps_y, "--- FPS", 0, 1.0f, 1.0f, 1.0f, 1.0f}     // White
+            {"id_fps_label", g_overlay_layout.overlay_fps_x, g_overlay_layout.overlay_fps_y, "FPS:", 1, 1.0f, 0.0f, 1.0f, 1.0f},       // Magenta + Bold
+            {"id_fps_value", g_overlay_layout.overlay_fps_x + 70.0f, g_overlay_layout.overlay_fps_y, "--- FPS", 0, 1.0f, 1.0f, 1.0f, 1.0f}     // White
         };
         break;
     case CREATE_IP_OVERLAY:
 		configs = {
-           { "id_ip_label", global_conf.overlay_ip_x, global_conf.overlay_ip_y, "PS5 IP:", 1, 0.0f, 1.0f, 0.0f, 1.0f},       // Green + Bold
-		   { "id_ip_value", global_conf.overlay_ip_x + 70.0f, global_conf.overlay_ip_y, "---.---.---.---", 0, 1.0f, 1.0f, 1.0f, 1.0f }     // White
+           { "id_ip_label", g_overlay_layout.overlay_ip_x, g_overlay_layout.overlay_ip_y, "PS5 IP:", 1, 0.0f, 1.0f, 0.0f, 1.0f},       // Green + Bold
+		   { "id_ip_value", g_overlay_layout.overlay_ip_x + 70.0f, g_overlay_layout.overlay_ip_y, "---.---.---.---", 0, 1.0f, 1.0f, 1.0f, 1.0f }     // White
 	     };
 	     break;
     case CREATE_ALL_OVERLAYS:
         configs = {
             // GPU Overlay
-            {"id_gpu_label", global_conf.overlay_gpu_x, global_conf.overlay_gpu_y, "GPU", 1, 0.0f, 1.0f, 0.0f, 1.0f},        // Green + Bold
-            {"id_gpu_temp_value", global_conf.overlay_gpu_x + 70.0f, global_conf.overlay_gpu_y, "--C", 0, 1.0f, 0.6f, 0.0f, 1.0f},   // Orange
-            {"id_gpu_usage_value", global_conf.overlay_gpu_x + 115.0f, global_conf.overlay_gpu_y, "--%", 0, 1.0f, 0.6f, 0.0f, 1.0f},  // Orange
+            {"id_gpu_label", g_overlay_layout.overlay_gpu_x, g_overlay_layout.overlay_gpu_y, "GPU", 1, 0.0f, 1.0f, 0.0f, 1.0f},        // Green + Bold
+            {"id_gpu_temp_value", g_overlay_layout.overlay_gpu_x + 70.0f, g_overlay_layout.overlay_gpu_y, "--C", 0, 1.0f, 0.6f, 0.0f, 1.0f},   // Orange
+            {"id_gpu_usage_value", g_overlay_layout.overlay_gpu_x + 115.0f, g_overlay_layout.overlay_gpu_y, "--%", 0, 1.0f, 0.6f, 0.0f, 1.0f},  // Orange
             // CPU Overlay
-            {"id_cpu_label", global_conf.overlay_cpu_x, global_conf.overlay_cpu_y, "CPU", 1, 0.0f, 1.0f, 1.0f, 1.0f},        // Cyan + Bold
-            {"id_cpu_temp_value", global_conf.overlay_cpu_x + 70.0f, global_conf.overlay_cpu_y, "--C", 0, 1.0f, 0.6f, 0.0f, 1.0f},   // Orange
-            {"id_cpu_usage_value", global_conf.overlay_cpu_x + 115.0f, global_conf.overlay_cpu_y, "--%", 0, 1.0f, 0.6f, 0.0f, 1.0f},  // Orange
+            {"id_cpu_label", g_overlay_layout.overlay_cpu_x, g_overlay_layout.overlay_cpu_y, "CPU", 1, 0.0f, 1.0f, 1.0f, 1.0f},        // Cyan + Bold
+            {"id_cpu_temp_value", g_overlay_layout.overlay_cpu_x + 70.0f, g_overlay_layout.overlay_cpu_y, "--C", 0, 1.0f, 0.6f, 0.0f, 1.0f},   // Orange
+            {"id_cpu_usage_value", g_overlay_layout.overlay_cpu_x + 115.0f, g_overlay_layout.overlay_cpu_y, "--%", 0, 1.0f, 0.6f, 0.0f, 1.0f},  // Orange
             // RAM Overlay
-            {"id_ram_label", global_conf.overlay_ram_x, global_conf.overlay_ram_y, "RAM", 1, 0.0f, 1.0f, 1.0f, 1.0f},        // Cyan + Bold
-            {"id_ram_value", global_conf.overlay_ram_x + 70.0f, global_conf.overlay_ram_y, "----- MB", 0, 1.0f, 0.6f, 0.0f, 1.0f},    // Orange
+            {"id_ram_label", g_overlay_layout.overlay_ram_x, g_overlay_layout.overlay_ram_y, "RAM", 1, 0.0f, 1.0f, 1.0f, 1.0f},        // Cyan + Bold
+            {"id_ram_value", g_overlay_layout.overlay_ram_x + 70.0f, g_overlay_layout.overlay_ram_y, "----- MB", 0, 1.0f, 0.6f, 0.0f, 1.0f},    // Orange
             // FPS Overlay
-			{"id_fps_label", global_conf.overlay_fps_x, global_conf.overlay_fps_y, "FPS:", 1, 1.0f, 0.0f, 1.0f, 1.0f},       // Magenta + Bold
-            {"id_fps_value", global_conf.overlay_fps_x + 70.0f, global_conf.overlay_fps_y, "--- FPS", 0, 1.0f, 1.0f, 1.0f, 1.0f},     // White
+			{"id_fps_label", g_overlay_layout.overlay_fps_x, g_overlay_layout.overlay_fps_y, "FPS:", 1, 1.0f, 0.0f, 1.0f, 1.0f},       // Magenta + Bold
+            {"id_fps_value", g_overlay_layout.overlay_fps_x + 70.0f, g_overlay_layout.overlay_fps_y, "--- FPS", 0, 1.0f, 1.0f, 1.0f, 1.0f},     // White
 
-            { "id_ip_label", global_conf.overlay_ip_x, global_conf.overlay_ip_y, "IP:", 1, 0.0f, 1.0f, 0.0f, 1.0f },       // Green + Bold
-            { "id_ip_value", global_conf.overlay_ip_x + 70.0f, global_conf.overlay_ip_y, "---.---.---.---", 0, 1.0f, 1.0f, 1.0f, 1.0f }     // White
+            { "id_ip_label", g_overlay_layout.overlay_ip_x, g_overlay_layout.overlay_ip_y, "IP:", 1, 0.0f, 1.0f, 0.0f, 1.0f },       // Green + Bold
+            { "id_ip_value", g_overlay_layout.overlay_ip_x + 70.0f, g_overlay_layout.overlay_ip_y, "---.---.---.---", 0, 1.0f, 1.0f, 1.0f, 1.0f }     // White
 		};
         break;
 }
@@ -394,10 +395,10 @@ void* download_cheats_thr(void*){
         return nullptr;
     }
     cheat_action_in_progress = true;
-    notify("Preparing to download the %s cheats repo...", global_conf.selected_cheats_repo == CHEATS_REPO_ORIONHEN ? "OrionHEN PS5" : "GoldHEN PS4");
+    notify("Preparing to download the %s cheats repo...", g_settings.selected_cheats_repo == CHEATS_REPO_ORIONHEN ? "OrionHEN PS5" : "GoldHEN PS4");
     IPC_Client& util_ipc = IPC_Client::getInstance(true);
     // daemon shows notification when done
-    util_ipc.Cheats_Action(DOWNLOAD_CHEATS, global_conf.selected_cheats_repo);
+    util_ipc.Cheats_Action(DOWNLOAD_CHEATS, g_settings.selected_cheats_repo);
     
     cheat_action_in_progress = false;
     pthread_exit(nullptr);
@@ -418,662 +419,8 @@ void* kstuff_download_thread(void* args) {
     return nullptr;
 }
 
-int OnPress_Hook(MonoObject* Instance, MonoObject* element, MonoObject* e)
-{
-    bool& DPI = global_conf.DPI;
-    bool& Data_SB = global_conf.allow_data_sandbox;
-    int& StartOption = global_conf.start_option;
-    bool& util_rest_kill = global_conf.util_rest_kill;
-    bool& game_rest_kill = global_conf.game_rest_kill;
-    uint64_t& delay_secs = global_conf.rest_delay_seconds;
-    bool& DPI_v2 = global_conf.DPI_v2;
-    bool& dis_tids = global_conf.display_tids;
-    cheats_repo_source& selected_cheats_repo = global_conf.selected_cheats_repo;
+/* OnPress_Hook → hook_onpress.cpp */
 
-    // Define the array of IDs to exclude (you can put this at the top of your function or as a static/global)
-    const std::vector<std::string> excludedIds = {
-        "id_dl_cheats",
-        "id_save_rp_info",
-        "id_download_kstuff",
-        "id_delete_kstuff"
-    };
-
-
-    // shellui_log("OnPress_Hook: %p, %p, %p", Instance, element, e);
-    if (!Instance || !element)
-    {
-#if SHELL_DEBUG==1
-        shellui_log("[LM HOOK] OnPress_Hook: args are null");
-#endif
-        return oOnPress(Instance, element, e);
-    }
-
-    std::string id = GetPropertyValue(element, "Id");
-    std::string value = GetPropertyValue(element, "Value");
-    std::string title = GetPropertyValue(element, "Title");
-
-    bool is_cust_pkg = (id.rfind("id_pkg_") != std::string::npos);
-    bool is_orionhen_pl = (id.rfind("id_orionhen_pl_loader_") != std::string::npos);
-
-    if (id.rfind("id_cheat_") != std::string::npos && !is_current_game_open) {
-        notify("The Game is not running, to activate cheats launch the game first");
-#if SHELL_DEBUG==1
-        shellui_log("Failed to activate %s, game is not running", id.c_str());
-#endif
-        return oOnPress(Instance, element, e);
-    }
-
-    // Check if id is in the excluded list
-    bool isExcludedId = std::find(excludedIds.begin(), excludedIds.end(), id) != excludedIds.end();
-    if (value.empty() && !isExcludedId && !is_cust_pkg && !is_orionhen_pl) {
-#if SHELL_DEBUG==1
-        shellui_log("[LM HOOK] OnPress_Hook: Id: %s has no value set", id.c_str());
-#endif
-        return oOnPress(Instance, element, e);
-    }
-
-
-    bool reload_main_settings = false;
-    bool reload_util_settings = false;
-
-#if SHELL_DEBUG==1
-    shellui_log("[LM HOOK] OnPress_Hook: Id: %s, Value: %s", id.c_str(), value.c_str());
-#endif
-    if (id == "id_download_kstuff") {
-        pthread_t thr;
-        pthread_create(&thr, nullptr, kstuff_download_thread, nullptr);
-        pthread_detach(thr);
-    }
-    else if (id == "id_overlay_gpu") {
-		if (atoi(value.c_str()) == global_conf.overlay_gpu) {
-			return oOnPress(Instance, element, e);
-		}
-        if (!atoi(value.c_str())) {
-            RemoveGameWidget(REMOVE_GPU_OVERLAY);
-        }
-        else {
-			CreateGameWidget(CREATE_GPU_OVERLAY);
-        }
-
-        global_conf.overlay_gpu = !global_conf.overlay_gpu;
-    }
-    else if (id == "id_overlay_cpu") {
-		if (atoi(value.c_str()) == global_conf.overlay_cpu) {
-			return oOnPress(Instance, element, e);
-		}
-        if (!atoi(value.c_str())) {
-            if (!global_conf.all_cpu_usage) {
-				RemoveGameWidget(REMOVE_CPU_OVERLAY);
-            }
-            else {
-				notify("To disable CPU overlay, please disable the All CPU usage option first");
-				return oOnPress(Instance, element, e);
-            }
-        }
-        else {
-			CreateGameWidget(CREATE_CPU_OVERLAY);
-            
-        }
-
-        global_conf.overlay_cpu = !global_conf.overlay_cpu;
-    }
-    else if (id == "id_overlay_ram") {
-		if (atoi(value.c_str()) == global_conf.overlay_ram) {
-			return oOnPress(Instance, element, e);
-		}
-        if (!atoi(value.c_str())) {
-			RemoveGameWidget(REMOVE_RAM_OVERLAY);
-        }
-        else {
-			CreateGameWidget(CREATE_RAM_OVERLAY);   
-        }
-
-        global_conf.overlay_ram = !global_conf.overlay_ram;
-    }
-    else if (id == "id_overlay_fps") {
-		if (atoi(value.c_str()) == global_conf.overlay_fps) {
-			return oOnPress(Instance, element, e);
-		}
-        if (!atoi(value.c_str())) {
-			RemoveGameWidget(REMOVE_FPS_OVERLAY);
-            unlink("/system_tmp/fps_enabled");
-            
-        }
-        else {
-			CreateGameWidget(CREATE_FPS_OVERLAY);
-            touch_file("/system_tmp/fps_enabled");
-        }
-
-        global_conf.overlay_fps = !global_conf.overlay_fps;
-    }
-    else if (id == "id_overlay_ip") {
-		if (atoi(value.c_str()) == global_conf.overlay_ip) {
-			return oOnPress(Instance, element, e);
-		}
-        if (!atoi(value.c_str())) {
-            RemoveGameWidget(REMOVE_IP_OVERLAY);
-        }
-        else {
-            CreateGameWidget(CREATE_IP_OVERLAY);
-        }
-
-        global_conf.overlay_ip = !global_conf.overlay_ip;
-	}
-    else if (id == "id_all_cpu_usage") {
-        if (global_conf.all_cpu_usage == atoi(value.c_str())) {
-            return oOnPress(Instance, element, e);
-		}
-        if(!global_conf.overlay_cpu){
-            notify("To change CPU overlay mode, please enable the CPU overlay first");
-            return oOnPress(Instance, element, e);
-		}
-        global_conf.all_cpu_usage = !global_conf.all_cpu_usage;
-    }
-    else if (id == "id_overlay_change_pos") {
-
-        if((overlay_positions)atoi(value.c_str()) == global_conf.overlay_pos){
-            return oOnPress(Instance, element, e);
-		}
-
-        global_conf.overlay_pos = (overlay_positions)atoi(value.c_str());
-
-        if (global_conf.overlay_pos == OVERLAY_POS_TOP_LEFT) {
-            global_conf.overlay_fps_x = 10.0f;
-            global_conf.overlay_fps_y = 10.0f;
-
-            global_conf.overlay_gpu_x = 10.0f;
-            global_conf.overlay_gpu_y = 35.0f;
-
-            global_conf.overlay_cpu_x = 10.0f;
-            global_conf.overlay_cpu_y = 60.0f;
-
-            global_conf.overlay_ram_x = 10.0f;
-            global_conf.overlay_ram_y = 85.0f;
-
-            global_conf.overlay_ip_x = 10.0f;
-            global_conf.overlay_ip_y = 110.0f;
-        }
-        else if (global_conf.overlay_pos == OVERLAY_POS_BOTTOM_LEFT) {
-            global_conf.overlay_ram_x = 10.0f;
-            global_conf.overlay_ram_y = 970.0f;
-            global_conf.overlay_cpu_x = 10.0f;
-            global_conf.overlay_cpu_y = 990.0f;
-            global_conf.overlay_gpu_x = 10.0f;
-            global_conf.overlay_gpu_y = 1010.0f;
-            global_conf.overlay_fps_x = 10.0f;
-            global_conf.overlay_fps_y = 1030.0f;
-            global_conf.overlay_ip_x = 10.0f;
-            global_conf.overlay_ip_y = 1050.0f;
-        }
-        else if (global_conf.overlay_pos == OVERLAY_POS_TOP_RIGHT) {
-            global_conf.overlay_fps_x = 1720.0f;
-            global_conf.overlay_fps_y = 10.0f;
-            global_conf.overlay_gpu_x = 1720.0f;
-            global_conf.overlay_gpu_y = 35.0f;
-            global_conf.overlay_cpu_x = 1720.0f;
-            global_conf.overlay_cpu_y = 60.0f;
-            global_conf.overlay_ram_x = 1720.0f;
-            global_conf.overlay_ram_y = 85.0f;
-            global_conf.overlay_ip_x = 1670.0f;;
-            global_conf.overlay_ip_y = 110.0f;
-        }
-        else if (global_conf.overlay_pos == OVERLAY_POS_BOTTOM_RIGHT) {
-            global_conf.overlay_ram_x = 1720.0f;
-            global_conf.overlay_ram_y = 970.0f;
-            global_conf.overlay_cpu_x = 1720.0f;
-            global_conf.overlay_cpu_y = 990.0f;
-            global_conf.overlay_gpu_x = 1720.0f;
-            global_conf.overlay_gpu_y = 1010.0f;
-            global_conf.overlay_fps_x = 1720.0f;
-            global_conf.overlay_fps_y = 1030.0f;
-            global_conf.overlay_ip_x = 1670.0f;
-            global_conf.overlay_ip_y = 1050.0f;
-        }
-       
-        if (global_conf.overlay_cpu) {
-            RemoveGameWidget(REMOVE_CPU_OVERLAY);
-            CreateGameWidget(CREATE_CPU_OVERLAY);
-		}
-        if (global_conf.overlay_ram) {
-            RemoveGameWidget(REMOVE_RAM_OVERLAY);
-			CreateGameWidget(CREATE_RAM_OVERLAY);
-        }
-		if (global_conf.overlay_gpu) {
-			RemoveGameWidget(REMOVE_GPU_OVERLAY);
-			CreateGameWidget(CREATE_GPU_OVERLAY);
-        }
-        if (global_conf.overlay_fps) {
-            RemoveGameWidget(REMOVE_FPS_OVERLAY);
-            CreateGameWidget(CREATE_FPS_OVERLAY);
-        }
-        if (global_conf.overlay_ip) {
-            RemoveGameWidget(REMOVE_IP_OVERLAY);
-            CreateGameWidget(CREATE_IP_OVERLAY);
-		}
-    }
-    else if (id == "id_kstuff_autoload") {
-       // if(atoi(value.c_str()) == if_exists("/user/data/OrionHEN/no_kstuff")) {
-		//	return oOnPress(Instance, element, e);
-		//}
-        if(atol(value.c_str())){
-			unlink("/user/data/OrionHEN/no_kstuff");
-            notify("Kstuff will be loaded on next boot");
-        }
-        else{
-            touch_file("/user/data/OrionHEN/no_kstuff");
-            notify("Kstuff will NOT be loaded on next boot");
-		}
-    }
-    else if (id == "id_delete_kstuff") {
-       unlink("/user/data/OrionHEN/kstuff.elf");
-	   notify("The external kstuff download has been deleted");
-    }
-    else if (id == "id_change_custom_pkg_path") {
-		custom_pkg_path.path = value;
-	}
-    else if (id == "id_auto_eject") {
-        global_conf.auto_eject_disc = atol(value.c_str());
-    }
-      else if (id.rfind("id_plugin") != std::string::npos)
-    {
-        if (!plugins_list.empty())
-        {
-            for (auto plugin : plugins_list)
-            {
-                if (plugin.id == id)
-                {
-                    int pid = -1;
-                    if(plugin.tid.rfind(".elf") != std::string::npos && (pid = sceSystemServiceGetAppId(plugin.tid.c_str())) > 0){
-                        IPC_Client::getInstance(false).ForceKillPID(pid);
-                        notify("killed payload %s", plugin.tid.c_str());
-                        break;
-                    }
-                    char pbuf[256];
-                    snprintf(pbuf, sizeof(pbuf), "/system_tmp/%s.PID", plugin.tid.c_str());
-
-                    int f = open(pbuf, O_RDONLY);
-                    if (f >= 0)
-                    {
-                        char t[32];
-                        int r = read(f, t, sizeof(t) - 1);
-                        close(f);
-                        if (r > 0)
-                        {
-                            t[r] = 0;
-                            pid = atoi(t);
-                        }
-                    }
-
-                    if (pid > 0)
-                    {
-                        char name[32];
-                        if (sceKernelGetProcessName(pid, name) < 0)
-                        {
-                            shellui_log("Stale plugin PID file detected for %s, removing", plugin.tid.c_str());
-                            unlink(pbuf);
-                            pid = -1;
-                        }
-                    }
-
-                    if (pid > 0 && atol(value.c_str()) == 0)
-                    {
-                        shellui_log("killing pid: 0x%X", pid);
-                        IPC_Client::getInstance(false).ForceKillPID(pid);
-
-                        if (plugin.tid == "XMLS00001")
-                            unlink("/system_tmp/patch_plugin");
-
-                        unlink(pbuf);
-
-                        notify("%s killed", plugin.tid.c_str());
-                        break;
-                    }
-                    else if (pid <= 0 && atol(value.c_str()) == 1)
-                    {
-                        pthread_t thr;
-                        shellui_log("Plugin %s not running", plugin.tid.c_str());
-                        auto plugin_info = new Plugins(plugin);
-                        pthread_create(&thr, nullptr, load_plugin_thread, (void *)plugin_info);
-                    }
-                }
-            }
-        }
-    }
-    else if (is_cust_pkg) {
-        if (custom_pkg_list.empty()) {
-            return oOnPress(Instance, element, e);
-        }
-        for (auto selected_pkgs : custom_pkg_list) {
-            if (selected_pkgs.id == id) {
-#if SHELL_DEBUG==1
-                shellui_log("[Clicked %s] %s path: %s", selected_pkgs.id.c_str(), selected_pkgs.name.c_str(), selected_pkgs.shellui_path.c_str());
-#endif
-                std::string dl_url;
-                if (is_6xx)
-                    dl_url = "http://127.0.0.1:12800" + selected_pkgs.path;
-                else
-                    dl_url = (selected_pkgs.path.rfind("/data") != std::string::npos) ? selected_pkgs.shellui_path : selected_pkgs.path;
-
-                playgo_info_t playgoinfo = {};
-                pkg_info_t pkginfo = {};
-                pkg_metadata_t metainfo;
-                metainfo.playgo_scenario_id = "";
-                metainfo.content_name = "";
-                metainfo.content_id = "";
-                metainfo.icon_url = "";
-                metainfo.ex_uri = "";
-                metainfo.uri = dl_url.c_str();
-                
-
-                // msgok(MSG_DIALOG::NORMAL, "trying InstallByPackage");
-				shellui_log("Installing package from: %s", metainfo.uri);
-                int num = sceAppInstUtilInstallByPackage(&metainfo, &pkginfo, &playgoinfo);
-                if (num != 0) {
-					notify("Failed to install %s\nError: 0x%X\nis DPIv2 enabled???", selected_pkgs.name.c_str(), num);
-                }
-                else
-                {
-                    notify("%s installation started successfully", selected_pkgs.name.c_str());
-                }
-            }
-        }
-    }
-    else if (id.rfind("id_auto_plugin") != std::string::npos) {
-		if (!auto_list.empty()) {
-			for (auto plugin : auto_list) {
-				if (plugin.id == id) {
-                    std::string auto_path = plugin.shellui_path + ".auto_start";
-                    shellui_log("Auto start path: %s", auto_path.c_str());
-                    if (if_exists(auto_path.c_str()) && !atol(value.c_str())) {
-					            	unlink(auto_path.c_str());
-					           }
-                    else if(atol(value.c_str())){
-						int fd = open(auto_path.c_str(), O_CREAT | O_RDWR, 0777);
-						if (fd < 0) {
-							notify("Failed to create auto start file");
-						}
-						else {
-							close(fd);
-						}
-					}
-				}
-			}
-		}
-	}
-    else if (id.rfind("id_cheat_") != std::string::npos) {
-        if(!is_current_game_open){
-            notify("The Game is not running, to activate cheats launch the game first");
-            shellui_log("Failed to activate %s, game is not running", id.c_str());
-            return oOnPress(Instance, element, e);
-        }
-        char tid[32];
-        int cheat_id;
-        std::string cheat_name;
-        ParseCheatID(id.c_str(), tid, &cheat_id);
-        shellui_log("Getting PID for %s", id.c_str());
-        int pid = find_pid(tid, false, true, true);
-        if(pid < 0) {
-            notify("[ERROR] Failed to activate %s\nfailed to find game pid", cheat_name.c_str());   
-            shellui_log("Failed to get pid for %s", tid);
-            return oOnPress(Instance, element, e);
-        }
-        
-        shellui_log("Got proc for %s, tid %s, pid %i", id.c_str(), tid, pid);
-        
-        if (IPC_Client::getInstance(true).ToggleGameCheat(pid, tid, cheat_id, cheat_name))
-        {
-            if (currentCheatTID != tid)
-            {
-                currentCheatTID = tid;
-                bzero(cheatEnabledMap, MAX_CHEATS);
-            }
-
-            bool enabled = value == "1";
-            cheatEnabledMap[cheat_id] = enabled;
-            notify("★ %s [%s] ★", cheat_name.c_str(), enabled ? "ON" : "OFF");
-        }
-        else{
-            notify("[ERROR] Failed to activate %s", cheat_name.c_str());   
-        }
-    }
-    else if (id.rfind("id_orionhen_pl_loader_") != std::string::npos) {
-        if (games_list.empty()) {
-           return oOnPress(Instance, element, e);
-        }
-        for (const auto& game : games_list) {
-            if (game.id == id) {
-                // Payload homebrew entry selected (id_orionhen_pl_loader_*)
-                break;
-            }
-        }
-    }
-    else if (id == "id_save_rp_info"){
-      if(usbpath() == -1){
-        notify("Failed to save Remote Play info, USB not found");
-        return oOnPress(Instance, element, e);
-      }
-
-      std::string usb_rp_path = "/usb" + std::to_string(usbpath()) + "/remote_play_info.txt";
-      shellui_log("Saving Remote Play info to %s", usb_rp_path.c_str());
-      std::ofstream rp_file(usb_rp_path);
-      if (!rp_file.is_open()) {
-          notify("Failed to open Remote Play info file");
-          return oOnPress(Instance, element, e);
-      }
-      rp_file << remote_play_info;
-      rp_file.close();
-      notify("Remote Play info saved to /mnt%s", usb_rp_path.c_str());
-
-    }
-    else if (id == "id_disp_titleids"){
-        if (atol(value.c_str()) == dis_tids) {
-            shellui_log("Display TIDs already %s", dis_tids ? "Enabled" : "Disabled");
-            return oOnPress(Instance, element, e);
-        }
-        dis_tids = !dis_tids;
-        ReloadRNPSApp("NPXS40002");
-    }
-    else if (id == "id_enable_fan_speed") {
-        if (atol(value.c_str()) == global_conf.enable_fan_speed) {
-            shellui_log("Fan speed control already %s", global_conf.enable_fan_speed ? "Enabled" : "Disabled");
-            return oOnPress(Instance, element, e);
-        }
-        global_conf.enable_fan_speed = !global_conf.enable_fan_speed;
-        IPC_Client::getInstance(false).Set_Fan_Threshold(global_conf.fan_threshold, global_conf.enable_fan_speed);
-
-    }
-    else if (id == "id_lm_test")
-    {
-        shellui_log("LM's Test Button Pressed");
-        //call_show_alert(element, "msg_error_remoteplay_use_feature");
-        //SendShelluiNotify();
-        // notify("LM's Test Button Pressed (123)");
-    }
-    else if (id == "id_orionhen_credits") {
-        // notify("Home Menu Button Pressed");
-        return oOnPress(Instance, element, e);
-    }//
-    else if (id == "id_dl_cheats") {
-        pthread_t thr;
-        pthread_create(&thr, nullptr, download_cheats_thr, nullptr);
-        pthread_detach(thr);
-        return oOnPress(Instance, element, e);
-    }//
-    else if (id == "id_dpi_service") {
-        if (atoi(value.c_str()) == DPI) {
-            shellui_log("DPI already %s", DPI ? "Enabled" : "Disabled");
-            return oOnPress(Instance, element, e);
-        }
-        DPI = !DPI;
-        if (!IPC_Client::getInstance(true).ToggleDPI(DPI, false)) {
-            notify(DPI ? "DPI Server Failed to Start ..." : "DPI Server Failed to Stop ...");
-            DPI = !DPI;
-        }
-    }
-    else if (id == "id_DPI_v2_service") {
-        if (atoi(value.c_str()) == DPI_v2) {
-            shellui_log("DPI_v2 already %s", DPI_v2 ? "Enabled" : "Disabled");
-            return oOnPress(Instance, element, e);
-        }
-        DPI_v2 = !DPI_v2;
-        if (!IPC_Client::getInstance(true).ToggleDPI(DPI_v2, true)) {
-            notify(DPI_v2 ? "DPI_v2 Server Failed to Start ..." : "DPI_v2 Server Failed to Stop ...");
-            DPI_v2 = !DPI_v2;
-        }
-    }
-    else if (id == "id_debug_jb") {
-        if (atoi(value.c_str()) == global_conf.debug_app_jb_msg) {
-            shellui_log("Debug JB already %s", global_conf.debug_app_jb_msg ? "Enabled" : "Disabled");
-            return oOnPress(Instance, element, e);
-        }
-        global_conf.debug_app_jb_msg = !global_conf.debug_app_jb_msg;
-        reload_main_settings = true;
-    }
-    else if (id == "id_debug_legacy_cmd") {
-        if (atoi(value.c_str()) == global_conf.debug_legacy_cmd_server) {
-            shellui_log("Debug cmd already %s", global_conf.debug_legacy_cmd_server ? "Enabled" : "Disabled");
-            return oOnPress(Instance, element, e);
-        }
-        global_conf.debug_legacy_cmd_server = !global_conf.debug_legacy_cmd_server;
-
-        if (IPC_Client::getInstance(true).ToggleSetting(BREW_UTIL_TOGGLE_LEGACY_CMD_SERVER, global_conf.debug_legacy_cmd_server) != IPC_Ret::NO_ERROR) {
-            notify(global_conf.debug_legacy_cmd_server ? "cmd Failed to Start ..." : "CMD Server Failed to Stop ...");
-            global_conf.debug_legacy_cmd_server = !global_conf.debug_legacy_cmd_server;
-        }//
-    }
-    else if (id == "id_custom_game_opts") {
-        if (atoi(value.c_str()) == global_conf.OrionHEN_game_opts) {
-            shellui_log("OrionHEN Game Options already %s", global_conf.OrionHEN_game_opts ? "Enabled" : "Disabled");
-            return oOnPress(Instance, element, e);
-        }
-        global_conf.OrionHEN_game_opts = !global_conf.OrionHEN_game_opts;
-        shellui_log("OrionHEN Game Options: %s", global_conf.OrionHEN_game_opts ? "Enabled" : "Disabled");
-    }
-    else if (id == "id_start_opt") {
-        StartOption = atoi(value.c_str());
-        shellui_log("Start option: %d", StartOption);
-    }
-    else if (id == "id_selected_cheats_repo") {
-        selected_cheats_repo = static_cast<cheats_repo_source>(atoi(value.c_str()));
-        shellui_log("Selected cheats repo: %s", selected_cheats_repo == CHEATS_REPO_ORIONHEN ? "OrionHEN PS5" : "GoldHEN PS4");
-    }
-    else if (id == "id_data_sb") {
-        if (atoi(value.c_str()) == Data_SB) {
-            shellui_log("Data Sandbox already %s", Data_SB ? "Enabled" : "Disabled");
-            return oOnPress(Instance, element, e);
-        }
-        Data_SB = !Data_SB;
-    }
-    else if(id == "id_toolbox_auto_start"){
-        if (atoi(value.c_str()) == global_conf.toolbox_auto_start) {
-            shellui_log("toolbox Access already %s", global_conf.toolbox_auto_start ? "Enabled" : "Disabled");
-            return oOnPress(Instance, element, e);
-        }
-        global_conf.toolbox_auto_start = !global_conf.toolbox_auto_start;
-
-    }
-    else if (id == "id_sistro_ps5debug") {
-        notify("PS5Debug is not bundled in OrionHEN");
-    }
-    else if (id == "id_rest_1") {
-        delay_secs = atol(value.c_str());
-    }
-    else if (id == "id_fan_speed") {
-        int &fan_speed = global_conf.fan_threshold;
-        fan_speed = atoi(value.c_str());
-        if(!global_conf.enable_fan_speed){
-            notify("Manual Fan speed threshold is not enabled");
-            return oOnPress(Instance, element, e);
-        }
-        shellui_log("Setting fan speed to %d%%", fan_speed);
-        IPC_Client::getInstance(false).Set_Fan_Threshold(fan_speed, global_conf.enable_fan_speed);
-    }
-    else if (id == "id_rest_2") {
-        if (atoi(value.c_str()) == util_rest_kill) {
-            shellui_log("util_rest_kill already %s", util_rest_kill ? "Enabled" : "Disabled");
-            return oOnPress(Instance, element, e);
-        }
-        util_rest_kill = !util_rest_kill;
-    }
-    else if (id == "id_rest_3") {
-        if (atoi(value.c_str()) == game_rest_kill) {
-            shellui_log("game_rest_kill already %s", game_rest_kill ? "Enabled" : "Disabled");
-            return oOnPress(Instance, element, e);
-        }
-        game_rest_kill = !game_rest_kill; 
-    }
-    else if (id == "id_rest_4") {
-      bool &disable_for_rest_mode = global_conf.disable_toolbox_auto_start_for_rest_mode ;
-      if (atoi(value.c_str()) == disable_for_rest_mode) {
-          shellui_log("game_rest_kill already %s", disable_for_rest_mode ? "Enabled" : "Disabled");
-          return oOnPress(Instance, element, e);
-      }
-      disable_for_rest_mode = !disable_for_rest_mode; //global_conf.disable_toolbox_auto_start_for_rest_mode 
-    }
-    else if (id == "id_cheats_shortcut") {
-      if (atoi(value.c_str()) == global_conf.cheats_shortcut_opt) {
-          shellui_log("Cheats_shortcut already %i", global_conf.cheats_shortcut_opt);
-          return oOnPress(Instance, element, e);
-      }
-      Cheats_Shortcut opt = (Cheats_Shortcut)atoi(value.c_str());
-  
-      if(opt == CHEATS_SINGLE_SHARE ){
-         if(global_conf.toolbox_shortcut_opt == TOOLBOX_SINGLE_SHARE){
-              shellui_log("Toolbox and Cheats shortcuts cannot be the same, current selection will NOT be saved");
-              notify("Toolbox and Cheats shortcuts cannot be the same, current selection will NOT be saved");
-              return oOnPress(Instance, element, e);
-          }
-      }
-      else if(opt == CHEATS_LONG_SHARE ){
-         if(global_conf.toolbox_shortcut_opt == TOOLBOX_LONG_SHARE){
-              shellui_log("Toolbox and Cheats long shortcuts cannot be the same, current selection will NOT be saved");
-              notify("Toolbox and Cheats long shortcuts cannot be the same, current selection will NOT be saved");
-              return oOnPress(Instance, element, e);
-          }
-      }
-      global_conf.cheats_shortcut_opt = opt;
-  }
-  else if (id == "id_toolbox_shortcut" ){
-      if (atoi(value.c_str()) == global_conf.toolbox_shortcut_opt) {
-          shellui_log("toolbox_shortcut_opt already %i", global_conf.toolbox_shortcut_opt);
-          return oOnPress(Instance, element, e);
-      }
-      Toolbox_Shortcut opt = (Toolbox_Shortcut)atoi(value.c_str());
-  
-      if(opt == TOOLBOX_SINGLE_SHARE ){
-         if(global_conf.cheats_shortcut_opt == CHEATS_SINGLE_SHARE){
-              shellui_log("Cheats and Toolbox shortcuts cannot be the same, current selection will NOT be saved");
-              notify("Cheats and Toolbox shortcuts cannot be the same, current selection will NOT be saved");
-              return oOnPress(Instance, element, e);
-          }
-      }
-      else if(opt == TOOLBOX_LONG_SHARE ){
-         if(global_conf.cheats_shortcut_opt == CHEATS_LONG_SHARE){
-              shellui_log("Cheats and Toolbox long shortcuts cannot be the same, current selection will NOT be saved");
-              notify("Cheats and Toolbox long shortcuts cannot be the same, current selection will NOT be saved");
-              return oOnPress(Instance, element, e);
-          }
-      }
-      global_conf.toolbox_shortcut_opt = opt;
-  }
-    else {
-        shellui_log("Not a toolbox item!");
-    }
-
-    SaveSettings();
-    if(reload_main_settings){
-       IPC_Client::getInstance(false).Reload_Daemon_Settings();
-    }
-    if(reload_util_settings){
-       IPC_Client::getInstance(true).Reload_Daemon_Settings();
-    }
-   // shellui_log("[LM HOOK] OnPress_Hook: Id: %s, Value: %s", id.c_str(), value.c_str());
-
-    return oOnPress(Instance, element, e);
-
-}
-
-extern std::string running_tid;
 MonoString * CxmlUri_Hook(MonoObject * Instance, MonoString * uri) {
 
   if (!Instance || !uri) {
@@ -1334,177 +681,6 @@ uint64_t GetManifestResourceStream_Hook(uint64_t inst, MonoString* FileName) {
 extern "C" int sceKernelGetPs4SystemSwVersion(OrbisKernelSwVersion *);
 
 MonoMethod* set_value_method = nullptr;
-int OnPreCreate_Hook(MonoObject* Instance, MonoObject* element) {
-    bool& DPI = global_conf.DPI;
-    bool& DPI_v2 = global_conf.DPI_v2;
-    MonoString* s_MonoText = nullptr;
-
-    char tid[32] = { 0 };
-    int cheat_id = 0;
-
-    if (!Instance || !element)
-    {
-#if SHELL_DEBUG==1
-        shellui_log("[LM HOOK] OnPreCreate_Hook: args are null");
-#endif
-        return oOnPreCreate(Instance, element);
-    }
-
-    std::string id = GetPropertyValue(element, "Id");
-   // shellui_log("[LM HOOK] OnPreCreate_Hook: Id: %s", id.c_str());
-
-    if (!set_value_method) {
-        MonoAssembly* Legacy_assembly = mono_domain_assembly_open(Root_Domain, legacy_dec.c_str());
-        if (!Legacy_assembly) {
-            shellui_log("Failed to open assembly.");
-            return -1;
-        }
-
-        // Get the image
-        MonoImage* leg_img = mono_assembly_get_image(Legacy_assembly);
-        if (!leg_img) {
-            shellui_log("Failed to get image.");
-            return -1;
-        }
-
-        MonoClass* klass = mono_class_from_name(leg_img, UI3_dec.c_str(), "SettingElement");
-        if (!klass) {
-            sceKernelDebugOutText(0, "Failed to find class\n");
-            return -1;
-        }
-
-        MonoProperty* s_Property = mono_class_get_property_from_name(klass, "Value");
-        if (s_Property == NULL) {
-            shellui_log("Failed to find property");
-            return -1;
-        }
-
-        set_value_method = mono_property_get_set_method(s_Property);
-        if (set_value_method == NULL) {
-            shellui_log("Failed to find set method");
-            return -1;
-        }
-    }
-
-
-    if (!plugins_list.empty()) {
-        for (auto plugin : plugins_list) {
-            if (plugin.id == id) {
-                s_MonoText = mono_string_new(Root_Domain, (sceSystemServiceGetAppId(plugin.tid.c_str()) > 0) ? "1" : "0");
-            }
-        }
-    }
-
-    if (!auto_list.empty()) {
-        for (auto plugin : auto_list) {
-            if (plugin.id == id) {
-                std::string auto_path = plugin.shellui_path + ".auto_start";
-                s_MonoText = mono_string_new(Root_Domain, if_exists(auto_path.c_str()) ? "1" : "0");
-            }
-        }
-    }
-  
-    if (id == "id_lm_test") {
-        s_MonoText = mono_string_new(Root_Domain, "0");
-    }
-    else if (id == "id_overlay_gpu") {
-		s_MonoText = mono_string_new(Root_Domain, global_conf.overlay_gpu ? "1" : "0");
-    }
-    else if (id == "id_overlay_fps") {
-		s_MonoText = mono_string_new(Root_Domain, global_conf.overlay_fps ? "1" : "0");
-    }
-	else if (id == "id_overlay_ip") {
-        s_MonoText = mono_string_new(Root_Domain, global_conf.overlay_ip ? "1" : "0");
-	}
-    else if (id == "id_all_cpu_usage") {
-		s_MonoText = mono_string_new(Root_Domain, global_conf.all_cpu_usage ? "1" : "0");
-    }
-	else if (id == "id_overlay_cpu") {
-        s_MonoText = mono_string_new(Root_Domain, global_conf.overlay_cpu ? "1" : "0");
-	}
-    else if (id == "id_overlay_ram") {
-		s_MonoText = mono_string_new(Root_Domain, global_conf.overlay_ram ? "1" : "0");
-    }
-    else if (id == "id_kstuff_autoload") {
-		s_MonoText = mono_string_new(Root_Domain, !if_exists("/user/data/OrionHEN/no_kstuff") ? "1" : "0");
-    }
-    else if (id == "id_disp_titleids"){
-        s_MonoText = mono_string_new(Root_Domain, global_conf.display_tids ? "1" : "0");
-    }
-    else if (id == "id_enable_fan_speed"){
-        s_MonoText = mono_string_new(Root_Domain, global_conf.enable_fan_speed ? "1" : "0");
-    }
-    else if (id == "id_dpi_service") {
-        s_MonoText = mono_string_new(Root_Domain, DPI ?  "1" : "0");
-    }
-    else if (id == "id_DPI_v2_service") {
-        s_MonoText = mono_string_new(Root_Domain, DPI_v2 ?  "1" : "0");
-    }
-    else if (id == "id_selected_cheats_repo") {
-        s_MonoText = mono_string_new(Root_Domain, global_conf.selected_cheats_repo ? "1" : "0");
-    }
-    else if (id == "id_start_opt") {
-        s_MonoText = mono_string_new(Root_Domain, std::to_string(global_conf.start_option).c_str());
-    }
-    else if (id == "id_data_sb") {
-        s_MonoText = mono_string_new(Root_Domain, global_conf.allow_data_sandbox ? "1" : "0");
-	  }
-    else if (id == "id_sistro_ps5debug") {
-		    s_MonoText = mono_string_new(Root_Domain, "0");
-	  }
-    else if (id == "id_rest_1") {
-         s_MonoText = mono_string_new(Root_Domain, std::to_string(global_conf.rest_delay_seconds).c_str());
-    }
-    else if (id == "id_fan_speed") {
-        s_MonoText = mono_string_new(Root_Domain, std::to_string(global_conf.fan_threshold).c_str());
-    }
-    else if (id == "id_rest_2") {
-        s_MonoText = mono_string_new(Root_Domain, global_conf.util_rest_kill ? "1" : "0");
-    }
-    else if (id == "id_rest_3") {
-        s_MonoText = mono_string_new(Root_Domain, global_conf.game_rest_kill ? "1" : "0");
-    }
-    else if (id == "id_rest_4") {
-        s_MonoText = mono_string_new(Root_Domain, global_conf.disable_toolbox_auto_start_for_rest_mode ? "1" : "0");
-    }
-    else if (id.rfind("id_cheat_") != std::string::npos) {
-        if(is_current_game_open){
-           ParseCheatID(id.c_str(), tid, &cheat_id);
-           bool enabled = cheatEnabledMap[cheat_id];
-           s_MonoText = mono_string_new(Root_Domain, enabled ? "1" : "0");
-        }
-    }
-    else if (id.rfind("id_toolbox_shortcut") != std::string::npos){
-        s_MonoText = mono_string_new(Root_Domain, std::to_string(global_conf.toolbox_shortcut_opt).c_str());
-    }
-    else if (id == "id_cheats_shortcut") {
-        s_MonoText = mono_string_new(Root_Domain, std::to_string(global_conf.cheats_shortcut_opt).c_str());
-    }
-    else if (id == "id_toolbox_auto_start") {
-        s_MonoText = mono_string_new(Root_Domain, global_conf.toolbox_auto_start ? "1" : "0");
-    }
-    else if (id == "id_debug_jb"){
-       s_MonoText = mono_string_new(Root_Domain, global_conf.debug_app_jb_msg ? "1" : "0");
-    }
-    else if (id == "id_debug_legacy_cmd") {
-        s_MonoText = mono_string_new(Root_Domain, global_conf.debug_legacy_cmd_server ? "1" : "0");
-    }
-    else if (id == "id_custom_game_opts"){
-       s_MonoText = mono_string_new(Root_Domain, global_conf.OrionHEN_game_opts ? "1" : "0");
-    }
-    else if (id == "id_auto_eject") {
-        s_MonoText = mono_string_new(Root_Domain, global_conf.auto_eject_disc ? "1" : "0");
-    }
-    else if (id == "id_overlay_change_pos") {
-        s_MonoText = mono_string_new(Root_Domain, std::to_string(global_conf.overlay_pos).c_str());
-	}
-
-    if(s_MonoText)
-       mono_runtime_invoke(set_value_method, element, (void**)&s_MonoText, NULL);
-
-    return oOnPreCreate(Instance, element);
-}
-
 void CheckRunningOnMainThread() {
 	//notify("Main thread check called!");
 }
@@ -1528,290 +704,6 @@ void Patch_Main_thread_Check(MonoImage * image_core) {
 
 }
 // Common logic function
-bool handle_uri_boot_common(MonoString* uri, int opt, MonoString* titleIdForBootAction) {
-    std::string uri_string = Mono_to_String(uri);
-    std::string titleId = titleIdForBootAction ? Mono_to_String(titleIdForBootAction) : "";
-    
-#if SHELL_DEBUG==1
-    shellui_log("Boot: %s (%s), OPT %i", 
-                uri_string.c_str(), 
-                !titleId.empty() ? titleId.c_str() : "NULL", 
-                opt);
-#endif
-  
-    if(uri_string == "OrionHEN?Cheats") {
-#if SHELL_DEBUG==1
-      shellui_log("cheats_shortcut URI detected");
-#endif
-      cheats_shortcut_activated = true;
-      return true; // Signal to redirect
-    }
-    else if(uri_string == "OrionHEN?Cheats_not_open") {
-#if SHELL_DEBUG==1
-      shellui_log("cheats_shortcut (not open) URI detected");
-#endif
-      cheats_shortcut_activated_not_open = true;
-      return true;
-    }
-    else if (uri_string == "OrionHEN?Dump") {
-#if SHELL_DEBUG==1
-        shellui_log("Dump URI detected");
-#endif
-        notify("Game dumper payload is not bundled in OrionHEN");
-        return true; // Signal to redirect
-    }
-    else if (uri_string == "OrionHEN?DL_UPDATE") {
-#if SHELL_DEBUG==1
-        shellui_log("DL_UPDATE URI detected");
-#endif
-        
-        return true; // Signal to redirect
-    }
-
-    return false; // No redirect needed
-  }
-  
-  bool uri_boot_hook(MonoString* uri, int opt, MonoString* titleIdForBootAction) {
-    if(handle_uri_boot_common(uri, opt, titleIdForBootAction)) {
-        std::string uri_string = Mono_to_String(uri);
-        if(uri_string == "OrionHEN?Dump") {
-          return boot_orig(mono_string_new(Root_Domain, "pshomeui:navigateToHome?bootCondition=psButton"),  opt, titleIdForBootAction);
-        }
-      // Redirect to debug settings
-      return boot_orig(mono_string_new(Root_Domain, "pssettings:play?mode=settings&function=debug_settings"), opt, titleIdForBootAction);
-    }
-    
-    return boot_orig(uri, opt, titleIdForBootAction);
-  }
-  
-  bool uri_boot_hook_2(MonoString* uri, int opt) {
-  #if SHELL_DEBUG==1
-    shellui_log("uri_boot_hook_2: %s, opt: %i", Mono_to_String(uri).c_str(), opt);
-  #endif
-    if(handle_uri_boot_common(uri, opt, nullptr)) {
-      // Redirect to debug settings (no titleId parameter for older fw)
-      std::string uri_string = Mono_to_String(uri);
-      if(uri_string == "OrionHEN?Dump") {
-        return boot_orig_2(mono_string_new(Root_Domain, "pshomeui:navigateToHome?bootCondition=psButton"),  opt);
-      }
-
-      return boot_orig_2(mono_string_new(Root_Domain, "pssettings:play?function=debug_settings"),  opt);
-    }
-    
-    return boot_orig_2(uri, opt);
-  }
-
-  GamePadData GetData_hook(int deviceIndex) {
-    GamePadData result;
-    bool cheas_sc_activated = false;
-    bool toolbox_sc_activated = false;
-  
-    const std::chrono::milliseconds LONG_PRESS_DURATION(1000); // 1 second
-  
-    // Static variables for Cheats shortcut hold detection
-    static bool cheats_pressed = false;
-    static std::chrono::steady_clock::time_point cheats_press_start;
-    static bool cheats_long_press_triggered = false;
-  
-    // Static variables for Toolbox shortcut hold detection
-    static bool toolbox_pressed = false;
-    static std::chrono::steady_clock::time_point toolbox_press_start;
-    static bool toolbox_long_press_triggered = false;
-
-  
-    result = GetData(deviceIndex);
-
-    // Cheats Shortcut
-    if (global_conf.cheats_shortcut_opt != CHEATS_SC_OFF) {
-      bool cheats_buttons_held = false;
-  
-      switch (global_conf.cheats_shortcut_opt) {
-      case R3_L3:
-        cheats_buttons_held = (result.Buttons & R3) && (result.Buttons & L3);
-        break;
-      case L2_TRIANGLE:
-        cheats_buttons_held = (result.Buttons & L2) && (result.Buttons & Triangle);
-        break;
-      case LONG_OPTIONS:
-        cheats_buttons_held = (result.Buttons & Option);
-        break;
-      default:
-        break;
-      }
-  
-      if (cheats_buttons_held) {
-        if (!cheats_pressed) {
-          cheats_pressed = true;
-          cheats_press_start = std::chrono::steady_clock::now();
-          cheats_long_press_triggered = false;
-          #if SHELL_DEBUG == 1
-          shellui_log("Cheats buttons pressed - starting timer");
-          #endif
-        } else {
-          auto current_time = std::chrono::steady_clock::now();
-          auto hold_duration = std::chrono::duration_cast < std::chrono::milliseconds > (
-            current_time - cheats_press_start
-          );
-  
-          // Log every 500ms to track progress
-          static auto last_log_time = std::chrono::steady_clock::now();
-          if (std::chrono::duration_cast < std::chrono::milliseconds > (
-              current_time - last_log_time) >= std::chrono::milliseconds(500)) {
-              #if SHELL_DEBUG == 1
-              shellui_log("Cheats buttons held for %lld ms (need %lld ms)",
-              hold_duration.count(),
-              LONG_PRESS_DURATION.count());
-              #endif
-            last_log_time = current_time;
-          }
-  
-          if (hold_duration >= LONG_PRESS_DURATION && !cheats_long_press_triggered) {
-            #if SHELL_DEBUG == 1
-            shellui_log("Cheats long press threshold reached! Duration: %lld ms",
-              hold_duration.count());
-            #endif
-            cheas_sc_activated = true;
-            cheats_long_press_triggered = true;
-          }
-        }
-      } else {
-        if (cheats_pressed) {
-          #if SHELL_DEBUG == 1
-          auto current_time = std::chrono::steady_clock::now();
-          auto hold_duration = std::chrono::duration_cast < std::chrono::milliseconds > (
-            current_time - cheats_press_start
-          );
-          shellui_log("Cheats buttons released after %lld ms (needed %lld ms)",
-            hold_duration.count(),
-            LONG_PRESS_DURATION.count());
-          #endif
-        }
-        cheats_pressed = false;
-        cheats_long_press_triggered = false;
-      }
-  
-      if (cheas_sc_activated) {
-#if SHELL_DEBUG == 1
-        shellui_log("Cheats Shortcut Activated");
-#endif
-        GoToURI("OrionHEN?Cheats");
-        result.Buttons = None; // Clear the Select button to prevent triggering other actions
-        cheas_sc_activated = false; // Reset the flag
-      }
-    }
-  
-    // Toolbox Shortcut
-    if (global_conf.toolbox_shortcut_opt != TOOLBOX_SC_OFF) {
-      bool toolbox_buttons_held = false;
-  
-      switch (global_conf.toolbox_shortcut_opt) {
-      case L2_R3:
-        toolbox_buttons_held = (result.Buttons & L2) && (result.Buttons & R3);
-        break;
-      default:
-        break;
-      }
-  
-      if (toolbox_buttons_held) {
-        if (!toolbox_pressed) {
-          toolbox_pressed = true;
-          toolbox_press_start = std::chrono::steady_clock::now();
-          toolbox_long_press_triggered = false;
-        } else {
-          auto current_time = std::chrono::steady_clock::now();
-          auto hold_duration = std::chrono::duration_cast < std::chrono::milliseconds > (
-            current_time - toolbox_press_start
-          );
-  
-          if (hold_duration >= LONG_PRESS_DURATION && !toolbox_long_press_triggered) {
-            toolbox_sc_activated = true;
-            toolbox_long_press_triggered = true;
-          }
-        }
-      } else {
-        toolbox_pressed = false;
-        toolbox_long_press_triggered = false;
-      }
-  
-      if (toolbox_sc_activated) {
-#if SHELL_DEBUG == 1
-        shellui_log("Toolbox Shortcut Activated");
-#endif
-        GoToURI("pssettings:play?mode=settings&function=debug_settings");
-        result.Buttons = None; // Clear the Select button to prevent triggering other actions
-      }
-    }
-  
-#if SHELL_DEBUG==1
-    if (result.Buttons & Option) {
-      shellui_log("Option button pressed");
-    }
-#endif
-  
-    return result;
-  }
-
-bool CaptureScreen(){
-  if(global_conf.cheats_shortcut_opt == CHEATS_LONG_SHARE){
-    //shellui_log("CaptureScreen: Long Share Shortcut activated");
-    GoToURI("OrionHEN?Cheats");
-    return true;
-  }
-  else if (global_conf.toolbox_shortcut_opt == TOOLBOX_LONG_SHARE){
-    //shellui_log("CaptureScreen: Long Share Shortcut activated");
-    GoToURI("pssettings:play?mode=settings&function=debug_settings");
-    return true;
-  }
-
-  return false;
-}
-void CaptureScreen_old(MonoObject *inst, int userId, long deviceId, int capType, MonoObject* capInfo){
-#if SHELL_DEBUG == 1
-  shellui_log("CaptureScreen: userId: %d, deviceId: %ld, capType: %d", userId, deviceId, capType);
-#endif
-
-  if(CaptureScreen()){
-#if SHELL_DEBUG == 1
-    shellui_log("CaptureScreen: Shortcut activated, redirecting");
-#endif
-    return;
-  }
-  CaptureScreen_orig_old(inst, userId, deviceId, capType, capInfo);
-
-}
-
-void CaptureScreen_new(MonoObject * inst, int userId, long deviceId, int capType, MonoString* format, MonoObject* capInfo) {
-#if SHELL_DEBUG == 1
-  shellui_log("CaptureScreen_new: userId: %d, deviceId: %ld, capType: %d", userId, deviceId, capType);
-#endif
-  if(CaptureScreen()){
-#if SHELL_DEBUG == 1
-    shellui_log("CaptureScreen_new: Shortcut activated, redirecting");
-#endif
-    return;
-  }
-  CaptureScreen_orig_new(inst, userId, deviceId, capType, format, capInfo);
-}
-
-void OnShareButton(MonoObject * data) {
-#if SHELL_DEBUG == 1
-  shellui_log("OnShareButton: data: %p", data);
-#endif
-
-  if( global_conf.cheats_shortcut_opt == CHEATS_SINGLE_SHARE) {
-    // shellui_log("Share Shortcut: Redirecting to Cheats");
-    GoToURI("OrionHEN?Cheats");
-    return;
-  }
-  else if (global_conf.toolbox_shortcut_opt == TOOLBOX_SINGLE_SHARE) {
-    // shellui_log("Share Shortcut: Redirecting to Toolbox");
-    GoToURI("pssettings:play?mode=settings&function=debug_settings");
-    return;
-  }
-
-  OnShareButton_orig(data);
-}
-
 void save_appid(int value, const char* filename) {
     std::ofstream file(filename);
     file << value;
@@ -1861,7 +753,7 @@ int LaunchApp(MonoString* titleId, uint64_t* args, int argsSize, LaunchAppParam 
 }
 
 int sceRegMgrGetInt_hook(long regid, int* out_val){
-  bool dis_tids = global_conf.display_tids;
+  bool dis_tids = g_settings.display_tids;
 
   if(dis_tids && regid == SCE_REGMGR_ENT_KEY_DEVENV_TOOL_SHELLUI_disp_titleid){
     if (out_val) {
@@ -1955,7 +847,7 @@ void createJson_hook(MonoObject* inst, MonoObject* array, MonoString* id, MonoSt
                Mono_to_String(messageId).c_str());
 #endif
 
-    if(!global_conf.OrionHEN_game_opts) {
+    if(!g_settings.orionhen_game_opts) {
         createJson(inst, array, id, label, actionUrl, actionId, messageId, subMenu, enable);
         return;
     }
@@ -1994,14 +886,14 @@ void Terminate() {
     shellui_log("******************************\nShellUI is exiting\n*****************************");
     shellui_log("Sending Action");
     IPC_Client& main_ipc = IPC_Client::getInstance(false);
-    if(global_conf.game_rest_kill) {
+    if(g_settings.game_rest_kill) {
 	    	shellui_log("Killing Game");
         int pid = find_pid("NA", false, true);
         if(pid > 0)
            main_ipc.ForceKillPID(pid);
     }
     //dont send the command if the util is already dead
-    if(global_conf.util_rest_kill) {
+    if(g_settings.util_rest_kill) {
         shellui_log("Killing Util");
         KillAllWithName("Utility", SIGKILL);
     }
