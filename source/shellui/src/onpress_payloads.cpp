@@ -7,10 +7,8 @@
 void *load_payload_thread(void *args);
 
 static OnPressResult prefix_id_payload(OnPressContext &ctx) {
-  if (ctx.id.rfind("id_auto_payload", 0) == 0) {
-    return OnPressResult::NotMine;
-  }
-  if (ctx.id.rfind("id_payload", 0) != 0) {
+  /* Only dynamic entries id_payload_<n> — not the link id_payloads. */
+  if (ctx.id.rfind("id_payload_", 0) != 0) {
     return OnPressResult::NotMine;
   }
   if (g_ui.payloads_list.empty()) {
@@ -58,7 +56,8 @@ static OnPressResult prefix_id_payload(OnPressContext &ctx) {
 }
 
 static OnPressResult prefix_id_auto_payload(OnPressContext &ctx) {
-  if (ctx.id.rfind("id_auto_payload", 0) != 0) {
+  /* Only dynamic entries id_auto_payload_<n> — not a bare list title. */
+  if (ctx.id.rfind("id_auto_payload_", 0) != 0) {
     return OnPressResult::NotMine;
   }
   if (g_ui.auto_payloads_list.empty()) {
@@ -85,8 +84,8 @@ static OnPressResult prefix_id_auto_payload(OnPressContext &ctx) {
 }
 
 static const OnPressPrefixEntry kPrefix[] = {
-    {"id_auto_payload", prefix_id_auto_payload},
-    {"id_payload", prefix_id_payload},
+    {"id_auto_payload_", prefix_id_auto_payload},
+    {"id_payload_", prefix_id_payload},
 };
 
 const OnPressPrefixEntry *onpress_payloads_prefix(size_t *count) {
