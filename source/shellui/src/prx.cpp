@@ -1,5 +1,5 @@
 
-/* Copyright (C) 2025 etaHEN / LightningMods
+/* Copyright (C) 2025 OrionHEN / LightningMods
 
 This program is free software; you can redistribute it and/or modify it
 under the terms of the GNU General Public License as published by the
@@ -931,7 +931,7 @@ int main(int argc, char const *argv[]) {
     const char *enc_ver = "\x30\x44\x0d\x1c\x13\x08\x69\x35\x3d\x44\x0d\x46";
     std::vector<unsigned char> dev_ver_string = encrypt_decrypt((unsigned char *)enc_ver, strlen(enc_ver), key_base64);
     std::string dec_ver = std::string(dev_ver_string.begin(), dev_ver_string.end());
-    dec_ver += etaHEN_VERSION;
+    dec_ver += OrionHEN_VERSION;
     std::string final_ver;
 #if PUBLIC_TEST == 1
     final_ver = dec_ver + "-PUBLIC_TEST" + " (" + sw.version_str + " )";
@@ -1079,55 +1079,21 @@ int main(int argc, char const *argv[]) {
 
   OnRender_orig = (void(*)(MonoObject*)) DetourFunction(Get_Address_of_Method(pui_img, "Sce.PlayStation.PUI", "Application", "Update", 0), (void*)&OnRender_Hook);
 
-  uint64_t ui3PushScene = Get_Address_of_Method(pui_img,
-                                                "Sce.PlayStation.PUI.UI3",
-                                                "NavigationScene",
-                                                "PushScene",
-                                                1);
-  if (ui3PushScene) {
-    UI3_NavigationScene_PushScene_Orig = (void (*)(MonoObject*, MonoObject*))
-        DetourFunction(ui3PushScene, (void*)&UI3_NavigationScene_PushScene_Hook);
-    if (UI3_NavigationScene_PushScene_Orig) {
-      shellui_log("[DBG-PUSH] Sce.PlayStation.PUI.UI3.NavigationScene.PushScene hooked");
+  uint64_t updateNavigationState = Get_Address_of_Method(REACTPUI_img,
+                                                         "ReactNative.Views.UI3.View",
+                                                         "ReactNavigatorManager",
+                                                         "UpdateNavigationState",
+                                                         1);
+  if (updateNavigationState) {
+    ReactNavigatorManager_UpdateNavigationState_Orig = (void (*)(MonoObject*, MonoObject*))
+        DetourFunction(updateNavigationState, (void*)&ReactNavigatorManager_UpdateNavigationState_Hook);
+    if (ReactNavigatorManager_UpdateNavigationState_Orig) {
+      shellui_log("[DBG-NAV] ReactNavigatorManager.UpdateNavigationState hooked");
     } else {
-      shellui_log("[DBG-PUSH] failed to detour Sce.PlayStation.PUI.UI3.NavigationScene.PushScene");
+      shellui_log("[DBG-NAV] failed to detour ReactNavigatorManager.UpdateNavigationState");
     }
   } else {
-    shellui_log("[DBG-PUSH] Sce.PlayStation.PUI.UI3.NavigationScene.PushScene not found");
-  }
-
-  uint64_t ui3PushScene2 = Get_Address_of_Method(pui_img,
-                                                 "Sce.PlayStation.PUI.UI3",
-                                                 "NavigationScene",
-                                                 "PushScene",
-                                                 2);
-  if (ui3PushScene2) {
-    UI3_NavigationScene_PushScene2_Orig = (void (*)(MonoObject*, MonoObject*, MonoObject*))
-        DetourFunction(ui3PushScene2, (void*)&UI3_NavigationScene_PushScene2_Hook);
-    if (UI3_NavigationScene_PushScene2_Orig) {
-      shellui_log("[DBG-PUSH] Sce.PlayStation.PUI.UI3.NavigationScene.PushScene/2 hooked");
-    } else {
-      shellui_log("[DBG-PUSH] failed to detour Sce.PlayStation.PUI.UI3.NavigationScene.PushScene/2");
-    }
-  } else {
-    shellui_log("[DBG-PUSH] Sce.PlayStation.PUI.UI3.NavigationScene.PushScene/2 not found");
-  }
-
-  uint64_t ui3PushScene3 = Get_Address_of_Method(pui_img,
-                                                 "Sce.PlayStation.PUI.UI3",
-                                                 "NavigationScene",
-                                                 "PushScene",
-                                                 3);
-  if (ui3PushScene3) {
-    UI3_NavigationScene_PushScene3_Orig = (void (*)(MonoObject*, MonoObject*, MonoObject*, MonoObject*))
-        DetourFunction(ui3PushScene3, (void*)&UI3_NavigationScene_PushScene3_Hook);
-    if (UI3_NavigationScene_PushScene3_Orig) {
-      shellui_log("[DBG-PUSH] Sce.PlayStation.PUI.UI3.NavigationScene.PushScene/3 hooked");
-    } else {
-      shellui_log("[DBG-PUSH] failed to detour Sce.PlayStation.PUI.UI3.NavigationScene.PushScene/3");
-    }
-  } else {
-    shellui_log("[DBG-PUSH] Sce.PlayStation.PUI.UI3.NavigationScene.PushScene/3 not found");
+    shellui_log("[DBG-NAV] ReactNavigatorManager.UpdateNavigationState not found");
   }
 
 #if 0

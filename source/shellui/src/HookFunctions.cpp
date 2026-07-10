@@ -1,4 +1,4 @@
-﻿/* Copyright (C) 2025 etaHEN / LightningMods
+﻿/* Copyright (C) 2025 OrionHEN / LightningMods
 
 This program is free software; you can redistribute it and/or modify it
 under the terms of the GNU General Public License as published by the
@@ -44,9 +44,7 @@ MonoString* (*CxmlUri)(MonoObject* obj, MonoString* uri) = nullptr;
 uint64_t(*GetManifestResourceStream_Original)(uint64_t inst, MonoString* FileName) = nullptr;
 uint64_t(*GetManifestResourceInternal_Orig)(MonoObject* instance, MonoString* name, int* size, MonoObject& module) = nullptr;
 void (*DebugSettings_GetModel_Orig)(MonoObject* instance, MonoObject* param, MonoObject* promise) = nullptr;
-void (*UI3_NavigationScene_PushScene_Orig)(MonoObject* instance, MonoObject* newScene) = nullptr;
-void (*UI3_NavigationScene_PushScene2_Orig)(MonoObject* instance, MonoObject* newScene, MonoObject* animation) = nullptr;
-void (*UI3_NavigationScene_PushScene3_Orig)(MonoObject* instance, MonoObject* newScene, MonoObject* animation, MonoObject* animationForPreviousScene) = nullptr;
+void (*ReactNavigatorManager_UpdateNavigationState_Orig)(MonoObject* instance, MonoObject* state) = nullptr;
 void (*UpdateImposeStatusFlag_Orig)(MonoObject* Instance, MonoObject* a) = nullptr;
 bool (*CheckRemotePlayRestriction_Orig)(MonoObject* instance) = nullptr;
 void (*oTerminate)(void) = nullptr;
@@ -309,8 +307,8 @@ void patch_bundle_strings(unsigned char* buffer, int* size_ptr, int actual_size)
   (void)count;
 #endif
   
-  // Replace "icon_setting" with "etahen_sicon"
-  replace_all(buffer, size_ptr, actual_size, "icon_setting", "etahen_sicon");
+  // Replace "icon_setting" with "orionhen_sicon"
+  replace_all(buffer, size_ptr, actual_size, "icon_setting", "orionhen_sicon");
 }
 
 int ioctl_hook(int fd, unsigned long request, void *argp) {
@@ -389,7 +387,7 @@ MonoString* Hook_getIpMacHost(uint64_t inst, SceNetIfName name) {
 
     //SCE_NET_IF_NAME_PHYSICAL
 
-    snprintf(full_text, sizeof(full_text), "OrionHEN 版本: %s\nIP: %s", etaHEN_VERSION, ip_address);
+    snprintf(full_text, sizeof(full_text), "OrionHEN 版本: %s\nIP: %s", OrionHEN_VERSION, ip_address);
     if (global_conf.kit_panel_info == 0 || sceKernelGetSocSensorTemperature(0, &temp)) { // ON (ONLY)
         return mono_string_new(Root_Domain, full_text);
     }
@@ -675,7 +673,7 @@ void* download_cheats_thr(void*){
         return nullptr;
     }
     cheat_action_in_progress = true;
-    notify("Preparing to download the %s cheats repo...", global_conf.selected_cheats_repo == CHEATS_REPO_ETAHEN ? "OrionHEN PS5" : "GoldHEN PS4");
+    notify("Preparing to download the %s cheats repo...", global_conf.selected_cheats_repo == CHEATS_REPO_ORIONHEN ? "OrionHEN PS5" : "GoldHEN PS4");
     IPC_Client& util_ipc = IPC_Client::getInstance(true);
     // daemon shows notification when done
     util_ipc.Cheats_Action(DOWNLOAD_CHEATS, global_conf.selected_cheats_repo);
@@ -756,6 +754,7 @@ int OnPress_Hook(MonoObject* Instance, MonoObject* element, MonoObject* e)
     std::string title = GetPropertyValue(element, "Title");
 
     bool is_cust_pkg = (id.rfind("id_pkg_") != std::string::npos);
+    bool is_orionhen_pl = (id.rfind("id_orionhen_pl_loader_") != std::string::npos);
 
     if (id.rfind("id_cheat_") != std::string::npos && !is_current_game_open) {
         notify("The Game is not running, to activate cheats launch the game first");
@@ -767,7 +766,7 @@ int OnPress_Hook(MonoObject* Instance, MonoObject* element, MonoObject* e)
 
     // Check if id is in the excluded list
     bool isExcludedId = std::find(excludedIds.begin(), excludedIds.end(), id) != excludedIds.end();
-    if (value.empty() && !isExcludedId && !is_cust_pkg) {
+    if (value.empty() && !isExcludedId && !is_cust_pkg && !is_orionhen_pl) {
 #if SHELL_DEBUG==1
         shellui_log("[LM HOOK] OnPress_Hook: Id: %s has no value set", id.c_str());
 #endif
@@ -954,20 +953,20 @@ int OnPress_Hook(MonoObject* Instance, MonoObject* element, MonoObject* e)
 		}
     }
     else if (id == "id_kstuff_autoload") {
-       // if(atoi(value.c_str()) == if_exists("/user/data/etaHEN/no_kstuff")) {
+       // if(atoi(value.c_str()) == if_exists("/user/data/OrionHEN/no_kstuff")) {
 		//	return oOnPress(Instance, element, e);
 		//}
         if(atol(value.c_str())){
-			unlink("/user/data/etaHEN/no_kstuff");
+			unlink("/user/data/OrionHEN/no_kstuff");
             notify("Kstuff will be loaded on next boot");
         }
         else{
-            touch_file("/user/data/etaHEN/no_kstuff");
+            touch_file("/user/data/OrionHEN/no_kstuff");
             notify("Kstuff will NOT be loaded on next boot");
 		}
     }
     else if (id == "id_delete_kstuff") {
-       unlink("/user/data/etaHEN/kstuff.elf");
+       unlink("/user/data/OrionHEN/kstuff.elf");
 	   notify("The external kstuff download has been deleted");
     }
     else if (id == "id_change_custom_pkg_path") {
@@ -1137,16 +1136,14 @@ int OnPress_Hook(MonoObject* Instance, MonoObject* element, MonoObject* e)
         else{
             notify("[ERROR] Failed to activate %s", cheat_name.c_str());   
         }
-    }  //payloads_apps_list
-    else if (id.rfind("id_plapp_") != std::string::npos) {
-        if(payloads_apps_list.empty()){
+    }
+    else if (id.rfind("id_orionhen_pl_loader_") != std::string::npos) {
+        if (games_list.empty()) {
            return oOnPress(Instance, element, e);
         }
-        // Handle payloads_apps_list
-        std::string plapp_id = id;
-        for (const auto& plapp : payloads_apps_list) {
-            if (plapp.id == plapp_id) {
-                // Do something with the matching payload
+        for (const auto& game : games_list) {
+            if (game.id == id) {
+                // Payload homebrew entry selected (id_orionhen_pl_loader_*)
                 break;
             }
         }
@@ -1277,12 +1274,12 @@ int OnPress_Hook(MonoObject* Instance, MonoObject* element, MonoObject* e)
         }//
     }
     else if (id == "id_custom_game_opts") {
-        if (atoi(value.c_str()) == global_conf.etaHEN_game_opts) {
-            shellui_log("etaHEN Game Options already %s", global_conf.etaHEN_game_opts ? "Enabled" : "Disabled");
+        if (atoi(value.c_str()) == global_conf.OrionHEN_game_opts) {
+            shellui_log("OrionHEN Game Options already %s", global_conf.OrionHEN_game_opts ? "Enabled" : "Disabled");
             return oOnPress(Instance, element, e);
         }
-        global_conf.etaHEN_game_opts = !global_conf.etaHEN_game_opts;
-        shellui_log("etaHEN Game Options: %s", global_conf.etaHEN_game_opts ? "Enabled" : "Disabled");
+        global_conf.OrionHEN_game_opts = !global_conf.OrionHEN_game_opts;
+        shellui_log("OrionHEN Game Options: %s", global_conf.OrionHEN_game_opts ? "Enabled" : "Disabled");
     }
     else if (id == "id_start_opt") {
         StartOption = atoi(value.c_str());
@@ -1290,7 +1287,7 @@ int OnPress_Hook(MonoObject* Instance, MonoObject* element, MonoObject* e)
     }
     else if (id == "id_selected_cheats_repo") {
         selected_cheats_repo = static_cast<cheats_repo_source>(atoi(value.c_str()));
-        shellui_log("Selected cheats repo: %s", selected_cheats_repo == CHEATS_REPO_ETAHEN ? "etaHEN PS5" : "GoldHEN PS4");
+        shellui_log("Selected cheats repo: %s", selected_cheats_repo == CHEATS_REPO_ORIONHEN ? "OrionHEN PS5" : "GoldHEN PS4");
     }
     else if (id == "id_trial_soft") {
 	      	trial_expire = atoi(value.c_str());
@@ -1472,26 +1469,10 @@ MonoString * CxmlUri_Hook(MonoObject * Instance, MonoString * uri) {
   return CxmlUri(Instance, uri);
 }
 MonoObject* MemoryStream_Instance = nullptr;
-static bool debug_settings_rn_route_pending = false;
-static bool debug_settings_old_opening = false;
-static bool debug_settings_legacy_active = false;
-static bool debug_settings_allow_rn_restore = false;
+static bool debug_settings_nav_redirecting = false;
 
-static const char* SafeClassName(MonoObject* obj) {
+static std::string MonoObjectToString(MonoObject* obj) {
     if (!obj || !mono_object_get_class) {
-        return "<null>";
-    }
-
-    MonoClass* klass = mono_object_get_class(obj);
-    if (!klass || !klass->name) {
-        return "<unknown>";
-    }
-
-    return klass->name;
-}
-
-static std::string GetStringProperty(MonoObject* obj, const char* propertyName) {
-    if (!obj || !propertyName || !mono_object_get_class) {
         return "";
     }
 
@@ -1500,126 +1481,37 @@ static std::string GetStringProperty(MonoObject* obj, const char* propertyName) 
         return "";
     }
 
-    MonoString* value = Get_Property<MonoString*>(klass, obj, propertyName);
-    if (!value) {
+    MonoString* text = Invoke<MonoString*>(nullptr, klass, obj, "ToString");
+    if (!text) {
         return "";
     }
 
-    return Mono_to_String(value);
+    return Mono_to_String(text);
 }
 
-static bool IsDebugSettingsReactScene(const std::string& sceneName) {
-    if (sceneName == "DebugSettingsScreen") {
-        return true;
+void ReactNavigatorManager_UpdateNavigationState_Hook(MonoObject* instance, MonoObject* state) {
+    std::string state_text = MonoObjectToString(state);
+
+    if (state_text.find("DebugSettingsOldScreen") != std::string::npos ||
+        state_text.find("ps5:settings:debug settings old") != std::string::npos) {
+        debug_settings_nav_redirecting = false;
     }
 
-    if (sceneName.find("ps5:settings:debug settings") == std::string::npos) {
-        return false;
-    }
-
-    return sceneName.find("old") == std::string::npos &&
-           sceneName.find(":nuic") == std::string::npos;
-}
-
-static bool IsDebugSettingsStackScene(const std::string& sceneName) {
-    return sceneName == "StackNavigatorPS";
-}
-
-static bool IsSettingsMainScene(const std::string& sceneName) {
-    return sceneName == "ps5:settings:main";
-}
-
-static bool IsLegacyDebugSettingsScene(const std::string& sceneName) {
-    return sceneName.find("ps5:settings:debug settings old") != std::string::npos ||
-           sceneName == "id_debug_settings";
-}
-
-static bool RedirectDebugSettingsPush(const char* source, MonoObject* newScene) {
-    std::string sceneName = GetStringProperty(newScene, "Name");
-
-    if (!sceneName.empty()) {
-        shellui_log("[DBG-PUSH] %s newScene=%s class=%s", source, sceneName.c_str(), SafeClassName(newScene));
-    } else {
-        shellui_log("[DBG-PUSH] %s newScene=<empty> class=%s", source, SafeClassName(newScene));
-    }
-
-    if (IsSettingsMainScene(sceneName)) {
-        if (debug_settings_rn_route_pending || debug_settings_old_opening) {
-            shellui_log("[DBG-PUSH] settings main reached; clearing DebugSettings redirect state");
-        }
-        debug_settings_rn_route_pending = false;
-        debug_settings_old_opening = false;
-        debug_settings_legacy_active = false;
-    }
-
-    if (IsLegacyDebugSettingsScene(sceneName)) {
-        debug_settings_rn_route_pending = false;
-        debug_settings_old_opening = false;
-        debug_settings_legacy_active = true;
-    }
-
-    if (debug_settings_rn_route_pending && IsDebugSettingsStackScene(sceneName)) {
-        shellui_log("[DBG-PUSH] blocking RN DebugSettings stack container and opening debug_settings_old");
-        debug_settings_rn_route_pending = false;
-        debug_settings_old_opening = true;
-        GoToURI("pssettings:play?function=debug_settings_old");
-        return true;
-    }
-
-    if (IsDebugSettingsReactScene(sceneName)) {
-        if (debug_settings_allow_rn_restore) {
-            shellui_log("[DBG-PUSH] allowing RN DebugSettings restore while returning from legacy XML");
-            debug_settings_allow_rn_restore = false;
-            return false;
-        }
-
-        if (!debug_settings_rn_route_pending && !debug_settings_old_opening) {
-            shellui_log("[DBG-PUSH] RN DebugSettings scene without redirect state; allowing");
-            return false;
-        }
-
-        shellui_log("[DBG-PUSH] blocking RN DebugSettings scene%s",
-                    debug_settings_rn_route_pending ? " after stack fallback" : "");
-        if (debug_settings_rn_route_pending) {
-            debug_settings_rn_route_pending = false;
-        }
-        if (!debug_settings_old_opening) {
-            debug_settings_old_opening = true;
+    if (state_text.find("DebugSettingsScreen") != std::string::npos &&
+        state_text.find("DebugSettingsOldScreen") == std::string::npos &&
+        state_text.find("ps5:settings:debug settings old") == std::string::npos) {
+        if (!debug_settings_nav_redirecting) {
+            shellui_log("[DBG-NAV] DebugSettingsScreen route blocked before RN scene load; opening debug_settings_old");
+            debug_settings_nav_redirecting = true;
             GoToURI("pssettings:play?function=debug_settings_old");
+        } else {
+            shellui_log("[DBG-NAV] DebugSettingsScreen route blocked before RN scene load; redirect already pending");
         }
-        return true;
-    }
-
-    return false;
-}
-
-void UI3_NavigationScene_PushScene_Hook(MonoObject* instance, MonoObject* newScene) {
-    if (RedirectDebugSettingsPush("PushScene/1", newScene)) {
         return;
     }
 
-    if (UI3_NavigationScene_PushScene_Orig) {
-        UI3_NavigationScene_PushScene_Orig(instance, newScene);
-    }
-}
-
-void UI3_NavigationScene_PushScene2_Hook(MonoObject* instance, MonoObject* newScene, MonoObject* animation) {
-    if (RedirectDebugSettingsPush("PushScene/2", newScene)) {
-        return;
-    }
-
-    if (UI3_NavigationScene_PushScene2_Orig) {
-        UI3_NavigationScene_PushScene2_Orig(instance, newScene, animation);
-    }
-}
-
-void UI3_NavigationScene_PushScene3_Hook(MonoObject* instance, MonoObject* newScene, MonoObject* animation, MonoObject* animationForPreviousScene) {
-    if (RedirectDebugSettingsPush("PushScene/3", newScene)) {
-        return;
-    }
-
-    if (UI3_NavigationScene_PushScene3_Orig) {
-        UI3_NavigationScene_PushScene3_Orig(instance, newScene, animation, animationForPreviousScene);
+    if (ReactNavigatorManager_UpdateNavigationState_Orig) {
+        ReactNavigatorManager_UpdateNavigationState_Orig(instance, state);
     }
 }
 
@@ -1665,16 +1557,7 @@ void DebugSettings_GetModel_Hook(MonoObject* instance, MonoObject* param, MonoOb
     }
 
     if (page_id == "id_debug_settings" || param_text.find("id_debug_settings") != std::string::npos) {
-        if (debug_settings_legacy_active) {
-            shellui_log("[DBG-GETMODEL] id_debug_settings while legacy XML active; treating as return restore");
-            debug_settings_rn_route_pending = false;
-            debug_settings_old_opening = false;
-            debug_settings_allow_rn_restore = true;
-        } else {
-            shellui_log("[DBG-GETMODEL] id_debug_settings detected; will block RN stack push");
-            debug_settings_rn_route_pending = true;
-            debug_settings_allow_rn_restore = false;
-        }
+        shellui_log("[DBG-GETMODEL] id_debug_settings reached RN model; navigation-state redirect did not catch this path");
     }
 
     if (DebugSettings_GetModel_Orig) {
@@ -1932,7 +1815,7 @@ int OnPreCreate_Hook(MonoObject* Instance, MonoObject* element) {
 		s_MonoText = mono_string_new(Root_Domain, global_conf.overlay_ram ? "1" : "0");
     }
     else if (id == "id_kstuff_autoload") {
-		s_MonoText = mono_string_new(Root_Domain, !if_exists("/user/data/etaHEN/no_kstuff") ? "1" : "0");
+		s_MonoText = mono_string_new(Root_Domain, !if_exists("/user/data/OrionHEN/no_kstuff") ? "1" : "0");
     }
     else if (id == "id_disp_titleids"){
         s_MonoText = mono_string_new(Root_Domain, global_conf.display_tids ? "1" : "0");
@@ -2011,7 +1894,7 @@ int OnPreCreate_Hook(MonoObject* Instance, MonoObject* element) {
         s_MonoText = mono_string_new(Root_Domain, global_conf.debug_legacy_cmd_server ? "1" : "0");
     }
     else if (id == "id_custom_game_opts"){
-       s_MonoText = mono_string_new(Root_Domain, global_conf.etaHEN_game_opts ? "1" : "0");
+       s_MonoText = mono_string_new(Root_Domain, global_conf.OrionHEN_game_opts ? "1" : "0");
     }
     else if (id == "id_auto_eject") {
         s_MonoText = mono_string_new(Root_Domain, global_conf.auto_eject_disc ? "1" : "0");
@@ -2060,28 +1943,28 @@ bool handle_uri_boot_common(MonoString* uri, int opt, MonoString* titleIdForBoot
                 opt);
 #endif
   
-    if(uri_string == "etaHEN?Cheats") {
+    if(uri_string == "OrionHEN?Cheats") {
 #if SHELL_DEBUG==1
       shellui_log("cheats_shortcut URI detected");
 #endif
       cheats_shortcut_activated = true;
       return true; // Signal to redirect
     }
-    else if(uri_string == "etaHEN?Cheats_not_open") {
+    else if(uri_string == "OrionHEN?Cheats_not_open") {
 #if SHELL_DEBUG==1
       shellui_log("cheats_shortcut (not open) URI detected");
 #endif
       cheats_shortcut_activated_not_open = true;
       return true;
     }
-    else if (uri_string == "etaHEN?Dump") {
+    else if (uri_string == "OrionHEN?Dump") {
 #if SHELL_DEBUG==1
         shellui_log("Dump URI detected");
 #endif
         notify("Game dumper payload is not bundled in OrionHEN");
         return true; // Signal to redirect
     }
-    else if (uri_string == "etaHEN?DL_UPDATE") {
+    else if (uri_string == "OrionHEN?DL_UPDATE") {
 #if SHELL_DEBUG==1
         shellui_log("DL_UPDATE URI detected");
 #endif
@@ -2095,7 +1978,7 @@ bool handle_uri_boot_common(MonoString* uri, int opt, MonoString* titleIdForBoot
   bool uri_boot_hook(MonoString* uri, int opt, MonoString* titleIdForBootAction) {
     if(handle_uri_boot_common(uri, opt, titleIdForBootAction)) {
         std::string uri_string = Mono_to_String(uri);
-        if(uri_string == "etaHEN?Dump") {
+        if(uri_string == "OrionHEN?Dump") {
           return boot_orig(mono_string_new(Root_Domain, "pshomeui:navigateToHome?bootCondition=psButton"),  opt, titleIdForBootAction);
         }
       // Redirect to debug settings
@@ -2112,7 +1995,7 @@ bool handle_uri_boot_common(MonoString* uri, int opt, MonoString* titleIdForBoot
     if(handle_uri_boot_common(uri, opt, nullptr)) {
       // Redirect to debug settings (no titleId parameter for older fw)
       std::string uri_string = Mono_to_String(uri);
-      if(uri_string == "etaHEN?Dump") {
+      if(uri_string == "OrionHEN?Dump") {
         return boot_orig_2(mono_string_new(Root_Domain, "pshomeui:navigateToHome?bootCondition=psButton"),  opt);
       }
 
@@ -2215,7 +2098,7 @@ bool handle_uri_boot_common(MonoString* uri, int opt, MonoString* titleIdForBoot
 #if SHELL_DEBUG == 1
         shellui_log("Cheats Shortcut Activated");
 #endif
-        GoToURI("etaHEN?Cheats");
+        GoToURI("OrionHEN?Cheats");
         result.Buttons = None; // Clear the Select button to prevent triggering other actions
         cheas_sc_activated = false; // Reset the flag
       }
@@ -2275,7 +2158,7 @@ bool handle_uri_boot_common(MonoString* uri, int opt, MonoString* titleIdForBoot
 bool CaptureScreen(){
   if(global_conf.cheats_shortcut_opt == CHEATS_LONG_SHARE){
     //shellui_log("CaptureScreen: Long Share Shortcut activated");
-    GoToURI("etaHEN?Cheats");
+    GoToURI("OrionHEN?Cheats");
     return true;
   }
   else if (global_conf.toolbox_shortcut_opt == TOOLBOX_LONG_SHARE){
@@ -2321,7 +2204,7 @@ void OnShareButton(MonoObject * data) {
 
   if( global_conf.cheats_shortcut_opt == CHEATS_SINGLE_SHARE) {
     // shellui_log("Share Shortcut: Redirecting to Cheats");
-    GoToURI("etaHEN?Cheats");
+    GoToURI("OrionHEN?Cheats");
     return;
   }
   else if (global_conf.toolbox_shortcut_opt == TOOLBOX_SINGLE_SHARE) {
@@ -2476,7 +2359,7 @@ void createJson_hook(MonoObject* inst, MonoObject* array, MonoString* id, MonoSt
                Mono_to_String(messageId).c_str());
 #endif
 
-    if(!global_conf.etaHEN_game_opts) {
+    if(!global_conf.OrionHEN_game_opts) {
         createJson(inst, array, id, label, actionUrl, actionId, messageId, subMenu, enable);
         return;
     }
@@ -2492,13 +2375,13 @@ void createJson_hook(MonoObject* inst, MonoObject* array, MonoString* id, MonoSt
     }
 #if 1
     if(id_str == "MENU_ID_SAVE_DATA_MANAGEMENT_PS4_MANUAL" || id_str == "MENU_ID_SAVE_DATA_MANAGEMENT_PS5_MANUAL" || (id_str == "MENU_ID_UPDATE_HISTORY" && 0)){
-       createJson(inst, array, mono_string_new(Root_Domain, "MENU_ID_CUST_UPDATES"), mono_string_new(Root_Domain, "★ (测试版) 转储游戏/应用"), mono_string_new(Root_Domain, "etaHEN?Dump"), actionId, nullptr, subMenu, enable);
+       createJson(inst, array, mono_string_new(Root_Domain, "MENU_ID_CUST_UPDATES"), mono_string_new(Root_Domain, "★ (测试版) 转储游戏/应用"), mono_string_new(Root_Domain, "OrionHEN?Dump"), actionId, nullptr, subMenu, enable);
        return;
     }
 #endif
     if(id_str == "MENU_ID_CHECK_PATCH"){  
       //createJson_hook: 8815fec90 id: MENU_ID_CHECK_PATCH, label: , actionUrl: pspatchcheck:check-for-update?titleid=CUSA01127, actionId: , messageId: msgid_check_update
-        createJson(inst, array, mono_string_new(Root_Domain, "MENU_ID_CHEATS"), mono_string_new(Root_Domain, "★ OrionHEN 金手指"), mono_string_new(Root_Domain, "etaHEN?Cheats_not_open"), actionId, nullptr, subMenu, enable);
+        createJson(inst, array, mono_string_new(Root_Domain, "MENU_ID_CHEATS"), mono_string_new(Root_Domain, "★ OrionHEN 金手指"), mono_string_new(Root_Domain, "OrionHEN?Cheats_not_open"), actionId, nullptr, subMenu, enable);
         return;
     }
 
