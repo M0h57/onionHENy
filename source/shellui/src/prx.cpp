@@ -23,6 +23,7 @@ along with this program; see the file COPYING. If not, see
 #include "proc.h"
 #include "ps5/kernel.h"
 #include "ucred.h"
+#include <orion/ready.h>
 #include <cstdint>
 #include <iostream>
 #include "webserver.hpp"
@@ -1267,7 +1268,7 @@ int main(int argc, char const *argv[]) {
     scePthreadCreate(&thread_id, nullptr, dialogue_thread, nullptr, "dialogue_thread");
 
     // file to let the main daemon know that its finished loading
-    touch_file("/system_tmp/toolbox_online");
+    orion_ready_signal(ORION_READY_TOOLBOX);
 
     while (true) {
       shellui_log("sleeping ....");

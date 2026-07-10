@@ -196,6 +196,17 @@ OrionHEN/
 | **liborion_settings** | 统一 `config.ini` schema；各进程以 `orion::Settings g_settings` 为真相源 |
 | **liborion_detour** | 共享 Detour + hde64 钩子栈；shellui / fps_elf 共用 |
 | **liborion_proc** | 共享 proc/ucred（allproc 遍历、dynlib、authid）；shellui / fps_elf 共用 |
+| **liborion_ready** | 跨进程 ready 标记（`/system_tmp/orion_ready/<name>` + wait/timeout）；替代固定 sleep 竞态 |
+| **orion/lnc.h** | 共享 LNC 启动 ABI（`LncAppParam` / `Flag` / 错误码）；daemon `launcher.hpp` 仅为 shim |
+
+#### Ready 协议
+
+| 标记名 | 发布方 | 等待方 |
+|--------|--------|--------|
+| `util` | util 在 IPC 线程启动后 | bootstrapper 启动 util 之后 |
+| `kstuff` | bootstrapper 在 mprotect 成功后 | daemon 注入 toolbox 前 |
+| `daemon` | daemon 在 IPC 线程启动后 | bootstrapper 启动 daemon 之后 |
+| `toolbox` | shellui 注入完成后 | daemon `cmd_enable_toolbox`（兼容旧路径 `toolbox_online`） |
 
 #### IPC 分层（加深后）
 

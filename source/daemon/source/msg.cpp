@@ -18,6 +18,7 @@ along with this program; see the file COPYING. If not, see
 #include "../../extern/cJSON/orion_cjson.hpp"
 #include "globalconf.hpp"
 #include <orion/settings.hpp>
+#include <orion/ready.h>
 #include <orion/ipc_server.hpp>
 #include <atomic>
 #include <msg.hpp>
@@ -770,7 +771,6 @@ bool cmd_enable_fps(int appid) {
 }
 
 bool cmd_enable_toolbox(){
-    int wait = 0;
     char buz[100] = {0};
 
     /*
@@ -798,8 +798,10 @@ bool cmd_enable_toolbox(){
       sleep(g_settings.rest_mode_delay_seconds);
     }
 
-    /* ShellUI needs a moment after kstuff trophy patches */
-    sleep(2);
+    /* Prefer kstuff ready marker when present; fall back to short settle. */
+    if (!orion_ready_wait(ORION_READY_KSTUFF, /*timeout_ms=*/5000, /*poll_ms=*/200)) {
+      sleep(1);
+    }
 
     int pid = get_shellui_pid();
     if (pid < 0) {
@@ -814,17 +816,14 @@ bool cmd_enable_toolbox(){
       return false;
     }
 
-    while (!if_exists("/system_tmp/toolbox_online")) {
-      OrionHEN_log("waiting for toolbox to start");
-      sleep(1);
-      if (++wait >= 45) {
-        /* Keep ShellUI alive; user can retry from Debug Settings */
-        notify(true, "Failed to load the OrionHEN toolbox (timeout, ShellUI left running)");
-        return false;
-      }
+    /* Ready protocol: shellui signals ORION_READY_TOOLBOX after inject hooks run */
+    if (!orion_ready_wait(ORION_READY_TOOLBOX, /*timeout_ms=*/45 * 1000,
+                          /*poll_ms=*/250)) {
+      notify(true, "Failed to load the OrionHEN toolbox (timeout, ShellUI left running)");
+      return false;
     }
-    unlink("/system_tmp/toolbox_online");
-    OrionHEN_log("Toolbox online");
+    orion_ready_clear(ORION_READY_TOOLBOX);
+    OrionHEN_log("Toolbox online (ready protocol)");
 
     return true;
 }

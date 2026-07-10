@@ -64,3 +64,4 @@ source/lib/liborion_ipc.a
 source/lib/liborion_settings.a
 source/lib/liborion_detour.a
 source/lib/liborion_proc.a
+source/lib/liborion_ready.a

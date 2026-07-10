@@ -48,6 +48,7 @@ along with this program; see the file COPYING. If not, see
 #include <unistd.h>
 #include <string.h>
 #include <stdio.h>
+#include <orion/ready.h>
 #include <errno.h>
  
  /******************************************************************************
@@ -1137,16 +1138,23 @@ int main(void) {
     kill(pid, SIGKILL);
     sleep(1);
   }
+  orion_ready_clear(ORION_READY_UTIL);
+  orion_ready_clear(ORION_READY_KSTUFF);
+  orion_ready_clear(ORION_READY_DAEMON);
+  orion_ready_clear(ORION_READY_TOOLBOX);
   if (!launch_path("/data/OrionHEN/daemons/util.elf", "util", "util.elf")) {
     notify("failed to launch util via elfldr :9021");
     return -2;
   }
-  sleep(2);
+  if (!orion_ready_wait(ORION_READY_UTIL, /*timeout_ms=*/15000, /*poll_ms=*/200)) {
+    klog_puts("util ready timeout — continuing (process may still be starting)");
+  }
 
   bool dont_load_kstuff =
       (if_exists("/mnt/usb0/no_kstuff") || if_exists("/data/OrionHEN/no_kstuff"));
   if (dont_load_kstuff) {
     klog_puts("kstuff disabled via no_kstuff file");
+    orion_ready_signal(ORION_READY_KSTUFF);
   } else if (sys_ver.version >= 0x3000000) {
     klog_puts("Loading kstuff via 9021 (before daemon/toolbox) ...");
     const char *kpath = if_exists("/data/OrionHEN/kstuff.elf")
@@ -1163,14 +1171,18 @@ int main(void) {
         sleep(1);
       }
       if (!not_loaded) {
-        klog_puts("kstuff loaded — wait for ShellUI settle");
-        sleep(3); /* let kstuff finish ShellUI patches before inject */
+        klog_puts("kstuff mprotect OK — signal ready");
+        orion_ready_signal(ORION_READY_KSTUFF);
+        /* Brief settle for ShellUI trophy patches (still a short fixed delay). */
+        sleep(1);
       }
     } else {
       notify("Failed to load kstuff via 9021, continuing");
     }
+  } else {
+    /* No kstuff path: mark kstuff ready so waiters are not blocked. */
+    orion_ready_signal(ORION_READY_KSTUFF);
   }
-  sleep(1);
 
   klog_puts("Starting daemon via 9021 (toolbox inject) ...");
   while ((pid = find_pid("daemon.elf")) > 0 ||
@@ -1178,11 +1190,14 @@ int main(void) {
     kill(pid, SIGKILL);
     sleep(1);
   }
+  orion_ready_clear(ORION_READY_DAEMON);
   if (!launch_path("/data/OrionHEN/daemons/daemon.elf", "daemon", "daemon.elf")) {
     notify("failed to launch daemon via elfldr :9021");
     return -2;
   }
-  sleep(2);
+  if (!orion_ready_wait(ORION_READY_DAEMON, /*timeout_ms=*/20000, /*poll_ms=*/200)) {
+    klog_puts("daemon ready timeout — continuing");
+  }
 
   /* Welcome toast after launches (earlier toast raced MediaCore + EXEC) */
   sceNotificationSend(0xFE, true, &json_payload[0]);

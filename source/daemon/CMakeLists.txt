@@ -70,11 +70,12 @@ target_include_directories(${PROJECT_NAME} PRIVATE
 	"${D_CWD}/include"
 	"${PROJECT_ROOT}/liborion_settings/include"
 	"${PROJECT_ROOT}/liborion_ipc/include"
+	"${PROJECT_ROOT}/include"
 )
 target_link_directories	(${PROJECT_NAME} PUBLIC "${PROJECT_ROOT}/lib")
-add_dependencies(${PROJECT_NAME} NineS shellui hijacker orion_settings orion_ipc)
+add_dependencies(${PROJECT_NAME} NineS shellui hijacker orion_settings orion_ipc orion_ready)
 # Launches util via external 9021 elfldr (no local libelfldr spawn)
-target_link_libraries	(${PROJECT_NAME} PUBLIC orion_ipc orion_settings hijacker ScePad SceSystemService SceNotification SceNet SceRegMgr SceSysmodule SceUserService SceNetCtl SceSysCore kernel_sys SceAppInstUtil NineS)
+target_link_libraries	(${PROJECT_NAME} PUBLIC orion_ipc orion_settings orion_ready hijacker ScePad SceSystemService SceNotification SceNet SceRegMgr SceSysmodule SceUserService SceNetCtl SceSysCore kernel_sys SceAppInstUtil NineS)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 # Add post-build command
 add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD

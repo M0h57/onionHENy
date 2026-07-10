@@ -67,12 +67,15 @@ set_source_files_properties(
 		"${PROJECT_ROOT}/bin/daemon.elf;${PROJECT_ROOT}/bin/util.elf;${D_CWD}/assets/kstuff.elf;${D_CWD}/assets/orionhen_sicon.png;${D_CWD}/assets/icon_xml_package.png;${D_CWD}/assets/icon_xml_plugins.png;${D_CWD}/assets/icon_xml_game.png;${D_CWD}/assets/icon_xml_network.png;${D_CWD}/assets/icon_xml_settings.png;${D_CWD}/assets/icon_xml_shortcuts.png;${D_CWD}/assets/icon_xml_debug.png;${D_CWD}/assets/icon_xml_about.png"
 )
 # elfldr.c still provides elfldr_raise_privileges; launches go via 9021 (elfldr_remote.c).
-target_include_directories(${PROJECT_NAME} PRIVATE "${D_CWD}/include")
+target_include_directories(${PROJECT_NAME} PRIVATE
+	"${D_CWD}/include"
+	"${PROJECT_ROOT}/include"
+)
 target_link_directories	(${PROJECT_NAME} PUBLIC "${PROJECT_ROOT}/lib")
 target_sources(${PROJECT_NAME} PRIVATE "${PROJECT_ROOT}/lib/elfldr_remote.c")
-target_link_libraries	(${PROJECT_NAME} PUBLIC NineS SceSystemService SceUserService kernel_sys SceNotification SceNet)
+target_link_libraries	(${PROJECT_NAME} PUBLIC orion_ready NineS SceSystemService SceUserService kernel_sys SceNotification SceNet)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
-add_dependencies(${PROJECT_NAME} daemon util shellui)
+add_dependencies(${PROJECT_NAME} daemon util shellui orion_ready)
 
 # Copy bootstrapper.elf as test.elf before processing
 add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD

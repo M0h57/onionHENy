@@ -40,6 +40,7 @@ along with this program; see the file COPYING. If not, see
 #include "globalconf.hpp"
 #include "launcher.hpp"
 #include "ipc.hpp"
+#include <orion/ready.h>
 
 #define MSG_NOSIGNAL 0x20000 /* do not generate SIGPIPE on EOF. */
 pthread_t cheat_thr = nullptr;
@@ -299,6 +300,7 @@ int main() {
     pthread_create(&fifo_thr, nullptr, fifo_and_dumper_thread, nullptr);
     pthread_create(&pt_thr, nullptr, Play_time_thread, nullptr);
     pthread_create(&msg_thr, nullptr, IPC_loop, nullptr);
+    orion_ready_signal(ORION_READY_DAEMON);
 
     OrionHEN_log("is toolbox only: %s | ver: %x", toolbox_only ? "Yes" : "No", sys_ver.version);
     // Initialize toolbox if needed
