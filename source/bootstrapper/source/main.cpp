@@ -50,6 +50,8 @@ along with this program; see the file COPYING. If not, see
 #include <stdio.h>
 #include <orion/ready.h>
 #include <orion/platform.h>
+#include <orion/notify.h>
+#include <orion/platform.h>
 #include <orion/proc_query.h>
 #include <errno.h>
  
@@ -254,25 +256,12 @@ const char json_payload[] =
 
      bool devkit_byepervisor(void);
      void notify(const char *text, ...) {
-      OrbisNotificationRequest req;
-      va_list args;
-    
-      memset(&req, 0, sizeof(OrbisNotificationRequest));
-    
-      // Process args
-      va_start(args, text);
-      vsnprintf(req.message, sizeof(req.message), text, args);
-      va_end(args);
-    
-      req.type = 0;
-      req.unk3 = 0;
-      req.use_icon_image_uri = 1;
-      req.target_id = -1;
-      snprintf(req.uri, sizeof(req.uri), "cxml://psnotification/tex_icon_system");
-    
-      printf("Notify: %s\n", req.message);
-      sceKernelSendNotificationRequest(0, &req, sizeof(req), 0);
-    }
+     va_list args;
+     va_start(args, text);
+     orion_notify_v(/*show_watermark=*/0, text, args);
+     va_end(args);
+ }
+
     
  }
  
