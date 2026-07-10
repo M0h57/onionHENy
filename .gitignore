@@ -66,3 +66,6 @@ source/lib/liborion_detour.a
 source/lib/liborion_proc.a
 source/lib/liborion_ready.a
 source/lib/liborion_platform.a
+source/lib/liborion_plugin.a
+source/lib/liborion_playtime.a
+source/lib/liborion_elfldr.a
