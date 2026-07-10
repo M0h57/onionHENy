@@ -394,7 +394,6 @@ git submodule update --init --recursive
 | **libmicrohttpd** | DPI v2 WebUI |
 | **libminizip** + **libz** + **libzstd** | 压缩/归档 |
 | **libpsl** | Public Suffix List（curl 依赖） |
-| **libsqlite** | 本地数据（若启用） |
 
 历史上还留有 `libelfldr.a` / `libelfloader.a` 等；当前 spawn 走 remote 9021（`lib/elfldr_remote.c`）。
 
