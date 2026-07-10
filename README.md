@@ -136,7 +136,7 @@ powershell.exe -ExecutionPolicy Bypass -File C:\Path\To\OrionHEN\scripts\send_pa
 .\scripts\send_payload.ps1 -Payload "C:\path\to\example.elf" -IP "192.168.x.x" -Port XXXX
 ```
 
-Common ports: exploit elfldr **9020** (external). OrionHEN does **not** ship a 9021 elfldr service; payloads are spawned via **libelfldr**.
+Common ports: exploit elfldr **9020** and runtime elfldr **9021**. OrionHEN does **not** ship the 9021 service; start an external elfldr before loading OrionHEN.
 
 ### Other tools
 
@@ -156,7 +156,6 @@ Common ports: exploit elfldr **9020** (external). OrionHEN does **not** ship a 9
 
 - ★ Toolbox (debug settings replacement)
 - Custom plugins via the [etaHEN SDK](https://github.com/LightningMods/etaHEN-SDK/tree/main/Plugin_samples) (still used until an OrionHEN SDK is split out)
-- [Toolbox] Install the Homebrew Store
 - [Toolbox] Rest Mode options
 - [Toolbox] Remote Play menu
 - [Toolbox] Plugin / payload ELF menu with auto-start
@@ -166,7 +165,6 @@ Common ports: exploit elfldr **9020** (external). OrionHEN does **not** ship a 9
 - [Toolbox] Game overlay menu
 - [Toolbox] Cheats menu (WIP)
 - [Toolbox] Controller shortcuts
-- [Toolbox] PS5 webMAN games menu
 - [Toolbox] Custom game options menu
 - [Toolbox] Display title IDs on home menu
 - [Toolbox] Disable toolbox auto-start
@@ -186,7 +184,7 @@ Common ports: exploit elfldr **9020** (external). OrionHEN does **not** ship a 9
 - Optional FTP on port **1337**
 - ~~Optional `/data` inside app sandboxes~~ (removed — was only sandbox path visibility, not jailbreak)
 - Klog server on port **9081**
-- Embedded ELF spawn via **libelfldr** (no bundled 9021 network loader)
+- ELF spawn via external **elfldr on port 9021** (not bundled)
 - Optional Direct PKG Installer v2 WebUI: `http://PS5_IP:12800`
 - Optional Direct PKG Installer service on port **9090**
 
@@ -227,7 +225,6 @@ Path may stay under `etaHEN` for a while so existing installs and tools keep wor
 | `auto_eject_disc` | Auto eject disc | 0 |
 | `Cheats_shortcut_opt` | Cheats shortcut | 0 (`CHEATS_SC_OFF`) |
 | `Toolbox_shortcut_opt` | Toolbox shortcut | 0 (`TOOLBOX_SC_OFF`) |
-| `Games_shortcut_opt` | Games shortcut | 0 (`GAMES_SC_OFF`) |
 | `Kstuff_shortcut_opt` | Kstuff shortcut | 0 (`KSTUFF_SC_OFF`) |
 | `overlay_ram` | Overlay: RAM | 0 |
 | `overlay_cpu` | Overlay: CPU | 0 |

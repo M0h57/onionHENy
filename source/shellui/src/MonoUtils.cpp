@@ -56,7 +56,6 @@ bool is_current_game_open = true;
 int cheatEnabledMap[256];
 
 static const char *INI_PATH = "/user/data/etaHEN/config.ini";
-extern bool game_shortcut_activated_media;
 
 
 // #include <user_service.h>
@@ -619,11 +618,9 @@ bool LoadSettings()
     // Shortcuts
     const char *cheats_shortcut_opt = ini_parser_get(&parser, "Settings.Cheats_shortcut_opt", "0");
     const char *toolbox_shortcut_opt = ini_parser_get(&parser, "Settings.Toolbox_shortcut_opt", "0");
-    const char *games_shortcut_opt = ini_parser_get(&parser, "Settings.Games_shortcut_opt", "0");
 
     global_conf.cheats_shortcut_opt = cheats_shortcut_opt ? (Cheats_Shortcut)atoi(cheats_shortcut_opt) : CHEATS_SC_OFF;
     global_conf.toolbox_shortcut_opt = toolbox_shortcut_opt ? (Toolbox_Shortcut)atoi(toolbox_shortcut_opt) : TOOLBOX_SC_OFF;
-    global_conf.games_shortcut_opt = games_shortcut_opt ? (Games_Shortcut)atoi(games_shortcut_opt) : GAMES_SC_OFF;
 
     global_conf.overlay_pos = overlay_position ? (overlay_positions)atoi(overlay_position) : OVERLAY_POS_TOP_LEFT;
 
@@ -725,7 +722,6 @@ bool SaveSettings()
   //shortcuts
   buff += "Cheats_shortcut_opt=" + std::to_string(global_conf.cheats_shortcut_opt) + "\n";
   buff += "Toolbox_shortcut_opt=" + std::to_string(global_conf.toolbox_shortcut_opt) + "\n";
-  buff += "Games_shortcut_opt=" + std::to_string(global_conf.games_shortcut_opt) + "\n";
 
   buff += "Overlay_pos=" + std::to_string(global_conf.overlay_pos) + "\n";
   // Open the file for writing
@@ -913,7 +909,7 @@ void generate_remote_play_xml(std::string &xml_buffer)
 
   xml_buffer = R"(<?xml version="1.0" encoding="UTF-8" ?>
     <system_settings version="1.0" plugin="debug_settings_plugin">
-    <setting_list id="remote_play_pin_display" title="Remote Play connection details" style="center">)";
+    <setting_list id="remote_play_pin_display" title="远程游玩连接详情" style="center">)";
 
   shellui_log("Starting remote play");
   static bool remote_play_initialized = false;
@@ -929,30 +925,30 @@ void generate_remote_play_xml(std::string &xml_buffer)
     // Implicit activate it
     //
     GetEncodedAccountID(AccountID, dec_account_id);
-    xml_buffer += R"(<label id="id_pin_2" title="Account activated by etaHEN, please reboot your console before using Remote Play!" style="center"/>)";
+    xml_buffer += R"(<label id="id_pin_2" title="账号已由 OrionHEN 激活，请重启主机后再使用远程游玩！" style="center"/>)";
     goto close;
   }
 
   shellui_log("Get encoded account id");
   GetEncodedAccountID(AccountID, dec_account_id);
   shellui_log("Get encoded account id ==> %s", AccountID);
-  remote_play_info = "Account ID: " + std::string(AccountID);
+  remote_play_info = "账号 ID: " + std::string(AccountID);
   ss << std::hex << std::uppercase << dec_account_id;
-  remote_play_info += "\nDecoded Account ID: " + ss.str();
+  remote_play_info += "\n解码后账号 ID: " + ss.str();
 
   pinCode = GeneratePINCode();
   shellui_log("Pin code => %d", pinCode);
 
-  sprintf(pin_code, "PIN code  : %04d %04d    ", pinCode / 10000, pinCode % 10000);
+  sprintf(pin_code, "PIN 码  : %04d %04d    ", pinCode / 10000, pinCode % 10000);
   remote_play_info += "\n" + std::string(pin_code);
   xml_buffer += R"(<label id="id_pin" title=")" + std::string(pin_code) + R"(" style="center"/>)";
   shellui_log("Pin code str => %s", pin_code);
 
-  xml_buffer += R"(<label id="base64_account_id" title="Account ID: )";
+  xml_buffer += R"(<label id="base64_account_id" title="账号 ID: )";
   xml_buffer += std::string(AccountID) + R"(" style="center"/>)";
 
   if(usbpath() != -1)
-      xml_buffer += R"(<button id="id_save_rp_info" title="Save Remote Play Details to USB" style="center"/>)";
+      xml_buffer += R"(<button id="id_save_rp_info" title="将远程游玩详情保存到 USB" style="center"/>)";
 
 close:
   xml_buffer += R"(</setting_list></system_settings>)";
@@ -989,13 +985,13 @@ void generate_custom_pkg_xml(std::string& xml_buffer)
         "<system_settings version=\"1.0\" plugin=\"debug_settings_plugin\">\n"
         "\n";
 
-    xml_buffer += "<setting_list id=\"custom_pkg_install\" title=\"★ Custom PKG Installer ( " + custom_pkg_path.path + " )\">\n";
-    xml_buffer += "<text_field id=\"id_change_custom_pkg_path\" title=\"Custom PKG Search Path\" keyboard_type=\"url\" confirm=\"Back out and re-select to refresh\" min_length=\"1\" max_length=\"255\"/>\n";
+    xml_buffer += "<setting_list id=\"custom_pkg_install\" title=\"★ 自定义 PKG 安装器 ( " + custom_pkg_path.path + " )\">\n";
+    xml_buffer += "<text_field id=\"id_change_custom_pkg_path\" title=\"自定义 PKG 搜索路径\" keyboard_type=\"url\" confirm=\"请返回后重新进入以刷新\" min_length=\"1\" max_length=\"255\"/>\n";
 
     DIR* dir = opendir(custom_pkg_path.shellui_path.c_str());
     if (!dir) {
         shellui_log("Failed to open custom PKG directory: %s", custom_pkg_path.shellui_path.c_str());
-        xml_buffer += "<label id=\"id_no_pkgs\" title=\"No PKGs found - Path: " + custom_pkg_path.path + "\"/>\n";
+        xml_buffer += "<label id=\"id_no_pkgs\" title=\"未找到 PKG - 路径: " + custom_pkg_path.path + "\"/>\n";
         xml_buffer += "</setting_list>\n</system_settings>";
         return;
     }
@@ -1021,7 +1017,7 @@ void generate_custom_pkg_xml(std::string& xml_buffer)
     closedir(dir);
 
     if (pkg_count == 0) {
-        xml_buffer += "<label id=\"id_no_pkgs\" title=\"No PKGs found - Path: " + custom_pkg_path.path + "\"/>\n";
+        xml_buffer += "<label id=\"id_no_pkgs\" title=\"未找到 PKG - 路径: " + custom_pkg_path.path + "\"/>\n";
     }
 
     xml_buffer += "</setting_list>\n</system_settings>";
@@ -1050,9 +1046,9 @@ void generate_plugin_xml(std::string &xml_buffer, bool plugins_xml)
                "\n";
 
   if (plugins_xml)
-    xml_buffer += "<setting_list id=\"id_plugin\" title=\"Plugins\">\n";
+    xml_buffer += "<setting_list id=\"id_plugin\" title=\"插件\">\n";
   else
-    xml_buffer += "<setting_list id=\"id_auto_plugins\" title=\"★ Plugins - Startup Menu\">\n";
+    xml_buffer += "<setting_list id=\"id_auto_plugins\" title=\"★ 插件 - 启动菜单\">\n";
 
   for (const auto &directory : directories)
   {
@@ -1120,9 +1116,9 @@ void generate_plugin_xml(std::string &xml_buffer, bool plugins_xml)
 
         id = plugins_xml ? "id_plugin_" + std::to_string(toggle_switch_id++) : "id_auto_plugin_" + std::to_string(toggle_switch_id++);
         if (plugins_xml)
-          toggle_switch = "<toggle_switch id=\"" + id + "\" title=\"" + entry->d_name + " " + version_str + "\" second_title=\"Start/Stop " + entry->d_name + " (Path: " + shown_path + ") (" + (is_elf ? entry->d_name : header.titleID) + ")\" value=\"0\"/>\n";
+          toggle_switch = "<toggle_switch id=\"" + id + "\" title=\"" + entry->d_name + " " + version_str + "\" second_title=\"启动/停止 " + entry->d_name + " (路径: " + shown_path + ") (" + (is_elf ? entry->d_name : header.titleID) + ")\" value=\"0\"/>\n";
         else
-          toggle_switch = "<toggle_switch id=\"" + id + "\" title=\"" + entry->d_name + " " + version_str + "\" second_title=\"Enable/Disable auto start for " + entry->d_name + "  (" + shown_path + ")\" value=\"0\"/>\n";
+          toggle_switch = "<toggle_switch id=\"" + id + "\" title=\"" + entry->d_name + " " + version_str + "\" second_title=\"启用/禁用 " + entry->d_name + " 的自动启动  (" + shown_path + ")\" value=\"0\"/>\n";
 
         xml_buffer += toggle_switch;
         new_list.tid = (is_elf ? entry->d_name : header.titleID);
@@ -1138,7 +1134,7 @@ void generate_plugin_xml(std::string &xml_buffer, bool plugins_xml)
 
   if (plugins_xml)
   {
-    xml_buffer += "<link id=\"id_auto_plugins\" title=\"★ Plugins - Startup Menu\" file=\"auto_plugins.xml\" second_title=\"Configure plugins to launch when you load etaHEN\"/>\n";
+    xml_buffer += "<link id=\"id_auto_plugins\" title=\"★ 插件 - 启动菜单\" file=\"auto_plugins.xml\" second_title=\"配置在加载 OrionHEN 时自动启动的插件\"/>\n";
     xml_buffer += "</setting_list>\n</setting_list>\n</system_settings> ";
   }
   else
@@ -1326,13 +1322,13 @@ void generate_cheats_xml(std::string &new_xml, std::string& not_open_tid, bool r
   std::string list_id = running_as_debug_settings ? "id_debug_settings" : "id_cheat_title";
 
   // buttons for if nothing is found
-  std::string dl_cheats = R"(<list id="id_selected_cheats_repo" title="Cheats Repo Source" >
-                   <list_item id="id_selected_cheats_repo_1" title="etaHEN PS5 Cheats repo" value="0"/>
-                   <list_item id="id_selected_cheats_repo_2" title="GoldHEN PS4 Cheats repo" value="1"/>
+  std::string dl_cheats = R"(<list id="id_selected_cheats_repo" title="金手指仓库来源" >
+                   <list_item id="id_selected_cheats_repo_1" title="OrionHEN PS5 金手指仓库" value="0"/>
+                   <list_item id="id_selected_cheats_repo_2" title="GoldHEN PS4 金手指仓库" value="1"/>
                  </list>
-                <button id="id_dl_cheats" title="Download/Update Cheats" second_title="Downloads the latest cheats from the selected GitHub repo"/>)";
+                <button id="id_dl_cheats" title="下载/更新金手指" second_title="从所选 GitHub 仓库下载最新金手指"/>)";
 
-  std::string reload_cheats = R"(<button id="id_reload_cheats" title="Cache and reload Cheats list" second_title="New cheats added to /data/etaHEN/cheats/EXT_HERE will be cached and the cheats list will be reloaded"/>)";
+  std::string reload_cheats = R"(<button id="id_reload_cheats" title="缓存并重新加载金手指列表" second_title="添加到 /data/etaHEN/cheats/扩展名 的新金手指将被缓存并重新加载列表"/>)";
   //
 
   new_xml =
@@ -1345,8 +1341,8 @@ void generate_cheats_xml(std::string &new_xml, std::string& not_open_tid, bool r
 
   if (!is_game_open && !show_while_not_open)
   {
-    new_xml += "<setting_list id=\"" + list_id + "\" title=\"etaHEN Cheats - No "
-               "Game is open\">\n";
+    new_xml += "<setting_list id=\"" + list_id + "\" title=\"OrionHEN 金手指 - 当前"
+               "没有打开的游戏\">\n";
     new_xml += dl_cheats;
     new_xml += reload_cheats;
     
@@ -1361,14 +1357,14 @@ void generate_cheats_xml(std::string &new_xml, std::string& not_open_tid, bool r
 
     if (!client.GameVerFromTid(running_tid, game_ver))
     {
-      game_ver = "Unable to detect patch version";
+      game_ver = "无法检测补丁版本";
     } 
 
-    new_xml += "<setting_list id=\"" + list_id + "\" title=\"etaHEN Cheats - ";
+    new_xml += "<setting_list id=\"" + list_id + "\" title=\"OrionHEN 金手指 - ";
     new_xml += running_tid + " - " + game_ver + "\">\n";
 
     if(!is_game_open && show_while_not_open)
-      new_xml += R"(<label id="id_cheat_disclaimer" title=")" + running_tid + R"( is not currently running you wont be able to activate any cheats unless its open")" + R"( style="center"/>)";
+      new_xml += R"(<label id="id_cheat_disclaimer" title=")" + running_tid + R"( 当前未运行，除非打开游戏否则无法激活任何金手指")" + R"( style="center"/>)";
 
     if (client.GetGameCheats(running_tid, game_ver, cheat_info_json))
     {
@@ -1422,7 +1418,7 @@ void generate_cheats_xml(std::string &new_xml, std::string& not_open_tid, bool r
       new_xml += R"(<label id="id_cheat_title" title="★ )" + game_name + R"( ★" style="center"/>)";
 
       // Cheat creator credits
-      new_xml += R"(<label id="credits" style="center" title="Cheats created by: )";
+      new_xml += R"(<label id="credits" style="center" title="金手指作者: )";
 
       std::unordered_map<std::string, bool> knownAuthors;
       if (res_json.contains("authors")) 
@@ -1455,7 +1451,7 @@ void generate_cheats_xml(std::string &new_xml, std::string& not_open_tid, bool r
           for (const auto& cheat_entry : res_json["cheats"]) 
           {
               std::string cheat_name = cheat_entry.value("name", "");
-              std::string description = cheat_entry.value("description", "On/Off");
+              std::string description = cheat_entry.value("description", "开/关");
               escapeXML(cheat_name);
               escapeXML(description);
 
@@ -1466,7 +1462,7 @@ void generate_cheats_xml(std::string &new_xml, std::string& not_open_tid, bool r
               if(is_game_open && is_current_game_open)
                  toggle_switch = R"(<toggle_switch id="id_cheat_)" + running_tid + "_" + std::to_string(cheat_id) + R"(" icon="tex_game_icon" title=")" + cheat_name + R"(" description=")" + description + R"(" value=")" + enabled_value + R"("/>)";
               else
-                  toggle_switch = R"(<button id="id_cheat_)" + running_tid + "_" + std::to_string(cheat_id) + R"(" icon="tex_game_icon" title=")" + cheat_name + R"(" description=")" + description + R"(" second_title="Enable/Disable )" + cheat_name + R"( for )" + game_name + R"(" />)";
+                  toggle_switch = R"(<button id="id_cheat_)" + running_tid + "_" + std::to_string(cheat_id) + R"(" icon="tex_game_icon" title=")" + cheat_name + R"(" description=")" + description + R"(" second_title="为 )" + game_name + R"( 启用/禁用 )" + cheat_name + R"(" />)";
 
               new_xml += toggle_switch;
 
@@ -1508,7 +1504,7 @@ void generate_plapps_xml(std::string& new_xml) {
       "<system_settings version=\"1.0\" plugin=\"debug_settings_plugin\">\n"
       "\n";
 
-    new_xml += "<setting_list id=\"id_plapps\" title=\"etaHEN Payload Homebrew - Applications\">\n";
+    new_xml += "<setting_list id=\"id_plapps\" title=\"OrionHEN Payload 自制软件 - 应用程序\">\n";
 
   // Initialize random number generator
   std::random_device rd;
@@ -1594,14 +1590,14 @@ void generate_plapps_xml(std::string& new_xml) {
       game.dir_name = entry->d_name;
       escapeXML(game.dir_name);
       game.icon_path = icon_path;
-      game.id = "id_etahen_pl_loader_" + title_id + "_" + std::to_string(random_num);
+      game.id = "id_orionhen_pl_loader_" + title_id + "_" + std::to_string(random_num);
       
       // Add to the games list
       games_list.push_back(game);
       
       // Format the button XML
       std::string button = "<button id=\"" + game.id + "\" title=\"(" + title_id + ") " + title + 
-      "\" icon=\"" + icon_path + "\" second_title=\"" + shown_path + " | Version: " + ver + "\"/>\n";
+      "\" icon=\"" + icon_path + "\" second_title=\"" + shown_path + " | 版本: " + ver + "\"/>\n";
       
       new_xml += button;
     }

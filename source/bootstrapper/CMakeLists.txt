@@ -64,7 +64,7 @@ target_sources(${PROJECT_NAME} PRIVATE ${SrcFiles})
 set_source_files_properties(
 	${D_SRC}/daemon.c
 	PROPERTIES OBJECT_DEPENDS
-		"${PROJECT_ROOT}/bin/daemon.elf;${PROJECT_ROOT}/bin/util.elf;${D_CWD}/assets/kstuff.elf"
+		"${PROJECT_ROOT}/bin/daemon.elf;${PROJECT_ROOT}/bin/util.elf;${D_CWD}/assets/kstuff.elf;${D_CWD}/assets/etahen_sicon.png;${D_CWD}/assets/icon_xml_package.png;${D_CWD}/assets/icon_xml_plugins.png;${D_CWD}/assets/icon_xml_game.png;${D_CWD}/assets/icon_xml_network.png;${D_CWD}/assets/icon_xml_settings.png;${D_CWD}/assets/icon_xml_shortcuts.png;${D_CWD}/assets/icon_xml_debug.png;${D_CWD}/assets/icon_xml_about.png"
 )
 # elfldr.c still provides elfldr_raise_privileges; launches go via 9021 (elfldr_remote.c).
 target_include_directories(${PROJECT_NAME} PRIVATE "${D_CWD}/include")

@@ -44,6 +44,9 @@ MonoString* (*CxmlUri)(MonoObject* obj, MonoString* uri) = nullptr;
 uint64_t(*GetManifestResourceStream_Original)(uint64_t inst, MonoString* FileName) = nullptr;
 uint64_t(*GetManifestResourceInternal_Orig)(MonoObject* instance, MonoString* name, int* size, MonoObject& module) = nullptr;
 void (*DebugSettings_GetModel_Orig)(MonoObject* instance, MonoObject* param, MonoObject* promise) = nullptr;
+void (*UI3_NavigationScene_PushScene_Orig)(MonoObject* instance, MonoObject* newScene) = nullptr;
+void (*UI3_NavigationScene_PushScene2_Orig)(MonoObject* instance, MonoObject* newScene, MonoObject* animation) = nullptr;
+void (*UI3_NavigationScene_PushScene3_Orig)(MonoObject* instance, MonoObject* newScene, MonoObject* animation, MonoObject* animationForPreviousScene) = nullptr;
 void (*UpdateImposeStatusFlag_Orig)(MonoObject* Instance, MonoObject* a) = nullptr;
 bool (*CheckRemotePlayRestriction_Orig)(MonoObject* instance) = nullptr;
 void (*oTerminate)(void) = nullptr;
@@ -76,7 +79,6 @@ DecryptRnpsBundle_t DecryptRnpsBundle = NULL;
 /* ================================= HOOKED GLOBAL VARS ============================================= */
 MonoClass* MemoryStream_IO = nullptr;
 
-std::atomic_bool install_thread_in_progress(false);
 std::atomic_bool cheat_action_in_progress(false);
 std::atomic_bool download_kstuff_thread_in_progress(false);
 
@@ -92,12 +94,9 @@ bool is_cheats = false;
 bool is_auto_plugin = false;
 bool is_tk_menu = false;
 bool is_remote_play = false;
-bool is_hb_loader = false;
 bool is_plapps = false;
 bool cheats_shortcut_activated = false;
 bool cheats_shortcut_activated_not_open = false;
-bool game_shortcut_activated = false;
-bool game_shortcut_activated_media = false;
 
 extern int cheatEnabledMap[MAX_CHEATS]; // holds the current activated/deactivated cheats, used for onPreCreateHook
 std::string currentCheatTID; // holds current title ID being cheated, this is used to reset the map above
@@ -231,36 +230,36 @@ MonoString *GetString_Hook(MonoObject *Instance, MonoString *str) {
     std::string resourceName = Mono_to_String(str);
     shellui_log("Resource Name: %s", resourceName.c_str());
     if (resourceName == "msg_options") {
-      return mono_string_new(Root_Domain, "PKG Installer Options");
+      return mono_string_new(Root_Domain, "PKG 安装器选项");
     } else if (resourceName == "msg_installing") {
       return mono_string_new(Root_Domain,
-                             "etaHEN is currently installing the selected PKG");
+                             "OrionHEN 正在安装所选 PKG");
     } else if (resourceName == "msg_yes") {
-      return mono_string_new(Root_Domain, "Yes");
+      return mono_string_new(Root_Domain, "是");
     } else if (resourceName == "msg_no") {
-      return mono_string_new(Root_Domain, "No");
+      return mono_string_new(Root_Domain, "否");
     } else if (resourceName == "msg_sort") {
-      return mono_string_new(Root_Domain, "etaHEN PKG Sort");
+      return mono_string_new(Root_Domain, "OrionHEN PKG 排序");
     } else if (resourceName == "msg_sort_name_az") {
-      return mono_string_new(Root_Domain, "Name (A-Z)");
+      return mono_string_new(Root_Domain, "名称（A-Z）");
     } else if (resourceName == "msg_sort_name_za") {
-      return mono_string_new(Root_Domain, "Name (Z-A)");
+      return mono_string_new(Root_Domain, "名称（Z-A）");
     } else if (resourceName == "msg_updated") {
-      return mono_string_new(Root_Domain, "Updated");
+      return mono_string_new(Root_Domain, "已更新");
     } else if (resourceName == "msg_wait") {
-      return mono_string_new(Root_Domain, "Please wait...");
+      return mono_string_new(Root_Domain, "请稍候...");
     }
     else if (resourceName == "msg_ok"){
-      return mono_string_new(Root_Domain, "OK");
+      return mono_string_new(Root_Domain, "确定");
     }
     else if (resourceName == "msg_cancel_vb"){
-        return mono_string_new(Root_Domain, "Cancel");
+        return mono_string_new(Root_Domain, "取消");
     }
     //else if (resourceName == "msg_deselect_all") {
-   //   return mono_string_new(Root_Domain, "Deselect All"); // IDK WHY BUT ONLY 1 CAN BE ACTIVE OR SHELLUI CRASHES
+   //   return mono_string_new(Root_Domain, "取消全选"); // IDK WHY BUT ONLY 1 CAN BE ACTIVE OR SHELLUI CRASHES
   //  }
     else if (resourceName == "msg_select_all") {
-      return mono_string_new(Root_Domain, "Select All");
+      return mono_string_new(Root_Domain, "全选");
     }
     
     return oGetString(Instance, str);
@@ -296,11 +295,13 @@ void patch_bundle_strings(unsigned char* buffer, int* size_ptr, int actual_size)
       return;
   }
   
-  // Replace "Debug Settings" with "etaHEN Toolbox"
-  int count = replace_all(buffer, size_ptr, actual_size, "Debug Settings", "etaHEN Toolbox");
+  // Replace "Debug Settings" with "OrionHEN 工具箱"
+  // Note: replacement must not exceed original length when patching in-place buffers.
+  // "OrionHEN Toolbox" is same length as original English branding used previously.
+  int count = replace_all(buffer, size_ptr, actual_size, "Debug Settings", "OrionHEN 工具箱");
 #if SHELL_DEBUG == 1
   if (count > 0) {
-      shellui_log("patch_bundle_strings: Replaced %d occurrences of 'Debug Settings' with 'etaHEN Toolbox'", count);
+      shellui_log("patch_bundle_strings: Replaced %d occurrences of 'Debug Settings' with 'OrionHEN 工具箱'", count);
   } else {
       shellui_log("patch_bundle_strings: No occurrences of 'Debug Settings' found");
   }
@@ -388,7 +389,7 @@ MonoString* Hook_getIpMacHost(uint64_t inst, SceNetIfName name) {
 
     //SCE_NET_IF_NAME_PHYSICAL
 
-    snprintf(full_text, sizeof(full_text), "etaHEN Version: %s\nIP: %s", etaHEN_VERSION, ip_address);
+    snprintf(full_text, sizeof(full_text), "OrionHEN 版本: %s\nIP: %s", etaHEN_VERSION, ip_address);
     if (global_conf.kit_panel_info == 0 || sceKernelGetSocSensorTemperature(0, &temp)) { // ON (ONLY)
         return mono_string_new(Root_Domain, full_text);
     }
@@ -621,132 +622,6 @@ bool Start_Kit_Hooks() {
 	return true;
 
 }
-std::atomic_int sockfd = -1;
-
-int connect_to_host(int port) {
-    int fd = -1;
-    // Configure the address structure
-    struct sockaddr_in address{};
-    address.sin_family = AF_INET;
-    address.sin_port = htons(port);
-    memset(address.sin_zero, 0, sizeof(address.sin_zero));
-
-    // Convert IP address to binary form
-    if (inet_pton(AF_INET, "127.0.0.1", &address.sin_addr) <= 0) {
-        fprintf(stderr, "inet_pton failed");
-        return -1;
-    }
-
-    // Create the socket
-    fd = socket(AF_INET, SOCK_STREAM, 0);
-    if (fd < 0) {
-        shellui_log("socket creation failed");
-        return -1;
-    }
-
-    // Connect to the server
-    if (connect(fd, (struct sockaddr*)&address, sizeof(address)) < 0) {
-        shellui_log("connect failed");
-        close(fd);
-        return -1;
-    }
-
-    shellui_log("Connected to host %d",  port);
-    return fd;
-}
-
-bool Try_connect_to_host(int port) {
-    sockfd = connect_to_host(port);
-    if (sockfd.load() >= 0) {
-        close(sockfd.load()), sockfd = -1; // Close the socket after successful connection
-        return true; // Successfully connected
-    }
-    return false; // Failed to connect after retries
-}
-bool send_payload(const unsigned char *payload, size_t size) {
-  int fd = connect_to_host(9021);
-  int ret = sceNetSend(fd, payload, size, MSG_NOSIGNAL);
-  shellui_log("sceNetSend ret: 0x%08X", ret);
-  close(fd), fd = -1; // Close the socket after sending the payload
-  return ret >= 0;
-}
-
-bool read_and_send_file(const std::string& filePath) {
-    // Open the file in binary mode and seek to the end to get the size
-    std::ifstream file(filePath, std::ios::binary | std::ios::ate);
-    if (!file) {
-        shellui_log("Failed to open file: %s", filePath.c_str());
-        return false;
-    }
-
-    // Get the file size
-    std::streamsize size = file.tellg();
-    if (size <= 0) {
-        shellui_log("File is empty or failed to determine size: %s", filePath.c_str());
-        return false;
-    }
-
-    file.seekg(0, std::ios::beg);
-
-    // Read the file into a buffer
-    std::vector<unsigned char> buffer(size);
-    if (!file.read(reinterpret_cast<char*>(buffer.data()), size)) {
-        shellui_log("Failed to read file: %s", filePath.c_str());
-        return false;
-    }
-
-    file.close();
-    shellui_log("File read successfully: %s, size: %zu bytes", filePath.c_str(), size);
-    // Send the payload using the provided function
-    if(!send_payload(buffer.data(), buffer.size())){
-        shellui_log("Failed to send payload from file: %s", filePath.c_str());
-        return false;
-    }
-    return true;
-}
-void* launch_thr(void*) {
-    if(!read_and_send_file("/user/data/etaHEN/etaHEN.bin")){
-        notify("Failed to send etaHEN payload!, failed to exit lite mode");
-        return nullptr;
-    }
-
-    GoToHome();
-    shellui_log("launch_thr exiting");
-    notify("Lite Mode is disabled, relaunching the home menu in 3 secs, remember to relaunch your plugins after");
-    sleep(3);
-    kill(getpid(), SIGKILL); // Forcefully exit the process
-    global_conf.lite_mode = !global_conf.lite_mode;
-    pthread_exit(nullptr);
-    return nullptr;
-}
-
-void* switch_to_lite(void*) {
-    int sec = 0;
-    notify("Verifiying the elfldr is running (max 15 secs), please wait...");
-    while((!Try_connect_to_host(9021))){
-        if(sec > 15){
-            notify("Failed to connect to Johns elf loader on port 9021, unable to enter lite mode");
-            return nullptr;
-        }
-        sleep(1);
-        sec++;
-    }
-    global_conf.lite_mode = !global_conf.lite_mode;
-    GoToHome();
-    touch_file("/system_tmp/lite_mode");
-
-    // kill etaHEN
-    IPC_Client& util_ipc = IPC_Client::getInstance(true);
-    util_ipc.KillDaemon();
-    IPC_Client& main_ipc = IPC_Client::getInstance(false);
-    main_ipc.KillDaemon();
-
-    notify("Lite mode is active!");
-    pthread_exit(nullptr);
-	return nullptr;
-
-}
-
 void ParseCheatID(const char* id, char* tid, int* cheat_id)
 {
     sscanf(id, "id_cheat_%[^_]_%d", tid, cheat_id);
@@ -792,20 +667,6 @@ void* load_plugin_thread(void* args) {
     return nullptr;
 }
 extern std::string remote_play_info;
-void* store_install_thread(void* args) {
-    if(install_thread_in_progress){
-        notify("Install action already in progress, please wait for it to complete...");
-        pthread_exit(nullptr);
-        return nullptr;
-    }
-    install_thread_in_progress = true;
-    IPC_Client& main_ipc = IPC_Client::getInstance(false);
-    shellui_log("Ret: 0x%X", main_ipc.DownloadTheStore());
-    install_thread_in_progress = false;
-    pthread_exit(nullptr);
-    return nullptr;
-}
-
 void* load_ps5debug_thr(void*){ return nullptr; }
 void* download_cheats_thr(void*){
     if(cheat_action_in_progress){
@@ -814,7 +675,7 @@ void* download_cheats_thr(void*){
         return nullptr;
     }
     cheat_action_in_progress = true;
-    notify("Preparing to download the %s cheats repo...", global_conf.selected_cheats_repo == CHEATS_REPO_ETAHEN ? "etaHEN PS5" : "GoldHEN PS4");
+    notify("Preparing to download the %s cheats repo...", global_conf.selected_cheats_repo == CHEATS_REPO_ETAHEN ? "OrionHEN PS5" : "GoldHEN PS4");
     IPC_Client& util_ipc = IPC_Client::getInstance(true);
     // daemon shows notification when done
     util_ipc.Cheats_Action(DOWNLOAD_CHEATS, global_conf.selected_cheats_repo);
@@ -862,8 +723,7 @@ int OnPress_Hook(MonoObject* Instance, MonoObject* element, MonoObject* e)
     bool& Data_SB = global_conf.allow_data_sandbox;
     bool& FTP_Dev_Access = global_conf.ftp_dev_access;
     int& StartOption = global_conf.start_option;
-    bool& lite_mode = global_conf.lite_mode;
-        bool& util_rest_kill = global_conf.util_rest_kill;
+    bool& util_rest_kill = global_conf.util_rest_kill;
     bool& game_rest_kill = global_conf.game_rest_kill;
     int& trial_expire = global_conf.trial_soft_expire_time;
     int& kit_panel = global_conf.kit_panel_info;
@@ -874,7 +734,6 @@ int OnPress_Hook(MonoObject* Instance, MonoObject* element, MonoObject* e)
 
     // Define the array of IDs to exclude (you can put this at the top of your function or as a static/global)
     const std::vector<std::string> excludedIds = {
-        "id_download_store",
         "id_dl_cheats",
         "id_reload_cheats",
         "id_save_rp_info",
@@ -896,7 +755,6 @@ int OnPress_Hook(MonoObject* Instance, MonoObject* element, MonoObject* e)
     std::string value = GetPropertyValue(element, "Value");
     std::string title = GetPropertyValue(element, "Title");
 
-    bool is_game = (id.rfind("id_etahen_game_loader_") != std::string::npos);
     bool is_cust_pkg = (id.rfind("id_pkg_") != std::string::npos);
 
     if (id.rfind("id_cheat_") != std::string::npos && !is_current_game_open) {
@@ -909,7 +767,7 @@ int OnPress_Hook(MonoObject* Instance, MonoObject* element, MonoObject* e)
 
     // Check if id is in the excluded list
     bool isExcludedId = std::find(excludedIds.begin(), excludedIds.end(), id) != excludedIds.end();
-    if (value.empty() && !isExcludedId && !is_game && !is_cust_pkg) {
+    if (value.empty() && !isExcludedId && !is_cust_pkg) {
 #if SHELL_DEBUG==1
         shellui_log("[LM HOOK] OnPress_Hook: Id: %s has no value set", id.c_str());
 #endif
@@ -1222,9 +1080,6 @@ int OnPress_Hook(MonoObject* Instance, MonoObject* element, MonoObject* e)
             }
         }
     }
-    else if (is_game) {
-        IPC_Client::getInstance(true).Launch_Game_By_ID(id);
-    }
     else if (id.rfind("id_auto_plugin") != std::string::npos) {
 		if (!auto_list.empty()) {
 			for (auto plugin : auto_list) {
@@ -1351,7 +1206,7 @@ int OnPress_Hook(MonoObject* Instance, MonoObject* element, MonoObject* e)
             FTP = !FTP;
         }
     }
-    else if (id == "id_etahen_credits") {
+    else if (id == "id_orionhen_credits") {
         // notify("Home Menu Button Pressed");
         return oOnPress(Instance, element, e);
     }//
@@ -1401,12 +1256,6 @@ int OnPress_Hook(MonoObject* Instance, MonoObject* element, MonoObject* e)
             DPI_v2 = !DPI_v2;
         }
     }
-    else if (id == "id_download_store") {
-        pthread_t thr;
-        pthread_create(&thr, nullptr, store_install_thread, nullptr);
-        pthread_detach(thr);
-
-    }
     else if (id == "id_debug_jb") {
         if (atoi(value.c_str()) == global_conf.debug_app_jb_msg) {
             shellui_log("Debug JB already %s", global_conf.debug_app_jb_msg ? "Enabled" : "Disabled");
@@ -1442,13 +1291,6 @@ int OnPress_Hook(MonoObject* Instance, MonoObject* element, MonoObject* e)
     else if (id == "id_selected_cheats_repo") {
         selected_cheats_repo = static_cast<cheats_repo_source>(atoi(value.c_str()));
         shellui_log("Selected cheats repo: %s", selected_cheats_repo == CHEATS_REPO_ETAHEN ? "etaHEN PS5" : "GoldHEN PS4");
-    }
-    else if (id == "id_lite_mode") {
-        if (atoi(value.c_str()) == lite_mode) {
-            shellui_log("Lite Mode already %s", lite_mode ? "Enabled" : "Disabled");
-            return oOnPress(Instance, element, e);
-        }
-        lite_mode = !lite_mode;
     }
     else if (id == "id_trial_soft") {
 	      	trial_expire = atoi(value.c_str());
@@ -1534,21 +1376,11 @@ int OnPress_Hook(MonoObject* Instance, MonoObject* element, MonoObject* e)
               notify("Toolbox and Cheats shortcuts cannot be the same, current selection will NOT be saved");
               return oOnPress(Instance, element, e);
           }
-          else if(global_conf.games_shortcut_opt == GAMES_SINGLE_SHARE){
-              shellui_log("Games and Cheats shortcuts cannot be the same, current selection will NOT be saved");
-              notify("Games and Cheats shortcuts cannot be the same, current selection will NOT be saved");
-              return oOnPress(Instance, element, e);
-          }
       }
       else if(opt == CHEATS_LONG_SHARE ){
          if(global_conf.toolbox_shortcut_opt == TOOLBOX_LONG_SHARE){
               shellui_log("Toolbox and Cheats long shortcuts cannot be the same, current selection will NOT be saved");
               notify("Toolbox and Cheats long shortcuts cannot be the same, current selection will NOT be saved");
-              return oOnPress(Instance, element, e);
-          }
-          else if(global_conf.games_shortcut_opt == GAMES_LONG_SHARE){
-              shellui_log("Games and Cheats long shortcuts cannot be the same, current selection will NOT be saved");
-              notify("Games and Cheats long shortcuts cannot be the same, current selection will NOT be saved");
               return oOnPress(Instance, element, e);
           }
       }
@@ -1567,11 +1399,6 @@ int OnPress_Hook(MonoObject* Instance, MonoObject* element, MonoObject* e)
               notify("Cheats and Toolbox shortcuts cannot be the same, current selection will NOT be saved");
               return oOnPress(Instance, element, e);
           }
-          else if(global_conf.games_shortcut_opt == GAMES_SINGLE_SHARE){
-              shellui_log("Games and Toolbox shortcuts cannot be the same, current selection will NOT be saved");
-              notify("Games and Toolbox shortcuts cannot be the same, current selection will NOT be saved");
-              return oOnPress(Instance, element, e);
-          }
       }
       else if(opt == TOOLBOX_LONG_SHARE ){
          if(global_conf.cheats_shortcut_opt == CHEATS_LONG_SHARE){
@@ -1579,87 +1406,10 @@ int OnPress_Hook(MonoObject* Instance, MonoObject* element, MonoObject* e)
               notify("Cheats and Toolbox long shortcuts cannot be the same, current selection will NOT be saved");
               return oOnPress(Instance, element, e);
           }
-          else if(global_conf.games_shortcut_opt == GAMES_LONG_SHARE){
-              shellui_log("Games and Toolbox long shortcuts cannot be the same, current selection will NOT be saved");
-              notify("Games and Toolbox long shortcuts cannot be the same, current selection will NOT be saved");
-              return oOnPress(Instance, element, e);
-          }
       }
       global_conf.toolbox_shortcut_opt = opt;
   }
-  else if (id == "id_games_shortcut" ){
-      if (atoi(value.c_str()) == global_conf.games_shortcut_opt) {
-          shellui_log("games_shortcut_opt already %i", global_conf.games_shortcut_opt);
-          return oOnPress(Instance, element, e);
-      }
-      Games_Shortcut opt = (Games_Shortcut)atoi(value.c_str());
-  
-      if(opt == GAMES_SINGLE_SHARE ){
-         if(global_conf.cheats_shortcut_opt == CHEATS_SINGLE_SHARE){
-              shellui_log("Cheats and Games shortcuts cannot be the same, current selection will NOT be saved");
-              notify("Cheats and Games shortcuts cannot be the same, current selection will NOT be saved");
-              return oOnPress(Instance, element, e);
-          }
-          else if(global_conf.toolbox_shortcut_opt == TOOLBOX_SINGLE_SHARE){
-              shellui_log("Toolbox and Games shortcuts cannot be the same, current selection will NOT be saved");
-              notify("Toolbox and Games shortcuts cannot be the same, current selection will NOT be saved");
-              return oOnPress(Instance, element, e);
-          }
-      }
-      else if(opt == GAMES_LONG_SHARE ){
-         if(global_conf.cheats_shortcut_opt == CHEATS_LONG_SHARE){
-              shellui_log("Cheats and Games long shortcuts cannot be the same, current selection will NOT be saved");
-              notify("Cheats and Games long shortcuts cannot be the same, current selection will NOT be saved");
-              return oOnPress(Instance, element, e);
-          }
-          else if(global_conf.toolbox_shortcut_opt == TOOLBOX_LONG_SHARE){
-              shellui_log("Toolbox and Games long shortcuts cannot be the same, current selection will NOT be saved");
-              notify("Toolbox and Games long shortcuts cannot be the same, current selection will NOT be saved");
-              return oOnPress(Instance, element, e);
-          }
-      }
-      global_conf.games_shortcut_opt = opt;
-  }
-    else if (id == "id_lite_mode") {
-        pthread_t thr = 0;
-        if (!lite_mode) {
-            shellui_log("ACTIVATING LITE MODE");
-            if (plugins_list.empty()) {
-                std::string new_xml_string;
-                generate_plugin_xml(new_xml_string, true); // gen plugin list if its empty to be sure all the plugins are looked at
-                if (plugins_list.empty()){
-					         notify("No running plugins to kill");
-			         	}
-            }
-        
-            for (auto plugin : plugins_list) {
-                int pid = sceSystemServiceGetAppId(plugin.tid.c_str());
-                if (pid > 0) {
-                    shellui_log("killing pid: 0x%X", pid);
-                    IPC_Client::getInstance(false).ForceKillPID(pid);
-                    notify("%s killed", plugin.tid.c_str());
-                }
-            }
-            if(!Try_connect_to_host(9021)){
-                notify("Lite mode needs an external elfldr on port 9021 (not bundled in OrionHEN)");
-                return oOnPress(Instance, element, e);
-            }
-
-            scePthreadCreate(&thr, NULL, switch_to_lite, NULL, "Switch to LITE thr");
-            pthread_detach(thr);
-        }
-		else {
-            if(!if_exists("/user/data/etaHEN/etaHEN.bin")){
-                notify("/data/etaHEN/etaHEN.bin payload not found, please install it first");
-                return oOnPress(Instance, element, e);
-            }
-
-            scePthreadCreate(&thr, NULL, launch_thr, NULL, "Switch to Normal thr");
-            pthread_detach(thr);
-		}
-
-        
-	} else {
+    else {
         shellui_log("Not a toolbox item!");
     }
 
@@ -1690,10 +1440,7 @@ MonoString * CxmlUri_Hook(MonoObject * Instance, MonoString * uri) {
   shellui_log("uri_string: %s", uri_string.c_str());
   #endif
   ///shellui_log("CxmlUri_Hook: %s", uri_string.c_str());
-  if (uri_string.rfind("tex_store_icon") != std::string::npos) {
-    //shellui_log("CxmlUri_Hook: Returning store icon");
-    return mono_string_new(Root_Domain, "/user/data/etaHEN/assets/store.png");
-  } else if (uri_string.rfind("tex_game_icon") != std::string::npos) {
+  if (uri_string.rfind("tex_game_icon") != std::string::npos) {
     //shellui_log("CxmlUri_Hook: Returning store icon");
     std::string icon = "/user/appmeta/" + running_tid + "/icon0.png";
     if(!if_exists(icon.c_str())){
@@ -1725,6 +1472,156 @@ MonoString * CxmlUri_Hook(MonoObject * Instance, MonoString * uri) {
   return CxmlUri(Instance, uri);
 }
 MonoObject* MemoryStream_Instance = nullptr;
+static bool debug_settings_rn_route_pending = false;
+static bool debug_settings_old_opening = false;
+static bool debug_settings_legacy_active = false;
+static bool debug_settings_allow_rn_restore = false;
+
+static const char* SafeClassName(MonoObject* obj) {
+    if (!obj || !mono_object_get_class) {
+        return "<null>";
+    }
+
+    MonoClass* klass = mono_object_get_class(obj);
+    if (!klass || !klass->name) {
+        return "<unknown>";
+    }
+
+    return klass->name;
+}
+
+static std::string GetStringProperty(MonoObject* obj, const char* propertyName) {
+    if (!obj || !propertyName || !mono_object_get_class) {
+        return "";
+    }
+
+    MonoClass* klass = mono_object_get_class(obj);
+    if (!klass) {
+        return "";
+    }
+
+    MonoString* value = Get_Property<MonoString*>(klass, obj, propertyName);
+    if (!value) {
+        return "";
+    }
+
+    return Mono_to_String(value);
+}
+
+static bool IsDebugSettingsReactScene(const std::string& sceneName) {
+    if (sceneName == "DebugSettingsScreen") {
+        return true;
+    }
+
+    if (sceneName.find("ps5:settings:debug settings") == std::string::npos) {
+        return false;
+    }
+
+    return sceneName.find("old") == std::string::npos &&
+           sceneName.find(":nuic") == std::string::npos;
+}
+
+static bool IsDebugSettingsStackScene(const std::string& sceneName) {
+    return sceneName == "StackNavigatorPS";
+}
+
+static bool IsSettingsMainScene(const std::string& sceneName) {
+    return sceneName == "ps5:settings:main";
+}
+
+static bool IsLegacyDebugSettingsScene(const std::string& sceneName) {
+    return sceneName.find("ps5:settings:debug settings old") != std::string::npos ||
+           sceneName == "id_debug_settings";
+}
+
+static bool RedirectDebugSettingsPush(const char* source, MonoObject* newScene) {
+    std::string sceneName = GetStringProperty(newScene, "Name");
+
+    if (!sceneName.empty()) {
+        shellui_log("[DBG-PUSH] %s newScene=%s class=%s", source, sceneName.c_str(), SafeClassName(newScene));
+    } else {
+        shellui_log("[DBG-PUSH] %s newScene=<empty> class=%s", source, SafeClassName(newScene));
+    }
+
+    if (IsSettingsMainScene(sceneName)) {
+        if (debug_settings_rn_route_pending || debug_settings_old_opening) {
+            shellui_log("[DBG-PUSH] settings main reached; clearing DebugSettings redirect state");
+        }
+        debug_settings_rn_route_pending = false;
+        debug_settings_old_opening = false;
+        debug_settings_legacy_active = false;
+    }
+
+    if (IsLegacyDebugSettingsScene(sceneName)) {
+        debug_settings_rn_route_pending = false;
+        debug_settings_old_opening = false;
+        debug_settings_legacy_active = true;
+    }
+
+    if (debug_settings_rn_route_pending && IsDebugSettingsStackScene(sceneName)) {
+        shellui_log("[DBG-PUSH] blocking RN DebugSettings stack container and opening debug_settings_old");
+        debug_settings_rn_route_pending = false;
+        debug_settings_old_opening = true;
+        GoToURI("pssettings:play?function=debug_settings_old");
+        return true;
+    }
+
+    if (IsDebugSettingsReactScene(sceneName)) {
+        if (debug_settings_allow_rn_restore) {
+            shellui_log("[DBG-PUSH] allowing RN DebugSettings restore while returning from legacy XML");
+            debug_settings_allow_rn_restore = false;
+            return false;
+        }
+
+        if (!debug_settings_rn_route_pending && !debug_settings_old_opening) {
+            shellui_log("[DBG-PUSH] RN DebugSettings scene without redirect state; allowing");
+            return false;
+        }
+
+        shellui_log("[DBG-PUSH] blocking RN DebugSettings scene%s",
+                    debug_settings_rn_route_pending ? " after stack fallback" : "");
+        if (debug_settings_rn_route_pending) {
+            debug_settings_rn_route_pending = false;
+        }
+        if (!debug_settings_old_opening) {
+            debug_settings_old_opening = true;
+            GoToURI("pssettings:play?function=debug_settings_old");
+        }
+        return true;
+    }
+
+    return false;
+}
+
+void UI3_NavigationScene_PushScene_Hook(MonoObject* instance, MonoObject* newScene) {
+    if (RedirectDebugSettingsPush("PushScene/1", newScene)) {
+        return;
+    }
+
+    if (UI3_NavigationScene_PushScene_Orig) {
+        UI3_NavigationScene_PushScene_Orig(instance, newScene);
+    }
+}
+
+void UI3_NavigationScene_PushScene2_Hook(MonoObject* instance, MonoObject* newScene, MonoObject* animation) {
+    if (RedirectDebugSettingsPush("PushScene/2", newScene)) {
+        return;
+    }
+
+    if (UI3_NavigationScene_PushScene2_Orig) {
+        UI3_NavigationScene_PushScene2_Orig(instance, newScene, animation);
+    }
+}
+
+void UI3_NavigationScene_PushScene3_Hook(MonoObject* instance, MonoObject* newScene, MonoObject* animation, MonoObject* animationForPreviousScene) {
+    if (RedirectDebugSettingsPush("PushScene/3", newScene)) {
+        return;
+    }
+
+    if (UI3_NavigationScene_PushScene3_Orig) {
+        UI3_NavigationScene_PushScene3_Orig(instance, newScene, animation, animationForPreviousScene);
+    }
+}
 
 void DebugSettings_GetModel_Hook(MonoObject* instance, MonoObject* param, MonoObject* promise) {
     std::string param_text;
@@ -1768,8 +1665,16 @@ void DebugSettings_GetModel_Hook(MonoObject* instance, MonoObject* param, MonoOb
     }
 
     if (page_id == "id_debug_settings" || param_text.find("id_debug_settings") != std::string::npos) {
-        shellui_log("[DBG-GETMODEL] id_debug_settings detected, opening debug_settings_old");
-        GoToURI("pssettings:play?function=debug_settings_old");
+        if (debug_settings_legacy_active) {
+            shellui_log("[DBG-GETMODEL] id_debug_settings while legacy XML active; treating as return restore");
+            debug_settings_rn_route_pending = false;
+            debug_settings_old_opening = false;
+            debug_settings_allow_rn_restore = true;
+        } else {
+            shellui_log("[DBG-GETMODEL] id_debug_settings detected; will block RN stack push");
+            debug_settings_rn_route_pending = true;
+            debug_settings_allow_rn_restore = false;
+        }
     }
 
     if (DebugSettings_GetModel_Orig) {
@@ -1791,7 +1696,6 @@ uint64_t GetManifestResourceStream_Hook(uint64_t inst, MonoString* FileName) {
     is_cheats = (resourceName == cheats_xml);
     is_auto_plugin = (resourceName == "Sce.Vsh.ShellUI.Legacy.src.Sce.Vsh.ShellUI.Settings.Plugins.auto_plugins.xml");
   	is_tk_menu = (resourceName == "Sce.Vsh.ShellUI.Legacy.src.Sce.Vsh.ShellUI.Settings.Plugins.testkit_menu.xml");
-    is_hb_loader = (resourceName == "Sce.Vsh.ShellUI.Legacy.src.Sce.Vsh.ShellUI.Settings.Plugins.hb_loader.xml");
     is_plapps = (resourceName == "Sce.Vsh.ShellUI.Legacy.src.Sce.Vsh.ShellUI.Settings.Plugins.plapps.xml");
 	is_custom_pkg = (resourceName == "Sce.Vsh.ShellUI.Legacy.src.Sce.Vsh.ShellUI.Settings.Plugins.custompkginstaller.xml");
 	is_su_menu = (resourceName == "Sce.Vsh.ShellUI.Legacy.src.Sce.Vsh.ShellUI.Settings.Plugins.superuser.xml");
@@ -1803,10 +1707,6 @@ uint64_t GetManifestResourceStream_Hook(uint64_t inst, MonoString* FileName) {
         is_debug_settings = false;
         is_cheats = true;
     }
-    else if(game_shortcut_activated){
-        is_debug_settings = false;
-        is_hb_loader = true;
-    }
 
     // TEstKIt OG Debug Settings
     if((resourceName == "Sce.Vsh.ShellUI.Legacy.src.Sce.Vsh.ShellUI.Settings.Plugins.og_debug.xml")){
@@ -1814,7 +1714,7 @@ uint64_t GetManifestResourceStream_Hook(uint64_t inst, MonoString* FileName) {
         return GetManifestResourceStream_Original(inst, mono_string_new(Root_Domain, debug_settings_xml.c_str()));
     }
 
-    if (!is_plugin && !is_debug_settings && !is_cheats && !is_auto_plugin && !is_tk_menu && !is_remote_play && !is_hb_loader && !is_plapps && !is_su_menu && !is_custom_pkg) {
+    if (!is_plugin && !is_debug_settings && !is_cheats && !is_auto_plugin && !is_tk_menu && !is_remote_play && !is_plapps && !is_su_menu && !is_custom_pkg) {
         return GetManifestResourceStream_Original(inst, FileName);
     }
 
@@ -1837,51 +1737,40 @@ uint64_t GetManifestResourceStream_Hook(uint64_t inst, MonoString* FileName) {
 
     if (is_debug_settings) {
         LoadSettings();
-        new_xml_string = global_conf.lite_mode ? dec_list_xml_str : dec_xml_str;
-       // shellui_log("Lite mode is %s", global_conf.lite_mode ? "enabled" : "disabled");
-    }
-    else if (is_hb_loader){
-        if (!games_list.empty()) {
-             games_list.clear();
-           // shellui_log("games found");
-        }
-       
-        //generate_games_xml(new_xml_string, game_shortcut_activated);
-        IPC_Client::getInstance(true).GetGamesList(game_shortcut_activated, new_xml_string);
-        game_shortcut_activated = false;
+        new_xml_string = dec_xml_str;
     }
 	else if (is_tk_menu) {
 
         
 	     	new_xml_string  = "<?xml version=\"1.0\" encoding=\"UTF-8\" ?>\n"
             "<system_settings version=\"1.0\" plugin=\"debug_settings_plugin\">\n" 
-            "\n<setting_list id=\"id_testkit_menu\" title=\"TestKit Menu\">\n";
+            "\n<setting_list id=\"id_testkit_menu\" title=\"TestKit 菜单\">\n";
 
 		    IPC_Client& main_ipc = IPC_Client::getInstance(false);
 
         if (main_ipc.IsTestKit()) {
-            new_xml_string += R"(<list id="id_kit_panel" title="Console Info overlay" >)";
-            new_xml_string += R"(<list_item id="id_kit_panel_1" title="On [Custom]" value="0" />)";
-            new_xml_string += R"(<list_item id="id_kit_panel_2" title="On + APU Temp" value="1" />)";
-            new_xml_string += R"(<list_item id="id_kit_panel_3" title="On + Service Ports + temps" value="2" />)";
-            new_xml_string += R"(<list_item id="id_kit_panel_4" title="Off" value="3" />)";
+            new_xml_string += R"(<list id="id_kit_panel" title="主机信息覆盖层" >)";
+            new_xml_string += R"(<list_item id="id_kit_panel_1" title="开启 [自定义]" value="0" />)";
+            new_xml_string += R"(<list_item id="id_kit_panel_2" title="开启 + APU 温度" value="1" />)";
+            new_xml_string += R"(<list_item id="id_kit_panel_3" title="开启 + 服务端口 + 温度" value="2" />)";
+            new_xml_string += R"(<list_item id="id_kit_panel_4" title="关闭" value="3" />)";
             new_xml_string += R"( </list>)";
 
-            new_xml_string += R"(<list id="id_trial_soft" title="Trial System Software Expiration overlay" >)";
-            new_xml_string += R"(<list_item id="id_trial_soft_off" title="Off" value="0" />)";
-            new_xml_string += R"(<list_item id="id_trial_soft_1" title="(ON) 1 Day" value="1" />)";
-            new_xml_string += R"(<list_item id="id_trial_soft_2" title="(ON) 2 Days" value="2" />)";
-            new_xml_string += R"(<list_item id="id_trial_soft_3" title="(ON) Expired" value="3" />)";
+            new_xml_string += R"(<list id="id_trial_soft" title="试用系统软件到期覆盖层" >)";
+            new_xml_string += R"(<list_item id="id_trial_soft_off" title="关闭" value="0" />)";
+            new_xml_string += R"(<list_item id="id_trial_soft_1" title="(开启) 1 天" value="1" />)";
+            new_xml_string += R"(<list_item id="id_trial_soft_2" title="(开启) 2 天" value="2" />)";
+            new_xml_string += R"(<list_item id="id_trial_soft_3" title="(开启) 已过期" value="3" />)";
 		      	new_xml_string += R"( </list>)";
 
-            new_xml_string += R"( <list id="id_controller_pad_usable_ps4_device" title="Enable Controllers for PS4 in Native Games" key="/DEVENV/TOOL/pad_usable_ps4_device" confirm="You need to restart the system to reflect the setting.&#xa;The system will automatically restart when you leave from ★Debug Settings." confirm_phrase="OK,Cancel">)";
-            new_xml_string += R"( <list_item id="id_controller_pad_usable_ps4_device_off" title="Off" value="0"/>)";
-            new_xml_string += R"( <list_item id="id_controller_pad_usable_ps4_device_on" title="On" value="1"/>)";
+            new_xml_string += R"( <list id="id_controller_pad_usable_ps4_device" title="在原生游戏中为 PS4 启用手柄" key="/DEVENV/TOOL/pad_usable_ps4_device" confirm="需要重启系统才能应用此设置。&#xa;离开 ★调试设置 时系统将自动重启。" confirm_phrase="确定,取消">)";
+            new_xml_string += R"( <list_item id="id_controller_pad_usable_ps4_device_off" title="关闭" value="0"/>)";
+            new_xml_string += R"( <list_item id="id_controller_pad_usable_ps4_device_on" title="开启" value="1"/>)";
             new_xml_string += R"( </list>)";
-            new_xml_string += R"( <link id="id_og_debug" title="Orig. Debug Settings" file="og_debug.xml"/> )";
+            new_xml_string += R"( <link id="id_og_debug" title="原版调试设置" file="og_debug.xml"/> )";
         }
         else {
-			      new_xml_string += R"(<label id="id_testkit_494990" title="★ This Menu is not currently available on retail consoles" style="center"/>)";
+			      new_xml_string += R"(<label id="id_testkit_494990" title="★ 此菜单在零售机上暂不可用" style="center"/>)";
         }
 
 		    new_xml_string += "\n</setting_list>\n</system_settings>";
@@ -1945,9 +1834,6 @@ uint64_t GetManifestResourceStream_Hook(uint64_t inst, MonoString* FileName) {
 
     return (uint64_t)MemoryStream_Instance;
 }
-
-extern uint8_t store_png_start[];
-extern const unsigned int store_png_size;
 
 extern "C" int sceKernelGetPs4SystemSwVersion(OrbisKernelSwVersion *);
 
@@ -2102,9 +1988,6 @@ int OnPreCreate_Hook(MonoObject* Instance, MonoObject* element) {
     else if (id == "id_rest_4") {
         s_MonoText = mono_string_new(Root_Domain, global_conf.disable_toolbox_auto_start_for_rest_mode ? "1" : "0");
     }
-    else if (id == "id_lite_mode") {
-	      s_MonoText = mono_string_new(Root_Domain, global_conf.lite_mode ? "1" : "0");
-	  } 
     else if (id.rfind("id_cheat_") != std::string::npos) {
         if(is_current_game_open){
            ParseCheatID(id.c_str(), tid, &cheat_id);
@@ -2117,9 +2000,6 @@ int OnPreCreate_Hook(MonoObject* Instance, MonoObject* element) {
     }
     else if (id == "id_cheats_shortcut") {
         s_MonoText = mono_string_new(Root_Domain, std::to_string(global_conf.cheats_shortcut_opt).c_str());
-    }
-    else if (id == "id_games_shortcut") {
-        s_MonoText = mono_string_new(Root_Domain, std::to_string(global_conf.games_shortcut_opt).c_str());
     }
     else if (id == "id_toolbox_auto_start") {
         s_MonoText = mono_string_new(Root_Domain, global_conf.toolbox_auto_start ? "1" : "0");
@@ -2180,21 +2060,7 @@ bool handle_uri_boot_common(MonoString* uri, int opt, MonoString* titleIdForBoot
                 opt);
 #endif
   
-    if(uri_string == "etaHEN?webMAN_Games") {
-#if SHELL_DEBUG==1
-      shellui_log("webMAN Games URI detected");
-#endif
-      game_shortcut_activated = true;
-      return true; // Signal to redirect
-    }
-    else if(uri_string == "etaHEN?webMAN_Games_media") {
-#if SHELL_DEBUG==1
-        shellui_log("webMAN Games URI detected");
-#endif
-        game_shortcut_activated_media = game_shortcut_activated = true;
-        return true; // Signal to redirect
-    }
-    else if(uri_string == "etaHEN?Cheats") {
+    if(uri_string == "etaHEN?Cheats") {
 #if SHELL_DEBUG==1
       shellui_log("cheats_shortcut URI detected");
 #endif
@@ -2228,12 +2094,6 @@ bool handle_uri_boot_common(MonoString* uri, int opt, MonoString* titleIdForBoot
   
   bool uri_boot_hook(MonoString* uri, int opt, MonoString* titleIdForBootAction) {
     if(handle_uri_boot_common(uri, opt, titleIdForBootAction)) {
-        if(global_conf.lite_mode) {
-            // In lite mode, we don't want to handle any shortcuts
-            notify("Lite mode is enabled, shortcuts are disabled");
-            return boot_orig(uri, opt, titleIdForBootAction);
-        }
-
         std::string uri_string = Mono_to_String(uri);
         if(uri_string == "etaHEN?Dump") {
           return boot_orig(mono_string_new(Root_Domain, "pshomeui:navigateToHome?bootCondition=psButton"),  opt, titleIdForBootAction);
@@ -2251,12 +2111,6 @@ bool handle_uri_boot_common(MonoString* uri, int opt, MonoString* titleIdForBoot
   #endif
     if(handle_uri_boot_common(uri, opt, nullptr)) {
       // Redirect to debug settings (no titleId parameter for older fw)
-      if(global_conf.lite_mode) {
-        // In lite mode, we don't want to handle any shortcuts
-        notify("Lite mode is enabled, shortcuts are disabled");
-        return boot_orig_2(uri, opt);
-      }
-
       std::string uri_string = Mono_to_String(uri);
       if(uri_string == "etaHEN?Dump") {
         return boot_orig_2(mono_string_new(Root_Domain, "pshomeui:navigateToHome?bootCondition=psButton"),  opt);
@@ -2271,7 +2125,6 @@ bool handle_uri_boot_common(MonoString* uri, int opt, MonoString* titleIdForBoot
   GamePadData GetData_hook(int deviceIndex) {
     GamePadData result;
     bool cheas_sc_activated = false;
-    bool game_sc_activated = false;
     bool toolbox_sc_activated = false;
   
     const std::chrono::milliseconds LONG_PRESS_DURATION(1000); // 1 second
@@ -2280,11 +2133,6 @@ bool handle_uri_boot_common(MonoString* uri, int opt, MonoString* titleIdForBoot
     static bool cheats_pressed = false;
     static std::chrono::steady_clock::time_point cheats_press_start;
     static bool cheats_long_press_triggered = false;
-  
-    // Static variables for Games shortcut hold detection
-    static bool games_pressed = false;
-    static std::chrono::steady_clock::time_point games_press_start;
-    static bool games_long_press_triggered = false;
   
     // Static variables for Toolbox shortcut hold detection
     static bool toolbox_pressed = false;
@@ -2373,51 +2221,6 @@ bool handle_uri_boot_common(MonoString* uri, int opt, MonoString* titleIdForBoot
       }
     }
   
-    // Games Shortcut
-    if (global_conf.games_shortcut_opt != GAMES_SC_OFF) {
-      bool games_buttons_held = false;
-  
-      switch (global_conf.games_shortcut_opt) {
-      case R1_L1:
-        games_buttons_held = (result.Buttons & R1) && (result.Buttons & L1);
-        break;
-      case L2_O:
-        games_buttons_held = (result.Buttons & L2) && (result.Buttons & Circle);
-        break;
-      default:
-        break;
-      }
-  
-      if (games_buttons_held) {
-        if (!games_pressed) {
-          games_pressed = true;
-          games_press_start = std::chrono::steady_clock::now();
-          games_long_press_triggered = false;
-        } else {
-          auto current_time = std::chrono::steady_clock::now();
-          auto hold_duration = std::chrono::duration_cast < std::chrono::milliseconds > (
-            current_time - games_press_start
-          );
-  
-          if (hold_duration >= LONG_PRESS_DURATION && !games_long_press_triggered) {
-            game_sc_activated = true;
-            games_long_press_triggered = true;
-          }
-        }
-      } else {
-        games_pressed = false;
-        games_long_press_triggered = false;
-      }
-  
-      if (game_sc_activated) {
-#if SHELL_DEBUG == 1
-        shellui_log("Games Shortcut Activated");
-#endif
-        GoToURI("etaHEN?webMAN_Games");
-        result.Buttons = None; // Clear the Select button to prevent triggering other actions
-      }
-    }
-  
     // Toolbox Shortcut
     if (global_conf.toolbox_shortcut_opt != TOOLBOX_SC_OFF) {
       bool toolbox_buttons_held = false;
@@ -2470,19 +2273,9 @@ bool handle_uri_boot_common(MonoString* uri, int opt, MonoString* titleIdForBoot
   }
 
 bool CaptureScreen(){
-   
-  if (global_conf.lite_mode) {
-    return false;
-  }
-
   if(global_conf.cheats_shortcut_opt == CHEATS_LONG_SHARE){
     //shellui_log("CaptureScreen: Long Share Shortcut activated");
     GoToURI("etaHEN?Cheats");
-    return true;
-  }
-  else if (global_conf.games_shortcut_opt == GAMES_LONG_SHARE){
-    //shellui_log("CaptureScreen: Long Share Shortcut activated");
-    GoToURI("etaHEN?webMAN_Games");
     return true;
   }
   else if (global_conf.toolbox_shortcut_opt == TOOLBOX_LONG_SHARE){
@@ -2526,19 +2319,9 @@ void OnShareButton(MonoObject * data) {
   shellui_log("OnShareButton: data: %p", data);
 #endif
 
-  if (global_conf.lite_mode) {
-    OnShareButton_orig(data);
-    return;
-  }
-
   if( global_conf.cheats_shortcut_opt == CHEATS_SINGLE_SHARE) {
     // shellui_log("Share Shortcut: Redirecting to Cheats");
     GoToURI("etaHEN?Cheats");
-    return;
-  }
-  else if (global_conf.games_shortcut_opt == GAMES_SINGLE_SHARE) {
-    // shellui_log("Share Shortcut: Redirecting to Games");
-    GoToURI("etaHEN?webMAN_Games");
     return;
   }
   else if (global_conf.toolbox_shortcut_opt == TOOLBOX_SINGLE_SHARE) {
@@ -2693,7 +2476,7 @@ void createJson_hook(MonoObject* inst, MonoObject* array, MonoString* id, MonoSt
                Mono_to_String(messageId).c_str());
 #endif
 
-    if(global_conf.lite_mode || !global_conf.etaHEN_game_opts) {
+    if(!global_conf.etaHEN_game_opts) {
         createJson(inst, array, id, label, actionUrl, actionId, messageId, subMenu, enable);
         return;
     }
@@ -2709,19 +2492,19 @@ void createJson_hook(MonoObject* inst, MonoObject* array, MonoString* id, MonoSt
     }
 #if 1
     if(id_str == "MENU_ID_SAVE_DATA_MANAGEMENT_PS4_MANUAL" || id_str == "MENU_ID_SAVE_DATA_MANAGEMENT_PS5_MANUAL" || (id_str == "MENU_ID_UPDATE_HISTORY" && 0)){
-       createJson(inst, array, mono_string_new(Root_Domain, "MENU_ID_CUST_UPDATES"), mono_string_new(Root_Domain, "★ (Beta) Dump Game/App"), mono_string_new(Root_Domain, "etaHEN?Dump"), actionId, nullptr, subMenu, enable);
+       createJson(inst, array, mono_string_new(Root_Domain, "MENU_ID_CUST_UPDATES"), mono_string_new(Root_Domain, "★ (测试版) 转储游戏/应用"), mono_string_new(Root_Domain, "etaHEN?Dump"), actionId, nullptr, subMenu, enable);
        return;
     }
 #endif
     if(id_str == "MENU_ID_CHECK_PATCH"){  
       //createJson_hook: 8815fec90 id: MENU_ID_CHECK_PATCH, label: , actionUrl: pspatchcheck:check-for-update?titleid=CUSA01127, actionId: , messageId: msgid_check_update
-        createJson(inst, array, mono_string_new(Root_Domain, "MENU_ID_CHEATS"), mono_string_new(Root_Domain, "★ etaHEN Cheats"), mono_string_new(Root_Domain, "etaHEN?Cheats_not_open"), actionId, nullptr, subMenu, enable);
+        createJson(inst, array, mono_string_new(Root_Domain, "MENU_ID_CHEATS"), mono_string_new(Root_Domain, "★ OrionHEN 金手指"), mono_string_new(Root_Domain, "etaHEN?Cheats_not_open"), actionId, nullptr, subMenu, enable);
         return;
     }
 
     if(id_str == "MENU_ID_INTELLECTUAL_PROPERTY_NOTICES"){
         std::string uri = "psappinst:pat-uninstall?titleid=" + current_menu_tid;
-        createJson(inst, array, mono_string_new(Root_Domain, "MENU_ID_REMOVE_UPDATE"), mono_string_new(Root_Domain, "★ Delete"), mono_string_new(Root_Domain, uri.c_str()), actionId, nullptr, subMenu, enable);
+        createJson(inst, array, mono_string_new(Root_Domain, "MENU_ID_REMOVE_UPDATE"), mono_string_new(Root_Domain, "★ 删除"), mono_string_new(Root_Domain, uri.c_str()), actionId, nullptr, subMenu, enable);
         return;
     }
 

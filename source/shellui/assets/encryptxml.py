@@ -19,4 +19,3 @@ if __name__ == '__main__':
     
     # Use the Base64 string directly as the key
     xor_encrypt('shellui/assets/etaHEN_toolbox.xml', 'shellui/assets/etaHEN_toolbox.sxml', key_base64)
-    xor_encrypt('shellui/assets/etaHEN_Lite.xml', 'shellui/assets/etaHEN_Lite.sxml', key_base64)

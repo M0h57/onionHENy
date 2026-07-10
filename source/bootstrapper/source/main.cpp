@@ -94,7 +94,7 @@ const char json_payload[] =
      "        }\n"
      "      },\n"
      "      \"message\": {\n"
-     "        \"body\": \"etaHEN is starting...\"\n"
+     "        \"body\": \"OrionHEN is starting...\"\n"
      "      },\n"
      "      \"subMessage\": {\n"
      "        \"body\": \"Please Wait For The Welcome Message\"\n"
@@ -120,7 +120,7 @@ const char json_payload[] =
      "            }\n"
      "          },\n"
      "          \"message\": {\n"
-     "            \"body\": \"etaHEN is starting...\"\n"
+     "            \"body\": \"OrionHEN is starting...\"\n"
      "          }\n"
      "        }\n"
      "      }\n"
@@ -280,12 +280,25 @@ const char json_payload[] =
  extern uint8_t daemon_start[];
  extern uint8_t util_start[];
  extern const unsigned int util_size;
- extern uint8_t store_png_start;
- extern const unsigned int store_png_size;
  extern uint8_t sicon_start[];
  extern const unsigned int sicon_size;
- extern uint8_t webman_icon_start[];
- extern const unsigned int webman_icon_size;
+
+ extern uint8_t icon_xml_package_start[];
+ extern const unsigned int icon_xml_package_size;
+ extern uint8_t icon_xml_plugins_start[];
+ extern const unsigned int icon_xml_plugins_size;
+ extern uint8_t icon_xml_game_start[];
+ extern const unsigned int icon_xml_game_size;
+ extern uint8_t icon_xml_network_start[];
+ extern const unsigned int icon_xml_network_size;
+ extern uint8_t icon_xml_settings_start[];
+ extern const unsigned int icon_xml_settings_size;
+ extern uint8_t icon_xml_shortcuts_start[];
+ extern const unsigned int icon_xml_shortcuts_size;
+ extern uint8_t icon_xml_debug_start[];
+ extern const unsigned int icon_xml_debug_size;
+ extern uint8_t icon_xml_about_start[];
+ extern const unsigned int icon_xml_about_size;
  
  /******************************************************************************
   * Global Variables
@@ -323,6 +336,18 @@ static void cleanup(void);
  extern uint8_t shellui_prx_start[];
  extern const unsigned int shellui_prx_size;
 
+  static void write_blob_file(const char *path, const void *data, size_t size) {
+    int fd = open(path, O_WRONLY | O_CREAT | O_TRUNC, 0666);
+    if (fd < 0) {
+      perror("open failed");
+      return;
+    }
+    if (write(fd, data, size) == -1) {
+      perror("write failed");
+    }
+    close(fd);
+  }
+
   void write_embedded_assets() {
     mkdir("/data/etaHEN/", 0777);
     mkdir("/data/etaHEN/assets/", 0777);
@@ -352,64 +377,28 @@ static void cleanup(void);
   //  }
 #endif
 
-    if (!if_exists("/data/etaHEN/assets/store.png")) {
-      int fd = open("/data/etaHEN/assets/store.png", O_WRONLY | O_CREAT | O_TRUNC, 0666);
-      if (fd == -1) {
-        perror("open failed");
-        return;
-      }
-      if (write(fd, & store_png_start, store_png_size) == -1) {
-        perror("write failed");
-      }
-      close(fd);
-    }
-
-    if (!if_exists("/data/etaHEN/assets/webMAN.png")) {
-      int fd = open("/data/etaHEN/assets/webMAN.png", O_WRONLY | O_CREAT | O_TRUNC, 0666);
-      if (fd == -1) {
-        perror("open failed");
-        return;
-      }
-      if (write(fd, & webman_icon_start, webman_icon_size) == -1) {
-        perror("write failed");
-      }
-      close(fd);
-    }
-
     if (!if_exists("/data/etaHEN/etahen.png")) {
-      int fd = open("/data/etaHEN/etahen.png", O_WRONLY | O_CREAT | O_TRUNC, 0666);
-      if (fd == -1) {
-        perror("open failed");
-        return;
-      }
-      if (write(fd, & sicon_start, sicon_size) == -1) {
-        perror("write failed");
-      }
-      close(fd);
+      write_blob_file("/data/etaHEN/etahen.png", &sicon_start, sicon_size);
     }
+
+    // Toolbox category icons (always overwrite so asset updates take effect)
+    write_blob_file("/data/etaHEN/assets/icon_xml_package.png", &icon_xml_package_start, icon_xml_package_size);
+    write_blob_file("/data/etaHEN/assets/icon_xml_plugins.png", &icon_xml_plugins_start, icon_xml_plugins_size);
+    write_blob_file("/data/etaHEN/assets/icon_xml_game.png", &icon_xml_game_start, icon_xml_game_size);
+    write_blob_file("/data/etaHEN/assets/icon_xml_network.png", &icon_xml_network_start, icon_xml_network_size);
+    write_blob_file("/data/etaHEN/assets/icon_xml_settings.png", &icon_xml_settings_start, icon_xml_settings_size);
+    write_blob_file("/data/etaHEN/assets/icon_xml_shortcuts.png", &icon_xml_shortcuts_start, icon_xml_shortcuts_size);
+    write_blob_file("/data/etaHEN/assets/icon_xml_debug.png", &icon_xml_debug_start, icon_xml_debug_size);
+    write_blob_file("/data/etaHEN/assets/icon_xml_about.png", &icon_xml_about_start, icon_xml_about_size);
  
     if (!if_exists("/system_ex/rnps/apps/NPXS40008/assets/src/modules/categoriesList/assets/texture/etahen_sicon.png")) {
-      int fd = open("/system_ex/rnps/apps/NPXS40008/assets/src/modules/categoriesList/assets/texture/etahen_sicon.png", O_WRONLY | O_CREAT | O_TRUNC, 0666);
-      if (fd == -1) {
-        perror("open failed");
-        return;
-      }
-      if (write(fd, & sicon_start, sicon_size) == -1) {
-        perror("write failed");
-      }
-      close(fd);
+      write_blob_file("/system_ex/rnps/apps/NPXS40008/assets/src/modules/categoriesList/assets/texture/etahen_sicon.png",
+                      &sicon_start, sicon_size);
     }
  
     if (!if_exists("/mnt/rnps/apps/NPXS40008/assets/src/modules/categoriesList/assets/texture/etahen_sicon.png")) {
-      int fd = open("/mnt/rnps/apps/NPXS40008/assets/src/modules/categoriesList/assets/texture/etahen_sicon.png", O_WRONLY | O_CREAT | O_TRUNC, 0666);
-      if (fd == -1) {
-        perror("open failed");
-        return;
-      }
-      if (write(fd, & sicon_start, sicon_size) == -1) {
-        perror("write failed");
-      }
-      close(fd);
+      write_blob_file("/mnt/rnps/apps/NPXS40008/assets/src/modules/categoriesList/assets/texture/etahen_sicon.png",
+                      &sicon_start, sicon_size);
     }
 }
 
@@ -498,7 +487,7 @@ static void cleanup(void);
     }
   
     // Notify user about cleanup
-    notify("etaHEN has been cleaned up.");
+    notify("OrionHEN has been cleaned up.");
   
     // Exit the program
     exit(0);
@@ -1262,7 +1251,7 @@ int main(void) {
           klog_printf("Loading plugin: %s\n", plugin_paths[i]);
         if (!load_plugin(plugin_paths[i], loaded_filenames[i])) {
           snprintf(buff, sizeof(buff),
-                   "[etaHEN] Failed to load plugin!\nPath: %s",
+                   "[OrionHEN] Failed to load plugin!\nPath: %s",
                    plugin_paths[i]);
           notify(buff);
           klog_puts("FAILED!");

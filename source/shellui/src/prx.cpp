@@ -31,7 +31,7 @@ along with this program; see the file COPYING. If not, see
 #include <util.hpp>
 
 std::string dec_xml_str;
-std::string dec_list_xml_str;
+
 std::string UI3_dec;
 std::string legacy_dec;
 std::string appsystem_dll;
@@ -948,15 +948,12 @@ int main(int argc, char const *argv[]) {
     }
 
     int size = ((uint64_t)&toolbox_end - (uint64_t)&toolbox_start);
-    int lite_size = ((uint64_t)&toolbox_lite_end - (uint64_t)&toolbox_lite_start);
-    shellui_log("[GMRS-INIT] decrypting toolbox XML embeds: full_blob=%d lite_blob=%d", size, lite_size);
+    shellui_log("[GMRS-INIT] decrypting toolbox XML embed: blob=%d", size);
     std::vector<unsigned char> decrypted_data = encrypt_decrypt(toolbox_start, size, key_base64);
     // Convert decrypted data to a string
     dec_xml_str = std::string(decrypted_data.begin(), decrypted_data.end());
-    decrypted_data = encrypt_decrypt(toolbox_lite_start, lite_size, key_base64);
-    dec_list_xml_str = std::string(decrypted_data.begin(), decrypted_data.end());
-    shellui_log("[GMRS-INIT] decrypted toolbox XML: full=%zu lite=%zu full_prefix=%.60s",
-                dec_xml_str.size(), dec_list_xml_str.size(),
+    shellui_log("[GMRS-INIT] decrypted toolbox XML: full=%zu full_prefix=%.60s",
+                dec_xml_str.size(),
                 dec_xml_str.empty() ? "(empty)" : dec_xml_str.c_str());
     if (dec_xml_str.empty() || dec_xml_str.find("system_settings") == std::string::npos) {
       shellui_log("[GMRS-INIT] WARN: full toolbox XML missing/invalid after decrypt!");
@@ -1081,6 +1078,57 @@ int main(int argc, char const *argv[]) {
   Patch_Main_thread_Check(image_core);
 
   OnRender_orig = (void(*)(MonoObject*)) DetourFunction(Get_Address_of_Method(pui_img, "Sce.PlayStation.PUI", "Application", "Update", 0), (void*)&OnRender_Hook);
+
+  uint64_t ui3PushScene = Get_Address_of_Method(pui_img,
+                                                "Sce.PlayStation.PUI.UI3",
+                                                "NavigationScene",
+                                                "PushScene",
+                                                1);
+  if (ui3PushScene) {
+    UI3_NavigationScene_PushScene_Orig = (void (*)(MonoObject*, MonoObject*))
+        DetourFunction(ui3PushScene, (void*)&UI3_NavigationScene_PushScene_Hook);
+    if (UI3_NavigationScene_PushScene_Orig) {
+      shellui_log("[DBG-PUSH] Sce.PlayStation.PUI.UI3.NavigationScene.PushScene hooked");
+    } else {
+      shellui_log("[DBG-PUSH] failed to detour Sce.PlayStation.PUI.UI3.NavigationScene.PushScene");
+    }
+  } else {
+    shellui_log("[DBG-PUSH] Sce.PlayStation.PUI.UI3.NavigationScene.PushScene not found");
+  }
+
+  uint64_t ui3PushScene2 = Get_Address_of_Method(pui_img,
+                                                 "Sce.PlayStation.PUI.UI3",
+                                                 "NavigationScene",
+                                                 "PushScene",
+                                                 2);
+  if (ui3PushScene2) {
+    UI3_NavigationScene_PushScene2_Orig = (void (*)(MonoObject*, MonoObject*, MonoObject*))
+        DetourFunction(ui3PushScene2, (void*)&UI3_NavigationScene_PushScene2_Hook);
+    if (UI3_NavigationScene_PushScene2_Orig) {
+      shellui_log("[DBG-PUSH] Sce.PlayStation.PUI.UI3.NavigationScene.PushScene/2 hooked");
+    } else {
+      shellui_log("[DBG-PUSH] failed to detour Sce.PlayStation.PUI.UI3.NavigationScene.PushScene/2");
+    }
+  } else {
+    shellui_log("[DBG-PUSH] Sce.PlayStation.PUI.UI3.NavigationScene.PushScene/2 not found");
+  }
+
+  uint64_t ui3PushScene3 = Get_Address_of_Method(pui_img,
+                                                 "Sce.PlayStation.PUI.UI3",
+                                                 "NavigationScene",
+                                                 "PushScene",
+                                                 3);
+  if (ui3PushScene3) {
+    UI3_NavigationScene_PushScene3_Orig = (void (*)(MonoObject*, MonoObject*, MonoObject*, MonoObject*))
+        DetourFunction(ui3PushScene3, (void*)&UI3_NavigationScene_PushScene3_Hook);
+    if (UI3_NavigationScene_PushScene3_Orig) {
+      shellui_log("[DBG-PUSH] Sce.PlayStation.PUI.UI3.NavigationScene.PushScene/3 hooked");
+    } else {
+      shellui_log("[DBG-PUSH] failed to detour Sce.PlayStation.PUI.UI3.NavigationScene.PushScene/3");
+    }
+  } else {
+    shellui_log("[DBG-PUSH] Sce.PlayStation.PUI.UI3.NavigationScene.PushScene/3 not found");
+  }
 
 #if 0
     Orig_AppInstUtilInstallByPackage = (int (*)(MonoString * uri, MonoString * ex_uri, MonoString * playgo_scenario_id, MonoString * content_id, MonoString * content_name, MonoString * icon_url, uint32_t slot, bool is_playgo_enabled, MonoObject * pkg_info, MonoArray * languages, MonoArray * playgo_scenario_ids, MonoArray * content_ids)) DetourFunction(Get_Address_of_Method(AppInstallUtil_img, "Sce.Vsh", "AppInstUtilWrapper", "_AppInstUtilInstallByPackage", 12), (void*)&AppInstUtilInstallByPackage_Hook);

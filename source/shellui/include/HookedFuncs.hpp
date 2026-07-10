@@ -24,9 +24,6 @@ along with this program; see the file COPYING. If not, see
 extern "C" uint8_t toolbox_start[];
 extern "C" int32_t toolbox_end;
 
-extern "C" uint8_t toolbox_lite_start[];
-extern "C" int32_t toolbox_lite_end;
-
 #define MAX_LINE 256
 #define MAX_PAIRS 100
 
@@ -169,14 +166,6 @@ enum Cheats_Shortcut{
     TOOLBOX_SINGLE_SHARE,
  };
  
- enum Games_Shortcut{
-    GAMES_SC_OFF = 0,
-    R1_L1,
-    L2_O,
-    GAMES_LONG_SHARE,
-    GAMES_SINGLE_SHARE,
- };
- 
  enum overlay_positions{
     OVERLAY_POS_TOP_LEFT = 0,
     OVERLAY_POS_TOP_RIGHT,
@@ -203,7 +192,6 @@ typedef struct etaHENSettings_t
     bool ftp_dev_access = false;
     bool util_rest_kill = false;
     bool game_rest_kill = false;
-    bool lite_mode = false;
     bool toolbox_auto_start = false;
     bool disable_toolbox_auto_start_for_rest_mode = false;
     bool display_tids = false;
@@ -227,7 +215,6 @@ typedef struct etaHENSettings_t
     // Shortcuts
     Cheats_Shortcut cheats_shortcut_opt = CHEATS_SC_OFF;
     Toolbox_Shortcut toolbox_shortcut_opt = TOOLBOX_SC_OFF;
-    Games_Shortcut games_shortcut_opt = GAMES_SC_OFF;
 
 	//floats for overlays
     float overlay_gpu_x = 10.0f;
@@ -376,6 +363,9 @@ void notify(const char* text, ...);
 extern uint64_t(*GetManifestResourceStream_Original)(uint64_t inst, MonoString* FileName);
 extern uint64_t(*GetManifestResourceInternal_Orig)(MonoObject* instance, MonoString* name, int* size, MonoObject& module);
 extern void (*DebugSettings_GetModel_Orig)(MonoObject* instance, MonoObject* param, MonoObject* promise);
+extern void (*UI3_NavigationScene_PushScene_Orig)(MonoObject* instance, MonoObject* newScene);
+extern void (*UI3_NavigationScene_PushScene2_Orig)(MonoObject* instance, MonoObject* newScene, MonoObject* animation);
+extern void (*UI3_NavigationScene_PushScene3_Orig)(MonoObject* instance, MonoObject* newScene, MonoObject* animation, MonoObject* animationForPreviousScene);
 extern  void (*OnShareButton_orig)(MonoObject* data);
 extern void (*CaptureScreen_orig_old)(MonoObject * inst, int userId, long deviceId, int capType, MonoObject* capacityInfo);
 extern void (*CaptureScreen_orig_new)(MonoObject* inst, int userId, long deviceId, int capType,  MonoString* format, MonoObject* capInfo);
@@ -398,6 +388,9 @@ uint64_t Get_Address_of_Method(MonoImage* Assembly_Image, MonoClass* klass, cons
 uint64_t GetManifestResourceStream_Hook(uint64_t inst, MonoString* FileName);
 uint64_t GetManifestResourceInternal_Hook(MonoObject* instance, MonoString* name, int* size, MonoObject& module);
 void DebugSettings_GetModel_Hook(MonoObject* instance, MonoObject* param, MonoObject* promise);
+void UI3_NavigationScene_PushScene_Hook(MonoObject* instance, MonoObject* newScene);
+void UI3_NavigationScene_PushScene2_Hook(MonoObject* instance, MonoObject* newScene, MonoObject* animation);
+void UI3_NavigationScene_PushScene3_Hook(MonoObject* instance, MonoObject* newScene, MonoObject* animation, MonoObject* animationForPreviousScene);
 MonoObject* New_Mono_XML_From_String(std::string xml_doc);
 bool write_asset(const char* path, const void* start, uint32_t size);
 int ini_parser_load(IniParser* parser, const char* filename);
@@ -577,7 +570,6 @@ extern  std::vector<Plugins> plugins_list;
 extern  std::vector<Plugins> auto_list;
 extern  std::vector<Payloads_Apps> payloads_apps_list, custom_pkg_list;
 extern  std::string dec_xml_str;
-extern  std::string dec_list_xml_str;
 extern  std::string cheats_xml;
 extern  std::string UI3_dec;
 extern  std::string legacy_dec;
@@ -623,7 +615,6 @@ bool if_exists(const char* path);
 extern "C" int sceUserServiceGetInitialUser(int* uid);
 bool touch_file(const char *destfile);
 void ParseCheatID(const char* tid, int* cheat_id);
-void generate_games_xml(std::string &xml_buffer, bool game_shortcut_activated);
 int Launch_FG_Game(const char *path, const char* title_id, const char* title);
 void CallDecrypt(unsigned char* bundleData, int bundleOffset, int bundleSize,  int* payloadOffset, int* realPayloadSize);
 bool uri_boot_hook(MonoString* uri, int opt, MonoString* titleIdForBootAction);
