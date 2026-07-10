@@ -15,6 +15,7 @@ along with this program; see the file COPYING. If not, see
 <http://www.gnu.org/licenses/>.  */
 
 #include <orion/ipc_client.hpp>
+#include <orion/ipc_server.hpp>
 
 #include <cstdarg>
 #include <cstdio>
@@ -165,9 +166,22 @@ bool IPC_Client::IPCOpenIfNotConnected() {
   return IPCOpenConnection();
 }
 
-int IPC_Client::IPCReceiveData(IPCMessage &msg, std::string &ipc_msg) {
-  bzero(msg.msg, sizeof(msg.msg));
+int IPC_Client::send_frame_unlocked(const IPCMessage &msg) {
+  if (socket_fd_ < 0) {
+    return -1;
+  }
+  const int ret = orion::ipc_network_send_full(
+      socket_fd_, &msg, static_cast<int32_t>(sizeof(msg)));
+  if (ret < 0) {
+    shellui_log("IPCSendData failed: %s", strerror(errno));
+  } else {
+    shellui_log("IPCSendData sent %i bytes", ret);
+  }
+  return ret;
+}
 
+int IPC_Client::recv_frame_unlocked(IPCMessage &msg) {
+  bzero(msg.msg, sizeof(msg.msg));
   if (socket_fd_ < 0) {
     return -1;
   }
@@ -181,10 +195,23 @@ int IPC_Client::IPCReceiveData(IPCMessage &msg, std::string &ipc_msg) {
 
   shellui_log("Waiting for daemon response (%s)...",
               util_daemon_ ? "util" : "crit");
-  int ret = recv(socket_fd_, reinterpret_cast<void *>(&msg), sizeof(msg),
-                 MSG_NOSIGNAL);
+  const int ret = orion::ipc_network_recv_full(
+      socket_fd_, &msg, static_cast<int32_t>(sizeof(msg)));
   if (ret < 0) {
     shellui_log("recv failed: %s", strerror(errno));
+    return ret;
+  }
+  if (!orion::ipc_frame_is_complete(ret)) {
+    shellui_log("short IPC frame %d (want %zu)", ret, sizeof(msg));
+    return -1;
+  }
+  orion::ipc_message_force_nul(msg);
+  return ret;
+}
+
+int IPC_Client::IPCReceiveData(IPCMessage &msg, std::string &ipc_msg) {
+  const int ret = recv_frame_unlocked(msg);
+  if (ret < 0) {
     return ret;
   }
   shellui_log("Daemon returned: %i", msg.error);
@@ -218,17 +245,7 @@ int IPC_Client::IPCReceiveData(IPCMessage &msg, std::string &ipc_msg) {
 }
 
 int IPC_Client::IPCSendData(const IPCMessage &msg) {
-  if (socket_fd_ < 0) {
-    return -1;
-  }
-  int ret = send(socket_fd_, reinterpret_cast<const void *>(&msg), sizeof(msg),
-                 MSG_NOSIGNAL);
-  if (ret < 0) {
-    shellui_log("IPCSendData failed: %s", strerror(errno));
-  } else {
-    shellui_log("IPCSendData sent %i bytes", ret);
-  }
-  return ret;
+  return send_frame_unlocked(msg);
 }
 
 int IPC_Client::IPCCloseConnection() {
@@ -242,6 +259,7 @@ int IPC_Client::IPCCloseConnection() {
 
 bool IPC_Client::IPCSendCommand(DaemonCommands cmd, std::string &ipc_msg1,
                                 std::string ipc_msg2) {
+  std::lock_guard<std::mutex> lock(mu_);
   std::string json;
 
 #if SHELL_DEBUG == 1
@@ -258,7 +276,8 @@ bool IPC_Client::IPCSendCommand(DaemonCommands cmd, std::string &ipc_msg1,
     json = json_kv_string2("mount_src", ipc_msg1.c_str(), "mount_dest",
                            ipc_msg2.c_str());
   } else if (ipc_msg2.empty()) {
-    if (cmd == BREW_DAEMON_PID || cmd == BREW_UTIL_DAEMON_PID) {
+    if (cmd == BREW_DAEMON_PID || cmd == BREW_UTIL_DAEMON_PID ||
+        cmd == BREW_TEST_CONNECTION || cmd == BREW_UTIL_TEST_CONNECTION) {
       json = "{\"pid\": 0 }";
     } else {
       json = "{\"msg_1\": 0}";
@@ -273,8 +292,9 @@ bool IPC_Client::IPCSendCommand(DaemonCommands cmd, std::string &ipc_msg1,
   }
 
   snprintf(msg.msg, sizeof(msg.msg), "%s", json.c_str());
+  orion::ipc_message_force_nul(msg);
 
-  if (IPCSendData(msg) < 0) {
+  if (send_frame_unlocked(msg) < 0) {
     shellui_log("Failed to send message to daemon");
     maybe_notify("Failed to send message to daemon");
     IPCCloseConnection();

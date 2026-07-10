@@ -63,6 +63,7 @@ PROD_CXX_SRCS := \
 	$(UTIL_ROOT)/source/http_github.cpp \
 	$(REPO_ROOT)/source/extern/cJSON/cJSON.cpp \
 	$(REPO_ROOT)/source/liborion_settings/source/settings.cpp \
+	$(REPO_ROOT)/source/liborion_ipc/source/ipc_server.cpp \
 	$(REPO_ROOT)/source/shellui/src/ps5_settings_ui.cpp \
 	$(REPO_ROOT)/source/shellui/src/toolbox_route.cpp
 
@@ -82,12 +83,15 @@ TEST_C_SRCS := \
 	test_platform_fs.c \
 	test_platform_log.c \
 	test_platform_notify.c \
+	test_toolbox_timing.c \
+	test_hijack_retry.c \
 	stubs/host_stubs.c
 
 TEST_CXX_SRCS := \
 	test_cheat_parsers.cpp \
 	test_settings.cpp \
 	test_msg_protocol.cpp \
+	test_ipc_harden.cpp \
 	test_ps5_settings_ui.cpp \
 	test_toolbox_route.cpp \
 	test_toolbox_helpers.cpp \
@@ -106,6 +110,7 @@ PROD_C_OBJS += $(BUILD_DIR)/prod/liborion_playtime/playtime.o
 PROD_CXX_OBJS := $(patsubst $(UTIL_ROOT)/%.cpp,$(BUILD_DIR)/prod/%.o,$(filter $(UTIL_ROOT)/%,$(PROD_CXX_SRCS)))
 PROD_CXX_OBJS += $(BUILD_DIR)/prod/extern/cJSON.o
 PROD_CXX_OBJS += $(BUILD_DIR)/prod/liborion_settings/settings.o
+PROD_CXX_OBJS += $(BUILD_DIR)/prod/liborion_ipc/ipc_server.o
 PROD_CXX_OBJS += $(BUILD_DIR)/prod/shellui/ps5_settings_ui.o
 PROD_CXX_OBJS += $(BUILD_DIR)/prod/shellui/toolbox_route.o
 
@@ -149,6 +154,10 @@ $(BUILD_DIR)/prod/extern/cJSON.o: $(REPO_ROOT)/source/extern/cJSON/cJSON.cpp | $
 	$(HOST_CXX) $(CXXFLAGS) $(THIRD_PARTY_FLAGS) -c -o $@ $<
 
 $(BUILD_DIR)/prod/liborion_settings/settings.o: $(REPO_ROOT)/source/liborion_settings/source/settings.cpp | $(BUILD_DIR)
+	@mkdir -p $(dir $@)
+	$(HOST_CXX) $(CXXFLAGS) -c -o $@ $<
+
+$(BUILD_DIR)/prod/liborion_ipc/ipc_server.o: $(REPO_ROOT)/source/liborion_ipc/source/ipc_server.cpp | $(BUILD_DIR)
 	@mkdir -p $(dir $@)
 	$(HOST_CXX) $(CXXFLAGS) -c -o $@ $<
 

@@ -54,7 +54,7 @@ extern "C" {
 
 extern bool is_handler_enabled;
 
-orion::Settings g_settings;
+orion::SettingsStore g_settings;
 atomic_bool g_legacy_cmd_server = false;
 atomic_bool g_legacy_cmd_server_exit = false;
 void start_ip_thread(void);
@@ -78,7 +78,7 @@ void __stack_chk_fail(void) {
     puts("Stack smashing detected.");
 }
 
-void LoadSettings(void) {
+bool LoadSettings() {
     orion::Settings s{};
     if (!orion::settings_load(&s)) {
         OrionHEN_log("config.ini missing; using defaults (path primary=%s)",
@@ -87,9 +87,12 @@ void LoadSettings(void) {
         OrionHEN_log("Loaded settings from %s", orion::settings_last_loaded_path());
     }
 
-    g_settings = s;
+    g_settings.store(s);
     g_legacy_cmd_server = s.legacy_cmd_server;
+    /* Missing file is not an error — defaults were applied. */
+    return true;
 }
+
 int main(void) {
     pthread_t ipc_server = 0;
     char tmp_buf[200];
@@ -112,9 +115,6 @@ int main(void) {
     kernel_base = args->kdata_base_addr;
     set_proc_authid(getpid(), DEBUG_AUTHID);
 
-
-    g_settings.rest_mode_delay_seconds = 0;
-    g_settings.toolbox_auto_start = true;
 	g_legacy_cmd_server_exit = false;
 
     unlink("/data/OrionHEN/OrionHEN_util_daemon.log");
@@ -134,7 +134,8 @@ int main(void) {
         orion_notify(true, "Failed to initialize the HTTP lib, downloading cheats will not work");
     }
 
-    if (g_settings.toolbox_auto_start && orion_ready_is_set(ORION_FLAG_UTIL_BOOTED)) {
+    if (g_settings.snapshot().toolbox_auto_start &&
+        orion_ready_is_set(ORION_FLAG_UTIL_BOOTED)) {
         OrionHEN_log("util already booted once — activating toolbox path");
         patch_checker();
     }
@@ -143,7 +144,8 @@ int main(void) {
 
     for (;;) {
         // for rest mode we wait til we can restart everything
-        if (g_settings.toolbox_auto_start && get_ip_address(&tmp_buf[0]) < 0) {
+        if (g_settings.snapshot().toolbox_auto_start &&
+            get_ip_address(&tmp_buf[0]) < 0) {
             sleep(1);
 
             bool fail1 = get_ip_address(&tmp_buf[0]) < 0;

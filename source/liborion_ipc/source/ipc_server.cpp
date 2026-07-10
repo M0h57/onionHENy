@@ -61,10 +61,20 @@ void *client_thread(void *arg) {
 
   logf("[%s] Thread created for Socket %i", tag, client->socket);
 
-  IPCMessage ipcMessage{};
-  int readSize = 0;
-  while ((readSize = ipc_network_recv(client->socket, &ipcMessage,
-                                      sizeof(ipcMessage))) > 0) {
+  while (true) {
+    IPCMessage ipcMessage{};
+    const int readSize = ipc_network_recv_full(client->socket, &ipcMessage,
+                                               static_cast<int32_t>(sizeof(ipcMessage)));
+    if (readSize <= 0) {
+      break;
+    }
+    if (!ipc_frame_is_complete(readSize)) {
+      logf("[%s][client %i] short frame %d (want %zu)", tag, client->cl_nmb,
+           readSize, sizeof(ipcMessage));
+      break;
+    }
+    ipc_message_force_nul(ipcMessage);
+
     if (ipcMessage.magic == static_cast<int>(0xDEADBABE)) {
       std::string message = ipcMessage.msg;
       if (handler) {
@@ -73,7 +83,8 @@ void *client_thread(void *arg) {
     } else {
       logf("[%s][client %i] Invalid magic number", tag, client->cl_nmb);
       ipcMessage.error = -1;
-      ipc_network_send(client->socket, &ipcMessage, sizeof(ipcMessage));
+      ipc_network_send_full(client->socket, &ipcMessage,
+                            static_cast<int32_t>(sizeof(ipcMessage)));
     }
   }
 
@@ -120,7 +131,9 @@ int ipc_network_listen(const char *soc_path) {
   return s;
 }
 
-int ipc_network_accept(int socket_fd) { return accept(socket_fd, nullptr, nullptr); }
+int ipc_network_accept(int socket_fd) {
+  return accept(socket_fd, nullptr, nullptr);
+}
 
 int ipc_network_recv(int socket_fd, void *buffer, int32_t size) {
   int n = recv(socket_fd, buffer, size, 0);
@@ -128,11 +141,105 @@ int ipc_network_recv(int socket_fd, void *buffer, int32_t size) {
   return n;
 }
 
+int ipc_network_recv_full(int socket_fd, void *buffer, int32_t size) {
+  if (!buffer || size <= 0) {
+    return -1;
+  }
+  auto *p = static_cast<char *>(buffer);
+  int32_t got = 0;
+  while (got < size) {
+    const int n = recv(socket_fd, p + got, static_cast<size_t>(size - got), 0);
+    if (n < 0) {
+      if (errno == EINTR) {
+        continue;
+      }
+      logf("recv_full error: %s", strerror(errno));
+      return -1;
+    }
+    if (n == 0) {
+      logf("recv_full EOF after %d / %d", got, size);
+      return got;
+    }
+    got += n;
+  }
+  logf("got %i bytes (full frame)", got);
+  return got;
+}
+
 int ipc_network_send(int socket_fd, void *buffer, int32_t size) {
   return send(socket_fd, buffer, size, MSG_NOSIGNAL);
 }
 
+int ipc_network_send_full(int socket_fd, const void *buffer, int32_t size) {
+  if (!buffer || size <= 0) {
+    return -1;
+  }
+  const auto *p = static_cast<const char *>(buffer);
+  int32_t sent = 0;
+  while (sent < size) {
+    const int n =
+        send(socket_fd, p + sent, static_cast<size_t>(size - sent), MSG_NOSIGNAL);
+    if (n < 0) {
+      if (errno == EINTR) {
+        continue;
+      }
+      return -1;
+    }
+    if (n == 0) {
+      return sent;
+    }
+    sent += n;
+  }
+  return sent;
+}
+
 int ipc_network_close(int socket_fd) { return close(socket_fd); }
+
+std::string ipc_json_escape(const std::string &in) {
+  std::string out;
+  out.reserve(in.size() + 8);
+  for (unsigned char c : in) {
+    switch (c) {
+    case '\\':
+      out += "\\\\";
+      break;
+    case '"':
+      out += "\\\"";
+      break;
+    case '\b':
+      out += "\\b";
+      break;
+    case '\f':
+      out += "\\f";
+      break;
+    case '\n':
+      out += "\\n";
+      break;
+    case '\r':
+      out += "\\r";
+      break;
+    case '\t':
+      out += "\\t";
+      break;
+    default:
+      if (c < 0x20) {
+        char hex[8];
+        snprintf(hex, sizeof(hex), "\\u%04x", c);
+        out += hex;
+      } else {
+        out += static_cast<char>(c);
+      }
+      break;
+    }
+  }
+  return out;
+}
+
+std::string ipc_format_reply_body(bool error, const std::string &out_var) {
+  /* Compact JSON; var is always a quoted escaped string. */
+  return std::string("{\"res\":") + std::to_string(error ? -1 : 0) +
+         ",\"var\":\"" + ipc_json_escape(out_var) + "\"}";
+}
 
 void ipc_reply(int sender_socket, DaemonCommands reply_cmd, bool error,
                const std::string &out_var) {
@@ -144,10 +251,11 @@ void ipc_reply(int sender_socket, DaemonCommands reply_cmd, bool error,
   outputMessage.error = error ? -1 : 0;
   bzero(outputMessage.msg, sizeof(outputMessage.msg));
   strncpy(outputMessage.msg, body.c_str(), sizeof(outputMessage.msg) - 1);
-  outputMessage.msg[sizeof(outputMessage.msg) - 1] = '\0';
+  ipc_message_force_nul(outputMessage);
 
   logf("error: %d", outputMessage.error);
-  ipc_network_send(sender_socket, &outputMessage, sizeof(outputMessage));
+  ipc_network_send_full(sender_socket, &outputMessage,
+                        static_cast<int32_t>(sizeof(outputMessage)));
 }
 
 void *ipc_server_loop(void *options_ptr) {

@@ -11,6 +11,9 @@
 #include <orion/proc_query.h>
 #include <orion/platform.h>
 #include <orion/ready.h>
+#include <orion/settings.hpp>
+#include <orion/hijack_retry.h>
+#include "globalconf.hpp"
 #include <elfldr_remote.h>
 #include "../../extern/cJSON/orion_cjson.hpp"
 
@@ -27,7 +30,6 @@
 #include <string.h>
 #include <unistd.h>
 
-extern orion::Settings g_settings;
 extern bool is_800;
 
 namespace {
@@ -89,8 +91,11 @@ void *fifo_and_dumper_thread(void *args) noexcept {
 
     pthread_mutex_lock(&jb_lock);
 
-    if (g_settings.enable_fan_speed)
-      set_fan_threshold(g_settings.fan_threshold);
+    {
+      const orion::Settings cfg = g_settings.snapshot();
+      if (cfg.enable_fan_speed)
+        set_fan_threshold(cfg.fan_threshold);
+    }
 
     int bappid = 0;
     if (!Get_Running_App_TID(tid, bappid)) {
@@ -161,18 +166,21 @@ void *fifo_and_dumper_thread(void *args) noexcept {
     do {
       spawned = Hijacker::getHijacker(reserved_value);
       if (!spawned) {
-        if (++hijack_retries > 30 || isProcessAlive(reserved_value)) {
+        ++hijack_retries;
+        OrionHEN_log("is null for PID %d (attempt %d)", reserved_value,
+                     hijack_retries);
+        if (orion_hijack_retry_should_stop(isProcessAlive(reserved_value),
+                                           hijack_retries, 30)) {
           orion_notify(true, "Jailbreak failed, PID is invaild");
           OrionHEN_log("Jailbreak failed, PID is invaild");
           break;
         }
       }
-      OrionHEN_log("is null for PID %d", reserved_value);
     } while (spawned == nullptr);
 
     if (spawned) {
       OrionHEN_log("RIGHT Jailbreak command received: jailbreaking...");
-      if (g_settings.debug_app_jb_msg)
+      if (g_settings.snapshot().debug_app_jb_msg)
         orion_notify(true, "App (PID %i) has been granted a jailbreak", reserved_value);
 
       spawned->jailbreak(true);

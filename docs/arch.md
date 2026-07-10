@@ -247,10 +247,13 @@ ipc_client.*     注入侧客户端
 #### 配置分层
 
 ```
-orion::Settings  持久化 schema（单文件双路径）
-g_settings       各进程持有的 Settings 实例
-运行时原子量     仅 util：g_legacy_cmd_server / g_legacy_cmd_server_exit（热路径）
-OverlayLayout    仅 shellui：由 overlay_pos 派生的像素坐标
+orion::Settings       持久化 schema（双路径 twin：primary + shellui）
+orion::SettingsStore  进程内线程安全真相源（mutex + snapshot/store/update）
+g_settings            daemon/util：SettingsStore；shellui：Settings（UI 线程）
+LoadSettings()        统一 bool 契约：刷新 store；缺文件用默认并成功
+mtime 门控            settings_config_newest_mtime — 任一 twin 更新即失效
+运行时原子量          仅 util：g_legacy_cmd_server / g_legacy_cmd_server_exit（热路径）
+OverlayLayout         仅 shellui：由 overlay_pos 派生的像素坐标
 ```
 
 ### 2.8 主机工具（`scripts/`）

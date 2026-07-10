@@ -60,19 +60,20 @@ void apply_overlay_layout() {
 bool LoadSettings()
 {
   orion::Settings s{};
-  const bool loaded = orion::settings_load(&s);
-  if (!loaded) {
+  /* false from settings_load means defaults only — not a hard failure. */
+  if (!orion::settings_load(&s)) {
     shellui_log("config.ini missing; using defaults");
   } else {
     shellui_log("Loaded settings from %s", orion::settings_last_loaded_path());
   }
 
-  // g_settings is the single store; single store for all consumers.
+  // Process-local store (UI thread); twin disk paths via settings_load/save.
   g_settings = s;
   if (g_settings.overlay_fps) {
     orion_ready_signal(ORION_FLAG_FPS_OVERLAY);
   }
   apply_overlay_layout();
+  /* Always true once defaults-or-file applied (prx boot requires success). */
   return true;
 }
 

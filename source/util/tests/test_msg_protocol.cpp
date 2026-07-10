@@ -73,9 +73,10 @@ static int test_ipc_format_reply_body(void) {
   std::string ok = ipc_format_reply_body(false, "Nothing");
   std::string err = ipc_format_reply_body(true, "fail");
   std::string tid = ipc_format_reply_body(false, "CUSA12345");
-  TEST_ASSERT_STREQ("{\"res\":0, \"var\":\"Nothing\"}", ok.c_str());
-  TEST_ASSERT_STREQ("{\"res\":-1, \"var\":\"fail\"}", err.c_str());
-  TEST_ASSERT_STREQ("{\"res\":0, \"var\":\"CUSA12345\"}", tid.c_str());
+  /* Compact JSON; var is escaped (no space after colon). */
+  TEST_ASSERT_STREQ("{\"res\":0,\"var\":\"Nothing\"}", ok.c_str());
+  TEST_ASSERT_STREQ("{\"res\":-1,\"var\":\"fail\"}", err.c_str());
+  TEST_ASSERT_STREQ("{\"res\":0,\"var\":\"CUSA12345\"}", tid.c_str());
   return 0;
 }
 

@@ -5,6 +5,7 @@
 #include "daemon_ops.hpp"
 #include "ipc.hpp"
 #include <orion/platform.h>
+#include <orion/settings.hpp>
 #include "../../extern/cJSON/orion_cjson.hpp"
 #include "globalconf.hpp"
 #include <msg.hpp>
@@ -19,7 +20,7 @@
 #include <signal.h>
 #include <strings.h>
 
-extern orion::Settings g_settings;
+
 
 bool copyRecursive(const char *source, const char *destination);
 bool copyFile(const char *source, const char *destination, bool for_dumper);
@@ -36,7 +37,6 @@ void handleIPC(clientArgs *client, std::string &inputStr,
   std::string path_buf, path_buf2, json_path;
   const char *path = nullptr, *dest = nullptr;
   char size_buf[0x255];
-  bool last_ipc_error = false;
 
   std::string out_var = "Nothing"; // default send var
 
@@ -64,7 +64,9 @@ void handleIPC(clientArgs *client, std::string &inputStr,
     break;
   }
   case BREW_LAST_RET: {
-    reply(sender_app, last_ipc_error, last_ipc_error ? "1" : "0");
+    /* Tracks last reply() error for this process (not this call's local). */
+    const int last = daemon_last_ipc_error();
+    reply(sender_app, last != 0, last != 0 ? "1" : "0");
     break;
   }
   case BREW_UNUSED_DECRYPT_DIR:
@@ -132,6 +134,11 @@ void handleIPC(clientArgs *client, std::string &inputStr,
     break;
   case BREW_STAT_CMD: {
     path = orion_cjson::string_item(my_json.get(), "path");
+    if (!path || !*path) {
+      OrionHEN_log("BREW_STAT_CMD: missing path");
+      reply(sender_app, true);
+      break;
+    }
     if (stat(path, &buffer) == 0) {
       snprintf(size_buf, sizeof(size_buf), "%ld", buffer.st_size);
       OrionHEN_log("%s exists | size %s", path, size_buf);
@@ -143,15 +150,27 @@ void handleIPC(clientArgs *client, std::string &inputStr,
     break;
   }
   case BREW_CALC_DIR_SIZE: {
-    uint64_t size = calculateTotalSize(orion_cjson::string_item(my_json.get(), "path"));
-    snprintf(size_buf, sizeof(size_buf), "%lu", size);
-    OrionHEN_log("size %lu", size_buf);
+    path = orion_cjson::string_item(my_json.get(), "path");
+    if (!path || !*path) {
+      OrionHEN_log("BREW_CALC_DIR_SIZE: missing path");
+      reply(sender_app, true);
+      break;
+    }
+    uint64_t size = calculateTotalSize(path);
+    snprintf(size_buf, sizeof(size_buf), "%lu",
+             static_cast<unsigned long>(size));
+    OrionHEN_log("size %s", size_buf);
     reply(sender_app, false, size_buf);
     break;
   }
   case BREW_COPY_FILE: {
     path = orion_cjson::string_item(my_json.get(), "path");
     dest = orion_cjson::string_item(my_json.get(), "dest");
+    if (!path || !*path || !dest || !*dest) {
+      OrionHEN_log("BREW_COPY_FILE: missing path/dest");
+      reply(sender_app, true);
+      break;
+    }
     if (copyFile(path, dest, false)) {
       reply(sender_app, false);
     } else {
@@ -163,7 +182,13 @@ void handleIPC(clientArgs *client, std::string &inputStr,
   case BREW_COPY_DIR: {
     path = orion_cjson::string_item(my_json.get(), "path");
     dest = orion_cjson::string_item(my_json.get(), "dest");
-    snprintf(size_buf, sizeof(size_buf), "%lu", calculateTotalSize(path));
+    if (!path || !*path || !dest || !*dest) {
+      OrionHEN_log("BREW_COPY_DIR: missing path/dest");
+      reply(sender_app, true);
+      break;
+    }
+    snprintf(size_buf, sizeof(size_buf), "%lu",
+             static_cast<unsigned long>(calculateTotalSize(path)));
     if (copyRecursive(path, dest)) {
       reply(sender_app, false, size_buf);
     } else {
@@ -174,6 +199,11 @@ void handleIPC(clientArgs *client, std::string &inputStr,
   }
   case BREW_DELETE_DIR: {
     path = orion_cjson::string_item(my_json.get(), "path");
+    if (!path || !*path) {
+      OrionHEN_log("BREW_DELETE_DIR: missing path");
+      reply(sender_app, true);
+      break;
+    }
     if (rmtree(path)) {
       reply(sender_app, false);
     } else {
@@ -182,7 +212,13 @@ void handleIPC(clientArgs *client, std::string &inputStr,
     break;
   }
   case BREW_TEST_SB_FILE: {
-    reply(sender_app, !test_sb_file(orion_cjson::string_item(my_json.get(), "path")));
+    path = orion_cjson::string_item(my_json.get(), "path");
+    if (!path || !*path) {
+      OrionHEN_log("BREW_TEST_SB_FILE: missing path");
+      reply(sender_app, true);
+      break;
+    }
+    reply(sender_app, !test_sb_file(path));
     break;
   }
   case BREW_DAEMON_PID: {
@@ -206,18 +242,32 @@ void handleIPC(clientArgs *client, std::string &inputStr,
       break;
     }
 
-    g_settings.enable_fan_speed = enabled;
-
     if (!enabled) {
       orion_notify(true, "Fan speed adjustment is disabled.");
       set_fan_threshold(77);
+      const orion::Settings saved = g_settings.update([](orion::Settings &s) {
+        s.enable_fan_speed = false;
+      });
+      if (orion::settings_save(saved)) {
+        SettingsNoteDiskWritten();
+      } else {
+        OrionHEN_log("Fan disable: failed to persist settings");
+      }
       reply(sender_app, false);
       break;
     }
 
     if (set_fan_threshold(speed)) {
       orion_notify(true, "Fan threshold adjusted to %i°C.", speed);
-      g_settings.fan_threshold = speed;
+      const orion::Settings saved = g_settings.update([speed](orion::Settings &s) {
+        s.enable_fan_speed = true;
+        s.fan_threshold = speed;
+      });
+      if (orion::settings_save(saved)) {
+        SettingsNoteDiskWritten();
+      } else {
+        OrionHEN_log("Fan enable: memory updated but disk twin save failed");
+      }
       reply(sender_app, false);
     } else {
       orion_notify(true, "Failed to adjust fan speed.");

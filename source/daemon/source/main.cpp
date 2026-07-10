@@ -126,7 +126,6 @@ extern "C" {
 // Global variables
 uint64_t p_syscall = 0;
 char _end[1] = {};
-orion::Settings g_settings;
 int fd = -1;
 static constexpr auto DEFAULT_PRIORITY = 256;
 uintptr_t kernel_base = 0;
@@ -369,7 +368,8 @@ int main() {
   OrionHEN_log("is toolbox only: %s | ver: %x", toolbox_only ? "Yes" : "No",
                sys_ver.version);
 
-  if (g_settings.toolbox_auto_start) {
+  const orion::Settings boot_cfg = g_settings.snapshot();
+  if (boot_cfg.toolbox_auto_start) {
     cmd_enable_toolbox();
   } else {
     orion_notify(true,
@@ -382,11 +382,11 @@ int main() {
   OrionHEN_log("StartUp thread created!! - welcome to OrionHEN");
 
   if (const char* uri =
-          startup_uri_for_option(g_settings.start_option, g_settings.toolbox_auto_start)) {
+          startup_uri_for_option(boot_cfg.start_option, boot_cfg.toolbox_auto_start)) {
     OrionHEN_log("ret %d", ItemzLaunchByUri(uri));
   }
 
-  if (g_settings.auto_eject_disc)
+  if (boot_cfg.auto_eject_disc)
     sceShellCoreUtilRequestEjectDevice("/dev/cd0");
 
   ipc_supervisor_loop(&msg_thr);

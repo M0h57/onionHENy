@@ -6,6 +6,8 @@
 #include <orion/proc_query.h>
 #include <orion/ready.h>
 #include <orion/settings.hpp>
+#include <orion/toolbox_timing.h>
+#include "globalconf.hpp"
 #include "dbg/dbg.hpp"
 #include "elf/elf.hpp"
 #include "hijacker/hijacker.hpp"
@@ -26,8 +28,6 @@ extern uint8_t fps_elf_start[];
 extern const unsigned int fps_elf_size;
 int _sceApplicationGetAppId(int pid, int *appid);
 }
-
-extern orion::Settings g_settings;
 
 static void SuspendApp(pid_t pid)
 {
@@ -272,11 +272,21 @@ bool cmd_enable_toolbox(){
     }
 
     OrionHEN_log("Activating toolbox...");
-    /* util_booted: util has completed at least one full start (typed ready flag). */
-    if (orion_ready_is_set(ORION_FLAG_UTIL_BOOTED)) {
-      LoadSettings();
-      OrionHEN_log("sleeping for %llu", g_settings.rest_mode_delay_seconds);
-      sleep(g_settings.rest_mode_delay_seconds);
+    /*
+     * Rest_Mode_Delay only on rest resume — never on cold start.
+     * util_booted is true almost immediately after util starts (before this
+     * inject), so gating on it alone hung first toolbox load for delay seconds.
+     * Rest re-activation delay lives in util patch_checker / check_addr_change.
+     */
+    LoadSettings();
+    {
+      const uint64_t delay = g_settings.snapshot().rest_mode_delay_seconds;
+      constexpr bool kRestResume = false; /* daemon cold/direct inject path */
+      if (orion_toolbox_should_apply_rest_delay(kRestResume, delay)) {
+        OrionHEN_log("rest delay %llu (rest resume path)",
+                     static_cast<unsigned long long>(delay));
+        sleep(static_cast<unsigned int>(delay));
+      }
     }
 
     /* Prefer kstuff ready marker when present; fall back to short settle. */

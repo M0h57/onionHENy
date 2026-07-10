@@ -1,65 +1,67 @@
-/* Copyright (C) 2025 OrionHEN / LightningMods */
+/* Copyright (C) 2025 OrionHEN / LightningMods
+ *
+ * Process-local settings store + dual-path mtime reload gate.
+ */
 
 #include "daemon_ops.hpp"
 #include "globalconf.hpp"
 #include <orion/platform.h>
 #include <orion/settings.hpp>
-#include <sys/stat.h>
 
-
-
-#include <sys/stat.h>
+namespace {
 
 struct ConfigState {
+  /** Max mtime of twin paths at last successful store update. */
   time_t last_modified = 0;
+  bool ever_loaded = false;
 };
 
 ConfigState config_state;
 
-void LoadSettings() {
-  struct stat file_stat {};
-  const char *paths[] = {orion::kConfigPathPrimary, orion::kConfigPathShellui};
+} // namespace
 
-  // Prefer primary; fall back to shellui path for mtime / create.
-  const char *config_path = nullptr;
-  for (const char *p : paths) {
-    if (stat(p, &file_stat) == 0) {
-      config_path = p;
-      break;
-    }
+orion::SettingsStore g_settings;
+
+bool LoadSettings() {
+  const time_t newest = orion::settings_config_newest_mtime();
+
+  // Skip disk I/O when neither twin is newer than the last applied snapshot.
+  if (config_state.ever_loaded && !orion::settings_config_is_newer_than(
+                                      config_state.last_modified)) {
+    return true;
   }
 
-  if (!config_path) {
+  if (newest == 0) {
     OrionHEN_log("[Daemon] Config file not found. Creating default schema...");
     if (orion::settings_ensure_default()) {
       orion_notify(true, "OrionHEN config created! @ /data/OrionHEN/config.ini");
-      config_state.last_modified = 0;
     }
-    // Apply defaults even if create failed.
-    orion::Settings s{};
-    orion::settings_load(&s);
-    g_settings = s;
-    return;
-  }
-
-  // Only reload if file has been modified since last load
-  if (file_stat.st_mtime <= config_state.last_modified) {
-    return;
   }
 
   OrionHEN_log("[Daemon] Loading Settings from shared schema...");
   orion::Settings s{};
-  if (!orion::settings_load(&s)) {
+  const bool from_file = orion::settings_load(&s);
+  if (!from_file && newest != 0) {
     orion_notify(true, "Failed to Read the Settings file");
-    return;
+    return false;
   }
 
-  OrionHEN_log("[Daemon] Reading Settings from %s",
-               orion::settings_last_loaded_path());
+  if (from_file) {
+    OrionHEN_log("[Daemon] Reading Settings from %s",
+                 orion::settings_last_loaded_path());
+  } else {
+    OrionHEN_log("[Daemon] Using default settings (no config file)");
+  }
   OrionHEN_log("fan_threshold: %d", s.fan_threshold);
   OrionHEN_log("enable_fan_speed: %d", s.enable_fan_speed ? 1 : 0);
 
-  g_settings = s;
+  g_settings.store(s);
+  config_state.last_modified = orion::settings_config_newest_mtime();
+  config_state.ever_loaded = true;
+  return true;
+}
 
-  config_state.last_modified = file_stat.st_mtime;
+void SettingsNoteDiskWritten() {
+  config_state.last_modified = orion::settings_config_newest_mtime();
+  config_state.ever_loaded = true;
 }

@@ -17,6 +17,7 @@ along with this program; see the file COPYING. If not, see
 #pragma once
 
 #include <msg.hpp>
+#include <mutex>
 #include <string>
 
 // ---------------------------------------------------------------------------
@@ -25,6 +26,8 @@ along with this program; see the file COPYING. If not, see
 // Design rules:
 //   - One connection object per target (crit vs util). Never flip a flag on a
 //     shared singleton — that races MainDaemonSocket / UtilDaemonSocket.
+//   - IPCSendCommand is serialized with a per-instance mutex (shellui hooks +
+//     background threads may share the same singleton).
 //   - Implementation lives in the .cpp (not header-only).
 //   - JSON string fields are built with cJSON (escape-safe).
 // ---------------------------------------------------------------------------
@@ -102,8 +105,14 @@ private:
   bool util_daemon_;
   int socket_fd_;
   int recv_timeout_ms_;
+  mutable std::mutex mu_;
 
   const char *socket_path() const;
   bool require_util(const char *what) const;
   bool require_crit(const char *what) const;
+
+  /** Unlocked: full-frame send of IPCMessage. */
+  int send_frame_unlocked(const IPCMessage &msg);
+  /** Unlocked: full-frame recv into msg; forces NUL on payload. */
+  int recv_frame_unlocked(IPCMessage &msg);
 };

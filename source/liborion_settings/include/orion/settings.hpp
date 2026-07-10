@@ -16,9 +16,6 @@ along with this program; see the file COPYING. If not, see
 
 #pragma once
 
-#include <cstdint>
-#include <string>
-
 // ---------------------------------------------------------------------------
 // Single product config schema for daemon / util / shellui.
 //
@@ -26,12 +23,22 @@ along with this program; see the file COPYING. If not, see
 //   primary  /data/OrionHEN/config.ini          (elevated daemons)
 //   shellui  /user/data/OrionHEN/config.ini     (SceShellUI sandbox view)
 // Load tries both; save writes all writable targets so the files stay twins.
+//
+// Process-local store: use SettingsStore for multi-threaded daemons (snapshot
+// under mutex). Multi-process copies of Settings are expected and OK.
+//
+// Force C++ linkage even when a parent includes us under extern "C"
+// (e.g. util common_utils.h inside extern "C" blocks).
 // ---------------------------------------------------------------------------
 
-// Force C++ linkage even if a parent header included us under extern "C".
 #ifdef __cplusplus
 extern "C++" {
-#endif
+
+#include <cstdint>
+#include <ctime>
+#include <mutex>
+#include <string>
+#include <utility>
 
 namespace orion {
 
@@ -82,6 +89,37 @@ struct Settings {
   int schema_version = kSettingsSchemaVersion;
 };
 
+// Thread-safe process-local settings (daemon / util IPC + worker threads).
+// ShellUI may keep a plain Settings if UI work is single-threaded; prefer this
+// store when readers and writers can race.
+class SettingsStore {
+public:
+  SettingsStore() = default;
+  explicit SettingsStore(const Settings &s) : s_(s) {}
+
+  Settings snapshot() const {
+    std::lock_guard<std::mutex> lock(mu_);
+    return s_;
+  }
+
+  void store(const Settings &s) {
+    std::lock_guard<std::mutex> lock(mu_);
+    s_ = s;
+  }
+
+  /** Mutate under lock; returns a copy of the new value. */
+  template <typename Fn>
+  Settings update(Fn &&fn) {
+    std::lock_guard<std::mutex> lock(mu_);
+    fn(s_);
+    return s_;
+  }
+
+private:
+  mutable std::mutex mu_;
+  Settings s_{};
+};
+
 // Fill `out` with defaults then overlay values from the first readable config path.
 // Returns true if a file was loaded; false means defaults only (file missing).
 bool settings_load(Settings *out);
@@ -107,8 +145,19 @@ const char *settings_last_loaded_path();
 // USB override used historically by daemons.
 bool settings_usb_disables_toolbox_auto_start();
 
+/**
+ * Max st_mtime across both twin config paths (0 if neither exists).
+ * Use for daemon reload gating so either path's write invalidates the cache.
+ */
+time_t settings_config_newest_mtime();
+
+/**
+ * True if any twin path has mtime strictly greater than `since`.
+ * When no config file exists, returns false (nothing newer on disk).
+ */
+bool settings_config_is_newer_than(time_t since);
+
 } // namespace orion
 
-#ifdef __cplusplus
 } // extern "C++"
-#endif
+#endif /* __cplusplus */

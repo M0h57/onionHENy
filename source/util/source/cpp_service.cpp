@@ -18,6 +18,9 @@ along with this program; see the file COPYING. If not, see
 #include <orion/ipc_client.hpp>
 #include <orion/ready.h>
 #include <orion/proc_query.h>
+#include <orion/settings.hpp>
+#include <orion/hijack_retry.h>
+#include "common_utils.h"
 #include <string>
 #include <vector>
 #include <unistd.h>
@@ -86,9 +89,8 @@ pthread_mutex_t jb_lock = PTHREAD_MUTEX_INITIALIZER;
 extern atomic_bool not_connected;
 
 // Function forward declarations
-bool LoadSettings();
 void check_addr_change(void);
-int get_ip_address(char *ip_address);
+// get_ip_address: common_utils.h (always C linkage)
 
 // util_toolbox.cpp
 bool enable_toolbox();
@@ -135,24 +137,27 @@ void cmd_server(int sock, Command &cmd) {
         
         OrionHEN_log("WRONG Jailbreak command received: jailbreaking...");
         {
-            do { 
+            do {
                 spawned = Hijacker::getHijacker(cmd.PID);
                 if (spawned == nullptr) {
-                    if (isProcessAlive(cmd.PID)) {
-                        OrionHEN_log("process died");
-                        break;
-                    }
                     retries++;
-                    if (retries > 30) {
+                    OrionHEN_log("is null for PID %d (attempt %d)", cmd.PID,
+                                 retries);
+                    if (orion_hijack_retry_should_stop(isProcessAlive(cmd.PID),
+                                                       retries, 30)) {
                         orion_notify(true, "Jailbreak failed, PID is invaild");
                         OrionHEN_log("Jailbreak failed, PID is invaild");
                         break;
                     }
                 }
-                OrionHEN_log("is null for PID %d", cmd.PID);
             } while (spawned == nullptr);
 
             retries = 0;
+
+            if (!spawned) {
+                replyError(sock);
+                break;
+            }
 
             orion_notify(true, "[Legacy] App has been granted a jailbreak\n\nAn update for "
                       "this PKG is available");
@@ -274,8 +279,11 @@ void check_addr_change(void) {
         } else if (rest_mode_action && !no_network_patched && !not_connected &&
                   real_rest_mode_detected) {
             LoadSettings();
-            OrionHEN_log("sleeping for %lld secs", g_settings.rest_mode_delay_seconds);
-            sleep(g_settings.rest_mode_delay_seconds);
+            const uint64_t delay =
+                g_settings.snapshot().rest_mode_delay_seconds;
+            OrionHEN_log("sleeping for %llu secs",
+                         static_cast<unsigned long long>(delay));
+            sleep(static_cast<unsigned int>(delay));
             orion_notify(true, "Coming out of Rest Mode detected, restarting server(s)");
             OrionHEN_log("waiting for logged in user");
             
@@ -287,7 +295,10 @@ void check_addr_change(void) {
             OrionHEN_log("Coming out rest mode, activating patches");
             
 
-            if (g_settings.toolbox_auto_start  && !g_settings.disable_toolbox_auto_start_for_rest_mode && !enable_toolbox()) {
+            const orion::Settings cfg = g_settings.snapshot();
+            if (cfg.toolbox_auto_start &&
+                !cfg.disable_toolbox_auto_start_for_rest_mode &&
+                !enable_toolbox()) {
                 orion_notify(true, "Failed to inject toolbox");
             }
         }

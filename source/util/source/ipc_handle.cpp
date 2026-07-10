@@ -39,7 +39,6 @@ extern atomic_bool g_legacy_cmd_server;
 extern atomic_bool g_legacy_cmd_server_exit;
 
 void reply(int sender_socket, bool error, std::string out_var = "Nothing");
-bool LoadSettings();
 extern "C" {
 bool load_plugin(const char *path);
 int launchApp(const char *titleId);
@@ -73,6 +72,10 @@ void handleIPC(clientArgs *client, std::string &inputStr,
   }
 
   switch (command) {
+  case BREW_UTIL_TEST_CONNECTION: {
+    reply(sender_app, false, out_var);
+    break;
+  }
   case BREW_UTIL_SHELLUI_ON_STANDBY: {
     OrionHEN_log("ShellUI on standby");
     real_rest_mode_detected = no_network_rest_mode_action = true;

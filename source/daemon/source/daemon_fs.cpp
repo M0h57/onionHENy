@@ -5,6 +5,7 @@
 #include <orion/proc_query.h>
 #include <orion/ipc_server.hpp>
 #include <msg.hpp>
+#include <atomic>
 #include <string>
 #include <cstring>
 #include <cstdio>
@@ -190,7 +191,16 @@ bool test_sb_file(const char *filename) {
 }
 
 
+namespace {
+std::atomic<int> g_last_ipc_error{0};
+} // namespace
+
+int daemon_last_ipc_error() {
+  return g_last_ipc_error.load(std::memory_order_relaxed);
+}
+
 void reply(int sender_socket, bool error, std::string out_var) {
+  g_last_ipc_error.store(error ? -1 : 0, std::memory_order_relaxed);
   orion::ipc_reply(sender_socket, BREW_RETURN_VALUE, error, out_var);
 }
 

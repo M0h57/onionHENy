@@ -29,7 +29,8 @@ enum StartOpts {
   TOOLBOX,
 };
 
-// Single process store (same schema as util / shellui).
-extern orion::Settings g_settings;
+// Thread-safe process store (same schema as util / shellui).
+// Readers: g_settings.snapshot().  Writers: g_settings.store / update.
+extern orion::SettingsStore g_settings;
 
 int launchApp(const char *titleId);

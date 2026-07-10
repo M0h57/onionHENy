@@ -202,6 +202,42 @@ static int test_empty_file_loads_defaults(void) {
   return 0;
 }
 
+static int test_settings_store_snapshot_update(void) {
+  orion::SettingsStore store;
+  orion::Settings a = store.snapshot();
+  TEST_ASSERT_EQ_INT(77, a.fan_threshold);
+
+  store.update([](orion::Settings &s) {
+    s.fan_threshold = 60;
+    s.enable_fan_speed = true;
+  });
+  orion::Settings b = store.snapshot();
+  TEST_ASSERT_EQ_INT(60, b.fan_threshold);
+  TEST_ASSERT_TRUE(b.enable_fan_speed);
+
+  orion::Settings c{};
+  c.overlay_fps = true;
+  store.store(c);
+  orion::Settings d = store.snapshot();
+  TEST_ASSERT_TRUE(d.overlay_fps);
+  TEST_ASSERT_TRUE(d.enable_fan_speed == false); /* full replace */
+  return 0;
+}
+
+static int test_config_mtime_helpers(void) {
+  /* No twin paths on host test machine → newest is 0, not newer. */
+  TEST_ASSERT_TRUE(orion::settings_config_newest_mtime() == 0 ||
+                   orion::settings_config_newest_mtime() >= 0);
+  const time_t n = orion::settings_config_newest_mtime();
+  if (n == 0) {
+    TEST_ASSERT_TRUE(!orion::settings_config_is_newer_than(0));
+  } else {
+    TEST_ASSERT_TRUE(orion::settings_config_is_newer_than(n - 1));
+    TEST_ASSERT_TRUE(!orion::settings_config_is_newer_than(n));
+  }
+  return 0;
+}
+
 extern "C" int test_settings_suite(void) {
   int failures = 0;
   failures += orion_test_run("settings_defaults_serialize", test_defaults_and_serialize_keys);
@@ -213,5 +249,8 @@ extern "C" int test_settings_suite(void) {
   failures += orion_test_run("settings_partial_ini_defaults", test_partial_ini_keeps_defaults);
   failures += orion_test_run("settings_serialize_overlay_keys", test_serialize_contains_overlay_keys);
   failures += orion_test_run("settings_empty_file_defaults", test_empty_file_loads_defaults);
+  failures += orion_test_run("settings_store_snapshot_update",
+                             test_settings_store_snapshot_update);
+  failures += orion_test_run("settings_config_mtime_helpers", test_config_mtime_helpers);
   return failures;
 }

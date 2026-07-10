@@ -70,13 +70,13 @@ NineS       ──► orion_proc（不再自带 proc 副本）
 
 NineS 已避免 per-call authid 翻转；bootstrapper/util attach 仍在翻转。util 金手指走 `pt_attach_proc`（翻转）+ NineS `pt_mmap`（不翻转）——**同一条路径两套策略**。
 
-### 2.2 Settings：单 schema、三份真相
+### 2.2 Settings：单 schema、三份真相 — **已落地（2026-07-10）**
 
-- 进程内各有一份 `g_settings`（daemon / util / shellui）——多进程可接受。
-- **同一进程内无锁**，IPC 写 + jailbreak 线程读 → 数据竞争。
-- Fan IPC 只改内存，不 `settings_save`；与 shellui 磁盘双写 twin 模型不一致。
-- util：`void LoadSettings()` 定义 vs 多处 `bool LoadSettings()` 声明（ODR/潜在 UB）。
-- daemon mtime 缓存：只盯「第一个存在的 path」，双路径不同步时可能误跳过重载。
+- 进程内各有一份 store（daemon / util：`SettingsStore`；shellui：`Settings`）——多进程可接受。
+- daemon/util：`SettingsStore` mutex + `snapshot`/`store`/`update`，消除 IPC 写与 worker 读竞争。
+- Fan IPC：`update` 后 `settings_save` + `SettingsNoteDiskWritten`（twin 落盘）。
+- 统一 `bool LoadSettings()`（缺文件用默认并成功）；util ODR 已修。
+- mtime 门控：`settings_config_newest_mtime` 取双路径 max，任一 twin 更新即重载。
 
 ### 2.3 Ready 标志语义泄漏
 
@@ -169,28 +169,22 @@ Bootstrapper 只 clear util/kstuff/daemon/toolbox，**不清** `util_booted` / `
    - Code cave：`MAP_FIXED` 或按返回 VA 写
    - elfldr：`sizeof(Elf64_Shdr)`；mprotect 失败 fail-closed
 
-2. **IPC 硬化**（一处修、全树受益）
-   - 全帧 recv + 强制 NUL
-   - cJSON 转义 reply
-   - path 全 null-check
-   - 补 `BREW_UTIL_TEST_CONNECTION`；修或删 `BREW_LAST_RET`
-   - shellui：`IPC_Client` 加 mutex 或每调用独立连接
+2. **IPC 硬化** — **已落地（2026-07-10）**
+   - 全帧 `recv_full`/`send_full` + `ipc_message_force_nul`
+   - `ipc_json_escape` + compact escaped `ipc_format_reply_body`
+   - daemon path 全 null-check；`BREW_UTIL_TEST_CONNECTION`；`BREW_LAST_RET` 记 process last error
+   - `IPC_Client` 实例 mutex + full-frame 收发
 
-3. **Ready / Settings 语义收口**
-   - rest delay 只绑 rest 信号，不要绑 `util_booted`
-   - bootstrapper clear `util_booted` + `fps_overlay`
-   - 统一 `LoadSettings` 契约；fan 走 `settings_save`
-   - `g_settings` 快照或读写锁
+3. **Ready / Settings 语义收口** — 部分已落地
+   - rest delay：daemon 冷启动不再因 `util_booted` sleep（`orion/toolbox_timing.h`）
+   - Settings store / fan 落盘 / `LoadSettings` 契约 — 见 §2.2
+   - bootstrapper sticky flag clear — 仍待
 
 4. **加深模块（架构债）** — **已落地（2026-07-10）**
-   - 单一 `liborion_elfldr`（合并三份 pt/elfldr，统一 authid 策略）
-   - 删除 shellui 本地 `if_exists` 前向声明；走 `orion/platform`
-   - daemon `get_shellui_pid` / `get_game_pid` 收敛到 `orion_proc`
+   - 单一 `liborion_elfldr`；shellui `orion/platform`；daemon pid → `orion_proc`
 
-5. **补测**
-   - IPC 组帧/转义/null path 的 host 测试
-   - ready 冷启动时序测试（util 先 booted → daemon 不应 sleep rest delay）
-   - jailbreak 重试条件单元测试
+5. **补测** — **已落地（2026-07-10）**
+   - `test_ipc_harden` / `test_toolbox_timing` / `test_hijack_retry`
 
 ---
 
@@ -198,10 +192,11 @@ Bootstrapper 只 clear util/kstuff/daemon/toolbox，**不清** `util_booted` / `
 
 架构骨架（双 daemon、共享 `liborion_*`、util 承载重 IO、ready 协议）是清晰且在向深模块演进的。
 
-当前最危险的不是「缺库」，而是：
+当前仍优先关注：
 
-1. **进程标识混用（appid vs pid）**
-2. **存活检测条件写反 + 空指针 jailbreak**
+1. **进程标识混用（appid vs pid）**（FPS suspend 路径）
+2. **Jailbreak retry / null spawn** — 策略已修，实机仍需回归
+3. sticky ready flags（bootstrapper clear）
 3. **IPC 未组帧/未转义 + shellui 并发单连接**
 4. **ready/settings 生命周期与文档不符**
 5. **elfldr/pt/detour 失败未 fail-closed + 三份漂移**

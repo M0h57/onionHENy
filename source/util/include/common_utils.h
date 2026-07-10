@@ -92,10 +92,15 @@ typedef struct notify_request
 } notify_request_t;
 
 /*================ SETTINGS ==============*/
-/* Persisted keys: orion::Settings. Concurrent CMD flags stay atomic. */
+/* Persisted keys: orion::SettingsStore. Concurrent CMD flags stay atomic.
+ * Always C++ linkage even when this header is included under extern "C". */
 #ifdef __cplusplus
+extern "C++" {
 #include <orion/settings.hpp>
-extern orion::Settings g_settings;
+extern orion::SettingsStore g_settings;
+/** Reload twin config into g_settings; missing file applies defaults (true). */
+bool LoadSettings();
+} /* extern "C++" */
 #endif
 extern atomic_bool g_legacy_cmd_server;
 extern atomic_bool g_legacy_cmd_server_exit;
@@ -153,10 +158,11 @@ bool IniliatizeHTTP(void);
 /* download/extract/shutdown: see extern "C" block below */
 
 /*============ Back up JB server ==============*/
-int get_ip_address(char *ip_address);
+/* Always C linkage (impl in common_utils.c) regardless of include context. */
 #ifdef __cplusplus
 extern "C" {
 #endif
+int get_ip_address(char *ip_address);
 #include <orion/platform.h>
 #include <orion/proc_query.h>
 int sceNetCtlInit(void);

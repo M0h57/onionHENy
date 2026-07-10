@@ -17,6 +17,7 @@ along with this program; see the file COPYING. If not, see
 #pragma once
 
 #include <msg.hpp>
+#include <cstddef>
 #include <string>
 
 // ---------------------------------------------------------------------------
@@ -49,19 +50,46 @@ void ipc_server_set_log(IpcServerLogFn fn);
 // --- transport primitives ---
 int ipc_network_listen(const char *soc_path);
 int ipc_network_accept(int socket_fd);
+
+/** Single recv (may be short). Prefer ipc_network_recv_full for frames. */
 int ipc_network_recv(int socket_fd, void *buffer, int32_t size);
+
+/**
+ * Read exactly `size` bytes (loop on short reads / EINTR).
+ * Returns size on success, 0 on clean EOF before any data, 0 < n < size on
+ * short EOF, -1 on error.
+ */
+int ipc_network_recv_full(int socket_fd, void *buffer, int32_t size);
+
+/** Send exactly `size` bytes (loop on short writes / EINTR). */
+int ipc_network_send_full(int socket_fd, const void *buffer, int32_t size);
+
 int ipc_network_send(int socket_fd, void *buffer, int32_t size);
 int ipc_network_close(int socket_fd);
 
-/**
- * Pure: JSON body for daemon/util replies.
- * Shape is fixed for injectee parsers: {"res":N, "var":"..."}.
- */
-inline std::string ipc_format_reply_body(bool error,
-                                         const std::string &out_var) {
-  return std::string("{\"res\":") + std::to_string(error ? -1 : 0) +
-         ", \"var\":\"" + out_var + "\"}";
+// --- pure wire helpers (host-testable) ---
+
+/** True when nbytes matches a full IPCMessage frame. */
+inline bool ipc_frame_is_complete(int nbytes) {
+  return nbytes == static_cast<int>(sizeof(IPCMessage));
 }
+
+/** Force trailing NUL on the payload buffer (msg is char[DAEMON_BUFF_MAX]). */
+inline void ipc_message_force_nul(IPCMessage &msg) {
+  msg.msg[sizeof(msg.msg) - 1] = '\0';
+}
+
+/**
+ * Escape a string for inclusion inside a JSON double-quoted value.
+ * Handles \, ", control chars (as \u00XX). Pure — no I/O.
+ */
+std::string ipc_json_escape(const std::string &in);
+
+/**
+ * JSON body for daemon/util replies.
+ * Shape: {"res":N,"var":"..."} with `var` properly escaped.
+ */
+std::string ipc_format_reply_body(bool error, const std::string &out_var);
 
 // Build {"res":N,"var":"..."} reply with the process's return command ordinal.
 void ipc_reply(int sender_socket, DaemonCommands reply_cmd, bool error,

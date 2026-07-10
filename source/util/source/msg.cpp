@@ -63,7 +63,6 @@ extern char ip_address[];
 extern "C" int launchApp(const char *titleId);
 
 void activate_shellui_patch();
-bool LoadSettings();
 
 
 struct sockaddr_in networkAdress(uint16_t port) {

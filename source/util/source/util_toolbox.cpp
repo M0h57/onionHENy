@@ -5,12 +5,11 @@
 #include <orion/ready.h>
 #include <orion/ipc_client.hpp>
 #include <orion/settings.hpp>
+#include "common_utils.h"
 #include <atomic>
 #include <unistd.h>
 #include <cstring>
 
-extern orion::Settings g_settings;
-void LoadSettings(void);
 extern std::atomic_bool no_network_rest_mode_action;
 extern std::atomic_bool no_network_patched;
 extern std::atomic_bool real_rest_mode_detected;
@@ -71,12 +70,14 @@ void patch_checker() {
     }
 
     LoadSettings();
-    if(g_settings.disable_toolbox_auto_start_for_rest_mode){
+    const orion::Settings cfg = g_settings.snapshot();
+    if (cfg.disable_toolbox_auto_start_for_rest_mode) {
         OrionHEN_log("Toolbox auto start for rest mode is disabled");
         return;
     }
-    OrionHEN_log("sleeping for %lld secs", g_settings.rest_mode_delay_seconds);
-    sleep(g_settings.rest_mode_delay_seconds);
+    OrionHEN_log("sleeping for %llu secs",
+                 static_cast<unsigned long long>(cfg.rest_mode_delay_seconds));
+    sleep(static_cast<unsigned int>(cfg.rest_mode_delay_seconds));
 
     orion_notify(true, "(No Network) Coming out of Rest Mode detected\nre-activating "
                 "the OrionHEN toolbox...");

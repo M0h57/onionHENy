@@ -243,4 +243,29 @@ bool settings_usb_disables_toolbox_auto_start() {
   return stat("/mnt/usb0/toolbox_auto_start", &st) == 0;
 }
 
+static time_t path_mtime(const char *path) {
+  if (!path) {
+    return 0;
+  }
+  struct stat st {};
+  if (stat(path, &st) != 0 || !S_ISREG(st.st_mode)) {
+    return 0;
+  }
+  return st.st_mtime;
+}
+
+time_t settings_config_newest_mtime() {
+  const time_t a = path_mtime(kConfigPathPrimary);
+  const time_t b = path_mtime(kConfigPathShellui);
+  return a > b ? a : b;
+}
+
+bool settings_config_is_newer_than(time_t since) {
+  const time_t newest = settings_config_newest_mtime();
+  if (newest == 0) {
+    return false;
+  }
+  return newest > since;
+}
+
 } // namespace orion
