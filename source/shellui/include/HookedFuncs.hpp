@@ -162,61 +162,30 @@ enum Cheats_Shortcut{
     CHEATS_REPO_GOLDHEN
  };
 
-typedef struct OrionHENSettings_t
-{
-    bool DPI = true;
-    bool DPI_v2 = false;
-    bool libhijacker_cheats = false;
+// Persisted config: single product schema (orion::Settings).
+#include <orion/settings.hpp>
+extern orion::Settings g_settings;
 
-
-    bool allow_data_sandbox = false;
-    bool util_rest_kill = false;
-    bool game_rest_kill = false;
-    bool toolbox_auto_start = false;
-    bool disable_toolbox_auto_start_for_rest_mode = false;
-    bool display_tids = false;
-    bool debug_app_jb_msg = false;
-    bool debug_legacy_cmd_server = false;
-    bool OrionHEN_game_opts = true;
-    bool auto_eject_disc = false;
-    bool overlay_gpu = true;
-    bool overlay_cpu = true;
-	bool overlay_ram = true;
-    bool overlay_fps = false;
-    bool overlay_ip = false;
-    bool all_cpu_usage = false;
-    int start_option = 0;
-    uint64_t rest_delay_seconds = 0;
-    bool enable_fan_speed = false;
-    int fan_threshold = 77;
-    
-    // Shortcuts
-    Cheats_Shortcut cheats_shortcut_opt = CHEATS_SC_OFF;
-    Toolbox_Shortcut toolbox_shortcut_opt = TOOLBOX_SC_OFF;
-
-	//floats for overlays
+// Derived overlay pixel layout (not persisted; recomputed from overlay_pos).
+struct OverlayLayout {
     float overlay_gpu_x = 10.0f;
     float overlay_gpu_y = 10.0f;
-
     float overlay_cpu_x = 10.0f;
     float overlay_cpu_y = 35.0f;
-
     float overlay_ram_x = 10.0f;
     float overlay_ram_y = 60.0f;
-
     float overlay_fps_x = 10.0f;
     float overlay_fps_y = 85.0f;
+    float overlay_ip_x = 10.0f;
+    float overlay_ip_y = 110.0f;
+};
+extern OverlayLayout g_overlay_layout;
 
-	float overlay_ip_x = 10.0f;
-	float overlay_ip_y = 110.0f;
+// Runtime UI flag (not in INI schema).
+extern bool g_all_cpu_usage;
 
-    overlay_positions overlay_pos = OVERLAY_POS_TOP_LEFT; //0=top left, 1=top right, 2=bottom left, 3=bottom right
-    cheats_repo_source selected_cheats_repo = CHEATS_REPO_ORIONHEN;
+// Call sites use g_settings / g_overlay_layout / g_all_cpu_usage directly.
 
-} OrionHENSettings;
-
-
-extern OrionHENSettings global_conf;
 typedef struct
 {
     char prefix[15];  // "OrionHEN_PLUGIN" + null terminator
@@ -584,7 +553,7 @@ void generate_cheats_xml(std::string &new_xml, std::string& not_open_tid, bool r
 bool if_exists(const char* path);
 extern "C" int sceUserServiceGetInitialUser(int* uid);
 bool touch_file(const char *destfile);
-void ParseCheatID(const char* tid, int* cheat_id);
+void ParseCheatID(const char* id, char* tid, int* cheat_id);
 int Launch_FG_Game(const char *path, const char* title_id, const char* title);
 void CallDecrypt(unsigned char* bundleData, int bundleOffset, int bundleSize,  int* payloadOffset, int* realPayloadSize);
 bool uri_boot_hook(MonoString* uri, int opt, MonoString* titleIdForBootAction);

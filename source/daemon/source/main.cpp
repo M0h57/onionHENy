@@ -111,7 +111,7 @@ extern "C" {
 // Global variables
 uint64_t p_syscall = 0;
 char _end[1] = {};
-struct daemon_settings global_conf;
+orion::Settings g_settings;
 int fd = -1;
 static constexpr auto DEFAULT_PRIORITY = 256;
 uintptr_t kernel_base = 0;
@@ -302,10 +302,10 @@ int main() {
 
     OrionHEN_log("is toolbox only: %s | ver: %x", toolbox_only ? "Yes" : "No", sys_ver.version);
     // Initialize toolbox if needed
-    if (global_conf.toolbox_auto_start) {
+    if (g_settings.toolbox_auto_start) {
         cmd_enable_toolbox();
     }
-    else if (!global_conf.toolbox_auto_start) {
+    else if (!g_settings.toolbox_auto_start) {
         notify(true, "the OrionHEN Toolbox auto start is disabled in the config.ini\n\n"
                     "Re-enable toolbox_auto_start in /data/OrionHEN/config.ini or open Debug Settings");
     }
@@ -369,13 +369,13 @@ int main() {
 
     // Launch the appropriate app based on configuration
     const char *URI = nullptr;
-    switch (global_conf.start_opt) {
+    switch (g_settings.start_option) {
     case HOME_MENU: {
         URI = "pshomeui:navigateToHome?bootCondition=psButton";
         break;
     }
     case TOOLBOX: {
-        if (global_conf.toolbox_auto_start)
+        if (g_settings.toolbox_auto_start)
             URI = "pssettings:play?mode=settings&function=debug_settings";
         else
             URI = "pshomeui:navigateToHome?bootCondition=psButton";
@@ -386,14 +386,14 @@ int main() {
         break;
     }
     default:
-        OrionHEN_log("unknown opt %d", global_conf.start_opt);
+        OrionHEN_log("unknown opt %d", g_settings.start_option);
         break;
     }
 
     if (URI)
         OrionHEN_log("ret %d", ItemzLaunchByUri(URI));
 
-    if(global_conf.auto_eject_disc){
+    if(g_settings.auto_eject_disc){
         sceShellCoreUtilRequestEjectDevice("/dev/cd0");
     }
 

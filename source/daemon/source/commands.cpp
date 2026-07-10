@@ -54,7 +54,7 @@ extern "C" {
 }
 
 using namespace std;
-extern struct daemon_settings global_conf;
+extern orion::Settings g_settings;
 // Global variables
 
 atomic_bool cmd_srv_Running = false;
@@ -149,17 +149,23 @@ void *runDirectPKGInstaller(void *args);
 
 void activate_shellui_patch(void);
 
+// Local ABIs that used to leak through the junk globalconf.hpp dump.
+struct UserServiceLoginUserIdList {
+  int user_id[4];
+};
+
 // External function declarations
 extern "C" {
   int sceNetCtlGetInfo(int32_t s, SceNetCtlInfo *b);
   void sceNetCtlTerm(void);
   int sceKernelLoadStartModule(const char *name, size_t argc, const void *argv, uint32_t flags, void *unknown, int *result);
   int sceKernelDlsym(uint32_t lib, const char *name, void **fun);
-    int unmount(const char *dir, int flags);
+  int unmount(const char *dir, int flags);
   int sceLncUtilLaunchApp(const char *tid, const char *argv[], LncAppParam *param);
   int sceSysUtilSendSystemNotificationWithText(int messageType, const char *message);
   int sceNotificationSendById(int userid, bool logged_in, const char *useCaseId, const char *message);
   int sceUserServiceGetForegroundUser(int *userId);
+  int sceUserServiceGetLoginUserIdList(struct UserServiceLoginUserIdList *list);
   int sceSystemServiceGetAppIdOfRunningBigApp();
   int sceSystemServiceGetAppTitleId(int app_id, char *title_id);
   int32_t sceKernelPrepareToSuspendProcess(pid_t pid);
@@ -420,9 +426,9 @@ void *Play_time_thread(void *args) noexcept {
 
 bool isUserLoggedIn() {
   bool isLoggedIn = false;
-  UserServiceLoginUserIdList userIdList;
-  (void)memset(&userIdList, 0, sizeof(UserServiceLoginUserIdList));
-  
+  UserServiceLoginUserIdList userIdList{};
+  (void)memset(&userIdList, 0, sizeof(userIdList));
+
   if (sceUserServiceGetLoginUserIdList(&userIdList) < 0) {
     return false;
   }
@@ -439,7 +445,7 @@ bool isUserLoggedIn() {
       }
     }
   }
-  
+
   sleep(5);
   return isLoggedIn;
 }
@@ -583,8 +589,8 @@ void *fifo_and_dumper_thread(void *args) noexcept {
 
     pthread_mutex_lock(&jb_lock);
 
-    if(global_conf.enable_fan_speed)
-       set_fan_threshold(global_conf.fan_threshold);
+    if(g_settings.enable_fan_speed)
+       set_fan_threshold(g_settings.fan_threshold);
 
     int bappid;
     if (!Get_Running_App_TID(tid, bappid)) {
@@ -672,7 +678,7 @@ void *fifo_and_dumper_thread(void *args) noexcept {
     if (spawned) {
       OrionHEN_log("RIGHT Jailbreak command received: jailbreaking...");
 
-      if(global_conf.debug_app_jb_msg)
+      if(g_settings.debug_app_jb_msg)
           notify(true, "App (PID %i) has been granted a jailbreak", reserved_value);
 
       spawned->jailbreak(true);

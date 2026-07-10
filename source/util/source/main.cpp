@@ -16,6 +16,7 @@ along with this program; see the file COPYING. If not, see
 
 #include "ipc.hpp"
 #include "cheats/CheatService.hpp"
+#include <orion/settings.hpp>
 extern "C" {
 #include "freebsd-helper.h"
 }
@@ -74,7 +75,9 @@ extern "C" {
 
 extern bool is_handler_enabled;
 
-util_settings global_conf;
+orion::Settings g_settings;
+atomic_bool g_legacy_cmd_server = false;
+atomic_bool g_legacy_cmd_server_exit = false;
 bool startDirectPKGInstaller(bool is_v2);
 void shutdownDirectPKGInstaller(bool is_v2);
 void start_ip_thread(void);
@@ -115,29 +118,16 @@ void __stack_chk_fail(void) {
 }
 
 void LoadSettings(void) {
-    if (if_exists("/data/OrionHEN/config.ini")) {
-        IniParser parser;
-
-        if (ini_parser_load(&parser, "/data/OrionHEN/config.ini")) {
-            const char* DPI_str = ini_parser_get(&parser, "Settings.DPI", "0");
-            const char* allow_data_n_sandbox = ini_parser_get(&parser, "Settings.Allow_data_in_sandbox", "1");
-            const char* DPI_v2 = ini_parser_get(&parser, "Settings.DPI_v2", "0");
-            const char* toolbox_for_rest = ini_parser_get(&parser, "Settings.disable_toolbox_auto_start_for_rest_mode", "0");
-				const char* legacy_cmd_server_str = ini_parser_get(&parser, "Settings.legacy_cmd_server", "0");
-            global_conf.allow_data = allow_data_n_sandbox ? atoi(allow_data_n_sandbox) : 0;
-            global_conf.DPI = DPI_str ? atoi(DPI_str) : 0;
-            global_conf.DPI_v2 = DPI_v2 ? atoi(DPI_v2) : 0;
-            global_conf.toolbox_auto_start = atoi(ini_parser_get(&parser, "Settings.toolbox_auto_start", "1"));
-            global_conf.disable_toolbox_for_rest = toolbox_for_rest ? atoi(toolbox_for_rest) : 0;
-			global_conf.legacy_cmd_server = legacy_cmd_server_str ? atoi(legacy_cmd_server_str) : 0;
-            
-            if (if_exists("/mnt/usb0/toolbox_auto_start"))
-                global_conf.toolbox_auto_start = false;
-        } else {
-            OrionHEN_log("Failed to load config.ini");
-            notify(true, "Failed to load config.ini");
-        }
+    orion::Settings s{};
+    if (!orion::settings_load(&s)) {
+        OrionHEN_log("config.ini missing; using defaults (path primary=%s)",
+                     orion::kConfigPathPrimary);
+    } else {
+        OrionHEN_log("Loaded settings from %s", orion::settings_last_loaded_path());
     }
+
+    g_settings = s;
+    g_legacy_cmd_server = s.legacy_cmd_server;
 }
 int main(void) {
     pthread_t ipc_server = 0;
@@ -161,12 +151,12 @@ int main(void) {
     set_proc_authid(getpid(), DEBUG_AUTHID);
 
 
-    global_conf.allow_data = false;
+    global_conf.allow_data_in_sandbox = false;
     global_conf.DPI = true;
-    global_conf.seconds = 0;
+    global_conf.rest_mode_delay_seconds = 0;
     global_conf.toolbox_auto_start = true;
     global_conf.DPI_v2 = false;
-	global_conf.legacy_cmd_server_exit = false;
+	g_legacy_cmd_server_exit = false;
 
     unlink("/data/OrionHEN/OrionHEN_util_daemon.log");
     unlink("/data/OrionHEN/OrionHEN_util_crash.log");

@@ -129,19 +129,14 @@ typedef struct notify_request
 } notify_request_t;
 
 /*================ SETTINGS ==============*/
-typedef struct
-{
-	bool allow_data;
-	bool DPI;
-	bool toolbox_auto_start;
-	bool DPI_v2;
-	bool disable_toolbox_for_rest;
-	atomic_bool legacy_cmd_server;
-	atomic_bool legacy_cmd_server_exit;
-	uint64_t seconds;
-} util_settings;
-
-extern util_settings global_conf;
+/* Persisted keys: orion::Settings. Concurrent CMD flags stay atomic. */
+#ifdef __cplusplus
+#include <orion/settings.hpp>
+extern orion::Settings g_settings;
+#define global_conf g_settings
+#endif
+extern atomic_bool g_legacy_cmd_server;
+extern atomic_bool g_legacy_cmd_server_exit;
 /*================ SETTINGS ==============*/
 // Define your custom header structure for clarity
 typedef struct
@@ -151,7 +146,7 @@ typedef struct
 	char plugin_version[5];
 } CustomPluginHeader;
 
-bool load_plugin(const char *path);
+/* load_plugin: see extern "C" block below */
 
 /*================== Threads =================*/
 extern pthread_t dpi_thread;
@@ -225,20 +220,27 @@ int sceLncUtilLaunchApp(const char* tid, const char* argv[], LncAppParam* param)
 uint32_t sceLncUtilKillApp(uint32_t appId);
 bool copyFile(const char *source, const char *destination);
 
-void shutdownDirectPKGInstaller(bool is_v2);
 int32_t sceKernelSendNotificationRequest(int32_t device, OrbisNotificationRequest *req, size_t size, int32_t blocking);
 
 bool IniliatizeHTTP(void);
-bool download_file(const char *url, const char *dst);
-bool check_for_new_commit(int repo);
-bool extract_zip(const char *zip_path, const char *extract_dir);
-
+/* download/extract/shutdown: see extern "C" block below */
 
 /*============ Back up JB server ==============*/
 int get_ip_address(char *ip_address);
+#ifdef __cplusplus
+extern "C" {
+#endif
 void OrionHEN_log(const char *fmt, ...);
 bool touch_file(const char *destfile);
 void notify(bool show_watermark, const char *text, ...);
 int sceNetCtlInit(void);
 int sceUserServiceInitialize(void *ptr);
 bool patchShellCore(void);
+bool load_plugin(const char *path);
+bool download_file(const char *url, const char *dst);
+bool check_for_new_commit(int repo);
+bool extract_zip(const char *zip_path, const char *extract_dir);
+void shutdownDirectPKGInstaller(bool is_v2);
+#ifdef __cplusplus
+}
+#endif

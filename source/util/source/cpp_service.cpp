@@ -796,11 +796,11 @@ void *runCommandNControlServer(void *) {
         return nullptr;
     }
 
-    if(global_conf.legacy_cmd_server)
+    if(g_legacy_cmd_server)
 	   OrionHEN_log("[Daemon LEGACY IPC] Server started on port 9028");
 
     // Accept clients
-    while (!global_conf.legacy_cmd_server_exit) {
+    while (!g_legacy_cmd_server_exit) {
         client = accept(s, 0, 0);
         if (errno == 0xA3) {
             pthread_mutex_lock(&jb_lock);
@@ -808,7 +808,7 @@ void *runCommandNControlServer(void *) {
             pthread_mutex_unlock(&jb_lock);
             break;
         }
-        if (client > 0 && global_conf.legacy_cmd_server) {
+        if (client > 0 && g_legacy_cmd_server) {
             OrionHEN_log("[Daemon IPC] Client connected");
             while ((readSize = recv(client, reinterpret_cast<void *>(&cmd),
                                   sizeof(cmd), MSG_NOSIGNAL)) > 0) {
@@ -829,8 +829,8 @@ void *runCommandNControlServer(void *) {
 
     OrionHEN_log("[Daemon IPC] Server stopped");
 
-    if (global_conf.legacy_cmd_server_exit) {
-        global_conf.legacy_cmd_server_exit = false;
+    if (g_legacy_cmd_server_exit) {
+        g_legacy_cmd_server_exit = false;
 		return runCommandNControlServer(nullptr);
     }
     return nullptr;
@@ -859,8 +859,8 @@ void check_addr_change(void) {
         } else if (rest_mode_action && !no_network_patched && !not_connected &&
                   real_rest_mode_detected) {
             LoadSettings();
-            OrionHEN_log("sleeping for %lld secs", global_conf.seconds);
-            sleep(global_conf.seconds);
+            OrionHEN_log("sleeping for %lld secs", global_conf.rest_mode_delay_seconds);
+            sleep(global_conf.rest_mode_delay_seconds);
             notify(true, "Coming out of Rest Mode detected, restarting server(s)");
             OrionHEN_log("waiting for logged in user");
             
@@ -872,7 +872,7 @@ void check_addr_change(void) {
             OrionHEN_log("Coming out rest mode, activating patches");
             
 
-            if (global_conf.toolbox_auto_start  && !global_conf.disable_toolbox_for_rest && !enable_toolbox()) {
+            if (global_conf.toolbox_auto_start  && !global_conf.disable_toolbox_auto_start_for_rest_mode && !enable_toolbox()) {
                 notify(true, "Failed to inject toolbox");
             }
         }
@@ -909,12 +909,12 @@ void patch_checker() {
     }
 
     LoadSettings();
-    if(global_conf.disable_toolbox_for_rest){
+    if(global_conf.disable_toolbox_auto_start_for_rest_mode){
         OrionHEN_log("Toolbox auto start for rest mode is disabled");
         return;
     }
-    OrionHEN_log("sleeping for %lld secs", global_conf.seconds);
-    sleep(global_conf.seconds);
+    OrionHEN_log("sleeping for %lld secs", global_conf.rest_mode_delay_seconds);
+    sleep(global_conf.rest_mode_delay_seconds);
 
     notify(true, "(No Network) Coming out of Rest Mode detected\nre-activating "
                 "the OrionHEN toolbox...");

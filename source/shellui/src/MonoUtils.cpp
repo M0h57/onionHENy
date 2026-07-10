@@ -16,6 +16,7 @@ along with this program; see the file COPYING. If not, see
 
 #include "HookedFuncs.hpp"
 #include "ipc.hpp"
+#include <orion/settings.hpp>
 #include "defs.h"
 #include "RemotePlay.h"
 #include <cstdint>
@@ -41,7 +42,9 @@ along with this program; see the file COPYING. If not, see
 #define PIN_CODE_SIZE 30
 #define ACCOUNT_ID_BASE64_SIZE 16
 
-OrionHENSettings global_conf;
+orion::Settings g_settings;
+OverlayLayout g_overlay_layout;
+bool g_all_cpu_usage = false;
 
 std::vector<GameEntry> games_list;
 std::vector<Plugins> plugins_list, auto_list;
@@ -53,7 +56,7 @@ bool is_game_open = true;
 bool is_current_game_open = true;
 int cheatEnabledMap[256];
 
-static const char *INI_PATH = "/user/data/OrionHEN/config.ini";
+// Canonical schema lives in liborion_settings (primary + shellui path twins).
 
 
 // #include <user_service.h>
@@ -545,189 +548,80 @@ MonoObject *Get_Instance(MonoClass *klass, const char *Instance)
   return inst;
 }
 
+static void apply_overlay_layout() {
+  if (g_settings.overlay_pos == OVERLAY_POS_TOP_LEFT) {
+    g_overlay_layout.overlay_fps_x = 10.0f;
+    g_overlay_layout.overlay_fps_y = 10.0f;
+    g_overlay_layout.overlay_gpu_x = 10.0f;
+    g_overlay_layout.overlay_gpu_y = 35.0f;
+    g_overlay_layout.overlay_cpu_x = 10.0f;
+    g_overlay_layout.overlay_cpu_y = 60.0f;
+    g_overlay_layout.overlay_ram_x = 10.0f;
+    g_overlay_layout.overlay_ram_y = 85.0f;
+    g_overlay_layout.overlay_ip_x = 10.0f;
+    g_overlay_layout.overlay_ip_y = 110.0f;
+  } else if (g_settings.overlay_pos == OVERLAY_POS_BOTTOM_LEFT) {
+    g_overlay_layout.overlay_ram_x = 10.0f;
+    g_overlay_layout.overlay_ram_y = 970.0f;
+    g_overlay_layout.overlay_cpu_x = 10.0f;
+    g_overlay_layout.overlay_cpu_y = 990.0f;
+    g_overlay_layout.overlay_gpu_x = 10.0f;
+    g_overlay_layout.overlay_gpu_y = 1010.0f;
+    g_overlay_layout.overlay_fps_x = 10.0f;
+    g_overlay_layout.overlay_fps_y = 1030.0f;
+    g_overlay_layout.overlay_ip_x = 10.0f;
+    g_overlay_layout.overlay_ip_y = 1050.0f;
+  } else if (g_settings.overlay_pos == OVERLAY_POS_TOP_RIGHT) {
+    g_overlay_layout.overlay_fps_x = 1720.0f;
+    g_overlay_layout.overlay_fps_y = 10.0f;
+    g_overlay_layout.overlay_gpu_x = 1720.0f;
+    g_overlay_layout.overlay_gpu_y = 35.0f;
+    g_overlay_layout.overlay_cpu_x = 1720.0f;
+    g_overlay_layout.overlay_cpu_y = 60.0f;
+    g_overlay_layout.overlay_ram_x = 1720.0f;
+    g_overlay_layout.overlay_ram_y = 85.0f;
+    g_overlay_layout.overlay_ip_x = 1670.0f;
+    g_overlay_layout.overlay_ip_y = 110.0f;
+  } else if (g_settings.overlay_pos == OVERLAY_POS_BOTTOM_RIGHT) {
+    g_overlay_layout.overlay_ram_x = 1720.0f;
+    g_overlay_layout.overlay_ram_y = 970.0f;
+    g_overlay_layout.overlay_cpu_x = 1720.0f;
+    g_overlay_layout.overlay_cpu_y = 990.0f;
+    g_overlay_layout.overlay_gpu_x = 1720.0f;
+    g_overlay_layout.overlay_gpu_y = 1010.0f;
+    g_overlay_layout.overlay_fps_x = 1720.0f;
+    g_overlay_layout.overlay_fps_y = 1030.0f;
+    g_overlay_layout.overlay_ip_x = 1670.0f;
+    g_overlay_layout.overlay_ip_y = 1050.0f;
+  }
+}
+
 bool LoadSettings()
 {
-  IniParser parser;
-
-  if (ini_parser_load(&parser, INI_PATH))
-  {
-
-    const char *DPI_str = ini_parser_get(&parser, "Settings.DPI", "0");
-    const char *libhijacker_cheats_str = ini_parser_get(&parser, "Settings.libhijacker_cheats", "0");
-    const char *allow_data_n_sandbox = ini_parser_get(&parser, "Settings.Allow_data_in_sandbox", "1");
-    const char *start_option = ini_parser_get(&parser, "Settings.StartOption", "0");
-    const char *Delay_seconds = ini_parser_get(&parser, "Settings.Rest_Mode_Delay_Seconds", "0");
-    const char *util_rest_kill = ini_parser_get(&parser, "Settings.Util_rest_kill", "0");
-    const char *game_rest_kill = ini_parser_get(&parser, "Settings.Game_rest_kill", "0");
-    const char *toolbox_auto_start = ini_parser_get(&parser, "Settings.toolbox_auto_start", "1");
-    const char *DPI_v2 = ini_parser_get(&parser, "Settings.DPI_v2", "0");
-    const char *disable_toolbox_auto_start_for_rest_mode = ini_parser_get(&parser, "Settings.disable_toolbox_auto_start_for_rest_mode", "0");
-    const char *dip_tid = ini_parser_get(&parser, "Settings.Display_tids", "0");
-    const char *jb_debug_msg_str = ini_parser_get(&parser, "Settings.APP_JB_Debug_Msg", "0");
-    const char *game_opts_str = ini_parser_get(&parser, "Settings.OrionHEN_Game_Options", "1");
-    const char *auto_eject_disc_str = ini_parser_get(&parser, "Settings.auto_eject_disc", "0");
-	  const char* overlay_ram = ini_parser_get(&parser, "Settings.overlay_ram", "1");
-	  const char* overlay_cpu = ini_parser_get(&parser, "Settings.overlay_cpu", "1");
-	  const char* overlay_gpu = ini_parser_get(&parser, "Settings.overlay_gpu", "1");
-	  const char* overlay_fps = ini_parser_get(&parser, "Settings.overlay_fps", "0");
-	  const char* overlay_ip = ini_parser_get(&parser, "Settings.overlay_ip", "0");
-	  const char* overlay_position = ini_parser_get(&parser, "Settings.Overlay_pos", "0"); // 0: Top-Left, 1: Top-Right, 2: Bottom-Left, 3: Bottom-Right
-    const char* fan_threshold = ini_parser_get(&parser, "Settings.fan_threshold", "77");
-    const char* enable_fan_speed = ini_parser_get(&parser, "Settings.enable_fan_speed", "0");
-
-
-    // Check if the strings are not nullptr before converting
-    global_conf.enable_fan_speed = enable_fan_speed ? atoi(enable_fan_speed) : 0;
-    global_conf.fan_threshold = fan_threshold ? atoi(fan_threshold) : 77;
-    global_conf.OrionHEN_game_opts = game_opts_str ? atoi(game_opts_str) : 0;
-    global_conf.display_tids = dip_tid ? atoi(dip_tid) : 0;
-    global_conf.game_rest_kill = game_rest_kill ? atoi(game_rest_kill) : 0;
-    global_conf.util_rest_kill = util_rest_kill ? atoi(util_rest_kill) : 0;
-    global_conf.rest_delay_seconds = Delay_seconds ? atol(Delay_seconds) : 0;
-    global_conf.DPI = DPI_str ? atoi(DPI_str) : 0;
-    global_conf.libhijacker_cheats = libhijacker_cheats_str ? atoi(libhijacker_cheats_str) : 0;
-    global_conf.allow_data_sandbox = allow_data_n_sandbox ? atoi(allow_data_n_sandbox) : 0;
-    global_conf.start_option = start_option ? atoi(start_option) : 0;
-    global_conf.toolbox_auto_start = toolbox_auto_start ? atoi(toolbox_auto_start) : 0;
-    global_conf.DPI_v2 = DPI_v2 ? atoi(DPI_v2) : 0;
-    global_conf.debug_app_jb_msg = jb_debug_msg_str ? atoi(jb_debug_msg_str) : 0;
-    global_conf.disable_toolbox_auto_start_for_rest_mode = disable_toolbox_auto_start_for_rest_mode ? atoi(disable_toolbox_auto_start_for_rest_mode) : 0;
-    global_conf.auto_eject_disc = auto_eject_disc_str ? atoi(auto_eject_disc_str) : 0;  
-	global_conf.overlay_ram = overlay_ram ? atoi(overlay_ram) : 1;
-	global_conf.overlay_cpu = overlay_cpu ? atoi(overlay_cpu) : 1;
-	global_conf.overlay_gpu = overlay_gpu ? atoi(overlay_gpu) : 1;
-	global_conf.overlay_fps = overlay_fps ? atoi(overlay_fps) : 0;
-  if (global_conf.overlay_fps ){
-      touch_file("/system_tmp/fps_enabled");
+  orion::Settings s{};
+  const bool loaded = orion::settings_load(&s);
+  if (!loaded) {
+    shellui_log("config.ini missing; using defaults");
+  } else {
+    shellui_log("Loaded settings from %s", orion::settings_last_loaded_path());
   }
-	global_conf.overlay_ip = overlay_ip ? atoi(overlay_ip) : 0;
 
-    //apply ovelay pos  values
-
-
-    // Shortcuts
-    const char *cheats_shortcut_opt = ini_parser_get(&parser, "Settings.Cheats_shortcut_opt", "0");
-    const char *toolbox_shortcut_opt = ini_parser_get(&parser, "Settings.Toolbox_shortcut_opt", "0");
-
-    global_conf.cheats_shortcut_opt = cheats_shortcut_opt ? (Cheats_Shortcut)atoi(cheats_shortcut_opt) : CHEATS_SC_OFF;
-    global_conf.toolbox_shortcut_opt = toolbox_shortcut_opt ? (Toolbox_Shortcut)atoi(toolbox_shortcut_opt) : TOOLBOX_SC_OFF;
-
-    global_conf.overlay_pos = overlay_position ? (overlay_positions)atoi(overlay_position) : OVERLAY_POS_TOP_LEFT;
-
-
-
-    if (global_conf.overlay_pos == OVERLAY_POS_TOP_LEFT) {
-        global_conf.overlay_fps_x = 10.0f;
-        global_conf.overlay_fps_y = 10.0f;
-
-        global_conf.overlay_gpu_x = 10.0f;
-        global_conf.overlay_gpu_y = 35.0f;
-
-        global_conf.overlay_cpu_x = 10.0f;
-        global_conf.overlay_cpu_y = 60.0f;
-
-        global_conf.overlay_ram_x = 10.0f;
-        global_conf.overlay_ram_y = 85.0f;
-
-        global_conf.overlay_ip_x = 10.0f;
-        global_conf.overlay_ip_y = 110.0f;
-    }
-    else if (global_conf.overlay_pos == OVERLAY_POS_BOTTOM_LEFT) {
-        global_conf.overlay_ram_x = 10.0f;
-        global_conf.overlay_ram_y = 970.0f;
-        global_conf.overlay_cpu_x = 10.0f;
-        global_conf.overlay_cpu_y = 990.0f;
-        global_conf.overlay_gpu_x = 10.0f;
-        global_conf.overlay_gpu_y = 1010.0f;
-        global_conf.overlay_fps_x = 10.0f;
-        global_conf.overlay_fps_y = 1030.0f;
-        global_conf.overlay_ip_x = 10.0f;
-        global_conf.overlay_ip_y = 1050.0f;
-    }
-    else if (global_conf.overlay_pos == OVERLAY_POS_TOP_RIGHT) {
-        global_conf.overlay_fps_x = 1720.0f;
-        global_conf.overlay_fps_y = 10.0f;
-        global_conf.overlay_gpu_x = 1720.0f;
-        global_conf.overlay_gpu_y = 35.0f;
-        global_conf.overlay_cpu_x = 1720.0f;
-        global_conf.overlay_cpu_y = 60.0f;
-        global_conf.overlay_ram_x = 1720.0f;
-        global_conf.overlay_ram_y = 85.0f;
-        global_conf.overlay_ip_x = 1670.0f;
-        global_conf.overlay_ip_y = 110.0f;
-    }
-    else if (global_conf.overlay_pos == OVERLAY_POS_BOTTOM_RIGHT) {
-        global_conf.overlay_ram_x = 1720.0f;
-        global_conf.overlay_ram_y = 970.0f;
-        global_conf.overlay_cpu_x = 1720.0f;
-        global_conf.overlay_cpu_y = 990.0f;
-        global_conf.overlay_gpu_x = 1720.0f;
-        global_conf.overlay_gpu_y = 1010.0f;
-        global_conf.overlay_fps_x = 1720.0f;
-        global_conf.overlay_fps_y = 1030.0f;
-        global_conf.overlay_ip_x = 1670.0f;
-        global_conf.overlay_ip_y = 1050.0f;
-    }
-
-
-    return true;
+  // g_settings is the single store; single store for all consumers.
+  g_settings = s;
+  if (g_settings.overlay_fps) {
+    touch_file("/system_tmp/fps_enabled");
   }
-  else
-  {
-    shellui_log("Failed to load settings");
-  }
-  return false;
+  apply_overlay_layout();
+  return true;
 }
 
 bool SaveSettings()
 {
-  // Construct the settings string
-  std::string buff = "[Settings]\n";
-  buff += "libhijacker_cheats=" + std::to_string(global_conf.libhijacker_cheats) + "\n";
-  buff += "DPI=" + std::to_string(global_conf.DPI) + "\n";
-  buff += "Allow_data_in_sandbox=" + std::to_string(global_conf.allow_data_sandbox) + "\n";
-  buff += "StartOption=" + std::to_string(global_conf.start_option) + "\n";
-  buff += "Rest_Mode_Delay_Seconds=" + std::to_string(global_conf.rest_delay_seconds) + "\n";
-  buff += "Util_rest_kill=" + std::to_string(global_conf.util_rest_kill) + "\n";
-  buff += "Game_rest_kill=" + std::to_string(global_conf.game_rest_kill) + "\n";
-  buff += "toolbox_auto_start=" + std::to_string(global_conf.toolbox_auto_start) + "\n";
-  buff += "DPI_v2=" + std::to_string(global_conf.DPI_v2) + "\n";
-  buff += "disable_toolbox_auto_start_for_rest_mode=" + std::to_string(global_conf.disable_toolbox_auto_start_for_rest_mode) + "\n";
-  buff += "Display_tids=" + std::to_string(global_conf.display_tids) + "\n";
-  buff += "APP_JB_Debug_Msg=" + std::to_string(global_conf.debug_app_jb_msg) + "\n";
-  buff += "OrionHEN_Game_Options=" + std::to_string(global_conf.OrionHEN_game_opts) + "\n";
-  buff += "auto_eject_disc=" + std::to_string(global_conf.auto_eject_disc) + "\n";
-  buff += "overlay_ram=" + std::to_string(global_conf.overlay_ram) + "\n";
-  buff += "overlay_cpu=" + std::to_string(global_conf.overlay_cpu) + "\n";
-  buff += "overlay_gpu=" + std::to_string(global_conf.overlay_gpu) + "\n";
-  buff += "overlay_fps=" + std::to_string(global_conf.overlay_fps) + "\n";
-  buff += "overlay_ip=" + std::to_string(global_conf.overlay_ip) + "\n";
-  buff += "enable_fan_speed=" + std::to_string(global_conf.enable_fan_speed) + "\n";
-  buff += "fan_threshold=" + std::to_string(global_conf.fan_threshold) + "\n";
-  //shortcuts
-  buff += "Cheats_shortcut_opt=" + std::to_string(global_conf.cheats_shortcut_opt) + "\n";
-  buff += "Toolbox_shortcut_opt=" + std::to_string(global_conf.toolbox_shortcut_opt) + "\n";
-
-  buff += "Overlay_pos=" + std::to_string(global_conf.overlay_pos) + "\n";
-  // Open the file for writing
-  int fd = open(INI_PATH, O_WRONLY | O_CREAT | O_TRUNC, 0777);
-  if (fd >= 0)
-  {
-    // Write the buffer to the file
-    if (write(fd, buff.c_str(), buff.size()) != static_cast<ssize_t>(buff.size()))
-    {
-      shellui_log("Failed to write all settings to file");
-      close(fd);
-      return false;
-    }
-    close(fd);
-  }
-  else
-  {
-    shellui_log("Failed to open settings file for writing");
+  if (!orion::settings_save(g_settings)) {
+    shellui_log("Failed to save settings to any config path");
     return false;
   }
-  shellui_log("Saved settings");
+  shellui_log("Saved settings (primary + shellui paths when writable)");
   return true;
 }
 
