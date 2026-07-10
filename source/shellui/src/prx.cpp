@@ -29,6 +29,7 @@ along with this program; see the file COPYING. If not, see
 #include <orion/proc_query.h>
 #include <orion/ready.h>
 
+#include <cstring>
 #include <cstdint>
 #include <string>
 #include <unistd.h>
@@ -530,6 +531,8 @@ bool install_mono_hook(const MonoHookSpec& h) {
       notify("Failed to find hook target");
     return !h.required;
   }
+  shellui_log("Installing mono hook: %s target=%#02lx hook=%p", h.name, addr,
+              h.hook);
   void* tramp = DetourFunction(addr, h.hook);
   if (!tramp) {
     shellui_log("Detour failed: %s", h.name);
@@ -604,9 +607,10 @@ bool install_hooks(const ShellImages& img, void* read_fn) {
        *  reinterpret_cast<void*>(&UpdateImposeStatusFlag_hook),
        *  reinterpret_cast<void**>(&UpdateImposeStatusFlag_Orig), false},
        */
+      /* Optional: Core.Input may still be loading while we install; missing is non-fatal. */
       {"GamePad.GetData", img.core, "Sce.PlayStation.Core.Input", "GamePad", "GetData",
        1, reinterpret_cast<void*>(&GetData_hook), reinterpret_cast<void**>(&GetData),
-       true},
+       false},
       {"SettingsPlugin.CxmlUri", img.legacy, UI3_dec.c_str(), "SettingsPlugin",
        "CxmlUri", 1, reinterpret_cast<void*>(&CxmlUri_Hook),
        reinterpret_cast<void**>(&CxmlUri), false},
