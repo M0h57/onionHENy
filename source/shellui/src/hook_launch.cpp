@@ -1,0 +1,212 @@
+/* Copyright (C) 2025 OrionHEN / LightningMods — P0 split. */
+
+
+#include "HookedFuncs.hpp"
+#include "ipc.hpp"
+#include "external_symbols.hpp"
+#include <orion/platform.h>
+#include <string>
+#include <fstream>
+
+extern std::string current_menu_tid;
+#include <cstring>
+
+void save_appid(int value, const char* filename) {
+    std::ofstream file(filename);
+    file << value;
+}
+bool app_launched = false;
+int LaunchApp(MonoString* titleId, uint64_t* args, int argsSize, LaunchAppParam *param){
+#if 1
+   if(!if_exists("/system_tmp/patch_plugin")) {
+      #if SHELL_DEBUG == 1
+      shellui_log("patch plugin not running .. returning with orig");
+      #endif
+	  unsigned int ret = LaunchApp_orig(titleId, args, argsSize, param);
+      if (ret < 0) {
+         #if SHELL_DEBUG == 1
+         notify("LaunchApp failed with error code: %d", ret);
+         #endif
+         return ret;
+      }
+
+      app_launched = true;
+      return ret;
+
+   }
+#endif
+#if SHELL_DEBUG == 1
+  shellui_log("LaunchApp called with titleId: %s, argsSize: %d, param->size: %d", mono_string_to_utf8(titleId), argsSize, param->size);
+#endif
+  notify("Launching app: %s checking for patches ...", mono_string_to_utf8(titleId));
+
+  unsigned int ret = LaunchApp_orig(titleId, args, argsSize, param);
+  if (ret < 0) {
+    #if SHELL_DEBUG == 1
+    notify("LaunchApp failed with error code: %d", ret);
+    #endif
+    return ret;
+  }
+
+  app_launched = true;
+
+ #if SHELL_DEBUG == 1
+  notify("LaunchApp returned: %d", ret);
+  #endif
+
+  save_appid(ret, "/system_tmp/app_launched");
+  return ret;
+
+}
+
+int sceRegMgrGetInt_hook(long regid, int* out_val){
+  bool dis_tids = g_settings.display_tids;
+
+  if(dis_tids && regid == SCE_REGMGR_ENT_KEY_DEVENV_TOOL_SHELLUI_disp_titleid){
+    if (out_val) {
+       *out_val = 1;
+    }
+#if SHELL_DEBUG==1
+    shellui_log("RegMGR lookup called for SHELLUI_disp_titleid, spoofing out_var to 1");
+#endif
+    return 0;
+  }
+
+  #define visualize_fps_range 2013460994
+  #define visualize_fps_en 2013460993
+  #define visualize_fps_pos 2013460995
+  #define visualize_fps_port 2013460996
+  static int (*crash)() = nullptr;
+
+  if(regid == visualize_fps_range) {
+      crash();
+    shellui_log("visualize_fps_range regid %lx", regid);
+    if (out_val) {
+      *out_val = 2;
+    }
+    return 0;
+  }
+  else if(regid == visualize_fps_en) {
+
+	  crash();
+    shellui_log("visualize_fps_en regid %lx", regid); 
+    if (out_val) {
+      *out_val = 3;
+    }
+    return 0;
+  }
+  else if(regid == visualize_fps_pos) {
+      crash();
+    shellui_log("visualize_fps_pos regid %lx", regid);
+    if (out_val) {
+      *out_val = 1;
+    }
+    return 0;
+  }
+  else if(regid == visualize_fps_port) {
+      crash();
+    shellui_log("visualize_fps_port regid %lx", regid);
+    if (out_val) {
+      *out_val = 0;
+    }
+
+    return 0;
+  }
+
+  //shellui_log("sceRegMgrGetInt_hook: regid %lx", regid);
+
+  int ret = 0;
+  if(__sys_regmgr_call(2, regid, &ret, out_val, SCE_REGMGR_INT_SIZE)){
+#if SHELL_DEBUG==1
+    shellui_log("sceRegMgrGetInt_hook: Failed to get regid 0x%lx, ret %d", regid, ret);
+#endif
+    ret = SCE_REGMGR_ERROR_PRM_REGID;
+  }
+
+  return ret;
+}
+static std::string extractTIDFromURI(const std::string& url) {
+    const std::string prefix = "titleId=";
+    size_t pos = url.find(prefix);
+    
+    if (pos != std::string::npos) {
+        pos += prefix.length();
+        size_t end = url.find('&', pos);
+        if (end == std::string::npos) {
+            return url.substr(pos);
+        } else {
+            return url.substr(pos, end - pos);
+        }
+    }
+    return std::string(); // Not found
+}
+
+void createJson_hook(MonoObject* inst, MonoObject* array, MonoString* id, MonoString* label, MonoString* actionUrl, MonoString* actionId, MonoString* messageId, MonoObject* subMenu, bool enable) {
+
+    std::string id_str = Mono_to_String(id);
+
+#if SHELL_DEBUG==1
+    shellui_log("createJson_hook: %lx id: %s, label: %s, actionUrl: %s, actionId: %s, messageId: %s", 
+               inst, id_str.c_str(), 
+               Mono_to_String(label).c_str(), 
+               Mono_to_String(actionUrl).c_str(), 
+               Mono_to_String(actionId).c_str(), 
+               Mono_to_String(messageId).c_str());
+#endif
+
+    if(!g_settings.orionhen_game_opts) {
+        createJson(inst, array, id, label, actionUrl, actionId, messageId, subMenu, enable);
+        return;
+    }
+
+    // Only extract and update titleId if one is found in the current URL
+    std::string extracted_tid = extractTIDFromURI(Mono_to_String(actionUrl));
+    if (!extracted_tid.empty() && extracted_tid != current_menu_tid) {
+        current_menu_tid = extracted_tid;
+#if SHELL_DEBUG==1
+        //notify("Current menu titleId: %s", current_menu_tid.c_str());
+        shellui_log("Updated menu titleId: %s", current_menu_tid.c_str());
+#endif
+    }
+#if 1
+    if(id_str == "MENU_ID_SAVE_DATA_MANAGEMENT_PS4_MANUAL" || id_str == "MENU_ID_SAVE_DATA_MANAGEMENT_PS5_MANUAL" || (id_str == "MENU_ID_UPDATE_HISTORY" && 0)){
+       createJson(inst, array, mono_string_new(Root_Domain, "MENU_ID_CUST_UPDATES"), mono_string_new(Root_Domain, "★ (测试版) 转储游戏/应用"), mono_string_new(Root_Domain, "OrionHEN?Dump"), actionId, nullptr, subMenu, enable);
+       return;
+    }
+#endif
+    if(id_str == "MENU_ID_CHECK_PATCH"){  
+      //createJson_hook: 8815fec90 id: MENU_ID_CHECK_PATCH, label: , actionUrl: pspatchcheck:check-for-update?titleid=CUSA01127, actionId: , messageId: msgid_check_update
+        createJson(inst, array, mono_string_new(Root_Domain, "MENU_ID_CHEATS"), mono_string_new(Root_Domain, "★ OrionHEN 金手指"), mono_string_new(Root_Domain, "OrionHEN?Cheats_not_open"), actionId, nullptr, subMenu, enable);
+        return;
+    }
+
+    if(id_str == "MENU_ID_INTELLECTUAL_PROPERTY_NOTICES"){
+        std::string uri = "psappinst:pat-uninstall?titleid=" + current_menu_tid;
+        createJson(inst, array, mono_string_new(Root_Domain, "MENU_ID_REMOVE_UPDATE"), mono_string_new(Root_Domain, "★ 删除"), mono_string_new(Root_Domain, uri.c_str()), actionId, nullptr, subMenu, enable);
+        return;
+    }
+
+    createJson(inst, array, id, label, actionUrl, actionId, messageId, subMenu, enable);
+}
+
+void Terminate() {
+    shellui_log("******************************\nShellUI is exiting\n*****************************");
+    shellui_log("Sending Action");
+    IPC_Client& main_ipc = IPC_Client::getInstance(false);
+    if(g_settings.game_rest_kill) {
+	    	shellui_log("Killing Game");
+        int pid = orion_find_pid_ex("NA", false, true, false);
+        if(pid > 0)
+           main_ipc.ForceKillPID(pid);
+    }
+    //dont send the command if the util is already dead
+    if(g_settings.util_rest_kill) {
+        shellui_log("Killing Util");
+        KillAllWithName("Utility", SIGKILL);
+    }
+    else {
+        IPC_Client& ipc = IPC_Client::getInstance(true);
+        ipc.SendRestModeAction();
+    }
+    oTerminate();
+}
