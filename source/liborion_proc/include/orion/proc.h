@@ -39,10 +39,18 @@ along with this program; see the file COPYING. If not, see
 #define SYS_dl_get_list 0x217
 #define SYS_dl_get_info_2 0x2cd
 
+#ifndef MODULE_INFO_NAME_LENGTH
 #define MODULE_INFO_NAME_LENGTH 128
+#endif
+#ifndef MODULE_INFO_SANDBOXED_PATH_LENGTH
 #define MODULE_INFO_SANDBOXED_PATH_LENGTH 1024
+#endif
+#ifndef MODULE_INFO_MAX_SECTIONS
 #define MODULE_INFO_MAX_SECTIONS 4
+#endif
+#ifndef FINGERPRINT_LENGTH
 #define FINGERPRINT_LENGTH 20
+#endif
 
 typedef struct {
 	uint64_t vaddr;

@@ -16,6 +16,11 @@ along with this program; see the file COPYING. If not, see
 
 #pragma once
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+
 #include <stdint.h>
 #include <unistd.h>
 #include <orion/proc.h>
@@ -29,3 +34,7 @@ uintptr_t set_ucred_to_debugger();
 uintptr_t set_proc_authid(pid_t pid, uintptr_t new_authid);
 uint8_t* jailbreak_process(pid_t pid);
 void jail_process(pid_t pid, uint8_t* ucred);
+
+#ifdef __cplusplus
+}
+#endif

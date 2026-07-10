@@ -1,42 +1,32 @@
-extern "C"{
+extern "C" {
 #include <orion/ucred.h>
 }
 #define UCRED_SIZE 0x200
 
-
-uintptr_t set_ucred_to_debugger()
+extern "C" uintptr_t set_ucred_to_debugger()
 {
     return set_proc_authid(getpid(), DEBUG_AUTHID);
 }
 
-
 //
-// Search process entr on the allproc linked list
-// acquire the "ucred" structure and set it
-uintptr_t set_proc_authid(pid_t pid, uintptr_t new_authid)
+// Search process entry on the allproc linked list, acquire ucred, set authid.
+// Returns previous authid, or 0 on failure.
+//
+extern "C" uintptr_t set_proc_authid(pid_t pid, uintptr_t new_authid)
 {
-    (void)pid; // historical: always elevates self
-    struct proc* proc = get_proc_by_pid(getpid());
-
-    if (proc)
-    {
-        //
-        // Read from kernel
-        //
-        uintptr_t authid = 0;
-        kernel_copyout((uintptr_t) proc->p_ucred + 0x58, &authid, sizeof(uintptr_t));
-        kernel_copyin(&new_authid, (uintptr_t) proc->p_ucred + 0x58, sizeof(uintptr_t));
-
-        free(proc);
-
-        return authid;
+    struct proc *proc = get_proc_by_pid(pid);
+    if (!proc) {
+        return 0;
     }
 
-    return 0;
+    uintptr_t authid = 0;
+    kernel_copyout((uintptr_t)proc->p_ucred + 0x58, &authid, sizeof(uintptr_t));
+    kernel_copyin(&new_authid, (uintptr_t)proc->p_ucred + 0x58, sizeof(uintptr_t));
+    free(proc);
+    return authid;
 }
 
-
-uint8_t* jailbreak_process(pid_t pid)
+extern "C" uint8_t* jailbreak_process(pid_t pid)
 {
     uint8_t* backup_ucred = (uint8_t*) malloc(UCRED_SIZE);
 
@@ -76,7 +66,7 @@ uint8_t* jailbreak_process(pid_t pid)
 //
 // Restore
 //
-void jail_process(pid_t pid, uint8_t* old_ucred)
+extern "C" void jail_process(pid_t pid, uint8_t* old_ucred)
 {
     uintptr_t ucred = kernel_get_proc_ucred(pid);
     kernel_copyin(old_ucred, ucred, UCRED_SIZE);
