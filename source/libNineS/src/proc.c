@@ -1,5 +1,7 @@
 #include "../include/proc.h"
 
+#include <string.h>
+
 struct proc* find_proc_by_name(const char* proc_name)
 {
 
@@ -100,38 +102,82 @@ void list_proc_modules(struct proc* proc)
     }
 }
 
-
-module_info_t* get_module_handle(pid_t pid, const char* module_name)
+static const char *path_basename_c(const char *path)
 {
-    size_t num_handles = 0;
-    syscall(SYS_dl_get_list, pid, NULL, 0, &num_handles);
-    
-    if (num_handles)
-    {
-        uintptr_t* handles = (uintptr_t*) calloc(num_handles, sizeof(uintptr_t));
-        syscall(SYS_dl_get_list, pid, handles, num_handles, &num_handles);
+    const char *slash;
 
-        module_info_t* mod_info = (module_info_t*) malloc(sizeof(module_info_t));
-        
-        for (int i = 0; i < num_handles; ++i)
-        {
-            bzero(mod_info, sizeof(module_info_t));
-            syscall(SYS_dl_get_info_2, pid, 1, handles[i], mod_info);
-            if (!strcmp(mod_info->filename, module_name))
-            {
-                return mod_info;
-            }
-        }
-        
-        free(handles);
-        free(mod_info);
+    if (path == NULL || path[0] == '\0') {
+        return "";
     }
-
-    return NULL;
+    slash = strrchr(path, '/');
+    return slash != NULL ? slash + 1 : path;
 }
 
+static int module_name_matches(const module_info_t *mod, const char *module_name)
+{
+    if (mod == NULL || module_name == NULL) {
+        return 0;
+    }
+    return strcmp(mod->filename, module_name) == 0 ||
+           strcmp(mod->libname, module_name) == 0 ||
+           strcmp(path_basename_c(mod->sandboxed_path), module_name) == 0;
+}
 
+/*
+ * Fill *out with the first loaded module matching name (filename, libname,
+ * or sandboxed path basename). Returns 0 on success.
+ */
+int get_module_info(pid_t pid, const char *module_name, module_info_t *out)
+{
+    size_t num_handles = 0;
+    uintptr_t *handles = NULL;
+    size_t i;
 
+    if (module_name == NULL || module_name[0] == '\0' || out == NULL) {
+        return -1;
+    }
 
+    memset(out, 0, sizeof(*out));
+    syscall(SYS_dl_get_list, pid, NULL, 0, &num_handles);
+    if (num_handles == 0) {
+        return -1;
+    }
 
+    handles = (uintptr_t *)calloc(num_handles, sizeof(uintptr_t));
+    if (handles == NULL) {
+        return -1;
+    }
 
+    syscall(SYS_dl_get_list, pid, handles, num_handles, &num_handles);
+    for (i = 0; i < num_handles; ++i) {
+        module_info_t tmp;
+        memset(&tmp, 0, sizeof(tmp));
+        syscall(SYS_dl_get_info_2, pid, 1, handles[i], &tmp);
+        if (module_name_matches(&tmp, module_name)) {
+            *out = tmp;
+            free(handles);
+            return 0;
+        }
+    }
+
+    free(handles);
+    return -1;
+}
+
+/*
+ * Heap-allocated variant kept for existing callers (injector, etc.).
+ * Prefer get_module_info() for new code.
+ */
+module_info_t* get_module_handle(pid_t pid, const char* module_name)
+{
+    module_info_t *mod_info = (module_info_t *)malloc(sizeof(module_info_t));
+
+    if (mod_info == NULL) {
+        return NULL;
+    }
+    if (get_module_info(pid, module_name, mod_info) == 0) {
+        return mod_info;
+    }
+    free(mod_info);
+    return NULL;
+}

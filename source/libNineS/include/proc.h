@@ -50,6 +50,12 @@ typedef struct {
 
 struct proc* find_proc_by_name(const char* process_name);
 struct proc* get_proc_by_pid(pid_t pid);
+/**
+ * Fill out with dynlib module info. Matches filename, libname, or path basename.
+ * @return 0 on success, -1 if not found.
+ */
+int get_module_info(pid_t pid, const char *module_name, module_info_t *out);
+/** Heap-allocated variant; free() the result. Prefer get_module_info(). */
 module_info_t* get_module_handle(pid_t pid, const char* module_name);
 void list_all_proc_and_pid();
 
