@@ -59,7 +59,7 @@ atomic_bool g_legacy_cmd_server = false;
 atomic_bool g_legacy_cmd_server_exit = false;
 void start_ip_thread(void);
 void* runCommandNControlServer(void*);
-void patch_checker(void);
+void patch_checker(bool rest_resume);
 void* IPC_loop(void* args);
 bool shellui_patch(void);
 
@@ -137,8 +137,9 @@ int main(void) {
 
     if (g_settings.snapshot().toolbox_auto_start &&
         orion_ready_is_set(ORION_FLAG_UTIL_BOOTED)) {
-        OrionHEN_log("util already booted once — activating toolbox path");
-        patch_checker();
+        /* util.elf restarted mid-session (crash recover / re-launch) — not rest. */
+        OrionHEN_log("util already booted once — toolbox reinject (not rest)");
+        patch_checker(/*rest_resume=*/false);
     }
     /* Mark that util completed cold start (typed flag; replaces util_first_boot file). */
     orion_ready_signal(ORION_FLAG_UTIL_BOOTED);
@@ -160,7 +161,7 @@ int main(void) {
                 continue;
 
             if (no_network_rest_mode_action) {
-                patch_checker();
+                patch_checker(/*rest_resume=*/true);
             }
             continue;
         }

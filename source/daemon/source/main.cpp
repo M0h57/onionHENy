@@ -135,7 +135,6 @@ int launchApp(const char *titleId);
 int ItemzLaunchByUri(const char *uri);
 bool enable_toolbox();
 void sig_handler(int signo);
-void patch_checker();
 int elfldr_raise_privileges(pid_t pid);
 extern void makenewapp();
 // Play_time_thread / fifo_and_dumper_thread / get_ip_address / IPC_loop: daemon_ops.hpp

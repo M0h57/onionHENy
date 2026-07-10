@@ -743,6 +743,9 @@ static int launch_chain(const OrbisKernelSwVersion &sys_ver) {
   orion_ready_clear(ORION_READY_KSTUFF);
   orion_ready_clear(ORION_READY_DAEMON);
   orion_ready_clear(ORION_READY_TOOLBOX);
+  /* Runtime flags that must not stick across re-HEN without reboot. */
+  orion_ready_clear(ORION_FLAG_UTIL_BOOTED);
+  orion_ready_clear(ORION_FLAG_FPS_OVERLAY);
 
   if (!launch_path("/data/OrionHEN/daemons/util.elf", "util", "util.elf")) {
     notify("failed to launch util via elfldr :9021");

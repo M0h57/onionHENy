@@ -95,7 +95,7 @@ void check_addr_change(void);
 // util_toolbox.cpp
 bool enable_toolbox();
 bool isUserLoggedIn();
-void patch_checker();
+void patch_checker(bool rest_resume);
 
 // Command server functions
 static void replyError(int sock) {

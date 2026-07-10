@@ -5,6 +5,7 @@
 #include <orion/ready.h>
 #include <orion/ipc_client.hpp>
 #include <orion/settings.hpp>
+#include <orion/toolbox_timing.h>
 #include "common_utils.h"
 #include <atomic>
 #include <unistd.h>
@@ -63,35 +64,44 @@ bool isUserLoggedIn() {
     sleep(5);
     return isLoggedIn;
 }
-void patch_checker() {
+/**
+ * Re-request toolbox inject via crit daemon.
+ * @param rest_resume  true only for real rest-mode recovery paths.
+ *                     false for util restart / re-HEN reinject (no rest copy).
+ */
+void patch_checker(bool rest_resume) {
     if (!isUserLoggedIn()) {
-        OrionHEN_log("User is not logged in yet, skipping...");
+        OrionHEN_log("User is not logged in yet, skipping toolbox reinject...");
         return;
     }
 
     LoadSettings();
     const orion::Settings cfg = g_settings.snapshot();
-    if (cfg.disable_toolbox_auto_start_for_rest_mode) {
+    if (rest_resume && cfg.disable_toolbox_auto_start_for_rest_mode) {
         OrionHEN_log("Toolbox auto start for rest mode is disabled");
         return;
     }
-    OrionHEN_log("sleeping for %llu secs",
-                 static_cast<unsigned long long>(cfg.rest_mode_delay_seconds));
-    sleep(static_cast<unsigned int>(cfg.rest_mode_delay_seconds));
 
-    orion_notify(true, "(No Network) Coming out of Rest Mode detected\nre-activating "
-                "the OrionHEN toolbox...");
-
-    OrionHEN_log("************************************\n\nShellUI is not "
-              "patched\n\n************************************");
+    if (rest_resume &&
+        orion_toolbox_should_apply_rest_delay(true, cfg.rest_mode_delay_seconds)) {
+        OrionHEN_log("rest resume delay %llu secs",
+                     static_cast<unsigned long long>(cfg.rest_mode_delay_seconds));
+        sleep(static_cast<unsigned int>(cfg.rest_mode_delay_seconds));
+        orion_notify(true,
+                     "Coming out of Rest Mode — re-activating the OrionHEN toolbox...");
+    } else {
+        OrionHEN_log("toolbox reinject (not rest resume)");
+    }
 
     if (!enable_toolbox()) {
         orion_notify(true, "Failed to inject toolbox");
     }
-    
-    no_network_rest_mode_action = false;
-    no_network_patched = true;
-    real_rest_mode_detected = false;
+
+    if (rest_resume) {
+        no_network_rest_mode_action = false;
+        no_network_patched = true;
+        real_rest_mode_detected = false;
+    }
 }
 
 
