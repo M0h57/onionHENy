@@ -323,6 +323,14 @@ bool cmd_enable_toolbox(){
     }
     OrionHEN_log("Injecting toolbox into SceShellUI pid=%d", pid);
 
+    /*
+     * A previous ShellUI crash or direct daemon restart can leave either the
+     * modern or legacy toolbox-ready marker behind. Consume only a signal
+     * produced by this injection; otherwise StartOption=TOOLBOX may launch a
+     * settings scene while the new module is still installing its hooks.
+     */
+    orion_ready_clear(ORION_READY_TOOLBOX);
+
     if (!Inject_Toolbox(pid, shellui_elf_start)) {
       /* Do NOT ForceKill ShellUI — that loops home menu / coredumps */
       orion_notify(true, "Failed to inject toolbox");
@@ -340,4 +348,3 @@ bool cmd_enable_toolbox(){
 
     return true;
 }
-

@@ -289,10 +289,10 @@ void ParseCheatID(const char* id, char* tid, int* cheat_id)
 //
 // Scene has changed, stop Remote Play thread if is running.
 //
-// WARNING: Do not enable this detour on 11.600 until DetourFunction rewrites
-// RIP-relative prologues. Calling UpdateImposeStatusFlag_Orig jumps into the
-// memcpy trampoline and SIGSEGVs at trampoline+0x6 (see prx.cpp comment).
-// Remote-play cleanup lives in hook_manifest.cpp instead.
+// Kept disabled pending a dedicated 11.600 device regression pass. The original
+// crash was caused by the old memcpy-only trampoline; liborion_detour now
+// relocates RIP-relative prologues. Remote-play cleanup remains in
+// hook_manifest.cpp, so there is no reason to re-enable this hook speculatively.
 //
 void UpdateImposeStatusFlag_hook(MonoObject* scene, MonoObject* frontActiveScene)
 {
@@ -396,7 +396,10 @@ void Patch_Main_thread_Check(MonoImage * image_core) {
     shellui_log("changing permissions on (%p).", real_addr);
 #endif
     
-	DetourFunction(real_addr, (void*)&CheckRunningOnMainThread);
+    if (!DetourFunction(real_addr, (void*)&CheckRunningOnMainThread)) {
+        shellui_log("Main thread check detour failed");
+        return;
+    }
 #if SHELL_DEBUG==1
     shellui_log("Main thread check patched\n");
 #endif

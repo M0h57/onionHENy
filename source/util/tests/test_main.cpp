@@ -7,6 +7,7 @@ extern "C" int test_payload_suite(void);
 extern "C" int test_base64_suite(void);
 extern "C" int test_aes_cbc_suite(void);
 extern "C" int test_hde64_suite(void);
+extern "C" int test_x64_relocator_suite(void);
 extern "C" int test_http_github_suite(void);
 extern "C" int test_reg_entity_suite(void);
 extern "C" int test_account_id_b64_suite(void);
@@ -34,6 +35,7 @@ int main() {
   failures += test_base64_suite();
   failures += test_aes_cbc_suite();
   failures += test_hde64_suite();
+  failures += test_x64_relocator_suite();
   failures += test_http_github_suite();
   failures += test_reg_entity_suite();
   failures += test_account_id_b64_suite();

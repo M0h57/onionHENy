@@ -20,8 +20,8 @@ along with this program; see the file COPYING. If not, see
 #include <cstring>
 #include <cstdlib>
 
-#include <orion/hde64.h>
 #include <orion/ipc_client.hpp>
+#include <orion/x64_relocator.h>
 
 #include <machine/param.h>
 #include <sys/mman.h>
@@ -46,6 +46,16 @@ extern bool has_hv_bypass __attribute__((weak));
 namespace {
 
 constexpr int kProtRwx = PROT_EXEC | PROT_READ | PROT_WRITE;
+constexpr size_t kMaxX64InstructionLength = 15;
+/*
+ * hde64_disasm may inspect a complete 15-byte instruction when the final
+ * instruction starts at HOOK_LENGTH - 1. PS5 xotext is execute-only, so every
+ * page in that decoder window must be made readable before relocation starts.
+ */
+constexpr size_t kRelocationReadLength =
+    HOOK_LENGTH + kMaxX64InstructionLength - 1;
+constexpr uintptr_t kNearAllocationStep = 64u * 1024u * 1024u;
+constexpr unsigned kNearAllocationSteps = 31; /* 1984 MiB < INT32_MAX */
 
 uintptr_t page_align_down(uintptr_t addr) {
   return addr & ~static_cast<uintptr_t>(PAGE_MASK);
@@ -88,11 +98,9 @@ int mprotect_range_rwx(uintptr_t addr, size_t len) {
  * Allocate executable stub memory. Do NOT use malloc — heap is not a reliable
  * RX region even after mprotect; jumping there causes SIGILL/SIGSEGV.
  */
-void *alloc_exec_stub(size_t len) {
-  if (len == 0) {
-    return nullptr;
-  }
-  void *p = mmap(nullptr, len, kProtRwx, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+void *map_exec_stub(uintptr_t address, size_t len, int extra_flags) {
+  void *p = mmap(reinterpret_cast<void *>(address), len, kProtRwx,
+                 MAP_PRIVATE | MAP_ANONYMOUS | extra_flags, -1, 0);
   if (p == MAP_FAILED) {
     return nullptr;
   }
@@ -102,6 +110,38 @@ void *alloc_exec_stub(size_t len) {
     return nullptr;
   }
   return p;
+}
+
+void *alloc_exec_stub(size_t len, uintptr_t near_address) {
+  if (len == 0) {
+    return nullptr;
+  }
+
+  /*
+   * RIP-relative memory operands still use a signed disp32 after relocation.
+   * FreeBSD's MAP_EXCL makes MAP_FIXED collision-safe: probe nearby pages
+   * without replacing any existing ShellUI/system mapping.
+   */
+  const uintptr_t base = page_align_down(near_address);
+  for (unsigned step = 1; step <= kNearAllocationSteps; ++step) {
+    const uintptr_t distance =
+        static_cast<uintptr_t>(step) * kNearAllocationStep;
+    if (base <= UINTPTR_MAX - distance) {
+      if (void *p = map_exec_stub(base + distance, len,
+                                  MAP_FIXED | MAP_EXCL)) {
+        return p;
+      }
+    }
+    if (base >= distance) {
+      if (void *p = map_exec_stub(base - distance, len,
+                                  MAP_FIXED | MAP_EXCL)) {
+        return p;
+      }
+    }
+  }
+
+  /* Non-RIP-relative prologues remain relocatable even if no near gap exists. */
+  return map_exec_stub(0, len, 0);
 }
 
 } // namespace
@@ -136,47 +176,40 @@ void *DetourFunction(uint64_t address, void *destination) {
     return nullptr;
   }
 
-  uint32_t InstructionSize = 0;
   shellui_log("Hooking %#02lx => %p", address, destination);
 
-  if (mprotect_range_rwx(address, HOOK_LENGTH) < 0) {
-    shellui_log("DetourFunction: failed to mprotect target page(s)");
-    return nullptr;
-  }
-
-  while (InstructionSize < HOOK_LENGTH) {
-    hde64s hs{};
-    uint32_t temp =
-        hde64_disasm(reinterpret_cast<void *>(address + InstructionSize), &hs);
-    if (hs.flags & F_ERROR) {
-      shellui_log("DetourFunction: disasm error at +%u", InstructionSize);
-      return nullptr;
-    }
-    InstructionSize += temp;
-  }
-
-  shellui_log("InstructionSize: %i", InstructionSize);
-
-  if (InstructionSize < HOOK_LENGTH) {
-    shellui_log(
-        "DetourFunction: Hooking Requires a minimum of 14 bytes to write jump!");
-    return nullptr;
-  }
-
-  const size_t stubLength =
-      static_cast<size_t>(InstructionSize) + static_cast<size_t>(HOOK_LENGTH);
-  void *executableAddress = alloc_exec_stub(stubLength);
+  const size_t stubLength = ORION_X64_TRAMPOLINE_CAPACITY;
+  void *executableAddress = alloc_exec_stub(stubLength, address);
   if (!executableAddress) {
     shellui_log("DetourFunction: failed to allocate executable stub");
     return nullptr;
   }
 
-  ReadMemory(address, executableAddress, static_cast<int>(InstructionSize));
-  PatchInJump(reinterpret_cast<uint64_t>(executableAddress) + InstructionSize,
-              reinterpret_cast<void *>(address + InstructionSize));
+  /* PS5 xotext is execute-only. Never decode/copy it before this succeeds. */
+  if (mprotect_range_rwx(address, kRelocationReadLength) < 0) {
+    shellui_log("DetourFunction: failed to mprotect target decoder window");
+    munmap(executableAddress, stubLength);
+    return nullptr;
+  }
+
+  orion_x64_relocate_result relocation{};
+  if (!orion_x64_relocate(
+          reinterpret_cast<const uint8_t *>(address), address,
+          reinterpret_cast<uint8_t *>(executableAddress),
+          reinterpret_cast<uintptr_t>(executableAddress), HOOK_LENGTH,
+          stubLength, &relocation)) {
+    shellui_log("DetourFunction: relocation failed at +%zu: %s",
+                relocation.error_offset,
+                orion_x64_relocate_error_string(relocation.error));
+    munmap(executableAddress, stubLength);
+    return nullptr;
+  }
+
   PatchInJump(address, destination);
 
-  shellui_log("DetourFunction: target=%#02lx hook=%p trampoline=%p size=%u",
-              address, destination, executableAddress, InstructionSize);
+  shellui_log(
+      "DetourFunction: target=%#02lx hook=%p trampoline=%p stolen=%zu emitted=%zu",
+      address, destination, executableAddress, relocation.source_size,
+      relocation.trampoline_size);
   return executableAddress;
 }

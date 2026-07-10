@@ -591,16 +591,14 @@ bool install_hooks(const ShellImages& img, void* read_fn) {
        "OptionMenu", "createJson", 8, reinterpret_cast<void*>(&createJson_hook),
        reinterpret_cast<void**>(&createJson), true},
       /*
-       * DISABLED on 11.600+ (and likely other FW with similar Mono JIT prologues).
+       * DISABLED pending an explicit 11.600 device regression pass.
        *
-       * DetourFunction only memcpy's the first N whole instructions into a trampoline.
-       * UpdateImposeStatusFlag's prologue uses RIP-relative ops; after relocation those
-       * still encode the OLD rip, so UpdateImposeStatusFlag_Orig faults at trampoline+0x6
-       * (field log: IP = trampoline|0x6, right after "[DBG-UIS] calling original").
-       *
-       * This is NOT StopConfirmRegistLoop / remote-play pthread_join — confirm=0 in the
-       * crash path and the loop never runs. Keep disabled; remote-play cleanup is done
-       * from GetManifestResourceStream when leaving the remote_play page.
+       * Historical field logs faulted at trampoline+0x6 because the old
+       * DetourFunction copied RIP-relative JIT instructions without relocation.
+       * liborion_detour now relocates those instructions, but this unrelated hook
+       * stays off until its lifecycle behavior is validated on hardware. Remote-play
+       * cleanup is already handled from GetManifestResourceStream when leaving the
+       * remote_play page.
        *
        * {"LayerManager.UpdateImposeStatusFlag", img.app_system,
        *  "Sce.Vsh.ShellUI.AppSystem", "LayerManager", "UpdateImposeStatusFlag", 2,
@@ -835,8 +833,16 @@ int main(int argc, char const* argv[]) {
   set_proc_authid(pid, auth.old_authid);
   auth.release();
 
-  if (g_settings.display_tids)
-    ReloadRNPSApp("NPXS40002");
+  if (g_settings.display_tids) {
+    /*
+     * Do not call ReactApplicationSceneManager.ReloadApp from this injected
+     * worker thread. Bypassing CheckRunningOnMainThread suppresses Mono's
+     * guard but does not make ShellUI Scene/IME transitions thread-safe.
+     * The settings OnPress path performs the refresh later on ShellUI's UI
+     * thread; cold start can wait for the next natural scene refresh.
+     */
+    shellui_log("Display_tids enabled; deferring NPXS40002 scene refresh");
+  }
 
   shellui_log("Performed Magic");
   setup_proc_hooks();

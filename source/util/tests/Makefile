@@ -96,6 +96,7 @@ TEST_CXX_SRCS := \
 	test_toolbox_route.cpp \
 	test_toolbox_helpers.cpp \
 	test_http_github.cpp \
+	test_x64_relocator.cpp \
 	test_main.cpp
 
 PROD_C_OBJS := $(patsubst $(UTIL_ROOT)/%.c,$(BUILD_DIR)/prod/%.o,$(filter $(UTIL_ROOT)/%,$(PROD_C_SRCS)))
@@ -111,6 +112,7 @@ PROD_CXX_OBJS := $(patsubst $(UTIL_ROOT)/%.cpp,$(BUILD_DIR)/prod/%.o,$(filter $(
 PROD_CXX_OBJS += $(BUILD_DIR)/prod/extern/cJSON.o
 PROD_CXX_OBJS += $(BUILD_DIR)/prod/liborion_settings/settings.o
 PROD_CXX_OBJS += $(BUILD_DIR)/prod/liborion_ipc/ipc_server.o
+PROD_CXX_OBJS += $(BUILD_DIR)/prod/liborion_detour/x64_relocator.o
 PROD_CXX_OBJS += $(BUILD_DIR)/prod/shellui/ps5_settings_ui.o
 PROD_CXX_OBJS += $(BUILD_DIR)/prod/shellui/toolbox_route.o
 
@@ -158,6 +160,10 @@ $(BUILD_DIR)/prod/liborion_settings/settings.o: $(REPO_ROOT)/source/liborion_set
 	$(HOST_CXX) $(CXXFLAGS) -c -o $@ $<
 
 $(BUILD_DIR)/prod/liborion_ipc/ipc_server.o: $(REPO_ROOT)/source/liborion_ipc/source/ipc_server.cpp | $(BUILD_DIR)
+	@mkdir -p $(dir $@)
+	$(HOST_CXX) $(CXXFLAGS) -c -o $@ $<
+
+$(BUILD_DIR)/prod/liborion_detour/x64_relocator.o: $(REPO_ROOT)/source/liborion_detour/source/x64_relocator.cpp | $(BUILD_DIR)
 	@mkdir -p $(dir $@)
 	$(HOST_CXX) $(CXXFLAGS) -c -o $@ $<
 

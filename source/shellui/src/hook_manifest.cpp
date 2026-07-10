@@ -51,9 +51,8 @@ uint64_t GetManifestResourceStream_Hook(uint64_t inst, MonoString *FileName) {
       .cheats_shortcut_not_open = g_ui.cheats_shortcut_activated_not_open,
   });
 
-  /* Replace LayerManager.UpdateImposeStatusFlag hook (unsafe trampoline on
-   * 11.600): when navigating away from the remote-play settings page, stop the
-   * pairing registration thread. */
+  /* Keep remote-play cleanup independent of LayerManager lifecycle hooks: when
+   * navigating away from the page, stop the pairing registration thread. */
   const bool was_remote_play = g_ui.is_remote_play;
   g_ui.apply_route_flags(route.flags);
   if (was_remote_play && !g_ui.is_remote_play) {

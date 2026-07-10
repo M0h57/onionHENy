@@ -35,6 +35,7 @@ Binary: `source/util/build/host-tests/orion-host-tests`
 | `test_base64` | encode / decode / round-trip (MC4 codec) |
 | `test_aes_cbc` | AES-256-CBC encrypt/decrypt with MC4 key/IV |
 | `test_hde64` | x86_64 length decode (nop/ret/mov/jmp) |
+| `test_x64_relocator` | relocation-aware trampolines: RIP-relative memory/call, rel8/rel32 call/jmp/jcc, internal targets, safe rejection |
 | `test_http_github` | GitHub commits JSON → `sha` (object + array) |
 | `test_reg_entity` | registry entity-id formula (account slots) |
 | `test_account_id_b64` | uint64 account id → base64 |
