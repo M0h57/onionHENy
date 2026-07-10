@@ -1,0 +1,232 @@
+/* Copyright (C) 2025 OrionHEN / LightningMods
+ *
+ * Fluent builder for PS5 Debug Settings (system_settings) XML.
+ * Business code describes widgets; build() returns the full document string.
+ */
+#pragma once
+
+#include <functional>
+#include <optional>
+#include <string>
+#include <string_view>
+#include <utility>
+#include <vector>
+
+namespace ps5ui {
+
+enum class Style { None, Center };
+
+/** Escape attribute text: & < > " and path-style / → // (matches legacy escapeXML). */
+std::string escape(std::string_view text);
+
+struct Attrs {
+  std::string id;
+  std::string title;
+  std::optional<std::string> second_title;
+  std::optional<std::string> description;
+  std::optional<std::string> icon;
+  std::optional<std::string> file;
+  std::optional<std::string> value;
+  std::optional<std::string> confirm;
+  std::optional<std::string> initial_focus_to;
+  Style style = Style::None;
+};
+
+struct Node {
+  enum class Kind {
+    SettingList,
+    Toggle,
+    Button,
+    Label,
+    Link,
+    List,
+    ListItem,
+  } kind = Kind::SettingList;
+
+  Attrs attrs;
+  std::vector<Node> children;
+};
+
+class ListBuilder {
+public:
+  ListBuilder& item(std::string id, std::string title, std::string value);
+
+private:
+  template <typename>
+  friend class GroupT;
+  explicit ListBuilder(Node& list_node) : list_node_(list_node) {}
+  Node& list_node_;
+};
+
+class Group; // nested scopes always use Group
+
+/**
+ * CRTP base so Page::toggle(...).build() type-checks (returns Derived&).
+ */
+template <typename Derived>
+class GroupT {
+public:
+  Derived& label(std::string id, std::string title, Style style = Style::None);
+
+  Derived& button(std::string id, std::string title,
+                  std::optional<std::string> second_title = std::nullopt,
+                  std::optional<std::string> description = std::nullopt,
+                  std::optional<std::string> icon = std::nullopt,
+                  Style style = Style::None);
+
+  Derived& toggle(std::string id, std::string title, bool on,
+                  std::optional<std::string> second_title = std::nullopt,
+                  std::optional<std::string> description = std::nullopt,
+                  std::optional<std::string> icon = std::nullopt);
+
+  Derived& link(std::string id, std::string title, std::string file,
+                std::optional<std::string> second_title = std::nullopt);
+
+  Derived& list(std::string id, std::string title,
+                const std::function<void(ListBuilder&)>& body,
+                std::optional<std::string> second_title = std::nullopt);
+
+  Derived& group(std::string id, std::string title,
+                 const std::function<void(Group&)>& body,
+                 std::optional<std::string> second_title = std::nullopt,
+                 std::optional<std::string> icon = std::nullopt,
+                 std::optional<std::string> initial_focus_to = std::nullopt,
+                 Style style = Style::None);
+
+  Derived& add(Node node);
+
+protected:
+  GroupT() = default;
+  void bind(Node* node) { node_ = node; }
+  Node* node_ = nullptr;
+
+  Derived& self() { return static_cast<Derived&>(*this); }
+};
+
+/** Nested setting_list scope (and the type accepted by group() callbacks). */
+class Group : public GroupT<Group> {
+public:
+  explicit Group(Node* node) { bind(node); }
+};
+
+/**
+ * Root document: one root setting_list under system_settings.
+ * Call build() to get the full XML string.
+ */
+class Page : public GroupT<Page> {
+public:
+  Page(std::string root_list_id, std::string root_title,
+       std::string plugin = "debug_settings_plugin");
+
+  Page& root_style(Style style);
+  Page& root_focus(std::string id);
+
+  /** Serialize to a complete system_settings document. */
+  [[nodiscard]] std::string build() const;
+
+private:
+  std::string plugin_;
+  Node root_;
+};
+
+// ---- template method definitions ----
+
+template <typename Derived>
+Derived& GroupT<Derived>::label(std::string id, std::string title, Style style) {
+  Node n;
+  n.kind = Node::Kind::Label;
+  n.attrs.id = std::move(id);
+  n.attrs.title = std::move(title);
+  n.attrs.style = style;
+  return add(std::move(n));
+}
+
+template <typename Derived>
+Derived& GroupT<Derived>::button(std::string id, std::string title,
+                                 std::optional<std::string> second_title,
+                                 std::optional<std::string> description,
+                                 std::optional<std::string> icon, Style style) {
+  Node n;
+  n.kind = Node::Kind::Button;
+  n.attrs.id = std::move(id);
+  n.attrs.title = std::move(title);
+  n.attrs.second_title = std::move(second_title);
+  n.attrs.description = std::move(description);
+  n.attrs.icon = std::move(icon);
+  n.attrs.style = style;
+  return add(std::move(n));
+}
+
+template <typename Derived>
+Derived& GroupT<Derived>::toggle(std::string id, std::string title, bool on,
+                                 std::optional<std::string> second_title,
+                                 std::optional<std::string> description,
+                                 std::optional<std::string> icon) {
+  Node n;
+  n.kind = Node::Kind::Toggle;
+  n.attrs.id = std::move(id);
+  n.attrs.title = std::move(title);
+  n.attrs.second_title = std::move(second_title);
+  n.attrs.description = std::move(description);
+  n.attrs.icon = std::move(icon);
+  n.attrs.value = on ? "1" : "0";
+  return add(std::move(n));
+}
+
+template <typename Derived>
+Derived& GroupT<Derived>::link(std::string id, std::string title, std::string file,
+                               std::optional<std::string> second_title) {
+  Node n;
+  n.kind = Node::Kind::Link;
+  n.attrs.id = std::move(id);
+  n.attrs.title = std::move(title);
+  n.attrs.file = std::move(file);
+  n.attrs.second_title = std::move(second_title);
+  return add(std::move(n));
+}
+
+template <typename Derived>
+Derived& GroupT<Derived>::list(std::string id, std::string title,
+                               const std::function<void(ListBuilder&)>& body,
+                               std::optional<std::string> second_title) {
+  Node n;
+  n.kind = Node::Kind::List;
+  n.attrs.id = std::move(id);
+  n.attrs.title = std::move(title);
+  n.attrs.second_title = std::move(second_title);
+  node_->children.push_back(std::move(n));
+  ListBuilder lb(node_->children.back());
+  if (body)
+    body(lb);
+  return self();
+}
+
+template <typename Derived>
+Derived& GroupT<Derived>::group(std::string id, std::string title,
+                                const std::function<void(Group&)>& body,
+                                std::optional<std::string> second_title,
+                                std::optional<std::string> icon,
+                                std::optional<std::string> initial_focus_to,
+                                Style style) {
+  Node n;
+  n.kind = Node::Kind::SettingList;
+  n.attrs.id = std::move(id);
+  n.attrs.title = std::move(title);
+  n.attrs.second_title = std::move(second_title);
+  n.attrs.icon = std::move(icon);
+  n.attrs.initial_focus_to = std::move(initial_focus_to);
+  n.attrs.style = style;
+  node_->children.push_back(std::move(n));
+  Group sub(&node_->children.back());
+  if (body)
+    body(sub);
+  return self();
+}
+
+template <typename Derived>
+Derived& GroupT<Derived>::add(Node node) {
+  node_->children.push_back(std::move(node));
+  return self();
+}
+
+} // namespace ps5ui

@@ -23,6 +23,7 @@ COMMON_FLAGS := -Wall -Wextra -g -O0 -DORION_HOST_TEST=1 -DCBC=1 \
 	-I$(REPO_ROOT)/source/liborion_platform/include \
 	-I$(REPO_ROOT)/source/liborion_ready \
 	-I$(REPO_ROOT)/source/extern/cJSON \
+	-I$(REPO_ROOT)/source/shellui/include \
 	$(KEYSTONE_CFLAGS)
 
 # ready.h lives under source/include/orion/
@@ -52,7 +53,8 @@ PROD_CXX_SRCS := \
 	$(UTIL_ROOT)/source/cheats/ShnExtCheatParser.cpp \
 	$(UTIL_ROOT)/source/cheats/CheatParserFactory.cpp \
 	$(REPO_ROOT)/source/extern/cJSON/cJSON.cpp \
-	$(REPO_ROOT)/source/liborion_settings/source/settings.cpp
+	$(REPO_ROOT)/source/liborion_settings/source/settings.cpp \
+	$(REPO_ROOT)/source/shellui/src/ps5_settings_ui.cpp
 
 TEST_C_SRCS := \
 	test_harness.c \
@@ -68,6 +70,7 @@ TEST_CXX_SRCS := \
 	test_cheat_parsers.cpp \
 	test_settings.cpp \
 	test_msg_protocol.cpp \
+	test_ps5_settings_ui.cpp \
 	test_main.cpp
 
 PROD_C_OBJS := $(patsubst $(UTIL_ROOT)/%.c,$(BUILD_DIR)/prod/%.o,$(filter $(UTIL_ROOT)/%,$(PROD_C_SRCS)))
@@ -79,6 +82,7 @@ PROD_C_OBJS += $(BUILD_DIR)/prod/liborion_ready/ready.o
 PROD_CXX_OBJS := $(patsubst $(UTIL_ROOT)/%.cpp,$(BUILD_DIR)/prod/%.o,$(filter $(UTIL_ROOT)/%,$(PROD_CXX_SRCS)))
 PROD_CXX_OBJS += $(BUILD_DIR)/prod/extern/cJSON.o
 PROD_CXX_OBJS += $(BUILD_DIR)/prod/liborion_settings/settings.o
+PROD_CXX_OBJS += $(BUILD_DIR)/prod/shellui/ps5_settings_ui.o
 
 TEST_C_OBJS := $(patsubst %.c,$(BUILD_DIR)/tests/%.o,$(TEST_C_SRCS))
 TEST_CXX_OBJS := $(patsubst %.cpp,$(BUILD_DIR)/tests/%.o,$(TEST_CXX_SRCS))
@@ -120,6 +124,10 @@ $(BUILD_DIR)/prod/extern/cJSON.o: $(REPO_ROOT)/source/extern/cJSON/cJSON.cpp | $
 	$(HOST_CXX) $(CXXFLAGS) $(THIRD_PARTY_FLAGS) -c -o $@ $<
 
 $(BUILD_DIR)/prod/liborion_settings/settings.o: $(REPO_ROOT)/source/liborion_settings/source/settings.cpp | $(BUILD_DIR)
+	@mkdir -p $(dir $@)
+	$(HOST_CXX) $(CXXFLAGS) -c -o $@ $<
+
+$(BUILD_DIR)/prod/shellui/ps5_settings_ui.o: $(REPO_ROOT)/source/shellui/src/ps5_settings_ui.cpp | $(BUILD_DIR)
 	@mkdir -p $(dir $@)
 	$(HOST_CXX) $(CXXFLAGS) -c -o $@ $<
 
