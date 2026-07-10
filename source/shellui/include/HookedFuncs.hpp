@@ -1,215 +1,11 @@
 /* Copyright (C) 2025 OrionHEN / LightningMods
-
-This program is free software; you can redistribute it and/or modify it
-under the terms of the GNU General Public License as published by the
-Free Software Foundation; either version 3, or (at your option) any
-later version.
-
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
-
-You should have received a copy of the GNU General Public License
-along with this program; see the file COPYING. If not, see
-<http://www.gnu.org/licenses/>.  */
-
+ *
+ * ShellUI API surface: types + Mono hooks.
+ * Prefer including shellui_types.hpp alone when hooks are not needed.
+ * Do NOT include this from ipc.hpp (breaks compile seam).
+ */
 #pragma once
-#include "external_symbols.hpp"
-#include <string>
-#include <vector>
-#include <iostream>
-#include "defs.h"
-
-extern "C" uint8_t toolbox_start[];
-extern "C" int32_t toolbox_end;
-
-#define MAX_LINE 256
-#define MAX_PAIRS 100
-
-
-#define SCE_LNC_UTIL_ERROR_ALREADY_RUNNING 0x8094000c
-#define SCE_LNC_UTIL_ERROR_ALREADY_RUNNING_KILL_NEEDED 0x80940010
-#define SCE_LNC_UTIL_ERROR_ALREADY_RUNNING_SUSPEND_NEEDED 0x80940011
-
-#define SCE_REGMGR_ENT_KEY_DEVENV_TOOL_SHELLUI_disp_titleid 2013448470
-#define SCE_REGMGR_INT_SIZE 4
-#define SCE_REGMGR_ERROR_PRM_REGID 0x800D0203
-
-typedef struct {
-    char key[MAX_LINE];
-    char value[MAX_LINE];
-} KeyValue;
-
-// Base64 decoding table
-static const std::string base64_chars =
-"ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-"abcdefghijklmnopqrstuvwxyz"
-"0123456789+/";
-
-typedef struct IniParser_t {
-    KeyValue pairs[MAX_PAIRS];
-    int count = 0;
-} IniParser;
-
-enum RemoveWidget {
-    REMOVE_GPU_OVERLAY,
-    REMOVE_CPU_OVERLAY,
-    REMOVE_RAM_OVERLAY,
-    REMOVE_FPS_OVERLAY,
-    REMOVE_IP_OVERLAY,
-    REMOVE_ALL_OVERLAYS,
-};
-
-enum CreateWidget {
-    CREATE_GPU_OVERLAY,
-    CREATE_CPU_OVERLAY,
-    CREATE_RAM_OVERLAY,
-    CREATE_FPS_OVERLAY,
-    CREATE_IP_OVERLAY,
-    CREATE_ALL_OVERLAYS,
-};
-
-struct WidgetConfig {
-    const char* id;
-    float x, y;
-    const char* text;
-    int bold;
-    float r, g, b, a;
-};
-
-void RemoveGameWidget(RemoveWidget widget);
-void CreateGameWidget(CreateWidget widget);
-
-struct LaunchAppParam
-{
-  // Token: 0x04000024 RID: 36
-  unsigned int size;
-
-  // Token: 0x04000025 RID: 37
-  int userId;
-
-  // Token: 0x04000026 RID: 38
-  int appAttr;
-
-  // Token: 0x04000027 RID: 39
-  int enableCrashReport;
-
-  // Token: 0x04000028 RID: 40
-  int checkFlag;
-
-  // Token: 0x04000029 RID: 41
-  unsigned long contextId;
-
-  bool isSpeculativeLaunch;
-};
-
-typedef struct {
-    std::string path;
-    std::string shellui_path;
-    std::string tid;
-    std::string id;
-    std::string name; // filename
-    std::string version;
-} Plugins;
-
-typedef struct {
-    std::string path;
-    std::string shellui_path;
-    std::string id;
-    std::string name; 
-    std::string version;
-} Payloads_Apps;
-
-
-// Game Entry structure definition
-struct GameEntry {
-    std::string tid;         // Title ID
-    std::string title;       // Game title
-    std::string version;     // Game version
-    std::string path;        // Displayed path
-    std::string dir_name;    // Directory name
-    std::string icon_path;   // Path to icon
-    std::string id;          // Button ID
-  };
-
-extern std::vector<GameEntry> games_list;
-enum Cheats_Shortcut{
-    CHEATS_SC_OFF = 0,
-    R3_L3,
-    L2_TRIANGLE,
-    LONG_OPTIONS,
-    CHEATS_LONG_SHARE,
-    CHEATS_SINGLE_SHARE,
- };
- 
- enum Toolbox_Shortcut{
-    TOOLBOX_SC_OFF = 0,
-    L2_R3,
-    TOOLBOX_LONG_SHARE,
-    TOOLBOX_SINGLE_SHARE,
- };
- 
- enum overlay_positions{
-    OVERLAY_POS_TOP_LEFT = 0,
-    OVERLAY_POS_TOP_RIGHT,
-    OVERLAY_POS_BOTTOM_LEFT,
-    OVERLAY_POS_BOTTOM_RIGHT
- };
-
- enum cheats_repo_source{
-    CHEATS_REPO_ORIONHEN = 0,
-    CHEATS_REPO_GOLDHEN
- };
-
-// Persisted config: single product schema (orion::Settings).
-#include <orion/settings.hpp>
-extern orion::Settings g_settings;
-
-// Derived overlay pixel layout (not persisted; recomputed from overlay_pos).
-struct OverlayLayout {
-    float overlay_gpu_x = 10.0f;
-    float overlay_gpu_y = 10.0f;
-    float overlay_cpu_x = 10.0f;
-    float overlay_cpu_y = 35.0f;
-    float overlay_ram_x = 10.0f;
-    float overlay_ram_y = 60.0f;
-    float overlay_fps_x = 10.0f;
-    float overlay_fps_y = 85.0f;
-    float overlay_ip_x = 10.0f;
-    float overlay_ip_y = 110.0f;
-};
-extern OverlayLayout g_overlay_layout;
-
-// Runtime UI flag (not in INI schema).
-extern bool g_all_cpu_usage;
-
-// Call sites use g_settings / g_overlay_layout / g_all_cpu_usage directly.
-
-typedef struct
-{
-    char prefix[15];  // "OrionHEN_PLUGIN" + null terminator
-    char titleID[10]; // 4 uppercase letters, 5 numbers, and a null terminator
-    char plugin_version[5];
-} CustomPluginHeader;
-
-typedef struct _dirdesc {
-    int	dd_fd;		/* file descriptor associated with directory */
-    long	dd_loc;		/* offset in current buffer */
-    long	dd_size;	/* amount of data returned by getdirentries */
-    char* dd_buf;	/* data buffer */
-    int	dd_len;		/* size of data buffer */
-    long	dd_seek;	/* magic cookie returned by getdirentries */
-    long	dd_rewind;	/* magic cookie for rewinding */
-    int	dd_flags;	/* flags for readdir */
-    struct pthread_mutex* dd_lock;	/* lock */
-    struct _telldir* dd_td;
-} DIR;
-
-enum Plugin_Options {
-    KILL_OR_START,
-    ENABLE_OR_DISABLE_AUTO
-};
+#include "shellui_types.hpp"
 
 enum GamePadButtons
 	{
@@ -300,6 +96,20 @@ void __syscall();
 extern bool is_patches_plugin_running;
 // Original function pointer type
 typedef int (*DecryptRnpsBundle_t)(uint8_t* data, int offset, int size);
+
+/* Minimal DIR surface used by plugin scanners (not full BSD dirent). */
+typedef struct _dirdesc {
+    int dd_fd;
+    long dd_loc;
+    long dd_size;
+    char *dd_buf;
+    int dd_len;
+    long dd_seek;
+    long dd_rewind;
+    int dd_flags;
+    struct pthread_mutex *dd_lock;
+    struct _telldir *dd_td;
+} DIR;
 
 extern "C" DIR * opendir(const char*);
 extern "C" struct dirent* readdir(DIR*);

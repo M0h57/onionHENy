@@ -5,8 +5,9 @@
 
 #pragma once
 
+#include "shellui_types.hpp"
 #include "HookedFuncs.hpp"
-#include "ipc.hpp" // IPC_Client + shellui_log
+#include "ipc.hpp"
 #include <orion/platform.h>
 #include <orion/proc_query.h>
 #include <cstddef>
