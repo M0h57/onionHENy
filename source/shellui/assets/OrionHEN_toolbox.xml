@@ -152,8 +152,7 @@
         <label id="id_project_7" title="PS5-SELF-Decrypter by Specter - https://github.com/Cryptogenic/PS5-SELF-Decrypter" style="center"/>
         <label id="id_project_8" title="PS5Debug by CTN - https://github.com/GoldHEN/ps5debug" style="center"/>
         <label id="id_project_9" title="LibNineS - https://github.com/buzzer-re/NineS" style="center"/>
-        <label id="id_project_10" title="Libmicrohttpd - https://www.gnu.org/software/libmicrohttpd/" style="center"/>
-        <label id="id_project_11" title="cJSON - https://github.com/DaveGamble/cJSON" style="center"/>
+        <label id="id_project_10" title="cJSON - https://github.com/DaveGamble/cJSON" style="center"/>
       </setting_list>
     </setting_list>
 

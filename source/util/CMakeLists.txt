@@ -104,7 +104,6 @@ target_link_libraries(${PROJECT_NAME} PUBLIC
     ScePad
     SceVideoOut
     kernel_sys
-    SceAppInstUtil
     NineS
     SceHttp2
     SceSsl

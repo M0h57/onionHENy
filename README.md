@@ -182,9 +182,8 @@ Common ports: exploit elfldr **9020** and runtime elfldr **9021**. OrionHEN does
 - ~~Optional FTP on port 1337~~ (removed)
 - ~~Optional Klog server on port 9081~~ (removed)
 - ~~Optional `/data` inside app sandboxes~~ (removed — was only sandbox path visibility, not jailbreak)
+- ~~Direct PKG Installer (TCP 9090) and DPI v2 WebUI (12800)~~ (removed — use system PkgInstaller UI)
 - ELF spawn via external **elfldr on port 9021** (not bundled)
-- Optional Direct PKG Installer v2 WebUI: `http://PS5_IP:12800`
-- Optional Direct PKG Installer service on port **9090**
 
 ### Plugin / SDK
 
@@ -206,8 +205,6 @@ Settings file: **`/data/OrionHEN/config.ini`** (created on first run).
 |---------|-------------|---------|
 | `toolbox_auto_start` | 0 = off, 1 = on | 1 |
 | `Allow_data_in_sandbox` | **Ignored** (sandbox `/data` patch removed) | 0 |
-| `DPI` | 0 = disable Direct PKG Installer, 1 = enable | 0 |
-| `DPI_v2` | 0 = disable DPI v2, 1 = enable | 0 |
 | `Rest_Mode_Delay_Seconds` | Delay before shellui patch after rest | 0 |
 | `Util_rest_kill` | Kill util daemon on rest | 0 |
 | `Game_rest_kill` | Kill open game on rest | 0 |
@@ -225,17 +222,6 @@ Settings file: **`/data/OrionHEN/config.ini`** (created on first run).
 | `overlay_ip` | Overlay: IP | 1 |
 | `overlay_kstuff` | Overlay: kstuff status | 1 |
 | `Overlay_pos` | Overlay position | 0 (`OVERLAY_POS_TOP_LEFT`) |
-
----
-
-## DPI API (for tool authors)
-
-Direct PKG Installer (port **9090**) is simple and WIP:
-
-1. TCP connect to the PS5 on port **9090**
-2. Send JSON: `{ "url" : "http://xxxx" }`
-3. Receive: `{ "res" : "0" }` on success
-4. Server closes the client socket after the response
 
 ---
 

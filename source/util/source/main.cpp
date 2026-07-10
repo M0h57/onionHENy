@@ -45,8 +45,6 @@ extern "C" {
   #include "common_utils.h"
   #include <ps5/payload.h>
 
-  void * start_john_elf_loader(void * arg);
-  void * krw_server(void * args);
   int sceKernelGetAppInfo(pid_t pid, app_info_t * info);
   int sceKernelGetProcessName(int pid, char * out);
   int _sceApplicationGetAppId(int pid, uint32_t * appId);
@@ -66,7 +64,6 @@ void* IPC_loop(void* args);
 bool shellui_patch(void);
 
 extern atomic_bool no_network_rest_mode_action;
-extern pthread_t kernelrw_thread;
 
 jmp_buf g_catch_buf;
 uintptr_t kernel_base = 0;
@@ -74,9 +71,6 @@ void* __stack_chk_guard = (void*)0xdeadbeef;
 
 static void cleanup(void) {
     orion_notify(true, "OrionHEN utilities daemon has crashed...\n\nAttemping to recover...");
-
-    pthread_join(kernelrw_thread, NULL);
-
     exit(1);
 }
 

@@ -83,12 +83,9 @@ int numb_of_tries = 0;
 int retries = 0;
 pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t jb_lock = PTHREAD_MUTEX_INITIALIZER;
-pthread_t dpi_thread = NULL;
-pthread_t kernelrw_thread = NULL;
 extern atomic_bool not_connected;
 
 // Function forward declarations
-void *krw_server(void *args);
 bool LoadSettings();
 void check_addr_change(void);
 int get_ip_address(char *ip_address);

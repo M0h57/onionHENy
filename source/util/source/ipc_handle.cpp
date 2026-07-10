@@ -81,12 +81,9 @@ void handleIPC(clientArgs *client, std::string &inputStr,
   }
   case BREW_UTIL_UNUSED_FTP:
   case BREW_UTIL_UNUSED_KLOG:
-    /* FTP (1337) and Klog (9081) servers removed from OrionHEN. */
-    OrionHEN_log("FTP/Klog toggle: unsupported (services removed)");
-    reply(sender_app, true);
-    break;
   case BREW_UTIL_UNUSED_DPI:
-    OrionHEN_log("DPI toggle: unsupported (DirectPKGInstaller removed)");
+    /* FTP (1337), Klog (9081), and DirectPKGInstaller removed; ordinals kept for IPC compat. */
+    OrionHEN_log("Removed-service toggle: unsupported (cmd=%u)", static_cast<unsigned>(command));
     reply(sender_app, true);
     break;
   case BREW_UTIL_DAEMON_PID: {
