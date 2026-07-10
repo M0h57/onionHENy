@@ -47,9 +47,6 @@ struct Settings {
   bool DPI = true;
   bool DPI_v2 = false;
 
-  // --- Jail / sandbox (historical; feature may be removed) ---
-  bool allow_data_in_sandbox = false;
-
   // --- Toolbox ---
   bool toolbox_auto_start = true;
   bool disable_toolbox_auto_start_for_rest_mode = false;

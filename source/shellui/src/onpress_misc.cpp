@@ -80,12 +80,6 @@ static OnPressResult id_dl_cheats(OnPressContext &ctx) {
   return OnPressResult::EarlyReturn;
 }
 
-static OnPressResult id_sistro_ps5debug(OnPressContext &ctx) {
-  (void)ctx;
-  notify("PS5Debug is not bundled in OrionHEN");
-  return OnPressResult::Handled;
-}
-
 static const OnPressExactEntry kExact[] = {
     {"id_download_kstuff", id_download_kstuff},
     {"id_kstuff_autoload", id_kstuff_autoload},
@@ -95,7 +89,6 @@ static const OnPressExactEntry kExact[] = {
     {"id_lm_test", id_lm_test},
     {"id_orionhen_credits", id_orionhen_credits},
     {"id_dl_cheats", id_dl_cheats},
-    {"id_sistro_ps5debug", id_sistro_ps5debug},
 };
 
 const OnPressExactEntry *onpress_misc_exact(size_t *count) {

@@ -49,7 +49,6 @@ static int test_roundtrip_file(void) {
   in.selected_cheats_repo = 1;
   in.rest_mode_delay_seconds = 7;
   in.start_option = 3;
-  in.allow_data_in_sandbox = true;
 
   TEST_ASSERT_TRUE(orion::settings_save_file(path.c_str(), in));
 
@@ -65,7 +64,6 @@ static int test_roundtrip_file(void) {
   TEST_ASSERT_EQ_INT(1, out.selected_cheats_repo);
   TEST_ASSERT_EQ_U64(7, out.rest_mode_delay_seconds);
   TEST_ASSERT_EQ_INT(3, out.start_option);
-  TEST_ASSERT_TRUE(out.allow_data_in_sandbox == true);
   TEST_ASSERT_EQ_INT(orion::kSettingsSchemaVersion, out.schema_version);
 
   unlink(path.c_str());
@@ -114,7 +112,6 @@ static int test_full_schema_roundtrip(void) {
   orion::Settings in{};
   in.DPI = false;
   in.DPI_v2 = true;
-  in.allow_data_in_sandbox = true;
   in.toolbox_auto_start = false;
   in.disable_toolbox_auto_start_for_rest_mode = true;
   in.util_rest_kill = true;
@@ -145,7 +142,6 @@ static int test_full_schema_roundtrip(void) {
 
   TEST_ASSERT_TRUE(out.DPI == in.DPI);
   TEST_ASSERT_TRUE(out.DPI_v2 == in.DPI_v2);
-  TEST_ASSERT_TRUE(out.allow_data_in_sandbox == in.allow_data_in_sandbox);
   TEST_ASSERT_TRUE(out.toolbox_auto_start == in.toolbox_auto_start);
   TEST_ASSERT_TRUE(out.disable_toolbox_auto_start_for_rest_mode ==
                    in.disable_toolbox_auto_start_for_rest_mode);

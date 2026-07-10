@@ -23,8 +23,6 @@ void* load_plugin_thread(void* args) {
     pthread_exit(nullptr);
     return nullptr;
 }
-extern std::string remote_play_info;
-void* load_ps5debug_thr(void*){ return nullptr; }
 void* download_cheats_thr(void*){
     if(cheat_action_in_progress){
         notify("Cheat action already in progress, please wait for it to complete...");

@@ -58,8 +58,7 @@
 
     <!-- ========== 4. 系统设置 ========== -->
     <!-- 用途：主机权限、硬件、存储与稳定性相关配置 -->
-    <setting_list id="id_group_system" title="系统设置" second_title="权限、硬件、存储与休息模式" icon="//user//data//OrionHEN//assets//icon_xml_settings.png" initial_focus_to="id_data_sb">
-      <toggle_switch id="id_data_sb" title="允许应用沙盒访问 /data" second_title="应用内可访问 /data 目录" confirm="更改将在下次重启后生效" value="1"/>
+    <setting_list id="id_group_system" title="系统设置" second_title="权限、硬件、存储与休息模式" icon="//user//data//OrionHEN//assets//icon_xml_settings.png" initial_focus_to="id_toolbox_auto_start">
       <toggle_switch id="id_disp_titleids" title="在主菜单显示 Title ID" second_title="零售机可用，但仅在工具箱激活时显示" value="0"/>
       <toggle_switch id="id_auto_eject" title="OrionHEN 启动时自动弹出光盘" description="OrionHEN 完全启动后自动弹出已插入的光盘，适用于 BD-J 或 LUA 漏洞利用" confirm="更改将在下次重启后生效" value="0"/>
 

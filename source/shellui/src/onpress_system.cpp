@@ -40,16 +40,6 @@ static OnPressResult id_selected_cheats_repo(OnPressContext &ctx) {
   return OnPressResult::Handled;
 }
 
-static OnPressResult id_data_sb(OnPressContext &ctx) {
-  bool &Data_SB = g_settings.allow_data_in_sandbox;
-  if (atoi(ctx.value.c_str()) == Data_SB) {
-    shellui_log("Data Sandbox already %s", Data_SB ? "Enabled" : "Disabled");
-    return OnPressResult::EarlyReturn;
-  }
-  Data_SB = !Data_SB;
-  return OnPressResult::Handled;
-}
-
 static OnPressResult id_toolbox_auto_start(OnPressContext &ctx) {
   if (atoi(ctx.value.c_str()) == g_settings.toolbox_auto_start) {
     shellui_log("toolbox Access already %s",
@@ -181,7 +171,6 @@ static const OnPressExactEntry kExact[] = {
     {"id_custom_game_opts", id_custom_game_opts},
     {"id_start_opt", id_start_opt},
     {"id_selected_cheats_repo", id_selected_cheats_repo},
-    {"id_data_sb", id_data_sb},
     {"id_toolbox_auto_start", id_toolbox_auto_start},
     {"id_rest_1", id_rest_1},
     {"id_rest_2", id_rest_2},

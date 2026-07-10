@@ -207,7 +207,6 @@ extern "C" {
 #include <orion/proc_query.h>
 int sceNetCtlInit(void);
 int sceUserServiceInitialize(void *ptr);
-bool patchShellCore(void);
 bool load_plugin(const char *path);
 bool download_file(const char *url, const char *dst);
 bool check_for_new_commit(int repo);

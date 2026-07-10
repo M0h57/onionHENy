@@ -128,7 +128,6 @@ int main(void) {
     set_proc_authid(getpid(), DEBUG_AUTHID);
 
 
-    g_settings.allow_data_in_sandbox = false;
     g_settings.DPI = true;
     g_settings.rest_mode_delay_seconds = 0;
     g_settings.toolbox_auto_start = true;
@@ -141,8 +140,6 @@ int main(void) {
     OrionHEN_log("=========== starting OrionHEN Utilities... ===========");
 
     LoadSettings();
-
-    /* Allow_data_in_sandbox / patchShellCore / TestKit acti patch removed. */
 
     start_ip_thread();
     pthread_create(&ipc_server, NULL, IPC_loop, NULL);

@@ -136,12 +136,6 @@ int OnPreCreate_Hook(MonoObject* Instance, MonoObject* element) {
     else if (id == "id_start_opt") {
         s_MonoText = mono_string_new(Root_Domain, std::to_string(g_settings.start_option).c_str());
     }
-    else if (id == "id_data_sb") {
-        s_MonoText = mono_string_new(Root_Domain, g_settings.allow_data_in_sandbox ? "1" : "0");
-	  }
-    else if (id == "id_sistro_ps5debug") {
-		    s_MonoText = mono_string_new(Root_Domain, "0");
-	  }
     else if (id == "id_rest_1") {
          s_MonoText = mono_string_new(Root_Domain, std::to_string(g_settings.rest_mode_delay_seconds).c_str());
     }

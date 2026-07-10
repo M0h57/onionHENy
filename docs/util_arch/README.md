@@ -257,7 +257,7 @@ cheat_engine_runtime
 ### 6.5 CMD / Toolbox（`cpp_service.cpp`）
 
 - **`runCommandNControlServer`**：TCP **9028**，legacy hijacker 风格 `Command` 分发（越狱类命令等）；受 `legacy_cmd_server` 开关影响是否处理业务。
-- **`patch_checker` / `enable_toolbox` / `patchShellCore`**：与 Toolbox 注入、ShellCore 相关修补（部分路径已裁剪）。
+- **`patch_checker` / `enable_toolbox`**：与 Toolbox 注入、ShellCore 相关修补（部分路径已裁剪）。
 - **`start_ip_thread`**：维护全局 IP 字符串，供 notify 文案使用。
 
 ### 6.6 金手指（C++：`orion::cheats`）
@@ -343,7 +343,7 @@ IPC `DOWNLOAD_CHEATS`：zip → staging → `orion_cheat_flatten_install_tree` �
 | `/data/OrionHEN/kstuff.elf` | 下载的 kstuff |
 | `/system_tmp/util_first_boot` | 是否首启（影响 toolbox 自动） |
 
-`LoadSettings` 读取的主要键（节选）：`Settings.DPI`、`DPI_v2`、`toolbox_auto_start`、`legacy_cmd_server`、`Allow_data_in_sandbox`（历史项）、`disable_toolbox_auto_start_for_rest_mode`。
+`LoadSettings` 读取的主要键（节选）：`Settings.DPI`、`DPI_v2`、`toolbox_auto_start`、`legacy_cmd_server`、`disable_toolbox_auto_start_for_rest_mode`。
 
 ---
 
