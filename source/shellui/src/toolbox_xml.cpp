@@ -32,44 +32,7 @@
 
 int usbpath();
 void escapeXML(std::string& input);
-bool is_valid_plugin(CustomPluginHeader& header);
 bool Get_Running_App_TID(std::string& title_id, int& BigAppid);
-
-bool is_valid_plugin(CustomPluginHeader& header) {
-  if (strncmp(header.prefix, "OrionHEN_PLUGIN", 14) != 0) {
-    shellui_log("Plugin header prefix does not match");
-    return false;
-  }
-
-  for (int i = 0; i < 4; ++i) {
-    if (header.titleID[i] < 'A' || header.titleID[i] > 'Z') {
-      shellui_log("Invalid plugin file: titleID must contain 4 uppercase letters as the start");
-      return false;
-    }
-  }
-  for (int i = 4; i < 9; ++i) {
-    if (header.titleID[i] < '0' || header.titleID[i] > '9') {
-      shellui_log("Invalid plugin file: titleID must contain 5 numbers as the end");
-      return false;
-    }
-  }
-
-  if (header.titleID[9] != '\0') {
-    shellui_log("Invalid plugin file: titleID must be nullptr-terminated");
-    return false;
-  }
-
-  for (int i = 0; i < 3; ++i) {
-    if (header.plugin_version[i] == '.')
-      continue;
-    if (header.plugin_version[i] < '0' || header.plugin_version[i] > '9') {
-      shellui_log("Invalid plugin file: version must be in the following format xx.xx");
-      return false;
-    }
-  }
-
-  return true;
-}
 
 void escapeXML(std::string& input) {
   input = ps5ui::escape(input);
@@ -77,82 +40,56 @@ void escapeXML(std::string& input) {
 
 namespace {
 
-bool read_plugin_header(const std::string& path, CustomPluginHeader& header) {
+/** Payload .elf only (OrionHEN no longer supports .plugin packages). */
+template <typename G>
+void append_payload_entry(G& page, const std::string& directory, const char* filename,
+                          bool list_page, int& next_id) {
+  if (!toolbox::is_payload_elf_name(filename))
+    return;
+
+  const std::string path = directory + "/" + filename;
+  char elf_key[64] = {};
+  if (!toolbox::elf_key_from_name(filename, elf_key, sizeof(elf_key))) {
+    shellui_log("Skipping invalid payload name: %s", filename);
+    return;
+  }
+
+  /* Confirm file is readable (ELF magic checked at launch). */
   const int fd = open(path.c_str(), O_RDONLY, 0);
   if (fd < 0) {
-    shellui_log("Failed to open Plugin file");
-    return false;
+    shellui_log("Failed to open payload: %s", path.c_str());
+    return;
   }
-  const ssize_t n = read(fd, &header, sizeof(header));
   close(fd);
-  if (n != static_cast<ssize_t>(sizeof(header))) {
-    shellui_log("Failed to read Plugin file, %s", path.c_str());
-    return false;
-  }
-  return true;
-}
 
-template <typename G>
-void append_plugin_entry(G& page, const std::string& directory, const char* filename,
-                         bool plugins_xml, int& next_id) {
-  if (!toolbox::is_plugin_or_elf_name(filename))
-    return;
-
-  const bool is_elf = strstr(filename, ".elf") != nullptr;
-  const std::string path = directory + "/" + filename;
-  shellui_log("Found Plugin: %s", path.c_str());
-
-  CustomPluginHeader header{};
-  if (!read_plugin_header(path, header))
-    return;
-
-  if (!is_elf && !is_valid_plugin(header)) {
-    shellui_log("Invalid plugin file.");
-    return;
-  }
-  if (is_elf) {
-    strncpy(header.prefix, "<elf>", 5);
-    strncpy(header.plugin_version, "", 4);
-  }
-  shellui_log("Valid plugin file.");
-
-  /* Raw ELF: launch key = basename stem (must match util
-   * orion_plugin_elf_key_from_name → /system_tmp/<key>.PID). */
-  char elf_key[64] = {};
-  if (is_elf && !toolbox::elf_key_from_name(filename, elf_key, sizeof(elf_key))) {
-    shellui_log("Skipping ELF with invalid name: %s", filename);
-    return;
-  }
-  const char* tid = is_elf ? elf_key : header.titleID;
+  shellui_log("Found payload: %s key=%s", path.c_str(), elf_key);
 
   const std::string shown_path = toolbox::display_path_for_ui(path);
-  const std::string version_str =
-      is_elf ? "" : ("(v" + std::string(header.plugin_version) + ")");
-  const std::string id_prefix = plugins_xml ? "id_plugin_" : "id_auto_plugin_";
+  const std::string id_prefix = list_page ? "id_payload_" : "id_auto_payload_";
   const std::string id = id_prefix + std::to_string(next_id++);
-  const std::string title = std::string(filename) + " " + version_str;
 
   std::string second;
-  if (plugins_xml) {
-    second = "启动/停止 " + std::string(filename) + " (路径: " + shown_path + ") (" +
-             tid + ")";
+  if (list_page) {
+    second = "启动/停止 " + std::string(filename) + " (路径: " + shown_path +
+             ") (" + elf_key + ")";
   } else {
-    second = "启用/禁用 " + std::string(filename) + " 的自动启动  (" + shown_path + ")";
+    second = "启用/禁用 " + std::string(filename) + " 的自动启动  (" + shown_path +
+             ")";
   }
 
-  page.toggle(id, title, /*on=*/false, second);
+  page.toggle(id, filename, /*on=*/false, second);
 
-  Plugins entry;
+  PayloadEntry entry;
   entry.shellui_path = path;
-  entry.tid = tid;
+  entry.tid = elf_key;
   entry.path = shown_path;
   entry.name = filename;
-  entry.version = header.plugin_version;
+  entry.version = "";
   entry.id = id;
-  if (plugins_xml)
-    g_ui.plugins_list.push_back(entry);
+  if (list_page)
+    g_ui.payloads_list.push_back(entry);
   else
-    g_ui.auto_list.push_back(entry);
+    g_ui.auto_payloads_list.push_back(entry);
 }
 
 template <typename G>
@@ -319,40 +256,36 @@ void generate_remote_play_xml(std::string& xml_buffer) {
   xml_buffer = page.build();
 }
 
-void generate_plugin_xml(std::string& xml_buffer, bool plugins_xml) {
-  static const std::vector<std::string> kPluginDirs = {
-      "/user/data/OrionHEN/plugins",
-      "/usb0/OrionHEN/plugins",
-      "/usb1/OrionHEN/plugins",
-      "/usb2/OrionHEN/plugins",
-      "/usb3/OrionHEN/plugins",
+void generate_payload_xml(std::string& xml_buffer, bool list_page) {
+  static const std::vector<std::string> kPayloadDirs = {
       "/user/data/OrionHEN/payloads",
+      "/data/OrionHEN/payloads",
       "/usb0/OrionHEN/payloads",
       "/usb1/OrionHEN/payloads",
       "/usb2/OrionHEN/payloads",
       "/usb3/OrionHEN/payloads",
   };
 
-  const char* root_id = plugins_xml ? "id_plugin" : "id_auto_plugins";
-  const char* root_title = plugins_xml ? "插件" : "★ 插件 - 启动菜单";
+  const char* root_id = list_page ? "id_payload" : "id_auto_payloads";
+  const char* root_title = list_page ? "Payload" : "★ Payload 自动启动";
   ps5ui::Page page(root_id, root_title);
 
   int toggle_switch_id = 1;
-  for (const auto& directory : kPluginDirs) {
+  for (const auto& directory : kPayloadDirs) {
     DIR* dir = opendir(directory.c_str());
     if (!dir) {
       shellui_log("Failed to open directory: %s", directory.c_str());
       continue;
     }
     while (struct dirent* entry = readdir(dir))
-      append_plugin_entry(page, directory, entry->d_name, plugins_xml,
-                          toggle_switch_id);
+      append_payload_entry(page, directory, entry->d_name, list_page,
+                           toggle_switch_id);
     closedir(dir);
   }
 
-  if (plugins_xml) {
-    page.link("id_auto_plugins", "★ 插件 - 启动菜单", "auto_plugins.xml",
-              "配置在加载 OrionHEN 时自动启动的插件");
+  if (list_page) {
+    page.link("id_auto_payloads", "★ Payload 自动启动", "auto_payloads.xml",
+              "配置在加载 OrionHEN 时自动启动的 .elf（放在 payloads/）");
   }
 
   xml_buffer = page.build();

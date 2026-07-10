@@ -97,7 +97,7 @@ extern bool is_patches_plugin_running;
 // Original function pointer type
 typedef int (*DecryptRnpsBundle_t)(uint8_t* data, int offset, int size);
 
-/* Minimal DIR surface used by plugin scanners (not full BSD dirent). */
+/* Minimal DIR surface used by payload scanners (not full BSD dirent). */
 typedef struct _dirdesc {
     int dd_fd;
     long dd_loc;
@@ -134,8 +134,7 @@ std::string base64_decode(const std::string &encoded_string);
 std::vector<unsigned char> encrypt_decrypt(const unsigned char *data, size_t size, const std::string &key);
 void ReloadRNPSApp(const char* title_id);
 
-bool is_valid_plugin(CustomPluginHeader& header);
-void generate_plugin_xml(std::string& xml_buffer, bool plugins_xml);
+void generate_payload_xml(std::string& xml_buffer, bool list_page);
 void generate_remote_play_xml(std::string& xml_buffer);
 void Patch_Main_thread_Check(MonoImage * image_core);
 uint64_t Get_Address_of_Method(MonoImage* Assembly_Image, const char* Name_Space, const char* Class_Name, const char* Method_Name, int Param_Count);
@@ -331,7 +330,7 @@ extern  std::string Sysinfo;
 extern  std::string display_info;
 extern  std::string uilib_dll;
 
-extern  std::string plugin_xml;
+extern  std::string payloads_xml;
 extern  std::string debug_settings_xml;
 extern  std::string remote_play_xml;
 extern MonoImage* pui_img;

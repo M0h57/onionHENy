@@ -120,18 +120,18 @@ static int test_nested_group(void) {
 
 static int test_link_and_root_style(void) {
   const std::string xml =
-      Page("id_plugin", "插件")
+      Page("id_payload", "Payload")
           .root_style(Style::Center)
-          .link("id_auto_plugins", "★ 启动菜单", "auto_plugins.xml", "cfg")
+          .link("id_auto_payloads", "★ 启动菜单", "auto_payloads.xml", "cfg")
           .build();
 
-  TEST_ASSERT_TRUE(xml.find("id=\"id_plugin\"") != std::string::npos);
+  TEST_ASSERT_TRUE(xml.find("id=\"id_payload\"") != std::string::npos);
   TEST_ASSERT_TRUE(xml.find("style=\"center\"") != std::string::npos);
-  TEST_ASSERT_TRUE(xml.find("<link id=\"id_auto_plugins\" title=\"★ 启动菜单\" "
-                            "second_title=\"cfg\" file=\"auto_plugins.xml\"/>") !=
+  TEST_ASSERT_TRUE(xml.find("<link id=\"id_auto_payloads\" title=\"★ 启动菜单\" "
+                            "second_title=\"cfg\" file=\"auto_payloads.xml\"/>") !=
                        std::string::npos ||
-                   xml.find("<link id=\"id_auto_plugins\" title=\"★ 启动菜单\" "
-                            "file=\"auto_plugins.xml\" second_title=\"cfg\"/>") !=
+                   xml.find("<link id=\"id_auto_payloads\" title=\"★ 启动菜单\" "
+                            "file=\"auto_payloads.xml\" second_title=\"cfg\"/>") !=
                        std::string::npos);
   return 0;
 }

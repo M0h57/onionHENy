@@ -18,7 +18,7 @@ add_subdirectory(libNidResolver)
 # Shared proc/ucred before NineS (inject path links these symbols).
 add_subdirectory(liborion_proc)
 add_subdirectory(liborion_platform)
-add_subdirectory(liborion_plugin)
+add_subdirectory(liborion_payload)
 add_subdirectory(liborion_ipc)
 add_subdirectory(liborion_settings)
 add_subdirectory(liborion_detour)

@@ -13,7 +13,7 @@
 #include <stdbool.h>
 #include <unistd.h>
 
-/* --- liborion_plugin / elfldr_remote (device-only launch path) --- */
+/* --- liborion_payload / elfldr_remote (device-only launch path) --- */
 
 bool elfldr_remote_available(void) { return false; }
 

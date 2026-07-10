@@ -3,7 +3,7 @@
 extern "C" int test_cheat_utils_suite(void);
 extern "C" int test_cheat_parsers_suite(void);
 extern "C" int test_cheat_flatten_suite(void);
-extern "C" int test_plugin_suite(void);
+extern "C" int test_payload_suite(void);
 extern "C" int test_base64_suite(void);
 extern "C" int test_aes_cbc_suite(void);
 extern "C" int test_hde64_suite(void);
@@ -30,7 +30,7 @@ int main() {
   failures += test_cheat_utils_suite();
   failures += test_cheat_parsers_suite();
   failures += test_cheat_flatten_suite();
-  failures += test_plugin_suite();
+  failures += test_payload_suite();
   failures += test_base64_suite();
   failures += test_aes_cbc_suite();
   failures += test_hde64_suite();

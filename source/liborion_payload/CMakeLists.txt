@@ -1,10 +1,10 @@
 ###################################################################################################
-# OrionHEN shared plugin load helpers (.plugin / .elf via 9021)
+# OrionHEN payload ELF load helpers (9021 elfldr + PID files)
 ###################################################################################################
 
 cmake_minimum_required(VERSION 3.20)
 
-set(basename "orion_plugin")
+set(basename "orion_payload")
 project(${basename} C)
 
 set(CMAKE_C_STANDARD 11)
@@ -14,8 +14,7 @@ set(D_CWD "${PROJECT_SOURCE_DIR}")
 include_directories(SYSTEM "${PS5_PAYLOAD_SDK}")
 include_directories(SYSTEM "${PS5_PAYLOAD_SDK}/include")
 
-# elfldr_remote is provided by each final binary (util/bootstrapper/daemon).
-add_library(${PROJECT_NAME} STATIC source/plugin.c)
+add_library(${PROJECT_NAME} STATIC source/payload.c)
 set_target_properties(${PROJECT_NAME} PROPERTIES OUTPUT_NAME "${PROJECT_NAME}")
 
 message("========== build: ${PROJECT_NAME} ==========")
@@ -30,7 +29,6 @@ target_include_directories(${PROJECT_NAME}
     "${D_CWD}/../liborion_platform/include"
 )
 
-# PUBLIC so consumers pick up orion/plugin.h path
 target_link_libraries(${PROJECT_NAME} PUBLIC orion_proc orion_platform)
 add_dependencies(${PROJECT_NAME} orion_proc orion_platform)
 

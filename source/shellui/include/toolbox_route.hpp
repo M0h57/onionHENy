@@ -16,9 +16,9 @@ namespace toolbox {
 enum class Page : unsigned char {
   None = 0,           /**< unknown → original stream */
   DebugSettings,      /**< embedded toolbox XML */
-  Plugins,
+  Payloads,
   Cheats,
-  AutoPlugins,
+  AutoPayloads,
   RemotePlay,
   Plapps,
   SuperuserPass,      /**< recognized; still use original stream */
@@ -26,7 +26,7 @@ enum class Page : unsigned char {
 };
 
 struct ResourceNames {
-  std::string_view plugin_xml;
+  std::string_view payloads_xml;
   std::string_view debug_settings_xml;
   std::string_view cheats_xml;
   std::string_view remote_play_xml;
@@ -39,13 +39,13 @@ struct RouteInput {
   bool cheats_shortcut_not_open = false;
 };
 
-/** Flag snapshot after matching resource (matches historical hook behaviour). */
+/** Flag snapshot after matching resource. */
 struct RouteFlags {
-  bool is_plugin = false;
+  bool is_payloads = false;
   bool is_su_menu = false;
   bool is_debug_settings = false;
   bool is_cheats = false;
-  bool is_auto_plugin = false;
+  bool is_auto_payload = false;
   bool is_remote_play = false;
   bool is_plapps = false;
 };
@@ -53,24 +53,15 @@ struct RouteFlags {
 struct RouteResult {
   Page page = Page::None;
   RouteFlags flags{};
-  /** True when cheats page is selected via shortcut override. */
   bool shortcut_forced_cheats = false;
-  /**
-   * When serving cheats, caller should clear both shortcut flags after
-   * generating XML (historical behaviour).
-   */
   bool clear_cheat_shortcuts_after = false;
 };
 
-/**
- * Resolve which toolbox page to serve for @p in.resource.
- * Pure: no I/O, no globals.
- */
 RouteResult resolve_resource(const RouteInput &in);
 
-/** Fixed Legacy resource suffixes used by ShellUI (not base64-decoded). */
-inline constexpr std::string_view kAutoPluginsXml =
-    "Sce.Vsh.ShellUI.Legacy.src.Sce.Vsh.ShellUI.Settings.Plugins.auto_plugins.xml";
+/** Fixed Legacy resource paths (Sony Settings.Plugins module name is fixed). */
+inline constexpr std::string_view kAutoPayloadsXml =
+    "Sce.Vsh.ShellUI.Legacy.src.Sce.Vsh.ShellUI.Settings.Plugins.auto_payloads.xml";
 inline constexpr std::string_view kPlappsXml =
     "Sce.Vsh.ShellUI.Legacy.src.Sce.Vsh.ShellUI.Settings.Plugins.plapps.xml";
 inline constexpr std::string_view kSuperuserXml =
@@ -82,10 +73,6 @@ inline constexpr std::string_view kOgDebugXml =
 
 constexpr std::size_t kCheatMapSize = 256;
 
-/**
- * If @p new_tid differs from @p current_tid, clear map and update current_tid.
- * Returns true if the map was reset.
- */
 inline bool reset_cheat_map_if_tid_changed(std::string &current_tid, int *map,
                                            std::size_t map_n,
                                            std::string_view new_tid) {

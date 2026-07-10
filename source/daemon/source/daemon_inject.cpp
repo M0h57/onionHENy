@@ -228,13 +228,13 @@ bool cmd_enable_fps(int appid) {
     else
     {
         OrionHEN_log("Failed to get hijacker for (%d)", pid);
-       // printf_notification("Failed to get hijacker for (%d), try re-running the plugin", pid);
+       // printf_notification("Failed to get hijacker for (%d), try re-running the inject", pid);
         return false;
     }
     if (text_base == 0 || text_size == 0)
     {
         OrionHEN_log("text_base == 0 || text_size == 0");
-        //printf_notification("text_base == 0 || text_size == 0 (%d), try re-running the plugin", pid);
+        //printf_notification("text_base == 0 || text_size == 0 (%d), try re-running the inject", pid);
         return false;
     }
 
@@ -258,7 +258,7 @@ bool cmd_enable_toolbox(){
      * we ptrace ShellUI. Injecting while kstuff is still patching ShellUI
      * causes "waiting for toolbox" forever / ShellUI crash.
      * (Race seen when daemon+kstuff launched close together via 9021.)
-     * Note: we do NOT pause/resume kstuff — plugins may own that; only wait for
+     * Note: we do NOT pause/resume kstuff — other tools may own that; only wait for
      * mprotect readiness.
      */
     if (find_pid("kstuff.elf") > 0 || find_pid("kstuff") > 0) {

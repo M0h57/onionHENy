@@ -31,7 +31,7 @@ OrionHEN 是 PS5 的 All-in-One Homebrew Enabler，基于 **etaHEN**（Lightning
         │  3. unmount /update（阻止系统更新）
         │  4. 写出 util / daemon / kstuff 到 /data/OrionHEN/daemons/
         │  5. 经 9021 顺序启动：util → kstuff → daemon
-        │  6. 加载 /data/OrionHEN/plugins/ 插件
+        │  6. 加载 /data/OrionHEN/payloads/ 下 .elf
         ▼
 ┌───────────────┬────────────────┬──────────────────┐
 │  util.elf     │  kstuff.elf    │  daemon.elf      │
@@ -80,6 +80,9 @@ fps_elf.elf ──┼──► 嵌入 daemon.elf ──┐
 5. `bootstrapper`（再 lzma 压缩）
 6. `unpacker` → `OrionHEN.elf`
 
+> **Payload only:** OrionHEN no longer supports `.plugin` packages. Place
+> bare `.elf` under `/data/OrionHEN/payloads/` (or USB `.../payloads/`).
+
 产物落在 `source/bin/`。
 
 ### 1.3 仓库布局
@@ -97,7 +100,7 @@ OrionHEN/
 │   ├── fps_elf/      # 游戏 overlay
 │   ├── unpacker/     # 最终 OrionHEN.elf
 │   ├── libhijacker/ libNineS/ libNidResolver/
-│   ├── liborion_*    # 共享：ipc/settings/proc/platform/ready/detour/plugin/playtime/elfldr
+│   ├── liborion_*    # 共享：ipc/settings/proc/platform/ready/detour/payload/playtime/elfldr
 │   ├── extern/       # 第三方源码
 │   ├── include/ lib/ # 公共头文件与预编译库
 │   └── vendor/       # 同步后的 kstuff 等
@@ -128,7 +131,7 @@ OrionHEN/
 1. 先写 util / daemon / kstuff 到磁盘
 2. 检查 `127.0.0.1:9021` 上的 elfldr
 3. 顺序 `file:` URI 启动：util → kstuff → daemon
-4. 加载 `/data/OrionHEN/plugins/` 下插件
+4. 加载 `/data/OrionHEN/payloads/` 下带 `.auto_start` 的 `.elf`
 
 可用 `/data/OrionHEN/no_kstuff` 或 `/mnt/usb0/no_kstuff` 跳过 kstuff。
 
@@ -222,7 +225,7 @@ OrionHEN/
 | **toolbox_xml** | `generate_*_xml` 菜单 XML |
 | **settings_ui** | `settings_commit` / SaveSettings 等 UI 侧设置 |
 | **shellui_notify / shellui_proc** | UI 用 `notify(const char*)` 与进程/USB 辅助 |
-| **hook_onpress + onpress_*** | 表驱动 OnPress：`{id → handler}`，按 network / cheats / overlay / system / packages / plugins / misc 拆域 |
+| **hook_onpress + onpress_*** | 表驱动 OnPress：`{id → handler}`，按 network / cheats / overlay / system / packages / payloads / misc 拆域 |
 
 #### Ready / runtime flags 协议
 
@@ -307,7 +310,7 @@ struct IPCMessage {
 
 **Util（约 `0x8000000`）：**
 
-- `BREW_UTIL_LAUNCH_PLUGIN`
+- `BREW_UTIL_LAUNCH_PAYLOAD`
 - `BREW_UTIL_GET_GAME_VER` / `BREW_UTIL_GET_GAME_CHEAT` / `BREW_UTIL_TOGGLE_CHEAT`
 - `BREW_UTIL_DOWNLOAD_CHEATS`（`RELOAD_CHEATS` 已移除，热重载靠文件签名）
 - `BREW_UTIL_DOWNLOAD_KSTUFF`
@@ -330,8 +333,7 @@ struct IPCMessage {
 | `/data/OrionHEN/config.ini` | 配置 |
 | `/data/OrionHEN/OrionHEN.log` | 日志 |
 | `/data/OrionHEN/daemons/` | util / daemon / kstuff 写盘位置 |
-| `/data/OrionHEN/plugins/` | 插件 |
-| `/data/OrionHEN/payloads/` | payload ELF |
+| `/data/OrionHEN/payloads/` | payload `.elf`（唯一扩展包格式；启动时 stage 到同目录） |
 | `/system_tmp/OrionHEN_*_service` | Unix IPC socket |
 | `/system_tmp/toolbox_online` | Toolbox 注入就绪信号 |
 

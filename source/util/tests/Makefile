@@ -22,7 +22,7 @@ COMMON_FLAGS := -Wall -Wextra -g -O0 -DORION_HOST_TEST=1 -DCBC=1 \
 	-I$(REPO_ROOT)/source/include \
 	-I$(REPO_ROOT)/source/liborion_settings/include \
 	-I$(REPO_ROOT)/source/liborion_platform/include \
-	-I$(REPO_ROOT)/source/liborion_plugin/include \
+	-I$(REPO_ROOT)/source/liborion_payload/include \
 	-I$(REPO_ROOT)/source/liborion_proc/include \
 	-I$(REPO_ROOT)/source/liborion_ipc/include \
 	-I$(REPO_ROOT)/source/liborion_detour/include \
@@ -51,7 +51,7 @@ PROD_C_SRCS := \
 	$(REPO_ROOT)/source/liborion_platform/source/log.c \
 	$(REPO_ROOT)/source/liborion_platform/source/notify.c \
 	$(REPO_ROOT)/source/liborion_ready/source/ready.c \
-	$(REPO_ROOT)/source/liborion_plugin/source/plugin.c \
+	$(REPO_ROOT)/source/liborion_payload/source/payload.c \
 	$(REPO_ROOT)/source/liborion_playtime/source/playtime.c
 
 PROD_CXX_SRCS := \
@@ -72,7 +72,7 @@ TEST_C_SRCS := \
 	test_support.c \
 	test_cheat_utils.c \
 	test_cheat_flatten.c \
-	test_plugin.c \
+	test_payload.c \
 	test_base64.c \
 	test_aes_cbc.c \
 	test_hde64.c \
@@ -103,7 +103,7 @@ PROD_C_OBJS += $(BUILD_DIR)/prod/liborion_platform/fs.o
 PROD_C_OBJS += $(BUILD_DIR)/prod/liborion_platform/log.o
 PROD_C_OBJS += $(BUILD_DIR)/prod/liborion_platform/notify.o
 PROD_C_OBJS += $(BUILD_DIR)/prod/liborion_ready/ready.o
-PROD_C_OBJS += $(BUILD_DIR)/prod/liborion_plugin/plugin.o
+PROD_C_OBJS += $(BUILD_DIR)/prod/liborion_payload/payload.o
 PROD_C_OBJS += $(BUILD_DIR)/prod/liborion_detour/hde64.o
 PROD_C_OBJS += $(BUILD_DIR)/prod/liborion_playtime/playtime.o
 
@@ -185,7 +185,7 @@ $(BUILD_DIR)/prod/liborion_platform/notify.o: $(REPO_ROOT)/source/liborion_platf
 	@mkdir -p $(dir $@)
 	$(HOST_CC) $(CFLAGS) -c -o $@ $<
 
-$(BUILD_DIR)/prod/liborion_plugin/plugin.o: $(REPO_ROOT)/source/liborion_plugin/source/plugin.c | $(BUILD_DIR)
+$(BUILD_DIR)/prod/liborion_payload/payload.o: $(REPO_ROOT)/source/liborion_payload/source/payload.c | $(BUILD_DIR)
 	@mkdir -p $(dir $@)
 	$(HOST_CC) $(CFLAGS) -c -o $@ $<
 

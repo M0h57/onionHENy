@@ -85,7 +85,7 @@ int OnPress_Hook(MonoObject *Instance, MonoObject *element, MonoObject *e) {
   OnPressResult result = OnPressResult::NotMine;
   size_t n = 0;
 
-  // Prefix tables first (cheats/plugins/packages) so exact "id_plugin" list title
+  // Prefix tables first (cheats/payloads/packages) so exact "id_payload" list title
   // is not required — then exact tables.
   auto run_prefix = [&](const OnPressPrefixEntry *(*fn)(size_t *)) {
     if (result != OnPressResult::NotMine)
@@ -101,7 +101,7 @@ int OnPress_Hook(MonoObject *Instance, MonoObject *element, MonoObject *e) {
   };
 
   run_prefix(onpress_cheats_prefix);
-  run_prefix(onpress_plugins_prefix);
+  run_prefix(onpress_payloads_prefix);
   run_prefix(onpress_packages_prefix);
   run_exact(onpress_overlay_exact);
   run_exact(onpress_network_exact);

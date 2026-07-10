@@ -376,15 +376,15 @@ IPC_Ret IPC_Client::CopyFile(std::string src, std::string dest) {
   return IPC_Ret::NO_ERROR;
 }
 
-IPC_Ret IPC_Client::LaunchPlugin(std::string plugin_path, std::string tid) {
-  if (!require_util("LaunchPlugin")) {
+IPC_Ret IPC_Client::LaunchPayload(std::string payload_path, std::string tid) {
+  if (!require_util("LaunchPayload")) {
     return IPC_Ret::INVALID;
   }
   std::string ipc_msg;
-  std::string json = json_kv_string2("plugin_path", plugin_path.c_str(),
+  std::string json = json_kv_string2("payload_path", payload_path.c_str(),
                                      "title_id", tid.c_str());
-  if (!IPCSendCommand(BREW_UTIL_LAUNCH_PLUGIN, ipc_msg, json)) {
-    shellui_log("Failed to launch plugin");
+  if (!IPCSendCommand(BREW_UTIL_LAUNCH_PAYLOAD, ipc_msg, json)) {
+    shellui_log("Failed to launch payload");
     return IPC_Ret::OPERATION_FAILED;
   }
   return IPC_Ret::NO_ERROR;

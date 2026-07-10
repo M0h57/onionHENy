@@ -78,14 +78,15 @@ struct LaunchAppParam
   bool isSpeculativeLaunch;
 };
 
+/** List entry for a payload .elf in the toolbox. */
 typedef struct {
     std::string path;
     std::string shellui_path;
-    std::string tid;
+    std::string tid;  /* stem key for PID / launch */
     std::string id;
     std::string name;
     std::string version;
-} Plugins;
+} PayloadEntry;
 
 typedef struct {
     std::string path;
@@ -151,14 +152,4 @@ struct OverlayLayout {
 extern OverlayLayout g_overlay_layout;
 // g_all_cpu_usage → shellui_state.hpp
 
-typedef struct
-{
-    char prefix[15];
-    char titleID[10];
-    char plugin_version[5];
-} CustomPluginHeader;
 
-enum Plugin_Options {
-    KILL_OR_START,
-    ENABLE_OR_DISABLE_AUTO
-};

@@ -47,7 +47,7 @@ std::string uilib;
 std::string Sysinfo;
 std::string display_info;
 std::string uilib_dll;
-std::string plugin_xml;
+std::string payloads_xml;
 std::string remote_play_xml;
 std::string debug_settings_xml;
 std::string cheats_xml;
@@ -353,9 +353,9 @@ bool resolve_mono_symbols(pid_t pid) {
 
 void init_resource_names() {
   // Manifest resource paths (used by GetManifestResourceStream hook)
-  plugin_xml = base64_decode(
-      "U2NlLlZzaC5TaGVsbFVJLkxlZ2FjeS5zcmMuU2NlLlZzaC5Ta"
-      "GVsbFVJLlNldHRpbmdzLlBsdWdpbnMucGx1Z2lucy54bWw=");
+  payloads_xml = base64_decode(
+      "U2NlLlZzaC5TaGVsbFVJLkxlZ2FjeS5zcmMuU2NlLlZzaC5T"
+      "aGVsbFVJLlNldHRpbmdzLlBsdWdpbnMucGF5bG9hZHMueG1s");
   cheats_xml = base64_decode(
       "U2NlLlZzaC5TaGVsbFVJLkxlZ2FjeS5zcmMuU2NlLlZzaC5Ta"
       "GVsbFVJLlNldHRpbmdzLlBsdWdpbnMuY2hlYXRzLnhtbA==");
@@ -378,7 +378,7 @@ void init_resource_names() {
 
   shellui_log("[GMRS-INIT] expected resource names:");
   shellui_log("[GMRS-INIT]   debug_settings_xml=\"%s\"", debug_settings_xml.c_str());
-  shellui_log("[GMRS-INIT]   plugin_xml=\"%s\"", plugin_xml.c_str());
+  shellui_log("[GMRS-INIT]   payloads_xml=\"%s\"", payloads_xml.c_str());
   shellui_log("[GMRS-INIT]   cheats_xml=\"%s\"", cheats_xml.c_str());
   shellui_log("[GMRS-INIT]   remote_play_xml=\"%s\"", remote_play_xml.c_str());
 }

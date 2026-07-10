@@ -79,7 +79,7 @@ public:
   void KillDaemon();
   void ForceKillPID(int pid);
   IPC_Ret CopyFile(std::string src, std::string dest);
-  IPC_Ret LaunchPlugin(std::string plugin_path, std::string tid);
+  IPC_Ret LaunchPayload(std::string payload_path, std::string tid);
   bool GameVerFromTid(std::string tid, std::string &out_ver);
   bool Remount(const char *src, const char *dest);
   bool GetGameCheats(const std::string &tid, const std::string &ver,

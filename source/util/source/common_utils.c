@@ -24,7 +24,7 @@ along with this program; see the file COPYING. If not, see
 #include <ps5/klog.h>
 #include <orion/platform.h>
 #include <orion/proc_query.h>
-#include <orion/plugin.h>
+#include <orion/payload.h>
 
 typedef struct app_info {
   uint32_t app_id;
@@ -47,7 +47,7 @@ atomic_bool not_connected = false;
 #define SCE_NET_CTL_ERROR_NOT_CONNECTED 0x80412108
 #define SCE_NET_CTL_ERROR_NOT_AVAIL 0x80412109
 
-/* OrionHEN: no local spawn — plugins launch via external elfldr :9021.
+/* OrionHEN: no local spawn — payloads launch via external elfldr :9021.
  * ptrace attach/mmap: liborion_elfldr (pt_attach / pt_mmap). Authid is raised
  * once in util main via set_ucred_to_ptrace(), not flipped per ptrace call.
  */
@@ -114,103 +114,12 @@ bool copyFile(const char *source, const char *destination)
 
 
 
-void make_hb_elf(const char *tid, const void *start, const unsigned int size) {
-  char path[1024];
-  snprintf(path, sizeof(path), "/system_ex/app/%s/homebrew.elf", tid);
-  FILE *fp = fopen(path, "wb+");
-  if (fp == NULL) {
-    perror("open failed");
-    return;
-  }
-  fwrite(start, 1, size, fp);
-  fclose(fp);
-}
-
-
-static bool mkdir_if_necessary(const char *path) {
-  if (mkdir(path, 0777) == -1) {
-    const int err = errno;
-    if (err != EEXIST) {
-      perror("mkdir failed");
-      return false;
-    }
-  }
-  return true;
-}
-
-bool make_plugin_app(const char *tid, const void *start,
-                     const unsigned int size)
-{
-  // REDIS->NPXS40028
-  char sys_app[255];
-  static const char *json = "{\n"
-                            "    \"applicationCategoryType\": 33554432,\n"
-                            "    \"localizedParameters\": {\n"
-                            "        \"defaultLanguage\": \"en-US\",\n"
-                            "        \"en-US\": {\n"
-                            "            \"titleName\": \"OrionHEN Plugin\"\n"
-                            "        }\n"
-                            "    },\n"
-                            "    \"titleId\": \"%s"
-                            "\"\n"
-                            "}\n";
-  snprintf(sys_app, sizeof(sys_app), "/system_ex/app/%s", tid);
-  if (mkdir(sys_app, 0777) == -1)
-  {
-    const int err = errno;
-    if (err != EEXIST)
-    {
-      perror("make_plugin_app mkdir /system_ex/app/");
-      return false;
-    }
-    make_hb_elf(tid, start, size);
-    return true;
-  }
-  make_hb_elf(tid, start, size);
-  (void)memset(sys_app, 0, sizeof(sys_app));
-  snprintf(sys_app, sizeof(sys_app), "/system_ex/app/%s/eboot.bin", tid);
-  if (!copyFile("/system_ex/app/NPXS40028/eboot.bin", sys_app))
-  {
-    puts("failed to copy redis eboot.bin");
-    return false;
-  }
-  (void)memset(sys_app, 0, sizeof(sys_app));
-  snprintf(sys_app, sizeof(sys_app), "/system_ex/app/%s/sce_sys", tid);
-  if (!mkdir_if_necessary(sys_app))
-  {
-    return false;
-  }
-  (void)memset(sys_app, 0, sizeof(sys_app));
-  snprintf(sys_app, sizeof(sys_app), "/system_ex/app/%s/sce_sys/param.json",
-           tid);
-  FILE *fp = fopen(sys_app, "w+");
-  if (fp == NULL)
-  {
-    perror("open failed");
-    return false;
-  }
-  (void)memset(sys_app, 0, sizeof(sys_app));
-  snprintf(sys_app, sizeof(sys_app), json, tid);
-  fwrite(sys_app, 1, __builtin_strlen(sys_app), fp);
-  fclose(fp);
-
-  return true;
-}
-
-static void util_prepare_plugin_app(const char *title_id, const uint8_t *elf,
-                                    size_t elf_sz, void *user) {
-  (void)user;
-  make_plugin_app(title_id, elf, elf_sz);
-}
-
-bool load_plugin(const char *path) {
-  orion_plugin_load_opts opts = {
-      .prepare_package = util_prepare_plugin_app,
-      .prepare_user = NULL,
-      .auto_delete_eorr37000 = 0,
+bool load_payload(const char *path) {
+  /* Payload .elf only — .plugin packages removed. */
+  orion_payload_load_opts opts = {
       .always_succeed_after_launch = 0,
   };
-  return orion_plugin_load(path, /*filename=*/NULL, &opts);
+  return orion_payload_load(path, /*filename=*/NULL, &opts);
 }
 
 int launchApp(const char *titleId)

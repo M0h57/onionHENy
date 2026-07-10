@@ -146,21 +146,21 @@ bool try_exact_value(const std::string& id, std::string& out) {
   return false;
 }
 
-bool try_plugin_list_value(const std::string& id, std::string& out) {
-  for (const auto& plugin : g_ui.plugins_list) {
-    if (plugin.id != id)
+bool try_payload_list_value(const std::string& id, std::string& out) {
+  for (const auto& entry : g_ui.payloads_list) {
+    if (entry.id != id)
       continue;
-    out = bool_str(sceSystemServiceGetAppId(plugin.tid.c_str()) > 0);
+    out = bool_str(sceSystemServiceGetAppId(entry.tid.c_str()) > 0);
     return true;
   }
   return false;
 }
 
-bool try_auto_plugin_value(const std::string& id, std::string& out) {
-  for (const auto& plugin : g_ui.auto_list) {
-    if (plugin.id != id)
+bool try_auto_payload_value(const std::string& id, std::string& out) {
+  for (const auto& entry : g_ui.auto_payloads_list) {
+    if (entry.id != id)
       continue;
-    const std::string auto_path = plugin.shellui_path + ".auto_start";
+    const std::string auto_path = entry.shellui_path + ".auto_start";
     out = bool_str(if_exists(auto_path.c_str()));
     return true;
   }
@@ -192,9 +192,9 @@ std::string resolve_element_value(const std::string& id) {
   std::string value;
 
   // Dynamic lists first (id assigned at generation time)
-  if (try_plugin_list_value(id, value))
+  if (try_payload_list_value(id, value))
     return value;
-  if (try_auto_plugin_value(id, value))
+  if (try_auto_payload_value(id, value))
     return value;
 
   if (try_exact_value(id, value))

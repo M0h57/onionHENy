@@ -105,10 +105,10 @@ bool LoadSettings();
 extern atomic_bool g_legacy_cmd_server;
 extern atomic_bool g_legacy_cmd_server_exit;
 /*================ SETTINGS ==============*/
-/* Plugin package header + load helpers (shared). */
-#include <orion/plugin.h>
+/* Payload load helpers (shared orion_payload). */
+#include <orion/payload.h>
 
-/* load_plugin: see extern "C" block below */
+/* load_payload: see extern "C" block below */
 
 extern atomic_bool g_running;
 /*============ Back up JB server ==============*/
@@ -167,7 +167,7 @@ int get_ip_address(char *ip_address);
 #include <orion/proc_query.h>
 int sceNetCtlInit(void);
 int sceUserServiceInitialize(void *ptr);
-bool load_plugin(const char *path);
+bool load_payload(const char *path);
 bool download_file(const char *url, const char *dst);
 bool check_for_new_commit(int repo);
 bool extract_zip(const char *zip_path, const char *extract_dir);

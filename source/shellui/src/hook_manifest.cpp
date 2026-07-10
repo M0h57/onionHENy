@@ -11,9 +11,9 @@
 
 extern MonoClass *MemoryStream_IO;
 extern MonoObject *MemoryStream_Instance;
-extern std::string plugin_xml, remote_play_xml, debug_settings_xml, cheats_xml;
+extern std::string payloads_xml, remote_play_xml, debug_settings_xml, cheats_xml;
 extern std::string dec_xml_str, UI3_dec, legacy_dec;
-void generate_plugin_xml(std::string &xml_buffer, bool plugins_xml);
+void generate_payload_xml(std::string &xml_buffer, bool list_page);
 void generate_remote_play_xml(std::string &xml_buffer);
 void generate_plapps_xml(std::string &new_xml);
 void generate_cheats_xml(std::string &new_xml, std::string &not_open_tid,
@@ -35,7 +35,7 @@ uint64_t GetManifestResourceStream_Hook(uint64_t inst, MonoString *FileName) {
       .resource = resourceName,
       .names =
           {
-              .plugin_xml = plugin_xml,
+              .payloads_xml = payloads_xml,
               .debug_settings_xml = debug_settings_xml,
               .cheats_xml = cheats_xml,
               .remote_play_xml = remote_play_xml,
@@ -86,9 +86,9 @@ uint64_t GetManifestResourceStream_Hook(uint64_t inst, MonoString *FileName) {
     LoadSettings();
     new_xml_string = dec_xml_str;
     break;
-  case toolbox::Page::Plugins:
-    g_ui.plugins_list.clear();
-    generate_plugin_xml(new_xml_string, true);
+  case toolbox::Page::Payloads:
+    g_ui.payloads_list.clear();
+    generate_payload_xml(new_xml_string, true);
     break;
   case toolbox::Page::Cheats:
     generate_cheats_xml(new_xml_string, g_ui.current_menu_tid, shortcut,
@@ -96,9 +96,9 @@ uint64_t GetManifestResourceStream_Hook(uint64_t inst, MonoString *FileName) {
     if (route.clear_cheat_shortcuts_after)
       g_ui.clear_cheat_shortcuts();
     break;
-  case toolbox::Page::AutoPlugins:
-    g_ui.auto_list.clear();
-    generate_plugin_xml(new_xml_string, false);
+  case toolbox::Page::AutoPayloads:
+    g_ui.auto_payloads_list.clear();
+    generate_payload_xml(new_xml_string, false);
     break;
   case toolbox::Page::RemotePlay:
     generate_remote_play_xml(new_xml_string);

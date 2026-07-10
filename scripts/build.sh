@@ -281,7 +281,7 @@ clean_build_artifacts() {
     "${SOURCE}/lib/liborion_ipc.a" \
     "${SOURCE}/lib/liborion_platform.a" \
     "${SOURCE}/lib/liborion_playtime.a" \
-    "${SOURCE}/lib/liborion_plugin.a" \
+    "${SOURCE}/lib/liborion_payload.a" \
     "${SOURCE}/lib/liborion_proc.a" \
     "${SOURCE}/lib/liborion_ready.a" \
     "${SOURCE}/lib/liborion_settings.a"

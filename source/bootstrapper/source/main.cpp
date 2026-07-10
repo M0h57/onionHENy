@@ -53,7 +53,7 @@ along with this program; see the file COPYING. If not, see
 #include <orion/notify.h>
 #include <orion/platform.h>
 #include <orion/proc_query.h>
-#include <orion/plugin.h>
+#include <orion/payload.h>
 #include <errno.h>
  
  /******************************************************************************
@@ -290,7 +290,7 @@ const char json_payload[] =
  /******************************************************************************
   * Global Variables
   ******************************************************************************/
- int plugin_count = 0;
+ int payload_count = 0;
  char buff[255];
  char **loaded_filenames = NULL;
  jmp_buf g_catch_buf;
@@ -550,101 +550,84 @@ static void cleanup(void);
    return -1;
  }
  
- // Function to check if the file buffer contains a valid custom plugin header
- bool load_plugin(const char *path, const char *filename)
-{
-  orion_plugin_load_opts opts = {};
-  opts.auto_delete_eorr37000 = 1;
+ // Load a payload .elf
+bool load_payload(const char *path, const char *filename) {
+  orion_payload_load_opts opts = {};
   opts.always_succeed_after_launch = 1;
-  return orion_plugin_load(path, filename, &opts);
+  return orion_payload_load(path, filename, &opts);
 }
 
-/*=================== LOAD PLUGINS =========================*/
-char **find_plugin_files() {
+/*=================== LOAD PAYLOADS (autostart .elf) =========================*/
+char **find_payload_files() {
   const char *base_dirs[] = {
-    // Plugin directories
-    "/mnt/usb0/orionhen/plugins", "/mnt/usb0/OrionHEN/plugins",
-    "/mnt/usb1/orionhen/plugins", "/mnt/usb2/orionhen/plugins",
-    "/mnt/usb3/orionhen/plugins", "/user/data/OrionHEN/plugins",
-    "/user/data/orionhen/plugins",
-    
-    // Payload directories
-    "/mnt/usb0/orionhen/payloads", "/mnt/usb0/OrionHEN/payloads",
-    "/mnt/usb1/orionhen/payloads", "/mnt/usb2/orionhen/payloads",
-    "/mnt/usb3/orionhen/payloads", "/user/data/OrionHEN/payloads",
-    "/user/data/orionhen/payloads"
-};
+      "/mnt/usb0/orionhen/payloads", "/mnt/usb0/OrionHEN/payloads",
+      "/mnt/usb1/orionhen/payloads", "/mnt/usb2/orionhen/payloads",
+      "/mnt/usb3/orionhen/payloads", "/user/data/OrionHEN/payloads",
+      "/user/data/orionhen/payloads", "/data/OrionHEN/payloads",
+  };
 
   int base_dirs_count = sizeof(base_dirs) / sizeof(base_dirs[0]);
 
-  char **plugin_paths = NULL;
+  char **payload_paths = NULL;
   char full_path[255];
   char auto_start_path[255];
-  plugin_count = 0;
+  payload_count = 0;
   loaded_filenames = (char **)malloc(255 * sizeof(char *));
 
   for (int i = 0; i < base_dirs_count; i++) {
     DIR *dir = opendir(base_dirs[i]);
-    if (dir) {
-      struct dirent *entry;
-      while ((entry = readdir(dir)) != NULL) {
-        (void)memset(full_path, 0, sizeof(full_path));
-        if (entry->d_type == DT_REG) { // Regular file
-          const char *ext = strrchr(entry->d_name, '.');
-          if (ext && (strcmp(ext, ".plugin") == 0 || strcmp(ext, ".elf") == 0)) {
-            bool skip = false;
-            // Construct full path
-            snprintf(full_path, sizeof(full_path), "%s/%s", base_dirs[i],
-                     entry->d_name);
-            snprintf(auto_start_path, sizeof(auto_start_path),
-                     "%s/%s.auto_start", base_dirs[i], entry->d_name);
+    if (!dir)
+      continue;
+    struct dirent *entry;
+    while ((entry = readdir(dir)) != NULL) {
+      (void)memset(full_path, 0, sizeof(full_path));
+      if (entry->d_type != DT_REG)
+        continue;
+      const char *ext = strrchr(entry->d_name, '.');
+      if (!ext || strcmp(ext, ".elf") != 0)
+        continue;
 
-            if (!if_exists(auto_start_path)) {
-              printf("skipping auto start for plugin: %s\n", full_path);
-              continue;
-            }
+      bool skip = false;
+      snprintf(full_path, sizeof(full_path), "%s/%s", base_dirs[i],
+               entry->d_name);
+      snprintf(auto_start_path, sizeof(auto_start_path), "%s/%s.auto_start",
+               base_dirs[i], entry->d_name);
 
-            for (int j = 0; j < plugin_count; j++) {
-              if (strcmp(loaded_filenames[j], entry->d_name) == 0) {
-                skip = true;
-                // Only print the message for /data/OrionHEN/plugins/elfldr.plugin
-                // as per specific requirement
-                if ((strcmp(base_dirs[i], "/data/OrionHEN/plugins") == 0) || (strcmp(entry->d_name, "/data/OrionHEN/payloads") == 0)) {
-                  printf("skipping duplicate plugin: %s | already loaded: %s\n",
-                         full_path, loaded_filenames[j]);
-                }
-                break;
-              }
-            }
-            if (skip)
-              continue;
+      if (!if_exists(auto_start_path)) {
+        printf("skipping auto start for payload: %s\n", full_path);
+        continue;
+      }
 
-            // Add to array
-            plugin_paths = (char **)realloc(plugin_paths, (plugin_count + 1) *
-                                                              sizeof(char *));
-            plugin_paths[plugin_count] = strdup(full_path);
-
-            // Copy filename to loaded_filenames
-            loaded_filenames[plugin_count] =
-                strdup(entry->d_name); // Use strdup for simplicity
-            plugin_count++;
-          }
+      for (int j = 0; j < payload_count; j++) {
+        if (strcmp(loaded_filenames[j], entry->d_name) == 0) {
+          skip = true;
+          printf("skipping duplicate payload: %s | already loaded: %s\n",
+                 full_path, loaded_filenames[j]);
+          break;
         }
       }
-      closedir(dir);
+      if (skip)
+        continue;
+
+      payload_paths =
+          (char **)realloc(payload_paths, (payload_count + 1) * sizeof(char *));
+      payload_paths[payload_count] = strdup(full_path);
+      loaded_filenames[payload_count] = strdup(entry->d_name);
+      payload_count++;
     }
+    closedir(dir);
   }
 
-  return plugin_paths;
+  return payload_paths;
 }
-void free_plugin_files(char **plugin_files) {
+void free_payload_files(char **plugin_files) {
   // Free memory for loaded_filenames
-  for (int i = 0; i < plugin_count; i++) {
+  for (int i = 0; i < payload_count; i++) {
     free(loaded_filenames[i]);
   }
   free(loaded_filenames);
 
-  for (int i = 0; i < plugin_count; i++) {
+  for (int i = 0; i < payload_count; i++) {
     free((void *)plugin_files[i]);
   }
   free((void *)plugin_files);
@@ -655,7 +638,7 @@ void free_plugin_files(char **plugin_files) {
  * Policy: NO local spawn.
  * 1) write_daemon_elfs  — util/daemon/kstuff to disk
  * 2) launch_chain       — elfldr :9021 file: URI, util → kstuff → daemon
- * 3) load_autostart_plugins — .plugin/.elf with .auto_start (skip *elfldr*)
+ * 3) load_autostart_payloads — payloads .elf with .auto_start (skip *elfldr*)
  */
 
 static bool write_elf_file(const char *path, const uint8_t *elf, size_t size) {
@@ -810,29 +793,29 @@ static int launch_chain(const OrbisKernelSwVersion &sys_ver) {
   return 0;
 }
 
-/** Autostart plugins with .auto_start marker; skip paths containing "elfldr". */
-static void load_autostart_plugins(void) {
-  char **plugin_paths = find_plugin_files();
-  if (!plugin_paths || plugin_count <= 0)
+/** Autostart payloads (.elf) with .auto_start marker; skip *elfldr*. */
+static void load_autostart_payloads(void) {
+  char **payload_paths = find_payload_files();
+  if (!payload_paths || payload_count <= 0)
     return;
 
-  int loaded_plugins = 0;
-  for (int i = 0; i < plugin_count; i++) {
-    if (strstr(plugin_paths[i], "elfldr") != nullptr)
+  int loaded = 0;
+  for (int i = 0; i < payload_count; i++) {
+    if (strstr(payload_paths[i], "elfldr") != nullptr)
       continue;
-    klog_printf("Loading plugin: %s\n", plugin_paths[i]);
-    if (!load_plugin(plugin_paths[i], loaded_filenames[i])) {
+    klog_printf("Loading payload: %s\n", payload_paths[i]);
+    if (!load_payload(payload_paths[i], loaded_filenames[i])) {
       snprintf(buff, sizeof(buff),
-               "[OrionHEN] Failed to load plugin!\nPath: %s", plugin_paths[i]);
+               "[OrionHEN] Failed to load payload!\nPath: %s", payload_paths[i]);
       notify(buff);
       klog_puts("FAILED!");
       continue;
     }
     klog_puts("Loaded!");
-    loaded_plugins++;
+    loaded++;
   }
-  klog_printf("Successfully loaded %d plugins\n", loaded_plugins);
-  free_plugin_files(plugin_paths);
+  klog_printf("Successfully loaded %d payloads\n", loaded);
+  free_payload_files(payload_paths);
 }
 
 int main(void) {
@@ -870,7 +853,6 @@ int main(void) {
 
   // Directory layout
   mkdir("/data/OrionHEN", 0777);
-  mkdir("/data/OrionHEN/plugins", 0777);
   mkdir("/data/OrionHEN/payloads", 0777);
   mkdir("/data/OrionHEN/daemons", 0777);
   mkdir("/data/OrionHEN/assets", 0777);
@@ -912,7 +894,7 @@ int main(void) {
   if (rc != 0)
     return rc;
 
-  load_autostart_plugins();
+  load_autostart_payloads();
 
   klog_puts("============== Spawner (Bootstrapper) Finished =================");
   return 0;

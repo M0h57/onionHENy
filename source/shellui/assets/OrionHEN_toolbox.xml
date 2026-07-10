@@ -20,10 +20,10 @@
       <link id="id_game_add_content_manager" title="附加内容管理器" file="Addcontent/data/addcontent.xml"/>
     </setting_list>
 
-    <!-- ========== 2. 插件与内核 ========== -->
-    <!-- 用途：加载/管理运行在 HEN 之上的扩展与内核组件 -->
-    <setting_list id="id_group_plugins" title="插件与内核" second_title="插件、Payload 与 Kstuff" icon="//user//data//OrionHEN//assets//icon_xml_plugins.png" initial_focus_to="id_plugins">
-      <link id="id_plugins" title="插件 / Payload ELF" file="plugins.xml"/>
+    <!-- ========== 2. Payload 与内核 ========== -->
+    <!-- 用途：.elf payload 与 Kstuff -->
+    <setting_list id="id_group_payloads" title="Payload 与内核" second_title="Payload ELF 与 Kstuff" icon="//user//data//OrionHEN//assets//icon_xml_plugins.png" initial_focus_to="id_payloads">
+      <link id="id_payloads" title="Payload" file="payloads.xml"/>
       <setting_list id="id_kstuff_opts" title="Kstuff" second_title="内核补丁组件管理" initial_focus_to="id_kstuff_autoload">
         <toggle_switch id="id_kstuff_autoload" title="OrionHEN 启动时自动加载 Kstuff" value="0"/>
         <button id="id_download_kstuff" title="通过 GitHub 替换为最新 Kstuff" description="从 EchoStretch 的 GitHub 仓库下载并安装最新 kstuff，替换 OrionHEN 启动时自动加载的版本"/>

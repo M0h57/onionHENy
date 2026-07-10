@@ -168,7 +168,7 @@ struct IPCMessage {
 | `DOWNLOAD_CHEATS` | 下仓库 zip → staging → flatten | `http` + `CheatService::flattenInstallTree` |
 | `RELOAD_CHEATS` | **已移除**（枚举占位 `UNUSED_RELOAD_CHEATS`） | 列表/开关靠文件签名热重载，无索引重建 |
 | `DOWNLOAD_KSTUFF` | 下载 kstuff.elf | `http` |
-| `LAUNCH_PLUGIN` | 加载插件/ELF | `load_plugin`（external elfldr 路径） |
+| `LAUNCH_PAYLOAD` | 加载 payload `.elf` | `load_payload` → `orion_payload_load`（9021） |
 | `TOGGLE_LEGACY_CMD_SERVER` | 开关 9028 处理 | `global_conf.legacy_cmd_server` |
 | `LAUNCH_ELFLDR` | 已移除 | 固定失败 |
 | `UNUSED_FTP` / `UNUSED_KLOG` | 已移除 | 固定失败 |

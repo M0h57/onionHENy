@@ -20,7 +20,7 @@ int LaunchApp(MonoString* titleId, uint64_t* args, int argsSize, LaunchAppParam 
 #if 1
    if(!if_exists("/system_tmp/patch_plugin")) {
       #if SHELL_DEBUG == 1
-      shellui_log("patch plugin not running .. returning with orig");
+      shellui_log("patch payload not running .. returning with orig");
       #endif
 	  unsigned int ret = LaunchApp_orig(titleId, args, argsSize, param);
       if (ret < 0) {

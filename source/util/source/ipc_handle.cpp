@@ -40,7 +40,7 @@ extern atomic_bool g_legacy_cmd_server_exit;
 
 void reply(int sender_socket, bool error, std::string out_var = "Nothing");
 extern "C" {
-bool load_plugin(const char *path);
+bool load_payload(const char *path);
 int launchApp(const char *titleId);
 bool download_file(const char *url, const char *dst);
 bool extract_zip(const char *zip_path, const char *out_dir);
@@ -173,21 +173,21 @@ void handleIPC(clientArgs *client, std::string &inputStr,
 
     break;
   }
-  case BREW_UTIL_LAUNCH_PLUGIN: {
-    std::string plugin_path =
-        std::string(orion_cjson::string_item(my_json.get(), "plugin_path", ""));
+  case BREW_UTIL_LAUNCH_PAYLOAD: {
+    std::string payload_path =
+        std::string(orion_cjson::string_item(my_json.get(), "payload_path", ""));
     std::string title_id =
         std::string(orion_cjson::string_item(my_json.get(), "title_id", ""));
-    OrionHEN_log("Launching %s (TID: %s)", plugin_path.c_str(),
-               title_id.c_str());
-    if (!load_plugin(plugin_path.c_str())) {
-      orion_notify(true, "Failed to Load in\nPath: %s\nTID: %s",
-             plugin_path.c_str(), title_id.c_str());
+    OrionHEN_log("Launching payload %s (key: %s)", payload_path.c_str(),
+                 title_id.c_str());
+    if (!load_payload(payload_path.c_str())) {
+      orion_notify(true, "Failed to load payload\nPath: %s\nKey: %s",
+                   payload_path.c_str(), title_id.c_str());
       reply(sender_app, true);
       break;
     }
-    orion_notify(true, "Plugin or ELF launched successfully\nPath: %s\nTID: %s",
-           plugin_path.c_str(), title_id.c_str());
+    orion_notify(true, "Payload launched\nPath: %s\nKey: %s",
+                 payload_path.c_str(), title_id.c_str());
     reply(sender_app, false);
     break;
   }

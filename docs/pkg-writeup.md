@@ -12,7 +12,7 @@ This implementation requires one of the following privilege escalation methods:
 
 2. **Other Options**:
    - For FPKG applications: Utilize OrionHEN's Jailbreak IPC Command functionality
-   - For integrated solutions: Leverage the automatic privilege handling via the OrionHEN Plugins System or [ps5-payload-dev SDK](https://github.com/ps5-payload-dev/sdk)
+   - For integrated solutions: Leverage OrionHEN payload ELF loading or [ps5-payload-dev SDK](https://github.com/ps5-payload-dev/sdk)
 
 ## Module Requirements
 
