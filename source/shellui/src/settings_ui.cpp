@@ -5,6 +5,7 @@
 
 #include "HookedFuncs.hpp"
 #include <orion/platform.h>
+#include <orion/ready.h>
 #include "ipc.hpp" // shellui_log + IPC_Client
 #include <orion/settings.hpp>
 
@@ -69,7 +70,7 @@ bool LoadSettings()
   // g_settings is the single store; single store for all consumers.
   g_settings = s;
   if (g_settings.overlay_fps) {
-    touch_file("/system_tmp/fps_enabled");
+    orion_ready_signal(ORION_FLAG_FPS_OVERLAY);
   }
   apply_overlay_layout();
   return true;

@@ -20,11 +20,20 @@ extern "C" {
 
 #define ORION_READY_ROOT "/system_tmp/orion_ready"
 
-/* Well-known service names */
+/* Well-known service names (startup orchestration) */
 #define ORION_READY_UTIL "util"
 #define ORION_READY_KSTUFF "kstuff"
 #define ORION_READY_DAEMON "daemon"
 #define ORION_READY_TOOLBOX "toolbox"
+
+/*
+ * Runtime flags (same storage as ready markers; typed names replace ad-hoc
+ * /system_tmp/*.flag files).
+ *   fps_overlay  — shellui wants FPS inject when a CUSA/SCUS game is running
+ *   util_booted  — util finished at least one full start (rest-mode / delay)
+ */
+#define ORION_FLAG_FPS_OVERLAY "fps_overlay"
+#define ORION_FLAG_UTIL_BOOTED "util_booted"
 
 /* Publish / clear / query. name is a short token (no path separators). */
 bool orion_ready_signal(const char *name);

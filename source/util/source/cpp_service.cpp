@@ -15,6 +15,8 @@ along with this program; see the file COPYING. If not, see
 <http://www.gnu.org/licenses/>.  */
 
 #include <orion/platform.h>
+#include <orion/ipc_client.hpp>
+#include <orion/ready.h>
 #include <orion/proc_query.h>
 #include <string>
 #include <vector>
@@ -240,55 +242,21 @@ int get_shellcore_pid() {
     return pid;
 }
 
-
 bool enable_toolbox() {
-    int wait = 0, DaemonSocket = 0;
-    const char *path = "/system_tmp/OrionHEN_crit_service";
-    while (!if_exists(path)) {
-        sleep(1);
-
-        if (wait > 20) {
-            orion_notify(true, "Failed to load the OrionHEN toolbox");
-            return false;
-        }
-
-        wait++;
-    }
-
-    sockaddr_un server;
-    DaemonSocket = socket(AF_UNIX, SOCK_STREAM, 0);
-    if (DaemonSocket == -1) {
-        OrionHEN_log("Failed to create socket");
+    // Single client path into crit daemon (replaces hand-rolled Unix socket).
+    // Wait briefly for crit socket / ready — bootstrap order is util then daemon.
+    for (int wait = 0; wait <= 20; ++wait) {
+      if (orion_ready_is_set(ORION_READY_DAEMON) ||
+          if_exists("/system_tmp/OrionHEN_crit_service")) {
+        break;
+      }
+      if (wait == 20) {
+        orion_notify(true, "Failed to load the OrionHEN toolbox");
         return false;
+      }
+      sleep(1);
     }
-    
-    server.sun_family = AF_UNIX;
-    strncpy(server.sun_path, path, sizeof(server.sun_path) - 1);
-    if (connect(DaemonSocket, (struct sockaddr *)&server, SUN_LEN(&server)) == -1) {
-        close(DaemonSocket);
-        OrionHEN_log("Failed to connect to socket");
-        return false;
-    }
-
-    IPCMessage msg;
-    msg.cmd = BREW_ENABLE_TOOLBOX;
-    snprintf(msg.msg, sizeof(msg.msg), "{ \"titleId\": \"ETAH00002\" }");
-    if (send(DaemonSocket, reinterpret_cast<const void *>(&msg), sizeof(msg),
-            MSG_NOSIGNAL) < 0) {
-        close(DaemonSocket);
-        OrionHEN_log("Failed to send message to daemon");
-        return false;
-    }
-
-    if (recv(DaemonSocket, reinterpret_cast<void *>(&msg), sizeof(msg),
-            MSG_NOSIGNAL) < 0) {
-        close(DaemonSocket);
-        OrionHEN_log("Failed to receive message from daemon");
-        return false;
-    }
-
-    close(DaemonSocket);
-    return msg.error == 0;
+    return IPC_Client::getInstance(/*util=*/false).EnableToolbox();
 }
 
 

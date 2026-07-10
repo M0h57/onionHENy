@@ -90,6 +90,8 @@ public:
   bool Cheats_Action(Cheat_Actions act, int repo = 0);
   bool Set_Fan_Threshold(int temp, bool enabled);
   bool ToggleDPI(bool turn_on, bool is_v2);
+  /** Crit: inject ShellUI toolbox (BREW_ENABLE_TOOLBOX). */
+  bool EnableToolbox();
 
   // Kept for call-site readability (matches historical public field).
   // Prefer is_util(); do not reassign after construction.

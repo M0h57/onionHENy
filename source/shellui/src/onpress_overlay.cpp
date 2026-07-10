@@ -1,5 +1,6 @@
 /* Copyright (C) 2025 OrionHEN / LightningMods — OnPress overlay domain */
 #include "onpress.hpp"
+#include <orion/ready.h>
 #include <cstdlib>
 #include <unistd.h>
 
@@ -15,14 +16,14 @@ static OnPressResult toggle_overlay_flag(OnPressContext &ctx, bool &flag,
   if (!atoi(ctx.value.c_str())) {
     if (fps_special) {
       RemoveGameWidget(rem);
-      unlink("/system_tmp/fps_enabled");
+      orion_ready_clear(ORION_FLAG_FPS_OVERLAY);
     } else {
       RemoveGameWidget(rem);
     }
   } else {
     CreateGameWidget(cre);
     if (fps_special) {
-      touch_file("/system_tmp/fps_enabled");
+      orion_ready_signal(ORION_FLAG_FPS_OVERLAY);
     }
   }
   flag = !flag;

@@ -59,7 +59,6 @@ extern uintptr_t code_addr;
 
 extern char ip_address[];
 
-int DaemonSocket = 0;
 
 bool startDirectPKGInstaller(bool is_v2);
 extern "C" int launchApp(const char *titleId);
@@ -75,34 +74,6 @@ struct sockaddr_in networkAdress(uint16_t port) {
   address.sin_port = htons(port);
   memset(address.sin_zero, 0, sizeof(address.sin_zero));
   return address;
-}
-
-int networkListen(const char *soc_path) {
-  return orion::ipc_network_listen(soc_path);
-}
-
-int networkAccept(int socket) {
-  return orion::ipc_network_accept(socket);
-}
-
-int networkReceiveData(int socket, void *buffer, int32_t size) {
-  return orion::ipc_network_recv(socket, buffer, size);
-}
-
-int networkSendData(int socket, void *buffer, int32_t size) {
-  return orion::ipc_network_send(socket, buffer, size);
-}
-
-int networkSendDebugData(void *buffer, int32_t size) {
-  return networkSendData(DaemonSocket, buffer, size);
-}
-
-int networkCloseConnection(int socket) {
-  return orion::ipc_network_close(socket);
-}
-
-int networkCloseDebugConnection() {
-  return networkCloseConnection(DaemonSocket);
 }
 
 void reply(int sender_socket, bool error, std::string out_var = "Nothing") {

@@ -154,10 +154,12 @@ int main(void) {
         orion_notify(true, "Failed to initialize the HTTP lib, downloading cheats will not work");
     }
 
-    if (g_settings.toolbox_auto_start && if_exists("/system_tmp/util_first_boot")) {
-        OrionHEN_log("not First boot detected, activating toolbox");
+    if (g_settings.toolbox_auto_start && orion_ready_is_set(ORION_FLAG_UTIL_BOOTED)) {
+        OrionHEN_log("util already booted once — activating toolbox path");
         patch_checker();
     }
+    /* Mark that util completed cold start (typed flag; replaces util_first_boot file). */
+    orion_ready_signal(ORION_FLAG_UTIL_BOOTED);
 
     for (;;) {
         // for rest mode we wait til we can restart everything

@@ -197,27 +197,43 @@ OrionHEN/
 | **liborion_detour** | 共享 Detour + hde64 钩子栈；shellui / fps_elf 共用 |
 | **liborion_proc** | 共享 proc/ucred（allproc 遍历、dynlib、authid）+ **sysctl 进程查询**（`find_pid` / `orion_find_pid_ex` / `isProcessAlive`）；daemon / util / shellui / bootstrapper / fps 共用 |
 | **liborion_platform** | 平台叶子：`if_exists` / `touch_file` / `rmtree`、`OrionHEN_log`（可配置 tag/路径）、`orion_notify`；修一处全树受益 |
-| **liborion_ready** | 跨进程 ready 标记（`/system_tmp/orion_ready/<name>` + wait/timeout）；替代固定 sleep 竞态 |
+| **liborion_ready** | 跨进程 ready/runtime 标记（`/system_tmp/orion_ready/<name>` + wait/timeout）；替代固定 sleep 与 ad-hoc 文件旗 |
 | **orion/lnc.h** | 共享 LNC 启动 ABI（`LncAppParam` / `Flag` / 错误码）；daemon `launcher.hpp` 仅为 shim |
+| **libNineS** | ptrace 注入；**proc/ucred 走 liborion_proc**（不再自带副本） |
+
+#### Daemon 模块（加深后）
+
+| 模块 | 职责 |
+|------|------|
+| **msg.cpp** | 仅 `IPC_loop` + transport 胶水 |
+| **ipc_handle.cpp** | crit 命令表分发 |
+| **daemon_inject.cpp** | toolbox / fps 注入 |
+| **daemon_settings.cpp** | LoadSettings + mtime 缓存 |
+| **daemon_fs.cpp** | remount / chmod / test_sb / reply / fan / ForceKill / pid 查找 |
 
 #### ShellUI 模块（加深后）
 
 | 模块 | 职责 |
 |------|------|
+| **ipc.hpp** | 仅 `orion/ipc_client`（**不**拉 HookedFuncs） |
+| **shellui_types.hpp** | 枚举 / 插件 / overlay / settings 类型 |
+| **HookedFuncs.hpp** | Mono hooks + UI API（include types） |
 | **mono_runtime** | Mono 反射 / 属性读写 / 类查找 |
 | **toolbox_xml** | `generate_*_xml` 菜单 XML |
 | **settings_ui** | `settings_commit` / SaveSettings 等 UI 侧设置 |
 | **shellui_notify / shellui_proc** | UI 用 `notify(const char*)` 与进程/USB 辅助 |
 | **hook_onpress + onpress_*** | 表驱动 OnPress：`{id → handler}`，按 network / cheats / overlay / system / packages / plugins / misc 拆域 |
 
-#### Ready 协议
+#### Ready / runtime flags 协议
 
-| 标记名 | 发布方 | 等待方 |
-|--------|--------|--------|
+| 标记名 | 发布方 | 等待方 / 用途 |
+|--------|--------|----------------|
 | `util` | util 在 IPC 线程启动后 | bootstrapper 启动 util 之后 |
 | `kstuff` | bootstrapper 在 mprotect 成功后 | daemon 注入 toolbox 前 |
 | `daemon` | daemon 在 IPC 线程启动后 | bootstrapper 启动 daemon 之后 |
 | `toolbox` | shellui 注入完成后 | daemon `cmd_enable_toolbox`（兼容旧路径 `toolbox_online`） |
+| `fps_overlay` | shellui（overlay FPS 开） | daemon 游戏循环触发 fps inject（替代 `/system_tmp/fps_enabled`） |
+| `util_booted` | util 冷启动完成后 | rest-mode / toolbox 延迟路径（替代 `util_first_boot`） |
 
 #### IPC 分层（加深后）
 

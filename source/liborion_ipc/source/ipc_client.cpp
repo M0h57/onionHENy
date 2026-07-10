@@ -501,3 +501,18 @@ bool IPC_Client::ToggleDPI(bool turn_on, bool is_v2) {
   }
   return true;
 }
+
+bool IPC_Client::EnableToolbox() {
+  if (!require_crit("EnableToolbox")) {
+    return false;
+  }
+  std::string ipc_msg;
+  // Historical payload titleId; daemon ignores body for enable path.
+  std::string json = R"({ "titleId": "ETAH00002" })";
+  if (!IPCSendCommand(BREW_ENABLE_TOOLBOX, ipc_msg, json)) {
+    shellui_log("EnableToolbox failed");
+    return false;
+  }
+  return true;
+}
+
