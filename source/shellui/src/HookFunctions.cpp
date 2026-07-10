@@ -186,23 +186,63 @@ error:
     return -1;
 }
 
+/*
+ * Hermes stores non-ASCII strings as UTF-16LE in the decrypted RNPS/HBC
+ * buffer (see kylin-core develop-pro-shell-ui shellui_overlay.c). Searching
+ * for UTF-8 "★Debug Settings" never matches, so the Settings list kept
+ * showing Debug Settings. Replace equal-length UTF-16LE sequences in place.
+ */
+static int patch_utf16le_once(unsigned char *buf, int size,
+                              const unsigned char *old_bytes, size_t old_len,
+                              const unsigned char *new_bytes, size_t new_len) {
+  if (!buf || size <= 0 || old_len == 0 || old_len != new_len)
+    return 0;
+  for (int i = 0; i + (int)old_len <= size; i++) {
+    if (memcmp(buf + i, old_bytes, old_len) == 0) {
+      memcpy(buf + i, new_bytes, new_len);
+      return 1;
+    }
+  }
+  return 0;
+}
+
 void patch_bundle_strings(unsigned char* buffer, int* size_ptr, int buffer_capacity) {
-  if (!buffer || !size_ptr) {
+  if (!buffer || !size_ptr || *size_ptr <= 0) {
       return;
   }
-  
-  // Keep this replacement equal-length for callers that only expose exact size.
-  int count = replace_all(buffer, size_ptr, buffer_capacity, "★Debug Settings", "★OrionHEN Tools");
+  (void)buffer_capacity;
+  const int size = *size_ptr;
+
+  /* ★Debug Settings → ★OrionHEN Tools  (15 UTF-16 code units = 30 bytes) */
+  static const unsigned char kOldDbgLabel[] = {
+      0x05, 0x26, /* ★ U+2605 */
+      'D', 0x00, 'e', 0x00, 'b', 0x00, 'u', 0x00, 'g', 0x00,
+      ' ', 0x00, 'S', 0x00, 'e', 0x00, 't', 0x00, 't', 0x00,
+      'i', 0x00, 'n', 0x00, 'g', 0x00, 's', 0x00,
+  };
+  static const unsigned char kNewDbgLabel[] = {
+      0x05, 0x26, /* ★ */
+      'O', 0x00, 'r', 0x00, 'i', 0x00, 'o', 0x00, 'n', 0x00,
+      'H', 0x00, 'E', 0x00, 'N', 0x00, ' ', 0x00, 'T', 0x00,
+      'o', 0x00, 'o', 0x00, 'l', 0x00, 's', 0x00,
+  };
+  static_assert(sizeof(kOldDbgLabel) == sizeof(kNewDbgLabel),
+                "UTF-16 Debug Settings label must be equal length");
+
+  int count = patch_utf16le_once(buffer, size, kOldDbgLabel, sizeof(kOldDbgLabel),
+                                 kNewDbgLabel, sizeof(kNewDbgLabel));
 #if SHELL_DEBUG == 1
   if (count > 0) {
-      shellui_log("patch_bundle_strings: Replaced %d occurrences of 'Debug Settings' with 'OrionHEN Tools'", count);
+      shellui_log("patch_bundle_strings: UTF-16LE ★Debug Settings → ★OrionHEN Tools");
   } else {
-      shellui_log("patch_bundle_strings: No occurrences of 'Debug Settings' found");
+      shellui_log("patch_bundle_strings: UTF-16LE ★Debug Settings not found (size=%d)",
+                 size);
   }
 #else
   (void)count;
 #endif
-  
+
+  /* ASCII Hermes strings remain raw bytes (no UTF-16). Equal length. */
   replace_all(buffer, size_ptr, buffer_capacity, "icon_setting", "orionh_sicon");
 }
 
