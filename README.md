@@ -177,7 +177,7 @@ Common ports: exploit elfldr **9020** and runtime elfldr **9021**. OrionHEN does
 - Two daemons for stability (util daemon auto-restarted by the main daemon)
 - Custom system software version string
 - kstuff-related flows for fself / fpkg support
-- Logs under `/data/etaHEN` (path may remain for config compatibility)
+- Logs under `/data/OrionHEN`
 - Jailbreak IPC for homebrew apps
 - Update blocker (unmounts update partition)
 - Optional Illusions cheats/patches [plugin](https://github.com/LightningMods/etaHEN-SDK/tree/main/Plugin_samples/Illusion_cheats)
@@ -202,8 +202,7 @@ Custom plugins are still developed against the public [etaHEN SDK](https://githu
 
 ## Configuration (`config.ini`)
 
-Settings file: **`/data/etaHEN/config.ini`** (created on first run; reachable via built-in FTP).  
-Path may stay under `etaHEN` for a while so existing installs and tools keep working.
+Settings file: **`/data/OrionHEN/config.ini`** (created on first run; reachable via built-in FTP).
 
 | INI key | Description | Default |
 |---------|-------------|---------|
@@ -221,7 +220,7 @@ Path may stay under `etaHEN` for a while so existing installs and tools keep wor
 | `testkit` | TestKit mode | 0 |
 | `Display_tids` | Show title IDs | 0 |
 | `APP_JB_Debug_Msg` | App jailbreak debug messages | 0 |
-| `etaHEN_Game_Options` | Game options menu | 1 |
+| `OrionHEN_Game_Options` | Game options menu | 1 |
 | `auto_eject_disc` | Auto eject disc | 0 |
 | `Cheats_shortcut_opt` | Cheats shortcut | 0 (`CHEATS_SC_OFF`) |
 | `Toolbox_shortcut_opt` | Toolbox shortcut | 0 (`TOOLBOX_SC_OFF`) |

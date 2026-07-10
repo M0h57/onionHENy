@@ -1,6 +1,6 @@
 # ShellUI injection flow & kylin-core libNineS fixes
 
-## Call path (OrionHEN / etaHEN)
+## Call path (OrionHEN)
 
 ```
 daemon: cmd_enable_toolbox()          [daemon/source/msg.cpp]
@@ -23,9 +23,9 @@ ShellUI payload then signals readiness via `/system_tmp/toolbox_online` (daemon 
 
 kylin-core uses the same `inject_elf()` path for ShellUI overlay injection (`overlay_service.c` → `inject_elf`), plus higher-level retries / kill-respawn / boot-id skip that live outside libNineS.
 
-## Inconsistencies found (etaHEN vs kylin-core)
+## Inconsistencies found (OrionHEN vs kylin-core)
 
-| Area | etaHEN (before) | kylin-core | Risk |
+| Area | OrionHEN (before) | kylin-core | Risk |
 |------|-----------------|------------|------|
 | `sys_ptrace` | Flip authid to debugger **on every** ptrace call, then restore | Direct `syscall(SYS_ptrace)` | **Thread-unsafe race** between concurrent ptrace ops; can SIGSEGV daemon or corrupt authid |
 | `pt_call2` | `pt_continue` then **immediately** `pt_setregs(bak)` | `pt_continue` → **`waitpid`** → then restore regs | **Critical race**: restores ShellUI registers while bootstrap still runs → crash / freeze / power loss |
