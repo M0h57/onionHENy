@@ -1,0 +1,72 @@
+/* Copyright (C) 2025 OrionHEN / LightningMods — OnPress network/DPI domain */
+#include "onpress.hpp"
+#include <cstdlib>
+
+static OnPressResult id_dpi_service(OnPressContext &ctx) {
+  bool &DPI = g_settings.DPI;
+  if (atoi(ctx.value.c_str()) == DPI) {
+    shellui_log("DPI already %s", DPI ? "Enabled" : "Disabled");
+    return OnPressResult::EarlyReturn;
+  }
+  DPI = !DPI;
+  if (!IPC_Client::getInstance(true).ToggleDPI(DPI, false)) {
+    notify(DPI ? "DPI Server Failed to Start ..." : "DPI Server Failed to Stop ...");
+    DPI = !DPI;
+  }
+  return OnPressResult::Handled;
+}
+
+static OnPressResult id_DPI_v2_service(OnPressContext &ctx) {
+  bool &DPI_v2 = g_settings.DPI_v2;
+  if (atoi(ctx.value.c_str()) == DPI_v2) {
+    shellui_log("DPI_v2 already %s", DPI_v2 ? "Enabled" : "Disabled");
+    return OnPressResult::EarlyReturn;
+  }
+  DPI_v2 = !DPI_v2;
+  if (!IPC_Client::getInstance(true).ToggleDPI(DPI_v2, true)) {
+    notify(DPI_v2 ? "DPI_v2 Server Failed to Start ..."
+                  : "DPI_v2 Server Failed to Stop ...");
+    DPI_v2 = !DPI_v2;
+  }
+  return OnPressResult::Handled;
+}
+
+static OnPressResult id_debug_legacy_cmd(OnPressContext &ctx) {
+  if (atoi(ctx.value.c_str()) == g_settings.legacy_cmd_server) {
+    shellui_log("Debug cmd already %s",
+                g_settings.legacy_cmd_server ? "Enabled" : "Disabled");
+    return OnPressResult::EarlyReturn;
+  }
+  g_settings.legacy_cmd_server = !g_settings.legacy_cmd_server;
+  if (IPC_Client::getInstance(true).ToggleSetting(
+          BREW_UTIL_TOGGLE_LEGACY_CMD_SERVER, g_settings.legacy_cmd_server) !=
+      IPC_Ret::NO_ERROR) {
+    notify(g_settings.legacy_cmd_server ? "cmd Failed to Start ..."
+                                        : "CMD Server Failed to Stop ...");
+    g_settings.legacy_cmd_server = !g_settings.legacy_cmd_server;
+  }
+  return OnPressResult::Handled;
+}
+
+static OnPressResult id_disp_titleids(OnPressContext &ctx) {
+  bool &dis_tids = g_settings.display_tids;
+  if (atol(ctx.value.c_str()) == dis_tids) {
+    shellui_log("Display TIDs already %s", dis_tids ? "Enabled" : "Disabled");
+    return OnPressResult::EarlyReturn;
+  }
+  dis_tids = !dis_tids;
+  ReloadRNPSApp("NPXS40002");
+  return OnPressResult::Handled;
+}
+
+static const OnPressExactEntry kExact[] = {
+    {"id_dpi_service", id_dpi_service},
+    {"id_DPI_v2_service", id_DPI_v2_service},
+    {"id_debug_legacy_cmd", id_debug_legacy_cmd},
+    {"id_disp_titleids", id_disp_titleids},
+};
+
+const OnPressExactEntry *onpress_network_exact(size_t *count) {
+  *count = sizeof(kExact) / sizeof(kExact[0]);
+  return kExact;
+}

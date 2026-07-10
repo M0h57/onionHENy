@@ -49,6 +49,8 @@ along with this program; see the file COPYING. If not, see
 #include <string.h>
 #include <stdio.h>
 #include <orion/ready.h>
+#include <orion/platform.h>
+#include <orion/proc_query.h>
 #include <errno.h>
  
  /******************************************************************************
@@ -320,7 +322,6 @@ const char json_payload[] =
   * Function Prototypes
   ******************************************************************************/
  void write_embedded_assets();
- bool if_exists(const char *path);
  void notify(const char *text, ...);
 static void cleanup(void);
  FileDescriptor FileDescriptor_init(int fd);
@@ -464,11 +465,6 @@ static void cleanup(void);
       require_cleanup = false;
       return kstuff_start;
   }
- 
- bool if_exists(const char *path) {
-   struct stat buffer;
-   return (stat(path, &buffer) == 0);
- }
  
  static bool remount(const char *dev, const char *path) {
    iovec_t iov[] = {BUILD_IOVEC("fstype"),    BUILD_IOVEC("exfatfs"),
@@ -615,54 +611,6 @@ static void cleanup(void);
  }
  
 
-pid_t find_pid(const char * name) {
-  int mib[4] = {
-    CTL_KERN,
-    KERN_PROC,
-    KERN_PROC_PROC,
-    0
-  };
-  size_t buf_size;
-  void * buf;
-
-  int pid = -1;
-  // determine size of query response
-  if (sysctl(mib, 4, NULL,&buf_size, NULL, 0)) {
-    printf("sysctl failed: %s\n", strerror(errno));
-    return -1;
-  }
-
-  // allocate memory for query response
-  if (!(buf = malloc(buf_size))) {
-    printf("malloc failed %s\n", strerror(errno));
-    return -1;
-  }
-
-  // query the kernel for proc info
-  if (sysctl(mib, 4, buf,&buf_size, NULL, 0)) {
-    printf("sysctl failed: %s\n", strerror(errno));
-    free(buf);
-    return -1;
-  }
-
-  for (char * ptr = static_cast < char * > (buf); ptr < (static_cast < char * > (buf) + buf_size);) {
-    struct kinfo_proc * ki = reinterpret_cast < struct kinfo_proc * > (ptr);
-    ptr += ki->ki_structsize;
-
-    if(strlen(ki->ki_comm) < 2)
-      continue;
-
-    if (strstr(ki->ki_comm, name) != NULL) {
-      pid = ki->ki_pid;
-      break;
-    }
-  }
-
-  free(buf);
-
-  return pid;
-}
-
 bool is_elf_file(const void* buffer, size_t size) {
     if (size < 4) return false;
     
@@ -759,7 +707,7 @@ bool load_plugin(const char *path, const char *filename)
       snprintf(epath, sizeof(epath), "/data/OrionHEN/plugins/%s.elf", header->titleID);
       if (elfldr_remote_write_and_launch(epath, buf, (size_t)st.st_size)) {
         sleep(2);
-        pid = find_pid(header->titleID);
+        pid = orion_find_pid_substr(header->titleID);
         if (pid < 0)
           pid = 1; /* launched; pid unknown */
         printf("  Launched via 9021!\n");
@@ -856,7 +804,7 @@ bool load_plugin(const char *path, const char *filename)
     snprintf(epath, sizeof(epath), "/data/OrionHEN/plugins/%s.elf", header->titleID);
     if (elfldr_remote_write_and_launch(epath, elf, elf_sz)) {
       sleep(2);
-      pid = find_pid(header->titleID);
+      pid = orion_find_pid_substr(header->titleID);
       if (pid < 0)
         pid = 1;
       printf("  Launched via 9021!\n");
@@ -1115,7 +1063,7 @@ int main(void) {
     }
     /* Wait for process; do not fire next spawn while SpZeroConf is busy */
     for (int i = 0; i < 30; i++) {
-      if (wait_name && find_pid(wait_name) > 0) {
+      if (wait_name && orion_find_pid_substr(wait_name) > 0) {
         klog_printf("  running: %s\n", wait_name);
         return true;
       }
@@ -1133,8 +1081,8 @@ int main(void) {
    * Launching daemon+kstuff together races ptrace on ShellUI → toolbox timeout.
    */
   klog_puts("Starting util via 9021 ...");
-  while ((pid = find_pid("util.elf")) > 0 ||
-         (pid = find_pid("OrionHEN Utility")) > 0) {
+  while ((pid = orion_find_pid_substr("util.elf")) > 0 ||
+         (pid = orion_find_pid_substr("OrionHEN Utility")) > 0) {
     kill(pid, SIGKILL);
     sleep(1);
   }
@@ -1185,8 +1133,8 @@ int main(void) {
   }
 
   klog_puts("Starting daemon via 9021 (toolbox inject) ...");
-  while ((pid = find_pid("daemon.elf")) > 0 ||
-         (pid = find_pid("OrionHEN Critical")) > 0) {
+  while ((pid = orion_find_pid_substr("daemon.elf")) > 0 ||
+         (pid = orion_find_pid_substr("OrionHEN Critical")) > 0) {
     kill(pid, SIGKILL);
     sleep(1);
   }

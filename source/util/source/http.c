@@ -105,7 +105,7 @@ static int progress_callback(void* clientp, curl_off_t dltotal, curl_off_t dlnow
                 dlnow_mb);
         }
 
-        notify(true, notifyMsg);
+        orion_notify(true, notifyMsg);
         progress->last_notify_time = current_time;
     }
 
@@ -173,7 +173,7 @@ bool download_file(const char* url, const char* dst) {
 
     if (res != CURLE_OK) {
         OrionHEN_log("curl_easy_perform() failed: %s", curl_easy_strerror(res));
-        notify(true, "Failed to download the %s!\n\nCheck your internet connection and try again.\nError: %s", filename, curl_easy_strerror(res));
+        orion_notify(true, "Failed to download the %s!\n\nCheck your internet connection and try again.\nError: %s", filename, curl_easy_strerror(res));
     }
     else {
         // Check HTTP response code
@@ -189,13 +189,13 @@ bool download_file(const char* url, const char* dst) {
             snprintf(notifyMsg, sizeof(notifyMsg),
                 "Successfully downloaded the %s\nTotal Size: %.1f MB", filename,
                 (float)download_size / (1024 * 1024));
-            notify(true, notifyMsg);
+            orion_notify(true, notifyMsg);
             OrionHEN_log("Download complete: %lld bytes", download_size);
             success = true;
         }
         else {
             OrionHEN_log("HTTP error: unexpected status code %ld", response_code);
-            notify(true, "Failed to download the %s!\n\nServer returned an error.", filename);
+            orion_notify(true, "Failed to download the %s!\n\nServer returned an error.", filename);
         }
     }
 
@@ -317,7 +317,7 @@ bool extract_zip(const char* zip_path, const char* extract_dir) {
     unzFile zip = unzOpen(zip_path);
     if (!zip) {
         OrionHEN_log("Failed to open zip file: %s", zip_path);
-        notify(true, "Failed to open zip file");
+        orion_notify(true, "Failed to open zip file");
         return false;
     }
 
@@ -327,7 +327,7 @@ bool extract_zip(const char* zip_path, const char* extract_dir) {
     if (unzGoToFirstFile(zip) != UNZ_OK) {
         OrionHEN_log("Empty zip file");
         unzClose(zip);
-        notify(true, "Empty zip file");
+        orion_notify(true, "Empty zip file");
         return false;
     }
 
@@ -355,7 +355,7 @@ bool extract_zip(const char* zip_path, const char* extract_dir) {
     // Initial notification
     char notifyMsg[256];
     snprintf(notifyMsg, sizeof(notifyMsg), "Preparing to extract the cheats repo (%d files)", total_files);
-    notify(true, notifyMsg);
+    orion_notify(true, notifyMsg);
     OrionHEN_log("%s", notifyMsg);
 
     // Get current time for notification timing
@@ -446,7 +446,7 @@ bool extract_zip(const char* zip_path, const char* extract_dir) {
             snprintf(notifyMsg, sizeof(notifyMsg),
                 "Extracting the cheats: %d/%d files (%d%%)",
                 processed_files, total_files, progress_percent);
-            notify(true, notifyMsg);
+            orion_notify(true, notifyMsg);
             OrionHEN_log("%s", notifyMsg);
             last_notify_time = current_time;
         }
@@ -457,7 +457,7 @@ bool extract_zip(const char* zip_path, const char* extract_dir) {
     snprintf(notifyMsg, sizeof(notifyMsg),
         "Cheats Extraction complete (%d files)",
         processed_files);
-    notify(true, notifyMsg);
+    orion_notify(true, notifyMsg);
     OrionHEN_log("%s", notifyMsg);
 
     unzClose(zip);
@@ -558,20 +558,20 @@ bool check_for_new_commit(int repo) {
     bool has_new_commit = false;
     
     OrionHEN_log("Checking for new commits...");
-    notify(true, "Checking for updates to the cheats repo...");
+    orion_notify(true, "Checking for updates to the cheats repo...");
     
     // Download the latest commit information
     json_data = download_json(repo ? GOLDHEN_GITHUB_API_URL : ORIONHEN_GITHUB_API_URL);
     if (!json_data) {
         OrionHEN_log("Failed to download commit information from GitHub API");
-        notify(true, "Failed to check the cheats repo for updates\nCheck your Connection and try again");
+        orion_notify(true, "Failed to check the cheats repo for updates\nCheck your Connection and try again");
         return false;
     }
     
     // Extract the latest commit SHA
     if (!extract_commit_sha(json_data, latest_commit, sizeof(latest_commit))) {
         OrionHEN_log("Failed to extract commit SHA from JSON response");
-        notify(true, "Failed to parse update information\nUsing existing cheats repo");
+        orion_notify(true, "Failed to parse update information\nUsing existing cheats repo");
         free(json_data);
         return false;
     }
@@ -597,9 +597,9 @@ bool check_for_new_commit(int repo) {
         if (!write_commit_hash(latest_commit)) {
             OrionHEN_log("Warning: Failed to store new commit hash");
         }
-        notify(true, "New cheats update found!\nDownloading latest version...");
+        orion_notify(true, "New cheats update found!\nDownloading latest version...");
     } else {
-        notify(true, "Cheats repo is up to date!");
+        orion_notify(true, "Cheats repo is up to date!");
     }
     
     free(json_data);

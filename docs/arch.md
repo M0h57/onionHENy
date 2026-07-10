@@ -195,9 +195,20 @@ OrionHEN/
 | **liborion_ipc** | **客户端**（injectee 双单例）+ **服务端传输环**（`ipc_server`：listen/accept/loop/reply）；daemon/util/shellui/fps 共用 |
 | **liborion_settings** | 统一 `config.ini` schema；各进程以 `orion::Settings g_settings` 为真相源 |
 | **liborion_detour** | 共享 Detour + hde64 钩子栈；shellui / fps_elf 共用 |
-| **liborion_proc** | 共享 proc/ucred（allproc 遍历、dynlib、authid）；shellui / fps_elf 共用 |
+| **liborion_proc** | 共享 proc/ucred（allproc 遍历、dynlib、authid）+ **sysctl 进程查询**（`find_pid` / `orion_find_pid_ex` / `isProcessAlive`）；daemon / util / shellui / bootstrapper / fps 共用 |
+| **liborion_platform** | 平台叶子：`if_exists` / `touch_file` / `rmtree`、`OrionHEN_log`（可配置 tag/路径）、`orion_notify`；修一处全树受益 |
 | **liborion_ready** | 跨进程 ready 标记（`/system_tmp/orion_ready/<name>` + wait/timeout）；替代固定 sleep 竞态 |
 | **orion/lnc.h** | 共享 LNC 启动 ABI（`LncAppParam` / `Flag` / 错误码）；daemon `launcher.hpp` 仅为 shim |
+
+#### ShellUI 模块（加深后）
+
+| 模块 | 职责 |
+|------|------|
+| **mono_runtime** | Mono 反射 / 属性读写 / 类查找 |
+| **toolbox_xml** | `generate_*_xml` 菜单 XML |
+| **settings_ui** | `settings_commit` / SaveSettings 等 UI 侧设置 |
+| **shellui_notify / shellui_proc** | UI 用 `notify(const char*)` 与进程/USB 辅助 |
+| **hook_onpress + onpress_*** | 表驱动 OnPress：`{id → handler}`，按 network / cheats / overlay / system / packages / plugins / misc 拆域 |
 
 #### Ready 协议
 

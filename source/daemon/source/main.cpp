@@ -16,6 +16,9 @@ along with this program; see the file COPYING. If not, see
 
 // Include files
 #include <cstdint>
+#include <orion/ucred.h>
+#include <orion/proc_query.h>
+#include <orion/platform.h>
 #include <stdio.h>
 #include <stdarg.h>
 #include <stddef.h>
@@ -118,64 +121,18 @@ static constexpr auto DEFAULT_PRIORITY = 256;
 uintptr_t kernel_base = 0;
 
 // Function declarations
-void OrionHEN_log(const char *fmt, ...);
-void notify(bool show_watermark, const char *text, ...);
-bool touch_file(const char *destfile);
 int launchApp(const char *titleId);
 int get_ip_address(char *ip_address);
 int ItemzLaunchByUri(const char *uri);
 bool enable_toolbox();
 void sig_handler(int signo);
-
-bool if_exists(const char *path);
 void *fifo_and_dumper_thread(void *args);
 void *Play_time_thread(void *args) noexcept;
 void patch_checker();
 int elfldr_raise_privileges(pid_t pid);
 extern void makenewapp();
-
-// External function declarations
 extern void *IPC_loop(void *);
 extern bool is_handler_enabled;
-
-// Function implementations
-void OrionHEN_log(const char *fmt, ...) {
-    char msg[0x1000];
-    va_list args;
-    va_start(args, fmt);
-    __builtin_vsnprintf(msg, sizeof(msg), fmt, args);
-    va_end(args);
-
-    // Append newline at the end
-    size_t msg_len = strlen(msg);
-    if (msg_len < sizeof(msg) - 1) {
-        msg[msg_len] = '\n';
-        msg[msg_len + 1] = '\0';
-    } else {
-        msg[sizeof(msg) - 2] = '\n';
-        msg[sizeof(msg) - 1] = '\0';
-    }
-
-    printf("[OrionHEN]: %s", msg); // msg already includes a newline
-    klog_printf("%s", msg); // msg already includes a newline
-
-    int fd = open("/data/OrionHEN/OrionHEN.log", O_WRONLY | O_CREAT | O_APPEND, 0777);
-    if (fd < 0) {
-        return;
-    }
-    write(fd, msg, strlen(msg));
-    close(fd);
-}
-
-bool touch_file(const char *destfile) {
-    static constexpr int FLAGS = 0777;
-    int fd = open(destfile, O_WRONLY | O_CREAT | O_TRUNC, FLAGS);
-    if (fd > 0) {
-        close(fd);
-        return true;
-    }
-    return false;
-}
 
 int launchApp(const char *titleId) {
     int id = 0;
@@ -204,11 +161,11 @@ int launchApp(const char *titleId) {
         break;
     case SCE_LNC_ERROR_APP_NOT_FOUND:
         OrionHEN_log("app %s not found", titleId);
-        notify(true, "app %s not found", titleId);
+        orion_notify(true, "app %s not found", titleId);
         break;
     default:
         OrionHEN_log("[LA] unknown error 0x%x", (uint32_t)err);
-        // notify(true, "unknown error 0x%llx", (uint32_t)err);
+        // orion_notify(true, "unknown error 0x%llx", (uint32_t)err);
         break;
     }
     return err;
@@ -219,7 +176,7 @@ void sig_handler(int signo) {
         OrionHEN_log("Signal handler is disabled, ignoring signal %d", signo);
         return;
     }
-    notify(true,
+    orion_notify(true,
           "OrionHEN has crashed ...\n\nPlease send /data/OrionHEN/OrionHEN_crash.log "
           "to the PKG-Zone discord: https://discord.gg/BduZHudWGj");
     OrionHEN_log("main OrionHEN has crashed ...");
@@ -259,6 +216,7 @@ bool cmd_enable_toolbox();
 void LoadSettings();
 bool is_800 = false;
 int main() {
+  orion_log_configure("OrionHEN", "/data/OrionHEN/OrionHEN.log");
     char buz[255];
     pthread_t fifo_thr = nullptr;
     pthread_t pt_thr = nullptr;
@@ -308,7 +266,7 @@ int main() {
         cmd_enable_toolbox();
     }
     else if (!g_settings.toolbox_auto_start) {
-        notify(true, "the OrionHEN Toolbox auto start is disabled in the config.ini\n\n"
+        orion_notify(true, "the OrionHEN Toolbox auto start is disabled in the config.ini\n\n"
                     "Re-enable toolbox_auto_start in /data/OrionHEN/config.ini or open Debug Settings");
     }
 

@@ -15,6 +15,7 @@ along with this program; see the file COPYING. If not, see
 <http://www.gnu.org/licenses/>.  */
 
 #include <netinet/in.h>
+#include <orion/platform.h>
 #include <stddef.h>
 #include <stdio.h>
 #include <sys/socket.h>
@@ -42,59 +43,7 @@ long lastBytes = 0;
 std::string dump_message;
 pthread_t notifyThread;
 
-void OrionHEN_log(const char *fmt, ...);
-bool if_exists(const char *path);
-void notify(bool show_watermark, const char *text, ...);
 
-bool rmtree(const char *path)
-{
-    DIR *dir = opendir(path);
-    if (dir == NULL)
-    {
-        OrionHEN_log("Error opening directory %s", path);
-        return false;
-    }
-
-    struct dirent *entry;
-
-    while ((entry = readdir(dir)) != NULL)
-    {
-        // Skip "." and ".." entries
-        if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0)
-        {
-            continue;
-        }
-
-        char path_1[1000];
-        snprintf(path_1, sizeof(path_1), "%s/%s", path, entry->d_name);
-
-        if (entry->d_type == DT_DIR)
-        {
-            // Recursive call for subdirectories
-            rmtree(path_1);
-        }
-        else
-        {
-            // Delete files
-            if (unlink(path_1) != 0)
-            {
-                // perror("Error deleting file");
-                OrionHEN_log("Error deleting file %s", path);
-            }
-        }
-    }
-
-    closedir(dir);
-
-    // Delete the empty folder
-    if (rmdir(path) != 0)
-    {
-        // perror("Error deleting folder");
-        OrionHEN_log("Error deleting folder %s", path);
-    }
-
-    return true;
-}
 
 uint64_t calculateTotalSize(const char *path)
 {
@@ -105,7 +54,7 @@ uint64_t calculateTotalSize(const char *path)
 
     if (dir == NULL)
     {
-        notify(false, "calculateTotalSize failed for %s", path);
+        orion_notify(false, "calculateTotalSize failed for %s", path);
         return 0;
     }
 
@@ -172,7 +121,7 @@ bool copyFile(const char *source, const char *destination, bool for_dumper)
     FILE *src = fopen(source, "rb");
     if (src == NULL)
     {
-        notify(false, "copyFile failed for %s", source);
+        orion_notify(false, "copyFile failed for %s", source);
         OrionHEN_log("copyFile failed for %s", source);
         return false;
     }
@@ -180,7 +129,7 @@ bool copyFile(const char *source, const char *destination, bool for_dumper)
     FILE *dest = fopen(destination, "wb");
     if (dest == NULL)
     {
-        notify(false, "copyFile failed for %s", destination);
+        orion_notify(false, "copyFile failed for %s", destination);
         OrionHEN_log("copyFile failed for %s", destination);
         fclose(src);
         return false;
@@ -212,7 +161,7 @@ bool copyRecursive(const char *source, const char *destination)
     DIR *dir = opendir(source);
     if (dir == NULL)
     {
-        notify(false, "copyRecursive failed for %s", source);
+        orion_notify(false, "copyRecursive failed for %s", source);
         return false;
     }
 
@@ -239,7 +188,7 @@ bool copyRecursive(const char *source, const char *destination)
             {
                 if (!copyFile(srcPath, destPath, true))
                 {
-                    notify(false, "copyRecursive failed for %s", srcPath);
+                    orion_notify(false, "copyRecursive failed for %s", srcPath);
                     return false;
                 }
             }

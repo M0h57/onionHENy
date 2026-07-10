@@ -203,9 +203,8 @@ int get_ip_address(char *ip_address);
 #ifdef __cplusplus
 extern "C" {
 #endif
-void OrionHEN_log(const char *fmt, ...);
-bool touch_file(const char *destfile);
-void notify(bool show_watermark, const char *text, ...);
+#include <orion/platform.h>
+#include <orion/proc_query.h>
 int sceNetCtlInit(void);
 int sceUserServiceInitialize(void *ptr);
 bool patchShellCore(void);

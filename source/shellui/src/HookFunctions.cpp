@@ -15,6 +15,7 @@ along with this program; see the file COPYING. If not, see
 <http://www.gnu.org/licenses/>.  */
 
 #include "HookedFuncs.hpp"
+#include <orion/platform.h>
 #include "RemotePlay.h"
 #include "Detour.h"
 #include "ipc.hpp"
@@ -260,10 +261,6 @@ MonoString *GetString_Hook(MonoObject *Instance, MonoString *str) {
   }
   
 
-bool if_exists(const char* path) {
-	struct stat buffer;
-	return (stat(path, &buffer) == 0);
-}
 
 int get_ip_address(char* ip_address)
 {
@@ -888,7 +885,7 @@ void Terminate() {
     IPC_Client& main_ipc = IPC_Client::getInstance(false);
     if(g_settings.game_rest_kill) {
 	    	shellui_log("Killing Game");
-        int pid = find_pid("NA", false, true);
+        int pid = orion_find_pid_ex("NA", false, true, false);
         if(pid > 0)
            main_ipc.ForceKillPID(pid);
     }

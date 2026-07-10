@@ -3,6 +3,7 @@
  * Transport (listen/accept/thread) stays in msg.cpp.
  */
 #include "ipc.hpp"
+#include <orion/platform.h>
 #include "../../extern/cJSON/orion_cjson.hpp"
 #include "globalconf.hpp"
 #include <msg.hpp>
@@ -20,14 +21,10 @@
 extern orion::Settings g_settings;
 extern bool is_handler_enabled;
 
-void OrionHEN_log(const char *fmt, ...);
-void notify(bool show_watermark, const char *text, ...);
 void reply(int sender_socket, bool error, std::string out_var = "Nothing");
 void LoadSettings();
-bool if_exists(const char *path);
 bool copyRecursive(const char *source, const char *destination);
 bool copyFile(const char *source, const char *destination, bool for_dumper);
-bool rmtree(const char *path);
 void calculateSize(uint64_t size, char *result);
 uint64_t calculateTotalSize(const char *path);
 int change_permissions_recursive(const char *path);
@@ -56,7 +53,7 @@ void handleIPC(clientArgs *client, std::string &inputStr,
   orion_cjson::Root my_json(inputStr);
   if (!my_json) {
     OrionHEN_log("Error parsing JSON");
-    notify(true, "Error parsing JSON");
+    orion_notify(true, "Error parsing JSON");
     reply(sender_app, true);
     return;
   }
@@ -95,7 +92,7 @@ void handleIPC(clientArgs *client, std::string &inputStr,
     OrionHEN_log("change dir selected, %s", path_buf2.c_str());
 
     if(path_buf.rfind("/user") == std::string::npos && path_buf.length() <= strlen("/system_ex/app/")) {
-      notify(true, "Invalid path of size %d", path_buf.length());
+      orion_notify(true, "Invalid path of size %d", path_buf.length());
       reply(sender_app, true);
       break;
     }
@@ -112,7 +109,7 @@ void handleIPC(clientArgs *client, std::string &inputStr,
           OrionHEN_log("retrying attempt unmounting %d | prev. error %s", retries, strerror(errno));
 
         if (retries >= 20) {
-          notify(true, "Failed to unmount | error %s",
+          orion_notify(true, "Failed to unmount | error %s",
                  strerror(errno));
           reply(sender_app, true);
           break;
@@ -130,7 +127,7 @@ void handleIPC(clientArgs *client, std::string &inputStr,
         unmount(path_buf.c_str(), MNT_FORCE);
       }
       if (!remount(path_buf2.c_str(), path_buf.c_str(), MNT_UPDATE)) {
-        notify(true, "remount error: %s\nPath: %s", strerror(errno),
+        orion_notify(true, "remount error: %s\nPath: %s", strerror(errno),
                path_buf2.c_str());
         OrionHEN_log("remount error: %s Path: %s", strerror(errno),
                    path_buf2.c_str());
@@ -203,7 +200,7 @@ void handleIPC(clientArgs *client, std::string &inputStr,
   }
   case BREW_UNUSED_1: {
     // This command is not used anymore but kept for backwards compatibility
-    notify(true, "This command is not used anymore");
+    orion_notify(true, "This command is not used anymore");
     reply(sender_app, true);
     break;
   }
@@ -212,7 +209,7 @@ void handleIPC(clientArgs *client, std::string &inputStr,
     int enabled = orion_cjson::int_item(my_json.get(), "enabled");
     OrionHEN_log("Adjusting Fan Speed to: %d", speed);
     if (speed < 0 || speed > 100) {
-      notify(true, "Invalid fan speed: %d. Must be between 0 and 100.", speed);
+      orion_notify(true, "Invalid fan speed: %d. Must be between 0 and 100.", speed);
       reply(sender_app, true);
       break;
     }
@@ -220,18 +217,18 @@ void handleIPC(clientArgs *client, std::string &inputStr,
     g_settings.enable_fan_speed = enabled;
 
     if (!enabled) {
-      notify(true, "Fan speed adjustment is disabled.");
+      orion_notify(true, "Fan speed adjustment is disabled.");
       set_fan_threshold(77);
       reply(sender_app, false);
       break;
     }
 
     if (set_fan_threshold(speed)) {
-      notify(true, "Fan threshold adjusted to %i°C.", speed);
+      orion_notify(true, "Fan threshold adjusted to %i°C.", speed);
       g_settings.fan_threshold = speed;
       reply(sender_app, false);
     } else {
-      notify(true, "Failed to adjust fan speed.");
+      orion_notify(true, "Failed to adjust fan speed.");
       reply(sender_app, true);
     }
     break;
@@ -257,7 +254,7 @@ void handleIPC(clientArgs *client, std::string &inputStr,
   }
   case BREW_RELOAD_SETTINGS: {
     LoadSettings();
-    notify(true, "Reloaded Settings");
+    orion_notify(true, "Reloaded Settings");
     reply(sender_app, false);
     break;
   }
@@ -275,7 +272,7 @@ void handleIPC(clientArgs *client, std::string &inputStr,
     break;
   }
   default:
-    notify(true, "Unknown command 0x%X", command);
+    orion_notify(true, "Unknown command 0x%X", command);
     reply(sender_app, true);
     break;
   }

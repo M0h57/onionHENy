@@ -17,6 +17,7 @@ along with this program; see the file COPYING. If not, see
 
 #include "Detour.h"
 #include "HookedFuncs.hpp"
+#include <orion/proc_query.h>
 #include "defs.h"
 #include "external_symbols.hpp"
 #include "ipc.hpp"
@@ -52,6 +53,8 @@ MonoObject* Game = nullptr;
 MonoImage * react_common_img = nullptr;
 
 bool hooked = false;
+// SCE hooks for orion_find_pid_ex (installed after dynlib resolve in main)
+
 bool has_hv_bypass = false;
 
 
@@ -1263,7 +1266,24 @@ int main(int argc, char const *argv[]) {
     // shellui_log("Decrypted Data: %s", dec_xml_str.c_str());
     shellui_log("Performed Magic");
 
-    hooked = true;
+    
+  // Platform process lookup: use resolved SCE function pointers.
+  orion_proc_set_sce_hooks(
+      [](int pid, char *name) -> int {
+        return sceKernelGetProcessName ? sceKernelGetProcessName(pid, name) : -1;
+      },
+      [](pid_t pid, void *info) -> int {
+        return sceKernelGetAppInfo
+                   ? sceKernelGetAppInfo(pid, static_cast<app_info_t *>(info))
+                   : -1;
+      },
+      []() -> int {
+        return sceSystemServiceGetAppIdOfRunningBigApp
+                   ? sceSystemServiceGetAppIdOfRunningBigApp()
+                   : -1;
+      });
+
+  hooked = true;
     pthread_t thread_id;
     scePthreadCreate(&thread_id, nullptr, dialogue_thread, nullptr, "dialogue_thread");
 

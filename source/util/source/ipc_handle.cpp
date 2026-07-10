@@ -2,6 +2,7 @@
  * Util daemon IPC command dispatch.
  * Transport (listen/accept/thread) stays in msg.cpp.
  */
+#include <orion/platform.h>
 #include "ipc.hpp"
 #include <msg.hpp>
 #include <orion/settings.hpp>
@@ -40,9 +41,7 @@ extern atomic_bool g_legacy_cmd_server_exit;
 void reply(int sender_socket, bool error, std::string out_var = "Nothing");
 bool startDirectPKGInstaller(bool is_v2);
 void shutdownDirectPKGInstaller(bool is_v2);
-bool if_exists(const char *path);
 bool LoadSettings();
-bool rmtree(const char *path);
 extern "C" {
 bool load_plugin(const char *path);
 int launchApp(const char *titleId);
@@ -70,7 +69,7 @@ void handleIPC(clientArgs *client, std::string &inputStr,
   orion_cjson::Root my_json(inputStr);
   if (!my_json) {
     OrionHEN_log("Error parsing JSON");
-    notify(true, "Error parsing JSON");
+    orion_notify(true, "Error parsing JSON");
     reply(sender_app, true);
     return;
   }
@@ -94,7 +93,7 @@ void handleIPC(clientArgs *client, std::string &inputStr,
     OrionHEN_log("DPI toggle: %d | is_v2 %s", turn_on, is_v2 ? "true" : "false");
     if (turn_on) {
       if (startDirectPKGInstaller(is_v2)) {
-        notify(true,
+        orion_notify(true,
                is_v2 ? "Direct PKG Installer V2 Server Started\nWebUI: "
                        "http://%s:12800 "
                      : "Direct PKG Installer Server Started\nIP: %s Port: 9090",
@@ -104,7 +103,7 @@ void handleIPC(clientArgs *client, std::string &inputStr,
         reply(sender_app, true);
     } else {
       shutdownDirectPKGInstaller(is_v2);
-      notify(true, is_v2 ? "Direct PKG Installer V2 Server Stopped"
+      orion_notify(true, is_v2 ? "Direct PKG Installer V2 Server Stopped"
                          : "Direct PKG Installer Server Stopped");
       reply(sender_app, false);
     }
@@ -118,7 +117,7 @@ void handleIPC(clientArgs *client, std::string &inputStr,
   case BREW_UTIL_GET_GAME_VER: {
     auto tid = std::string(orion_cjson::string_item(my_json.get(), "tid", ""));
     if (tid.empty()) {
-      notify(true, "Failed to get tid");
+      orion_notify(true, "Failed to get tid");
       reply(sender_app, true);
       break;
     }
@@ -137,7 +136,7 @@ void handleIPC(clientArgs *client, std::string &inputStr,
           tmp = "/system_ex/app/" + tid + "/sce_sys/param.json";
           if (!if_exists(tmp.c_str())) {
             OrionHEN_log("%s: json %s does not exist", tid.c_str(), tmp.c_str());
-            notify(true, "Failed to get game version");
+            orion_notify(true, "Failed to get game version");
             reply(sender_app, true);
             break;
           }
@@ -146,7 +145,7 @@ void handleIPC(clientArgs *client, std::string &inputStr,
 
       game_version = GetPS5Version(tmp);
       if (game_version.empty()) {
-        notify(true, "Failed to get game version");
+        orion_notify(true, "Failed to get game version");
         OrionHEN_log("Failed to get game version for PS5 Game");
         reply(sender_app, true);
         break;
@@ -159,7 +158,7 @@ void handleIPC(clientArgs *client, std::string &inputStr,
         tmp = "/system_data/priv/appmeta/external/" + tid + "/param.sfo";
         if (!if_exists(tmp.c_str())) {
           OrionHEN_log("%s: sfo %s does not exist", tid.c_str(), tmp.c_str());
-          notify(true, "Failed to get game version");
+          orion_notify(true, "Failed to get game version");
           reply(sender_app, true);
           break;
         }
@@ -167,7 +166,7 @@ void handleIPC(clientArgs *client, std::string &inputStr,
 
       std::vector<uint8_t> sfo_data = readFile(tmp);
       if (sfo_data.empty()) {
-        notify(true, "Failed to read SFO file");
+        orion_notify(true, "Failed to read SFO file");
         reply(sender_app, true);
         break;
       }
@@ -202,12 +201,12 @@ void handleIPC(clientArgs *client, std::string &inputStr,
     OrionHEN_log("Launching %s (TID: %s)", plugin_path.c_str(),
                title_id.c_str());
     if (!load_plugin(plugin_path.c_str())) {
-      notify(true, "Failed to Load in\nPath: %s\nTID: %s",
+      orion_notify(true, "Failed to Load in\nPath: %s\nTID: %s",
              plugin_path.c_str(), title_id.c_str());
       reply(sender_app, true);
       break;
     }
-    notify(true, "Plugin or ELF launched successfully\nPath: %s\nTID: %s",
+    orion_notify(true, "Plugin or ELF launched successfully\nPath: %s\nTID: %s",
            plugin_path.c_str(), title_id.c_str());
     reply(sender_app, false);
     break;
@@ -227,7 +226,7 @@ void handleIPC(clientArgs *client, std::string &inputStr,
     if (cheats.exportList(title_id, version, pid, appid, shm_path) == 0) {
       reply(sender_app, false, shm_path);
     } else {
-      notify(true, "No cheats available for %s version %s!", title_id.c_str(),
+      orion_notify(true, "No cheats available for %s version %s!", title_id.c_str(),
              version.c_str());
       reply(sender_app, true);
     }
@@ -271,7 +270,7 @@ void handleIPC(clientArgs *client, std::string &inputStr,
       reply(sender_app, false);
       break;
     }
-    notify(true, "Downloading the latest %s Cheats repo....", repo ? "GoldHEN PS4" : "OrionHEN PS5");
+    orion_notify(true, "Downloading the latest %s Cheats repo....", repo ? "GoldHEN PS4" : "OrionHEN PS5");
     if (!download_file(repo ? "https://api.github.com/repos/GoldHEN/GoldHEN_Cheat_Repository/zipball" : "https://api.github.com/repos/OrionHEN/PS5_Cheats/zipball",
                        "/data/OrionHEN/cheats.zip")) {
       OrionHEN_log("Failed to download cheats");
@@ -291,17 +290,17 @@ void handleIPC(clientArgs *client, std::string &inputStr,
     auto &cheats = orion::cheats::CheatService::instance();
     cheats.ensureDir();
     if (cheats.flattenInstallTree(staging) < 0) {
-      notify(true, "Downloaded repo but no flat cheat files were installed");
+      orion_notify(true, "Downloaded repo but no flat cheat files were installed");
       reply(sender_app, true);
       break;
     }
-    notify(true, "Successfully installed cheats to %s (flat TITLE_VERSION.ext)",
+    orion_notify(true, "Successfully installed cheats to %s (flat TITLE_VERSION.ext)",
            ORION_CHEATS_DIR);
     reply(sender_app, false);
     break;
   }
   case BREW_UTIL_DOWNLOAD_KSTUFF: {
-      notify(true, "Attempting to Download kstuff ...");
+      orion_notify(true, "Attempting to Download kstuff ...");
       if (!download_file("https://github.com/EchoStretch/kstuff/releases/latest/download/kstuff.elf",
           "/data/OrionHEN/kstuff.elf")) {
 		  unlink("/data/OrionHEN/kstuff.elf");
@@ -310,7 +309,7 @@ void handleIPC(clientArgs *client, std::string &inputStr,
           break;
       }
 
-      notify(true, "Successfully downloaded latest kstuff");
+      orion_notify(true, "Successfully downloaded latest kstuff");
       reply(sender_app, false);
       break;
   }
@@ -323,14 +322,14 @@ void handleIPC(clientArgs *client, std::string &inputStr,
     bool turn_on = orion_cjson::bool_item(my_json.get(), "toggle");
     OrionHEN_log("Legacy Command Server toggle: %d", turn_on);
     if (turn_on) {
-      notify(true, "Legacy Command Server Enabled");
+      orion_notify(true, "Legacy Command Server Enabled");
       g_legacy_cmd_server = true;
       g_legacy_cmd_server_exit = true;
     } else {
 	  // dont exit server because its used to detect rest mode too 
       // just stop handling commands
       g_legacy_cmd_server = false;
-      notify(true, "Legacy Command Server Disabled");
+      orion_notify(true, "Legacy Command Server Disabled");
     }
     reply(sender_app, false);
 	break;
@@ -344,12 +343,12 @@ void handleIPC(clientArgs *client, std::string &inputStr,
   }
   case BREW_RELOAD_SETTINGS: {
     LoadSettings();
-    //notify(true, "Reloaded Settings");
+    //orion_notify(true, "Reloaded Settings");
     reply(sender_app, false);
     break;
   }
   default:
-    notify(true, "Unknown command 0x%X", command);
+    orion_notify(true, "Unknown command 0x%X", command);
     reply(sender_app, true);
     break;
   }

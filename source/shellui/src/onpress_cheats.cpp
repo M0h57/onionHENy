@@ -1,0 +1,56 @@
+/* Copyright (C) 2025 OrionHEN / LightningMods — OnPress cheats domain */
+#include "onpress.hpp"
+#include <cstring>
+
+#define MAX_CHEATS 256
+
+void ParseCheatID(const char *id, char *tid, int *cheat_id);
+extern bool is_current_game_open;
+extern int cheatEnabledMap[];
+extern std::string currentCheatTID;
+
+static OnPressResult prefix_id_cheat(OnPressContext &ctx) {
+  if (ctx.id.rfind("id_cheat_", 0) != 0) {
+    return OnPressResult::NotMine;
+  }
+  if (!is_current_game_open) {
+    notify("The Game is not running, to activate cheats launch the game first");
+    shellui_log("Failed to activate %s, game is not running", ctx.id.c_str());
+    return OnPressResult::EarlyReturn;
+  }
+  char tid[32];
+  int cheat_id;
+  std::string cheat_name;
+  ParseCheatID(ctx.id.c_str(), tid, &cheat_id);
+  shellui_log("Getting PID for %s", ctx.id.c_str());
+  int pid = orion_find_pid_ex(tid, false, true, true);
+  if (pid < 0) {
+    notify("[ERROR] Failed to activate %s\nfailed to find game pid",
+           cheat_name.c_str());
+    shellui_log("Failed to get pid for %s", tid);
+    return OnPressResult::EarlyReturn;
+  }
+  shellui_log("Got proc for %s, tid %s, pid %i", ctx.id.c_str(), tid, pid);
+  if (IPC_Client::getInstance(true).ToggleGameCheat(pid, tid, cheat_id,
+                                                    cheat_name)) {
+    if (currentCheatTID != tid) {
+      currentCheatTID = tid;
+      bzero(cheatEnabledMap, MAX_CHEATS);
+    }
+    bool enabled = ctx.value == "1";
+    cheatEnabledMap[cheat_id] = enabled;
+    notify("★ %s [%s] ★", cheat_name.c_str(), enabled ? "ON" : "OFF");
+  } else {
+    notify("[ERROR] Failed to activate %s", cheat_name.c_str());
+  }
+  return OnPressResult::Handled;
+}
+
+static const OnPressPrefixEntry kPrefix[] = {
+    {"id_cheat_", prefix_id_cheat},
+};
+
+const OnPressPrefixEntry *onpress_cheats_prefix(size_t *count) {
+  *count = sizeof(kPrefix) / sizeof(kPrefix[0]);
+  return kPrefix;
+}

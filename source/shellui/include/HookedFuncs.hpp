@@ -340,6 +340,10 @@ int ini_parser_load(IniParser* parser, const char* filename);
 const char* ini_parser_get(IniParser* parser, const char* key, const char* default_value);
 bool LoadSettings();
 bool SaveSettings();
+/** Recompute g_overlay_layout from g_settings.overlay_pos. */
+void apply_overlay_layout();
+/** Persist g_settings and optionally reload daemon/util settings via IPC. */
+void settings_commit(bool reload_main = false, bool reload_util = false);
 bool SetVersionString(const char* str);
 int SendShelluiNotify();
 void Terminate();
@@ -550,9 +554,12 @@ void GoToHome();
 void GoToURI(const char* uri);
 bool Get_Running_App_TID(std::string& title_id, int& BigAppid);
 void generate_cheats_xml(std::string &new_xml, std::string& not_open_tid, bool running_as_debug_settings, bool show_while_not_open);
-bool if_exists(const char* path);
+#include <orion/proc_query.h>
+#include <orion/platform.h>
+int sceSystemServiceGetAppId(const char *tid);
+/** USB mass-storage index, or -1 when none mounted. */
+int usbpath();
 extern "C" int sceUserServiceGetInitialUser(int* uid);
-bool touch_file(const char *destfile);
 void ParseCheatID(const char* id, char* tid, int* cheat_id);
 int Launch_FG_Game(const char *path, const char* title_id, const char* title);
 void CallDecrypt(unsigned char* bundleData, int bundleOffset, int bundleSize,  int* payloadOffset, int* realPayloadSize);

@@ -70,6 +70,8 @@ target_include_directories(${PROJECT_NAME} PRIVATE
   "${D_CWD}/include"
   "${PROJECT_ROOT}/liborion_settings/include"
   "${PROJECT_ROOT}/liborion_ipc/include"
+  "${PROJECT_ROOT}/liborion_proc/include"
+  "${PROJECT_ROOT}/liborion_platform/include"
   "${PROJECT_ROOT}/include"
 )
 # CBC for MC4 / ShnExt AES; no KCF/WMDW
@@ -79,11 +81,13 @@ target_link_directories(${PROJECT_NAME} PUBLIC
   "${D_CWD}/lib"
   "${D_CWD}/lib/keystone_cxxrt"
 )
-add_dependencies(${PROJECT_NAME} hijacker NineS orion_settings orion_ipc orion_ready)
+add_dependencies(${PROJECT_NAME} hijacker NineS orion_settings orion_ipc orion_proc orion_platform orion_ready)
 # keystone: ShnExt ASM only
 target_link_libraries(${PROJECT_NAME} PUBLIC
     orion_ipc
     orion_settings
+    orion_proc
+    orion_platform
     orion_ready
     keystone
     c++

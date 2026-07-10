@@ -24,6 +24,8 @@ along with this program; see the file COPYING. If not, see
 #include <ps5/klog.h>
 #include "pt.h"
 #include <elfldr_remote.h>
+#include <orion/platform.h>
+#include <orion/proc_query.h>
 
 typedef struct app_info {
   uint32_t app_id;
@@ -113,72 +115,8 @@ error:
 	return -1;
 }
 
-void OrionHEN_log(const char * fmt, ...) {
-  char msg[0x1000];
-  va_list args;
-  va_start(args, fmt);
-  __builtin_vsnprintf(msg, sizeof(msg), fmt, args);
-  va_end(args);
 
-  // Append newline at the end
-  size_t msg_len = strlen(msg);
-  if (msg_len < sizeof(msg) - 1) {
-    msg[msg_len] = '\n';
-    msg[msg_len + 1] = '\0';
-  } else {
-    msg[sizeof(msg) - 2] = '\n';
-    msg[sizeof(msg) - 1] = '\0';
-  }
 
-  printf("[OrionHEN utils]: %s", msg); // msg already includes a newline
-  klog_printf("%s", msg); // msg already includes a newline
-
-  int fd = open("/data/OrionHEN/OrionHEN_util_daemon.log", O_WRONLY | O_CREAT | O_APPEND, 0777);
-  if (fd < 0) {
-    return;
-  }
-  write(fd, msg, strlen(msg));
-  close(fd);
-}
-
-bool touch_file(const char *destfile)
-{
-	int fd = open(destfile, O_WRONLY | O_CREAT | O_TRUNC, 0777);
-	if (fd > 0)
-	{
-		close(fd);
-		return true;
-	}
-	return false;
-}
-
-void notify(bool show_watermark, const char *text, ...)
-{
-	OrbisNotificationRequest req;
-	(void)memset(&req, 0, sizeof(OrbisNotificationRequest));
-	char buff[3075];
-
-	// printf("******************** text: %s\n", text);
-
-	va_list args;
-	va_start(args, text);
-	vsnprintf(buff, sizeof(buff), text, args);
-	va_end(args);
-
-	if (show_watermark)
-		snprintf(req.message, sizeof(req.message), "[OrionHEN] %s", buff);
-	else
-		snprintf(req.message, sizeof(req.message), "[OrionHEN] %s", buff);
-
-    req.type = 0;
-    req.unk3 = 0;
-    req.use_icon_image_uri = 1;
-    req.target_id = -1;
-    strcpy(req.uri, "cxml://psnotification/tex_icon_system");
-
-	OrionHEN_log("Notify: %s", req.message);
-	sceKernelSendNotificationRequest(0, &req, sizeof(req), 0);
-}
 
 
 bool copyFile(const char *source, const char *destination)
@@ -187,7 +125,7 @@ bool copyFile(const char *source, const char *destination)
     FILE *src = fopen(source, "rb");
     if (src == NULL)
     {
-        notify(false, "copyFile failed for %s", source);
+        orion_notify(false, "copyFile failed for %s", source);
         OrionHEN_log("copyFile failed for %s", source);
         return false;
     }
@@ -195,7 +133,7 @@ bool copyFile(const char *source, const char *destination)
     FILE *dest = fopen(destination, "wb");
     if (dest == NULL)
     {
-        notify(false, "copyFile failed for %s", destination);
+        orion_notify(false, "copyFile failed for %s", destination);
         OrionHEN_log("copyFile failed for %s", destination);
         fclose(src);
         return false;
@@ -358,61 +296,6 @@ bool is_valid_plugin(const unsigned char *file_buffer)
   return true;
 }
 
-pid_t find_pid(const char *name)
-{
-  int mib[4] = {
-      CTL_KERN,
-      KERN_PROC,
-      KERN_PROC_PROC,
-      0};
-  app_info_t appinfo;
-  size_t buf_size;
-  void *buf;
-
-  int pid = -1;
-  //  size of query response
-  if (sysctl(mib, 4, NULL, &buf_size, NULL, 0))
-  {
-    OrionHEN_log("sysctl failed: %s", strerror(errno));
-    return -1;
-  }
-
-  // allocate memory for query response
-  if (!(buf = malloc(buf_size)))
-  {
-    OrionHEN_log("malloc failed %s", strerror(errno));
-    return -1;
-  }
-
-  // query the kernel for proc info
-  if (sysctl(mib, 4, buf, &buf_size, NULL, 0))
-  {
-    OrionHEN_log("sysctl failed: %s", strerror(errno));
-    free(buf);
-    return -1;
-  }
-
-  for (void *ptr = buf; ptr < (buf + buf_size);)
-  {
-    struct kinfo_proc *ki = (struct kinfo_proc *)ptr;
-    ptr += ki->ki_structsize;
-
-    if (sceKernelGetAppInfo(ki->ki_pid, &appinfo))
-    {
-      memset(&appinfo, 0, sizeof(appinfo));
-    }
-
-    if (strcmp(ki->ki_comm, name) == 0)
-    {
-      pid = ki->ki_pid;
-      break;
-    }
-  }
-
-  free(buf);
-
-  return pid;
-}
 
 
 bool is_elf_file(const void *buffer, size_t size)
@@ -469,7 +352,7 @@ bool load_plugin(const char *path)
     if (!is_elf_file(buf, st.st_size))
     {
       OrionHEN_log("Invalid ELF file.");
-      notify(true, "Invalid ELF file: %s", filename);
+      orion_notify(true, "Invalid ELF file: %s", filename);
       free(buf);
       return false;
     }
@@ -678,11 +561,11 @@ int launchApp(const char *titleId)
 		break;
 	case SCE_LNC_ERROR_APP_NOT_FOUND:
 		OrionHEN_log("app %s not found", titleId);
-		notify(true, "app %s not found", titleId);
+		orion_notify(true, "app %s not found", titleId);
 		break;
 	default:
 		OrionHEN_log("[LA] unknown error 0x%x", (uint32_t)err);
-		// notify(true, "unknown error 0x%llx", (uint32_t)err);
+		// orion_notify(true, "unknown error 0x%llx", (uint32_t)err);
 		break;
 	}
 	return err;

@@ -15,6 +15,8 @@ along with this program; see the file COPYING. If not, see
 <http://www.gnu.org/licenses/>.  */
 
 #include <hijacker/hijacker.hpp>
+#include <orion/proc_query.h>
+#include <orion/platform.h>
 #include <notify.hpp>
 #include <util.hpp>
 #include <freebsd-helper.h>
@@ -128,25 +130,18 @@ typedef struct app_info {
 } app_info_t;
 
 // Function declarations
-void OrionHEN_log(const char *fmt, ...);
 void crash_log(const char *fmt, ...);
-bool if_exists(const char *path);
 void jailbreak_proc(int pid);
-bool isProcessAlive(int pid) noexcept;
 bool GetFileContents(const char *path, char **buffer);
-void notify(bool show_watermark, const char *text, ...);
-bool rmtree(const char *path);
 int get_ip_address(char *ip_address);
-bool Get_Running_App_TID(std::string& title_id, int& BigAppid);
+bool Get_Running_App_TID(std::string &title_id, int &BigAppid);
 bool is_whitelisted_app(const std::string &tid);
 void *Play_time_thread(void *args) noexcept;
 bool enable_toolbox();
 bool isUserLoggedIn();
-pid_t find_pid(const char *name);
 bool Open_Utility_Elf(const char *path, uint8_t **buffer);
 void *fifo_and_dumper_thread(void *args) noexcept;
 void *runDirectPKGInstaller(void *args);
-
 void activate_shellui_patch(void);
 
 // Local ABIs that used to leak through the junk globalconf.hpp dump.
@@ -182,19 +177,11 @@ int last_BigAppid = -1;
 bool shown_dead_noti = false;
 
 // Function implementations
-bool if_exists(const char *path) {
-  struct stat buffer;
-  return stat(path, &buffer) == 0;
-}
 
 void jailbreak_proc(int pid) {
   kernel_set_proc_rootdir(pid, kernel_get_root_vnode());
 }
 
-bool isProcessAlive(int pid) noexcept {
-  int mib[]{CTL_KERN, KERN_PROC, KERN_PROC_PID, pid};
-  return sysctl(mib, 4, nullptr, nullptr, nullptr, 0) == 0;
-}
 
 static bool writeRecord(const char *filename, const char *tid, uint64_t duration) {
   FILE *file = fopen(filename, "a+b"); // Open in append mode to add new records without deleting old ones
@@ -315,30 +302,6 @@ bool GetFileContents(const char *path, char **buffer) {
   return true;
 }
 
-void notify(bool show_watermark, const char *text, ...) {
-  OrbisNotificationRequest req;
-  (void)memset(&req, 0, sizeof(OrbisNotificationRequest));
-  char buff[3075];
-
-  va_list args{};
-  va_start(args, text);
-  vsnprintf(buff, sizeof(buff), text, args);
-  va_end(args);
-
-  if (show_watermark)
-    snprintf(req.message, sizeof(req.message), "[OrionHEN] %s", buff);
-  else
-    snprintf(req.message, sizeof(req.message), "[OrionHEN] %s", buff);
-
-  req.type = 0;
-  req.unk3 = 0;
-  req.use_icon_image_uri = 1;
-  req.target_id = -1;
-  strcpy(req.uri, "cxml://psnotification/tex_icon_system");
-
-  OrionHEN_log("Notify: %s\n", req.message);
-  sceKernelSendNotificationRequest(0, &req, sizeof(req), 0);
-}
 
 int get_ip_address(char *ip_address) {
   int ret;
@@ -450,58 +413,6 @@ bool isUserLoggedIn() {
   return isLoggedIn;
 }
 
-pid_t find_pid(const char *name) {
-  int mib[4] = {
-    CTL_KERN,
-    KERN_PROC,
-    KERN_PROC_PROC,
-    0
-  };
-  app_info_t appinfo;
-  size_t buf_size;
-  void *buf;
-
-  int pid = -1;
-  // determine size of query response
-  if (sysctl(mib, 4, NULL, &buf_size, NULL, 0)) {
-    OrionHEN_log("sysctl failed: %s", strerror(errno));
-    return -1;
-  }
-
-  // allocate memory for query response
-  if (!(buf = malloc(buf_size))) {
-    OrionHEN_log("malloc failed %s", strerror(errno));
-    return -1;
-  }
-
-  // query the kernel for proc info
-  if (sysctl(mib, 4, buf, &buf_size, NULL, 0)) {
-    OrionHEN_log("sysctl failed: %s", strerror(errno));
-    free(buf);
-    return -1;
-  }
-
-  for (char *ptr = static_cast<char *>(buf); 
-       ptr < (static_cast<char *>(buf) + buf_size);) {
-    struct kinfo_proc *ki = reinterpret_cast<struct kinfo_proc *>(ptr);
-    ptr += ki->ki_structsize;
-
-    if (sceKernelGetAppInfo(ki->ki_pid, &appinfo)) {
-      memset(&appinfo, 0, sizeof(appinfo));
-    }
-
-    if (strlen(ki->ki_comm) < 2)
-      continue;
-
-    if (strstr(ki->ki_comm, name) != NULL) {
-      pid = ki->ki_pid;
-      break;
-    }
-  }
-
-  free(buf);
-  return pid;
-}
 
 bool Open_Utility_Elf(const char *path, uint8_t **buffer) {
   if (!path || !buffer) {
@@ -568,11 +479,11 @@ void *fifo_and_dumper_thread(void *args) noexcept {
       if (find_pid("util.elf") < 0 && find_pid("OrionHEN Utility") < 0 &&
           retries < MAX_RETIRES) {
           if (retries == 0) {
-              notify(true, "OrionHEN Utility is not running, restarting via 9021...");
+              orion_notify(true, "OrionHEN Utility is not running, restarting via 9021...");
           }
 
           if (++retries >= MAX_RETIRES) {
-              notify(true, "OrionHEN Utility services failed to restart — check elfldr :9021 and /data/OrionHEN/daemons/util.elf");
+              orion_notify(true, "OrionHEN Utility services failed to restart — check elfldr :9021 and /data/OrionHEN/daemons/util.elf");
               continue;
           }
 
@@ -580,7 +491,7 @@ void *fifo_and_dumper_thread(void *args) noexcept {
           if (ok) {
               sleep(2);
               OrionHEN_log("  Launched util via 9021!");
-              notify(true, "OrionHEN Utility services successfully restarted");
+              orion_notify(true, "OrionHEN Utility services successfully restarted");
               retries = 0;
           } else {
               OrionHEN_log("failed to launch util via 9021 (need elfldr + util.elf), retry: %d", retries);
@@ -652,7 +563,7 @@ void *fifo_and_dumper_thread(void *args) noexcept {
     const char *PID = orion_cjson::string_item(my_json.get(), "PID");
     if (!PID) {
       OrionHEN_log("PID is null");
-      notify(true, "Jailbreak failed, PID is null");
+      orion_notify(true, "Jailbreak failed, PID is null");
       pthread_mutex_unlock(&jb_lock);
       continue;
     }
@@ -667,7 +578,7 @@ void *fifo_and_dumper_thread(void *args) noexcept {
       spawned = Hijacker::getHijacker(reserved_value);
       if (!spawned) {
         if (++retries > 30 || isProcessAlive(reserved_value)) {
-          notify(true, "Jailbreak failed, PID is invaild");
+          orion_notify(true, "Jailbreak failed, PID is invaild");
           OrionHEN_log("Jailbreak failed, PID is invaild");
           break;
         }
@@ -679,7 +590,7 @@ void *fifo_and_dumper_thread(void *args) noexcept {
       OrionHEN_log("RIGHT Jailbreak command received: jailbreaking...");
 
       if(g_settings.debug_app_jb_msg)
-          notify(true, "App (PID %i) has been granted a jailbreak", reserved_value);
+          orion_notify(true, "App (PID %i) has been granted a jailbreak", reserved_value);
 
       spawned->jailbreak(true);
 	    spawned.release();

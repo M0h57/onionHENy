@@ -67,17 +67,18 @@ add_custom_target(run_encryptxml
 )
 
 target_sources(${PROJECT_NAME} PRIVATE ${SrcFiles})
-add_dependencies(${PROJECT_NAME} run_encryptxml orion_ipc orion_settings orion_detour orion_proc orion_ready)
+add_dependencies(${PROJECT_NAME} run_encryptxml orion_ipc orion_settings orion_detour orion_proc orion_platform orion_ready)
 target_include_directories(${PROJECT_NAME} PRIVATE
 	"${D_CWD}/include"
 	"${PROJECT_ROOT}/liborion_ipc/include"
 	"${PROJECT_ROOT}/liborion_settings/include"
 	"${PROJECT_ROOT}/liborion_detour/include"
 	"${PROJECT_ROOT}/liborion_proc/include"
+	"${PROJECT_ROOT}/liborion_platform/include"
 	"${PROJECT_ROOT}/include"
 )
 target_link_directories	(${PROJECT_NAME} PUBLIC "${PROJECT_ROOT}/lib")
-target_link_libraries	(${PROJECT_NAME} PUBLIC orion_detour orion_proc orion_ipc orion_settings orion_ready hijacker ScePad SceRegMgr SceSystemService SceNet SceSysmodule SceUserService SceNetCtl SceSysCore kernel_sys SceAppInstUtil)
+target_link_libraries	(${PROJECT_NAME} PUBLIC orion_detour orion_proc orion_platform orion_ipc orion_settings orion_ready hijacker ScePad SceRegMgr SceSystemService SceNet SceSysmodule SceUserService SceNetCtl SceSysCore kernel_sys SceAppInstUtil)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 # Add post-build command

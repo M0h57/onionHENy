@@ -17,6 +17,9 @@ along with this program; see the file COPYING. If not, see
 #include "ipc.hpp"
 #include "cheats/CheatService.hpp"
 #include <orion/settings.hpp>
+#include <orion/platform.h>
+#include <orion/ucred.h>
+#include <orion/proc_query.h>
 #include <orion/ready.h>
 extern "C" {
 #include "freebsd-helper.h"
@@ -38,8 +41,7 @@ pthread_t cmd_server = 0;
 
 extern "C" {
 
-  #define DEBUG_AUTHID 0x4800000000000006
-  #include "faulthandler.h"
+    #include "faulthandler.h"
   #include "common_utils.h"
   #include <ps5/payload.h>
 
@@ -49,29 +51,7 @@ extern "C" {
   int sceKernelGetProcessName(int pid, char * out);
   int _sceApplicationGetAppId(int pid, uint32_t * appId);
 
-  struct proc * get_proc_by_pid(pid_t pid);
-  //
-  // Search process entr on the allproc linked list
-  // acquire the "ucred" structure and set it
-  uintptr_t set_proc_authid(pid_t pid, uintptr_t new_authid) {
-    struct proc * proc = get_proc_by_pid(pid);
-
-    if (proc) {
-      //
-      // Read from kernel
-      //
-      uintptr_t authid = 0;
-      kernel_copyout((uintptr_t) proc -> p_ucred + 0x58, & authid, sizeof(uintptr_t));
-      kernel_copyin( & new_authid, (uintptr_t) proc -> p_ucred + 0x58, sizeof(uintptr_t));
-
-      free(proc);
-
-      return authid;
-    }
-
-    return 0;
-  }
-
+  // set_proc_authid / get_proc_by_pid: liborion_proc
 }
 
 extern bool is_handler_enabled;
@@ -95,13 +75,8 @@ jmp_buf g_catch_buf;
 uintptr_t kernel_base = 0;
 void* __stack_chk_guard = (void*)0xdeadbeef;
 
-bool if_exists(const char* path) {
-    struct stat buffer;
-    return stat(path, &buffer) == 0;
-}
-
 static void cleanup(void) {
-    notify(true, "OrionHEN utilities daemon has crashed...\n\nAttemping to recover...");
+    orion_notify(true, "OrionHEN utilities daemon has crashed...\n\nAttemping to recover...");
 
     pthread_join(kernelrw_thread, NULL);
 
@@ -136,12 +111,13 @@ int main(void) {
     
     sceNetCtlInit();
     sceUserServiceInitialize(NULL);
+    orion_log_configure("OrionHEN utils", "/data/OrionHEN/OrionHEN_util_daemon.log");
     OrionHEN_log("util daemon entered");
 
     if (setjmp(g_catch_buf) == 0)
         OrionHEN_log("jump has been set");
     else
-        notify(true, "The Fatal error has been successfully resolved\n\nyou have nothing to worry about");
+        orion_notify(true, "The Fatal error has been successfully resolved\n\nyou have nothing to worry about");
 
     OrionHEN_log("Registering signal handler...");
     fault_handler_init(cleanup);
@@ -175,7 +151,7 @@ int main(void) {
 
     if (!IniliatizeHTTP()) {
         OrionHEN_log("Failed to initialize HTTP lib");
-        notify(true, "Failed to initialize the HTTP lib, downloading cheats will not work");
+        orion_notify(true, "Failed to initialize the HTTP lib, downloading cheats will not work");
     }
 
     if (g_settings.toolbox_auto_start && if_exists("/system_tmp/util_first_boot")) {

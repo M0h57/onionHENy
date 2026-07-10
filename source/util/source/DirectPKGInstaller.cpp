@@ -14,6 +14,7 @@ You should have received a copy of the GNU General Public License
 along with this program; see the file COPYING. If not, see
 <http://www.gnu.org/licenses/>.  */
 
+#include <orion/notify.h>
 #include <string>
 #include <pthread.h>
 #include "error_translator.hpp"
@@ -27,7 +28,6 @@ extern "C" {
 
 struct MHD_Daemon *httpd = NULL;
 int srvfd = -1;
-void notify(bool show_watermark, const char *text, ...);
 pthread_t pkg_installer_thread, pkg_installer_thread_v2;
 enum AppInstErrorCodes {
   SCE_APP_INSTALLER_ERROR_UNKNOWN = -2136801279,
@@ -144,7 +144,7 @@ void *runDirectPKGInstaller(void *args) {
   while (is_running) {
     // Endlessly wait for a URL
     if (!first_run)
-      notify(true, "DPI: Waiting for Requests...");
+      orion_notify(true, "DPI: Waiting for Requests...");
 
     first_run = false;
 
@@ -153,7 +153,7 @@ void *runDirectPKGInstaller(void *args) {
       if (errno == 0xA3) {
         break;
       }
-      notify(true, "DPI: Failed to accept socket address %s", strerror(errno));
+      orion_notify(true, "DPI: Failed to accept socket address %s", strerror(errno));
       continue; // If accept fails, try again
     }
     char buffer[1024] = {0};
@@ -162,12 +162,12 @@ void *runDirectPKGInstaller(void *args) {
       orion_cjson::Root my_json(buffer);
       if (!my_json) {
         OrionHEN_log("Error parsing JSON");
-        notify(true, "Error parsing JSON");
+        orion_notify(true, "Error parsing JSON");
         continue;
       }
 
       if ((url = orion_cjson::string_item(my_json.get(), "url")) == NULL) {
-        notify(true, "DPI: URL not found in JSON");
+        orion_notify(true, "DPI: URL not found in JSON");
         continue;
       }
 
@@ -197,9 +197,9 @@ void *runDirectPKGInstaller(void *args) {
 
       int num = sceAppInstUtilInstallByPackage(&arg1, &pkg_info, &arg3);
       if (num == 0) {
-        notify(true, "DPI: Download and Install console Task initiated");
+        orion_notify(true, "DPI: Download and Install console Task initiated");
       } else {
-        notify(true, "DPI: Install failed with error code %d", num);
+        orion_notify(true, "DPI: Install failed with error code %d", num);
       }
 
       snprintf(json_str, sizeof(json_str), "{\"res\":\"%d\"}", num);
@@ -221,7 +221,7 @@ void *runDirectPKGInstaller(void *args) {
       }
       #endif
     } else {
-      notify(true, "DPI: No data received, or connection closed by client.");
+      orion_notify(true, "DPI: No data received, or connection closed by client.");
     }
 
     close(new_socket); // Close the connection and wait for the next one
@@ -285,13 +285,13 @@ bool startDirectPKGInstaller(bool is_v2) {
 
   int rv = sceAppInstUtilInitialize();
   if (rv != 0) {
-    notify(true, "DPI 3: Failed to initialize libSceAppInstUtil.sprx");
+    orion_notify(true, "DPI 3: Failed to initialize libSceAppInstUtil.sprx");
     return false;
   }
 
   if (is_v2) {
     if (pthread_create(&pkg_installer_thread_v2, NULL, DPI_v2, NULL) != 0) {
-      notify(true, "Failed to create runDirectPKGInstaller thread");
+      orion_notify(true, "Failed to create runDirectPKGInstaller thread");
       return false;
     }
     return true;
@@ -302,14 +302,14 @@ bool startDirectPKGInstaller(bool is_v2) {
 
   // Creating socket file descriptor
   if ((server_fd = socket(AF_INET, SOCK_STREAM, 0)) == 0) {
-    notify(true, "DPI 4: Failed to create socket file descriptor %s",
+    orion_notify(true, "DPI 4: Failed to create socket file descriptor %s",
            strerror(errno));
     return false;
   }
 
   // Forcefully attaching socket to the port 8080
   if (setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt))) {
-    notify(true, "DPI 5: Failed to set socket options %s", strerror(errno));
+    orion_notify(true, "DPI 5: Failed to set socket options %s", strerror(errno));
     return false;
   }
   setsockopt(server_fd, SOL_SOCKET, SO_REUSEPORT, &opt, sizeof(opt));
@@ -320,17 +320,17 @@ bool startDirectPKGInstaller(bool is_v2) {
 
   // Forcefully attaching socket to the port 8080
   if (bind(server_fd, (struct sockaddr *)&address, sizeof(address)) < 0) {
-    notify(true, "DPI 6: Failed to bind socket to port %s", strerror(errno));
+    orion_notify(true, "DPI 6: Failed to bind socket to port %s", strerror(errno));
     return false;
   }
   if (listen(server_fd, 3) < 0) {
-    notify(true, "DPI 7: Failed to listen on socket %s", strerror(errno));
+    orion_notify(true, "DPI 7: Failed to listen on socket %s", strerror(errno));
     return false;
   }
 
   if (pthread_create(&pkg_installer_thread, NULL, runDirectPKGInstaller,
                      NULL) != 0) {
-    notify(true, "Failed to create runDirectPKGInstaller thread");
+    orion_notify(true, "Failed to create runDirectPKGInstaller thread");
     return false;
   }
 
@@ -1205,7 +1205,7 @@ static enum MHD_Result dpiv2_on_request(void* cls, struct MHD_Connection* conn,
                 snprintf(response_buffer, sizeof(response_buffer),
                     "SUCCESS: Direct install console Task started for URL: %s",
                     url_value);
-                notify(true, "DPI: Direct install console Task started for %s",
+                orion_notify(true, "DPI: Direct install console Task started for %s",
                     url_value);
             }
             else {
@@ -1216,7 +1216,7 @@ static enum MHD_Result dpiv2_on_request(void* cls, struct MHD_Connection* conn,
                     "URL: %s",
                     error_message.c_str(), install_result, install_result,
                     url_value);
-                notify(true, "DPI: Install failed with error %s, code %d (0x%X)",
+                orion_notify(true, "DPI: Install failed with error %s, code %d (0x%X)",
                     error_message.c_str(), install_result, install_result);
             }
         }
@@ -1251,7 +1251,7 @@ static enum MHD_Result dpiv2_on_request(void* cls, struct MHD_Connection* conn,
                     snprintf(response_buffer, sizeof(response_buffer),
                         "SUCCESS: PKG installation started from file: %s (size: %s)",
                         display_filename, size_str);
-                    notify(true, "DPI: Installation started for uploaded PKG");
+                    orion_notify(true, "DPI: Installation started for uploaded PKG");
                 }
                 else {
                     std::string error_message =
@@ -1261,7 +1261,7 @@ static enum MHD_Result dpiv2_on_request(void* cls, struct MHD_Connection* conn,
                         "file: %s",
                         error_message.c_str(), install_result, install_result,
                         display_filename);
-                    notify(true, "DPI: Install failed with error %s, code %d",
+                    orion_notify(true, "DPI: Install failed with error %s, code %d",
                         error_message.c_str(), install_result);
                 }
             }
@@ -1357,12 +1357,12 @@ int DPIv2_listen(int port) {
     }
 
     if ((srvfd = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
-        notify(true, "DPIv2 error: socket | %s", strerror(errno));
+        orion_notify(true, "DPIv2 error: socket | %s", strerror(errno));
         return -1;
     }
     int opt = 1;
     if (setsockopt(srvfd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(int)) < 0) {
-        notify(true, "DPIv2 error: setsockopt | %s", strerror(errno));
+        orion_notify(true, "DPIv2 error: setsockopt | %s", strerror(errno));
         close(srvfd);
         return -1;
     }
@@ -1373,13 +1373,13 @@ int DPIv2_listen(int port) {
     server_addr.sin_port = htons(port);
 
     if (bind(srvfd, (struct sockaddr*)&server_addr, sizeof(server_addr)) != 0) {
-        notify(true, "DPIv2 error: bind | %s", strerror(errno));
+        orion_notify(true, "DPIv2 error: bind | %s", strerror(errno));
         close(srvfd);
         return -1;
     }
 
     if (listen(srvfd, 5) != 0) {
-        notify(true, "DPIv2 error: listen | %s", strerror(errno));
+        orion_notify(true, "DPIv2 error: listen | %s", strerror(errno));
         close(srvfd);
         return -1;
     }
@@ -1390,7 +1390,7 @@ int DPIv2_listen(int port) {
         0, NULL, NULL, &dpiv2_on_request, NULL,
         MHD_OPTION_NOTIFY_COMPLETED,
         &dpiv2_on_completed, NULL, MHD_OPTION_END))) {
-        notify(true, "DPIv2 error: MHD_start_daemon code: %d", httpd);
+        orion_notify(true, "DPIv2 error: MHD_start_daemon code: %d", httpd);
         close(srvfd);
         return -1;
     }

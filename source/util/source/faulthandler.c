@@ -115,13 +115,13 @@ extern void shutdown_ipc(void);
 extern void kill_loading_app(void);
 
 static void __attribute__((used)) cleanup_and_throw(void) {
-	//notify(true, "Fatal error occured. Cleaning up, catching and exiting...");
+	//orion_notify(true, "Fatal error occured. Cleaning up, catching and exiting...");
 	if (g_cleanup_handler != NULL) {
 		g_cleanup_handler();
 		g_cleanup_handler = NULL;
 	}
 	longjmp(g_catch_buf, 1);
-	notify(true, "OrionHEN utilities daemon has crashed ...\n\nSome OrionHEN features will be unavailable until you reboot");
+	orion_notify(true, "OrionHEN utilities daemon has crashed ...\n\nSome OrionHEN features will be unavailable until you reboot");
 	// TODO longjump here
 }
 

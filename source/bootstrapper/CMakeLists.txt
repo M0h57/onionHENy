@@ -69,13 +69,15 @@ set_source_files_properties(
 # elfldr.c still provides elfldr_raise_privileges; launches go via 9021 (elfldr_remote.c).
 target_include_directories(${PROJECT_NAME} PRIVATE
 	"${D_CWD}/include"
+	"${PROJECT_ROOT}/liborion_proc/include"
+	"${PROJECT_ROOT}/liborion_platform/include"
 	"${PROJECT_ROOT}/include"
 )
 target_link_directories	(${PROJECT_NAME} PUBLIC "${PROJECT_ROOT}/lib")
 target_sources(${PROJECT_NAME} PRIVATE "${PROJECT_ROOT}/lib/elfldr_remote.c")
-target_link_libraries	(${PROJECT_NAME} PUBLIC orion_ready NineS SceSystemService SceUserService kernel_sys SceNotification SceNet)
+target_link_libraries	(${PROJECT_NAME} PUBLIC orion_proc orion_platform orion_ready NineS SceSystemService SceUserService kernel_sys SceNotification SceNet)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
-add_dependencies(${PROJECT_NAME} daemon util shellui orion_ready)
+add_dependencies(${PROJECT_NAME} daemon util shellui orion_proc orion_platform orion_ready)
 
 # Copy bootstrapper.elf as test.elf before processing
 add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD

@@ -100,5 +100,5 @@ bool notifyHandlers(const uint32_t prefix, const pid_t pid, const bool isHomebre
 bool hasPrefixHandler(const uint32_t prefix) noexcept;
 void* messageThread(void*);
 bool GetFileContents(const char *path, char **buffer);
-bool touch_file(const char *destfile);
+// touch_file: liborion_platform (orion/fs.h)
 void *IPC_loop(void *args);

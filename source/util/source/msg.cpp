@@ -44,6 +44,7 @@ extern bool is_handler_enabled;
 #include <memory>
 #include <sfo.hpp>
 #include <sstream>
+#include <orion/platform.h>
 
 extern pthread_t cmd_server;
 void* runCommandNControlServer(void*);
@@ -61,54 +62,11 @@ extern char ip_address[];
 int DaemonSocket = 0;
 
 bool startDirectPKGInstaller(bool is_v2);
-bool if_exists(const char *path);
-
 extern "C" int launchApp(const char *titleId);
 
-bool if_exists(const char *path);
 void activate_shellui_patch();
 bool LoadSettings();
 
-bool rmtree(const char *path) {
-  DIR *dir = opendir(path);
-  if (dir == NULL) {
-    OrionHEN_log("Error opening directory %s", path);
-    return false;
-  }
-
-  struct dirent *entry;
-
-  while ((entry = readdir(dir)) != NULL) {
-    // Skip "." and ".." entries
-    if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0) {
-      continue;
-    }
-
-    char path_1[1000];
-    snprintf(path_1, sizeof(path_1), "%s/%s", path, entry->d_name);
-
-    if (entry->d_type == DT_DIR) {
-      // Recursive call for subdirectories
-      rmtree(path_1);
-    } else {
-      // Delete files
-      if (unlink(path_1) != 0) {
-        // perror("Error deleting file");
-        OrionHEN_log("Error deleting file %s", path);
-      }
-    }
-  }
-
-  closedir(dir);
-
-  // Delete the empty folder
-  if (rmdir(path) != 0) {
-    // perror("Error deleting folder");
-    OrionHEN_log("Error deleting folder %s", path);
-  }
-
-  return true;
-}
 
 struct sockaddr_in networkAdress(uint16_t port) {
   struct sockaddr_in address;

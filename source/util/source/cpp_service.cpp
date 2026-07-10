@@ -14,6 +14,8 @@ You should have received a copy of the GNU General Public License
 along with this program; see the file COPYING. If not, see
 <http://www.gnu.org/licenses/>.  */
 
+#include <orion/platform.h>
+#include <orion/proc_query.h>
 #include <string>
 #include <vector>
 #include <unistd.h>
@@ -144,9 +146,6 @@ extern atomic_bool not_connected;
 // Function forward declarations
 void *krw_server(void *args);
 bool RunDPIThread();
-void OrionHEN_log(const char *fmt, ...);
-void notify(bool show_watermark, const char *text, ...);
-bool if_exists(const char *path);
 bool LoadSettings();
 uint32_t getSystemSwVersion();
 void check_addr_change(void);
@@ -179,44 +178,6 @@ const uint8_t hex_lut[] = {
 };
 
 // Process management functions
-static pid_t find_pid(const char *name) {
-    int mib[4] = {1, 14, 8, 0};
-    pid_t pid = -1;
-    size_t buf_size;
-    uint8_t *buf;
-
-    if (sysctl(mib, 4, 0, &buf_size, 0, 0)) {
-        perror("sysctl");
-        return -1;
-    }
-
-    if (!(buf = (uint8_t *)malloc(buf_size))) {
-        perror("malloc");
-        return -1;
-    }
-
-    if (sysctl(mib, 4, buf, &buf_size, 0, 0)) {
-        perror("sysctl");
-        free(buf);
-        return -1;
-    }
-
-    for (uint8_t *ptr = buf; ptr < (buf + buf_size);) {
-        int ki_structsize = *(int *)ptr;
-        pid_t ki_pid = *(pid_t *)&ptr[72];
-        char *ki_tdname = (char *)&ptr[447];
-
-        ptr += ki_structsize;
-        if (strcmp(ki_tdname, name) == 0) {
-            printf("[MATCH] ki_pid: %d, ki_tdname: %s\n", ki_pid, ki_tdname);
-            pid = ki_pid;
-            break;
-        }
-    }
-
-    free(buf);
-    return pid;
-}
 
 int get_shellcore_pid() {
     /*
@@ -287,7 +248,7 @@ bool enable_toolbox() {
         sleep(1);
 
         if (wait > 20) {
-            notify(true, "Failed to load the OrionHEN toolbox");
+            orion_notify(true, "Failed to load the OrionHEN toolbox");
             return false;
         }
 
@@ -330,10 +291,6 @@ bool enable_toolbox() {
     return msg.error == 0;
 }
 
-bool isProcessAlive(int pid) noexcept {
-    int mib[]{CTL_KERN, KERN_PROC, KERN_PROC_PID, pid};
-    return sysctl(mib, 4, nullptr, nullptr, nullptr, 0) == 0;
-}
 
 bool isUserLoggedIn() {
     bool isLoggedIn = false;
@@ -486,7 +443,7 @@ bool patchShellCore() {
         g_ShellCorePid = executable->getPid();
     }
     else {
-        notify(true, "SceShellCore not found");
+        orion_notify(true, "SceShellCore not found");
         return false;
     }
 
@@ -708,12 +665,12 @@ void cmd_server(int sock, Command &cmd) {
     switch (cmd.cmd) {
     case JAILBREAK_CMD:
         if (cmd.magic != 0xDEADBEEF) {
-            notify(true, "Jailbreak failed, magic is invaild");
+            orion_notify(true, "Jailbreak failed, magic is invaild");
             replyError(sock);
             break;
         }
         if (cmd.PID == -1 || !isProcessAlive(cmd.PID)) {
-            notify(true, "Jailbreak failed, PID is invaild");
+            orion_notify(true, "Jailbreak failed, PID is invaild");
             replyError(sock);
             break;
         }
@@ -729,7 +686,7 @@ void cmd_server(int sock, Command &cmd) {
                     }
                     retries++;
                     if (retries > 30) {
-                        notify(true, "Jailbreak failed, PID is invaild");
+                        orion_notify(true, "Jailbreak failed, PID is invaild");
                         OrionHEN_log("Jailbreak failed, PID is invaild");
                         break;
                     }
@@ -739,7 +696,7 @@ void cmd_server(int sock, Command &cmd) {
 
             retries = 0;
 
-            notify(true, "[Legacy] App has been granted a jailbreak\n\nAn update for "
+            orion_notify(true, "[Legacy] App has been granted a jailbreak\n\nAn update for "
                       "this PKG is available");
             spawned->jailbreak(true);
             OrionHEN_log("jailbroke app %s", cmd.msg1);
@@ -754,7 +711,7 @@ void cmd_server(int sock, Command &cmd) {
         
     default:
         puts("default command");
-        notify(true, "Update the PKG you are using before continuing\nGot Command %i",
+        orion_notify(true, "Update the PKG you are using before continuing\nGot Command %i",
               cmd.cmd);
         replyError(sock);
         break;
@@ -771,7 +728,7 @@ void *runCommandNControlServer(void *) {
 
     s = socket(AF_INET, SOCK_STREAM, 0);
     if (s == -1) {
-        notify(true, "Failed to create socket %s", strerror(errno));
+        orion_notify(true, "Failed to create socket %s", strerror(errno));
         return nullptr;
     }
 
@@ -787,12 +744,12 @@ void *runCommandNControlServer(void *) {
     sockaddr.sin_addr.s_addr = INADDR_ANY;
 
     if (bind(s, (const struct sockaddr *)&sockaddr, sizeof(sockaddr)) < 0) {
-        notify(true, "Failed to bind to port 9028 %s", strerror(errno));
+        orion_notify(true, "Failed to bind to port 9028 %s", strerror(errno));
         return nullptr;
     }
 
     if (listen(s, 5) < 0) {
-        notify(true, "Failed to listen on port 9028 %s", strerror(errno));
+        orion_notify(true, "Failed to listen on port 9028 %s", strerror(errno));
         return nullptr;
     }
 
@@ -854,14 +811,14 @@ void check_addr_change(void) {
     bool ip_changed = strcmp(&ip_address[0], &func_ip_address[0]) != 0;
     if (ip_changed || rest_mode_action) {
         if (ip_changed || !real_rest_mode_detected) {
-            notify(true, "IP Address changed to %s, restarting server(s)",
+            orion_notify(true, "IP Address changed to %s, restarting server(s)",
                   func_ip_address);
         } else if (rest_mode_action && !no_network_patched && !not_connected &&
                   real_rest_mode_detected) {
             LoadSettings();
             OrionHEN_log("sleeping for %lld secs", g_settings.rest_mode_delay_seconds);
             sleep(g_settings.rest_mode_delay_seconds);
-            notify(true, "Coming out of Rest Mode detected, restarting server(s)");
+            orion_notify(true, "Coming out of Rest Mode detected, restarting server(s)");
             OrionHEN_log("waiting for logged in user");
             
             while (!isUserLoggedIn()) {
@@ -873,7 +830,7 @@ void check_addr_change(void) {
             
 
             if (g_settings.toolbox_auto_start  && !g_settings.disable_toolbox_auto_start_for_rest_mode && !enable_toolbox()) {
-                notify(true, "Failed to inject toolbox");
+                orion_notify(true, "Failed to inject toolbox");
             }
         }
         
@@ -916,14 +873,14 @@ void patch_checker() {
     OrionHEN_log("sleeping for %lld secs", g_settings.rest_mode_delay_seconds);
     sleep(g_settings.rest_mode_delay_seconds);
 
-    notify(true, "(No Network) Coming out of Rest Mode detected\nre-activating "
+    orion_notify(true, "(No Network) Coming out of Rest Mode detected\nre-activating "
                 "the OrionHEN toolbox...");
 
     OrionHEN_log("************************************\n\nShellUI is not "
               "patched\n\n************************************");
 
     if (!enable_toolbox()) {
-        notify(true, "Failed to inject toolbox");
+        orion_notify(true, "Failed to inject toolbox");
     }
     
     no_network_rest_mode_action = false;

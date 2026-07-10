@@ -41,5 +41,3 @@ along with this program; see the file COPYING. If not, see
 #include "HookedFuncs.hpp"
 
 extern bool cheats_shortcut_activate;
-pid_t find_pid(const char *name, bool needle, bool for_bigapp,
-               bool need_eboot = false);

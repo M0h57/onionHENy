@@ -15,6 +15,10 @@ along with this program; see the file COPYING. If not, see
 <http://www.gnu.org/licenses/>.  */
 
 #include "ipc.hpp"
+#include <orion/platform.h>
+#include <orion/proc_query.h>
+// orion/ucred.h (and orion/proc.h) pull freestanding kernel proc types that
+// clash with SDK <sys/proc.h> — only include where set_proc_authid is used.
 #include "../../extern/cJSON/orion_cjson.hpp"
 #include "globalconf.hpp"
 #include <orion/settings.hpp>
@@ -54,9 +58,6 @@ typedef struct app_info {
   char     unknown2[0x3c];
 } app_info_t;
 
-
-bool if_exists(const char *path);
-
 extern "C" {
 #include <sys/mount.h>
 
@@ -80,10 +81,9 @@ extern const unsigned int fps_elf_size;
 bool Inject_Toolbox(int pid, uint8_t *elf);
 int sceKernelGetAppInfo(int pid, app_info_t *title);
 int sceKernelGetProcessName(int pid, char *name);
-int _sceApplicationGetAppId(int pid, int* appid);
-
+int _sceApplicationGetAppId(int pid, int *appid);
+int nmount(struct iovec *iov, unsigned int niov, int flags);
 }
-
 
 bool is_handler_enabled = true;
 using namespace std;
@@ -94,11 +94,8 @@ extern atomic_bool shortcut_activated;
 int launchApp(const char *titleId);
 int ItemzLaunchByUri(const char *uri);
 
-void OrionHEN_log(const char *fmt, ...);
-
 extern "C" int unmount(const char *path, int flags);
 bool copyRecursive(const char *source, const char *destination);
-bool rmtree(const char *path);
 void calculateSize(uint64_t size, char *result);
 
 extern "C" void sceLncUtilGetAppTitleId(uint32_t appId, char *titleId);
@@ -106,8 +103,6 @@ bool GetFileContents(const char *path, char **buffer);
 uint64_t calculateTotalSize(const char *path);
 bool copyFile(const char *source, const char *destination, bool for_dumper);
 
-void notify(bool show_watermark, const char *text, ...);
-bool isProcessAlive(int pid) noexcept;
 
 int DaemonSocket = 0;
 
@@ -252,7 +247,7 @@ void LoadSettings() {
   if (!config_path) {
     OrionHEN_log("[Daemon] Config file not found. Creating default schema...");
     if (orion::settings_ensure_default()) {
-      notify(true, "OrionHEN config created! @ /data/OrionHEN/config.ini");
+      orion_notify(true, "OrionHEN config created! @ /data/OrionHEN/config.ini");
       config_state.last_modified = 0;
     }
     // Apply defaults even if create failed.
@@ -270,7 +265,7 @@ void LoadSettings() {
   OrionHEN_log("[Daemon] Loading Settings from shared schema...");
   orion::Settings s{};
   if (!orion::settings_load(&s)) {
-    notify(true, "Failed to Read the Settings file");
+    orion_notify(true, "Failed to Read the Settings file");
     return;
   }
 
@@ -284,44 +279,6 @@ void LoadSettings() {
   config_state.last_modified = file_stat.st_mtime;
 }
 
-static pid_t find_pid(const char *name) {
-  int mib[4] = {1, 14, 8, 0};
-  pid_t pid = -1;
-  size_t buf_size;
-  uint8_t *buf;
-
-  if (sysctl(mib, 4, 0, &buf_size, 0, 0)) {
-      perror("sysctl");
-      return -1;
-  }
-
-  if (!(buf = (uint8_t *)malloc(buf_size))) {
-      perror("malloc");
-      return -1;
-  }
-
-  if (sysctl(mib, 4, buf, &buf_size, 0, 0)) {
-      perror("sysctl");
-      free(buf);
-      return -1;
-  }
-
-  for (uint8_t *ptr = buf; ptr < (buf + buf_size);) {
-      int ki_structsize = *(int *)ptr;
-      pid_t ki_pid = *(pid_t *)&ptr[72];
-      char *ki_tdname = (char *)&ptr[447];
-
-      ptr += ki_structsize;
-      if (strcmp(ki_tdname, name) == 0) {
-          printf("[MATCH] ki_pid: %d, ki_tdname: %s\n", ki_pid, ki_tdname);
-          pid = ki_pid;
-          break;
-      }
-  }
-
-  free(buf);
-  return pid;
-}
 
 
 int networkListen(const char *soc_path) {
@@ -415,7 +372,6 @@ extern "C" int sceSystemServiceKillApp(uint32_t appid, int opt, int method,
 extern "C" int sceSystemServiceGetAppId(const char *tid);
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Winfinite-recursion"
-bool if_exists(const char *path);
 
 
 
@@ -467,28 +423,8 @@ int get_game_pid() {
     return app_pid;
 }
 extern "C" {
-  struct proc* get_proc_by_pid(pid_t pid);
-  uintptr_t set_proc_authid(pid_t pid, uintptr_t new_authid)
-{
-    struct proc* proc = get_proc_by_pid(getpid());
-
-    if (proc)
-    {
-        //
-        // Read from kernel
-        //
-        uintptr_t authid = 0;
-        kernel_copyout((uintptr_t) proc->p_ucred + 0x58, &authid, sizeof(uintptr_t));
-        kernel_copyin(&new_authid, (uintptr_t) proc->p_ucred + 0x58, sizeof(uintptr_t));
-
-        free(proc);
-
-        return authid;
-    }
-
-    return 0;
-}
   int sceKernelTerminateProcess(int pid, int *ret);
+  uintptr_t set_proc_authid(pid_t pid, uintptr_t new_authid);
 }
 
 void ForceKillProc(int pid) {
@@ -664,13 +600,13 @@ bool set_fan_threshold(int THRESHOLDTEMP) {
 
    int fd = open("/dev/icc_fan", O_RDONLY, 0);
    if (fd <= 0) {
-     notify(true, "Unable to Open Fan Settings!");
+     orion_notify(true, "Unable to Open Fan Settings!");
      return false;
    }
 
     char data[10] = {0x00, 0x00, 0x00, 0x00, 0x00, static_cast<char>(THRESHOLDTEMP), 0x00, 0x00, 0x00, 0x00};
     if(ioctl(fd, 0xC01C8F07, data) < 0) {
-        notify(true, "Unable to Set Fan Speed!");
+        orion_notify(true, "Unable to Set Fan Speed!");
         close(fd);
         return false;
     }
@@ -696,13 +632,13 @@ bool cmd_enable_fps_new(int appid) {
 
     int pid = get_game_pid();
     if (pid < 0) {
-        notify(true, "Failed to get game pid");
+        orion_notify(true, "Failed to get game pid");
         return false;
     }
 
     if (!Inject_Toolbox(pid, fps_elf_start)) {
         ForceKillProc(pid);
-        notify(true, "Failed to inject fps");
+        orion_notify(true, "Failed to inject fps");
         return false;
     }
 
@@ -805,21 +741,21 @@ bool cmd_enable_toolbox(){
 
     int pid = get_shellui_pid();
     if (pid < 0) {
-      notify(true, "Failed to get shellui pid");
+      orion_notify(true, "Failed to get shellui pid");
       return false;
     }
     OrionHEN_log("Injecting toolbox into SceShellUI pid=%d", pid);
 
     if (!Inject_Toolbox(pid, shellui_elf_start)) {
       /* Do NOT ForceKill ShellUI — that loops home menu / coredumps */
-      notify(true, "Failed to inject toolbox");
+      orion_notify(true, "Failed to inject toolbox");
       return false;
     }
 
     /* Ready protocol: shellui signals ORION_READY_TOOLBOX after inject hooks run */
     if (!orion_ready_wait(ORION_READY_TOOLBOX, /*timeout_ms=*/45 * 1000,
                           /*poll_ms=*/250)) {
-      notify(true, "Failed to load the OrionHEN toolbox (timeout, ShellUI left running)");
+      orion_notify(true, "Failed to load the OrionHEN toolbox (timeout, ShellUI left running)");
       return false;
     }
     orion_ready_clear(ORION_READY_TOOLBOX);
