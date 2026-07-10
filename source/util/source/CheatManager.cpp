@@ -1,4 +1,4 @@
-/* Copyright (C) 2025 etaHEN / LightningMods
+/* Copyright (C) 2025 OrionHEN / LightningMods
 
 This program is free software; you can redistribute it and/or modify it
 under the terms of the GNU General Public License as published by the
@@ -86,7 +86,7 @@ bool ParseTXTEntry(char *line, char *title_id, char *version, char *game_name,
     //
     // 20 bytes is the mininum that a entry can have
     //
-    etaHEN_log("ParseTXTEntry: %s %s Invalid line length (%zu), skipping...",
+    OrionHEN_log("ParseTXTEntry: %s %s Invalid line length (%zu), skipping...",
               title_id, version, strlen(line));
     return false;
   }
@@ -97,7 +97,7 @@ bool ParseTXTEntry(char *line, char *title_id, char *version, char *game_name,
     //
     // If no expected matches
     //
-    etaHEN_log("ParseTXTEntry: sscanf Invalid line format: '%s', skipping...",
+    OrionHEN_log("ParseTXTEntry: sscanf Invalid line format: '%s', skipping...",
                line);
     return false;
   }
@@ -124,7 +124,7 @@ bool ParseTXTEntry(char *line, char *title_id, char *version, char *game_name,
 
   // If no separator found, return false
   if (version_start == NULL) {
-    etaHEN_log(
+    OrionHEN_log(
         "ParseTXTEntry: No separator found in filename '%s', skipping...",
         filename);
     return false;
@@ -136,7 +136,7 @@ bool ParseTXTEntry(char *line, char *title_id, char *version, char *game_name,
     strncpy(title_id, filename, title_id_len);
     title_id[title_id_len] = '\0';
   } else {
-    etaHEN_log("ParseTXTEntry: Invalid title ID length in '%s', skipping...",
+    OrionHEN_log("ParseTXTEntry: Invalid title ID length in '%s', skipping...",
                filename);
     return false;
   }
@@ -146,7 +146,7 @@ bool ParseTXTEntry(char *line, char *title_id, char *version, char *game_name,
   // Find the first period after the version start
   char *version_end = strchr(version_start, '.');
   if (version_end == NULL) {
-    etaHEN_log("TitleID %s: No version end found in '%s', skipping...",
+    OrionHEN_log("TitleID %s: No version end found in '%s', skipping...",
                title_id, filename);
     return false;
   }
@@ -160,7 +160,7 @@ bool ParseTXTEntry(char *line, char *title_id, char *version, char *game_name,
       ps5_version_fmt + 3 < filename + strlen(filename) &&
       (ps5_version_fmt[3] >= '0' && ps5_version_fmt[3] <= '9')) {
     is_ps5_format = true;
-   // etaHEN_log("TitleID %s: Detected PS5 version format", title_id);
+   // OrionHEN_log("TitleID %s: Detected PS5 version format", title_id);
   } else {
     ps5_version_fmt = NULL;
   }
@@ -192,12 +192,12 @@ bool ParseTXTEntry(char *line, char *title_id, char *version, char *game_name,
     strncpy(version, version_start, version_len);
     version[version_len] = '\0';
   } else {
-    etaHEN_log("TitleID %s: Version string too long, truncating", title_id);
+    OrionHEN_log("TitleID %s: Version string too long, truncating", title_id);
     strncpy(version, version_start, MAX_CHEAT_VERSION_LEN - 1);
     version[MAX_CHEAT_VERSION_LEN - 1] = '\0';
   }
 
- // etaHEN_log("TitleID %s Version %s: Successfully parsed entry for '%s'",
+ // OrionHEN_log("TitleID %s Version %s: Successfully parsed entry for '%s'",
   //           title_id, version, game_name);
   return true;
 }
@@ -221,7 +221,7 @@ void ParseFile(CheatExtType extensionType) {
     file_extension = "shn";
     path = SHN_CHEATS_LIST;
   } else {
-    etaHEN_log("Invalid cheat filetype!");
+    OrionHEN_log("Invalid cheat filetype!");
     return;
   }
 
@@ -236,17 +236,17 @@ void ParseFile(CheatExtType extensionType) {
       bzero(game_name, MAX_CHEAT_GAMENAME_LEN);
       bzero(filename, MAX_CHEAT_NAME);
 
-      // etaHEN_log("Parsing line %d", line_num);
+      // OrionHEN_log("Parsing line %d", line_num);
 
       if (!ParseTXTEntry((char *)line.c_str(), title_id, version, game_name,
                          filename)) {
-        etaHEN_log("Invalid json line %d, skipping...", line_num);
+        OrionHEN_log("Invalid json line %d, skipping...", line_num);
         continue;
       }
 
       if (!strlen(title_id) || !strlen(version) || !strlen(game_name) ||
           !strlen(filename)) {
-        etaHEN_log("Invalid json line %d, skipping, wrong entry values!...",
+        OrionHEN_log("Invalid json line %d, skipping, wrong entry values!...",
                    line_num);
         continue;
       }
@@ -254,8 +254,8 @@ void ParseFile(CheatExtType extensionType) {
       snprintf(cheat_file_path, MAX_CHEAT_FILEPATH_LEN, "%s/%s/%s",
                CHEATS_DIRECTORY, file_extension.c_str(), filename);
 
-      // etaHEN_log("Cheat file path: %s", cheat_file_path);
-      // etaHEN_log("Title ID: %s %s", title_id, version);
+      // OrionHEN_log("Cheat file path: %s", cheat_file_path);
+      // OrionHEN_log("Title ID: %s %s", title_id, version);
 
       std::string tid = std::string(title_id);
       std::string game_name_str = std::string(game_name);
@@ -294,7 +294,7 @@ void ParseFile(CheatExtType extensionType) {
           extension = &meta->shn;
           break;
         default:
-          etaHEN_log("Invalid cheat extension type!");
+          OrionHEN_log("Invalid cheat extension type!");
           return;
         }
 
@@ -302,11 +302,11 @@ void ParseFile(CheatExtType extensionType) {
           //
           // Insert new cheat for a different version;
           //
-          // etaHEN_log("New cheat version for %s\n",
+          // OrionHEN_log("New cheat version for %s\n",
           // cheat_file_path_str.c_str());
           extension->insert(std::make_pair(version_str, parsedCheat));
         } else {
-          // etaHEN_log("New etahen cheatfile for %s version %s\n",
+          // OrionHEN_log("New orionhen cheatfile for %s version %s\n",
           // cheat_file_path_str.c_str(), version);
           version_it->second.filepaths.push_back(cheat_file_path_str);
         }
@@ -331,7 +331,7 @@ void ParseFile(CheatExtType extensionType) {
         meta.shn.insert(std::make_pair(version_str, parsedCheat));
         break;
       default:
-        etaHEN_log("Invalid cheat extension type!");
+        OrionHEN_log("Invalid cheat extension type!");
         return;
       }
 
@@ -339,7 +339,7 @@ void ParseFile(CheatExtType extensionType) {
     }
   }
 
-  // etaHEN_log("Finished processing %s", path.c_str());
+  // OrionHEN_log("Finished processing %s", path.c_str());
 }
 
 //
@@ -365,7 +365,7 @@ GameCheat *CheatManager::GetGameCheat(const std::string &name,
   auto it = cache.find(name);
 
   if (it == cache.end()) {
-    etaHEN_log("No cheat exists for %s", name.c_str());
+    OrionHEN_log("No cheat exists for %s", name.c_str());
     return nullptr;
   }
 
@@ -408,14 +408,14 @@ GameCheat *CheatManager::GetGameCheat(const std::string &name,
         pthread_join(pthreadMonitor, &ret);
       }
 
-      //etaHEN_log("Starting monitor thread...");
+      //OrionHEN_log("Starting monitor thread...");
       monitorGameRunning = true;
       pthread_create(&pthreadMonitor, NULL, (void *(*)(void *))MonitorOpenGame,
                      meta);
       pthread_detach(pthreadMonitor);
     }
 
-    etaHEN_log("Loaded cheat for %s", cheat->name.c_str());
+    OrionHEN_log("Loaded cheat for %s", cheat->name.c_str());
   }
 
   currentGameCheat = cheat;
@@ -536,17 +536,17 @@ bool CheatManager::ToggleCheat(int pid, const std::string &title_id,
   int fw = (sys_ver.version >> 16);
 
   if (cheat_index < 0 || cheat_index > currentGameCheat->cheats.size()) {
-    etaHEN_log("Cheat index %d is 0 or greater than the size", cheat_index);
+    OrionHEN_log("Cheat index %d is 0 or greater than the size", cheat_index);
     return false;
   }
   bool status = true;
 
   CheatInfo &cheat = currentGameCheat->cheats[cheat_index];
-  etaHEN_log("Toggling cheat %s", cheat.name.c_str());
+  OrionHEN_log("Toggling cheat %s", cheat.name.c_str());
   module_info_t *target_mod = get_module_handle(pid, cheat.module_name.c_str());
-  etaHEN_log("Target module name: %s", cheat.module_name.c_str());
+  OrionHEN_log("Target module name: %s", cheat.module_name.c_str());
   if (!target_mod) {
-    etaHEN_log("CheatManager::ToggleCheat: Unable to find %s of cheat %s",
+    OrionHEN_log("CheatManager::ToggleCheat: Unable to find %s of cheat %s",
                cheat.module_name.c_str(), title_id.c_str());
     return false;
   }
@@ -568,7 +568,7 @@ bool CheatManager::ToggleCheat(int pid, const std::string &title_id,
   int pt_ret = 0;
   if (fw >= 0x840) {
       if (pt_attach_proc(pid) < 0) {
-          etaHEN_log("Unable to ptrace into %d, aborting cheat...", pid);
+          OrionHEN_log("Unable to ptrace into %d, aborting cheat...", pid);
           return false;
       }
   }
@@ -599,13 +599,13 @@ bool CheatManager::ToggleCheat(int pid, const std::string &title_id,
     //
     // if (currentGameCheat->masterCodeId < 0)
     // {
-    //     etaHEN_log("No master code enabled for cheat!");
+    //     OrionHEN_log("No master code enabled for cheat!");
     //     return false;
     // }
     //
     // Check and fix the offsets
     //
-    etaHEN_log("Fixing Master Code dependent cheat");
+    OrionHEN_log("Fixing Master Code dependent cheat");
     CheatInfo &masterCode =
         currentGameCheat->cheats[currentGameCheat->masterCodeId];
     CheatMemory &mcPatch = masterCode.mods[0];
@@ -621,11 +621,11 @@ bool CheatManager::ToggleCheat(int pid, const std::string &title_id,
     // Copy cheat master code
     //
     if (fw >= 0x840) {
-        etaHEN_log("Master code address: %#02lx", mcAddress);
+        OrionHEN_log("Master code address: %#02lx", mcAddress);
         kernel_mprotect(pid, mcAddress, mcPatch.On.size(), PROT_READ | PROT_WRITE | PROT_EXEC);
-        etaHEN_log("Copying master code...");
+        OrionHEN_log("Copying master code...");
         pt_ret = pt_copyout(pid, mcAddress, vPatchedCode.data(), mcPatch.On.size());
-        etaHEN_log("Master code copied... errno %d %d", pt_ret, pt_errno(pid));
+        OrionHEN_log("Master code copied... errno %d %d", pt_ret, pt_errno(pid));
     }
     else {
         mdbg_copyout(pid, mcAddress, vPatchedCode.data(), mcPatch.On.size());
@@ -662,23 +662,23 @@ bool CheatManager::ToggleCheat(int pid, const std::string &title_id,
     //
     uint64_t addr = (isPS2 || mod.absolute) ? mod.Offset : baseAddress + mod.Offset;  // Absolute address controled by bolean variables // 09/10/2025 xZenithy
 
-    etaHEN_log("Offset: %#02lx", mod.Offset);
-    etaHEN_log("Addr: %#02lx", addr);
-    // etaHEN_log("Base address: %#02lx %s\n", baseAddress,
+    OrionHEN_log("Offset: %#02lx", mod.Offset);
+    OrionHEN_log("Addr: %#02lx", addr);
+    // OrionHEN_log("Base address: %#02lx %s\n", baseAddress,
     // target_mod->filename);
     bool fixCodeCave = false;
     // bool try_fix_asrl = false;
     if (cheat.enabled) {
-	  etaHEN_log("Disabling cheat...");
+	  OrionHEN_log("Disabling cheat...");
       if (fw >= 0x840) {
           kernel_mprotect(pid, addr, patch_size, PROT_READ | PROT_WRITE | PROT_EXEC);
-          etaHEN_log("Restoring original data...");
+          OrionHEN_log("Restoring original data...");
           pt_ret = pt_copyin(pid, mod.Off.data(), addr, mod.Off.size());
       }
       else {
           mdbg_copyin(pid, mod.Off.data(), addr, mod.Off.size());
       }
-      etaHEN_log("Cheat %s disabled, errno %d %d", cheat.name.c_str(), pt_ret, pt_errno(pid));
+      OrionHEN_log("Cheat %s disabled, errno %d %d", cheat.name.c_str(), pt_ret, pt_errno(pid));
       enabled = false;
     } else {
       uint8_t *patch_data = mod.On.data();
@@ -688,9 +688,9 @@ bool CheatManager::ToggleCheat(int pid, const std::string &title_id,
     // fix_aslr:
     //     if (try_fix_asrl)
     //     {
-    //         etaHEN_log("Trying to fix non-ASLR address");
+    //         OrionHEN_log("Trying to fix non-ASLR address");
     //         addr = baseAddress + (mod.Offset - NO_ASLR_ADDR_PS4);
-    //         etaHEN_log("New address %#02lx\n", addr);
+    //         OrionHEN_log("New address %#02lx\n", addr);
     //     }
     relocAndPatch:
       if (fixCodeCave) {
@@ -699,7 +699,7 @@ bool CheatManager::ToggleCheat(int pid, const std::string &title_id,
         //
         if (fw < 0x840) {
               if (pt_attach_proc(pid) < 0) {
-                  etaHEN_log("Unable to ptrace into %d, aborting cheat...", pid);
+                  OrionHEN_log("Unable to ptrace into %d, aborting cheat...", pid);
                   return false;
               }
         }
@@ -707,33 +707,33 @@ bool CheatManager::ToggleCheat(int pid, const std::string &title_id,
         uint64_t mem = pt_mmap(pid, ROUND_PG_DOWN(addr),
                                ROUND_PG(mod.On.size()), PROT_READ | PROT_WRITE,
                                MAP_PRIVATE | MAP_ANONYNMOUS, -1, 0);
-        etaHEN_log("Code Cave Cheat Mem => %02llx", mem);
+        OrionHEN_log("Code Cave Cheat Mem => %02llx", mem);
         if (mem == -1) {
-          etaHEN_log("Unable to fix codecave memory! game must be restarted "
+          OrionHEN_log("Unable to fix codecave memory! game must be restarted "
                      "for enabling this cheat!");
           status = false;
           break;
         }
-        etaHEN_log("Making it executable...");
+        OrionHEN_log("Making it executable...");
         kernel_mprotect(pid, mem, ROUND_PG(mod.On.size()),
                         PROT_READ | PROT_EXEC | PROT_WRITE);
 
         if (fw < 0x840) {
             pt_detach_proc(pid, 0);
         }
-        etaHEN_log("Ready to continue...");
+        OrionHEN_log("Ready to continue...");
       }
 
-	  etaHEN_log("Enabling cheat %s...", cheat.name.c_str());
+	  OrionHEN_log("Enabling cheat %s...", cheat.name.c_str());
       if (fw >= 0x840) {
           kernel_mprotect(pid, addr, patch_size, PROT_READ | PROT_WRITE | PROT_EXEC);
-          etaHEN_log("Applying patch...");
+          OrionHEN_log("Applying patch...");
           pt_ret = pt_copyin(pid, patch_data, addr, patch_size);
-          etaHEN_log("Patch applied, verifying... errrno %d %d", pt_ret, pt_errno(pid));
+          OrionHEN_log("Patch applied, verifying... errrno %d %d", pt_ret, pt_errno(pid));
           kernel_mprotect(pid, addr, patch_size, PROT_READ | PROT_WRITE | PROT_EXEC);
-          etaHEN_log("Reading back patched data...");
+          OrionHEN_log("Reading back patched data...");
           pt_ret = pt_copyout(pid, addr, dump_on, patch_size);
-          etaHEN_log("Data read back, comparing... errrno %d %d", pt_ret, pt_errno(pid));
+          OrionHEN_log("Data read back, comparing... errrno %d %d", pt_ret, pt_errno(pid));
       }
       else {
           mdbg_copyin(pid, patch_data, addr, patch_size);
@@ -756,7 +756,7 @@ bool CheatManager::ToggleCheat(int pid, const std::string &title_id,
             fixCodeCave = true;
             goto relocAndPatch;
           } else {
-            etaHEN_log("Failed to activate cheat find %s of cheat %s",
+            OrionHEN_log("Failed to activate cheat find %s of cheat %s",
                        cheat.module_name.c_str(), title_id.c_str());
             status = false;
             enabled = false;
@@ -773,7 +773,7 @@ bool CheatManager::ToggleCheat(int pid, const std::string &title_id,
  // pt_continue(pid);
   if (fw >= 0x840) {
       pt_ret = pt_detach_proc(pid, 0);
-      etaHEN_log("Detached from process %d, errno %d %d", pid, pt_ret,
+      OrionHEN_log("Detached from process %d, errno %d %d", pid, pt_ret,
           pt_errno(pid));
   }
   return status;
@@ -786,14 +786,14 @@ CheatManager::CheatManagerFormats::ParseJSONCheat(const std::string &filename,
   struct stat st;
   GameCheat *cheat = parsed;
   if (stat(filename.c_str(), &st) != 0) {
-    etaHEN_log("CheatManager: %s does not exist!", filename.c_str());
+    OrionHEN_log("CheatManager: %s does not exist!", filename.c_str());
     return cheat;
   }
 
   int cheat_fd = open(filename.c_str(), O_RDONLY);
 
   if (!cheat_fd) {
-    etaHEN_log("CheatManager: Unable to open %s!", filename.c_str());
+    OrionHEN_log("CheatManager: Unable to open %s!", filename.c_str());
     return cheat;
   }
 
@@ -801,32 +801,31 @@ CheatManager::CheatManagerFormats::ParseJSONCheat(const std::string &filename,
 
   if (read(cheat_fd, cheat_data, st.st_size) < 0) {
     free(cheat_data);
-    etaHEN_log("CheatManager: Unable to read file %s", filename.c_str());
+    OrionHEN_log("CheatManager: Unable to read file %s", filename.c_str());
     return cheat;
   }
 
   close(cheat_fd);
-  //
-  // Parse json
-  //
-  nlohmann::json cheat_json;
-
-  try {
-    cheat_json = nlohmann::json::parse(cheat_data);
-  } catch (const std::exception &e) {
-    etaHEN_log("CheatManager: Failed to parse json: %s", e.what());
+  orion_cjson::Root cheat_json(cheat_data);
+  if (!cheat_json) {
+    OrionHEN_log("CheatManager: Failed to parse json: %s",
+               cJSON_GetErrorPtr() ? cJSON_GetErrorPtr() : "unknown error");
+    free(cheat_data);
     return cheat;
   }
 
-  std::string process_target;
-  std::string name;
+  const char *process_target_value =
+      orion_cjson::string_item(cheat_json.get(), "process");
+  const char *name_value = orion_cjson::string_item(cheat_json.get(), "name");
 
-  if (cheat_json.contains("process") && cheat_json.contains("name")) {
-    process_target = cheat_json["process"];
-    name = cheat_json["name"];
-  } else {
-    goto error;
+  if (!process_target_value || !name_value) {
+    OrionHEN_log("CheatManager: Invalid cheat file %s", filename.c_str());
+    free(cheat_data);
+    return cheat;
   }
+
+  std::string process_target = process_target_value;
+  std::string name = name_value;
 
   //
   // Cheat metadata
@@ -837,96 +836,79 @@ CheatManager::CheatManagerFormats::ParseJSONCheat(const std::string &filename,
     cheat->masterCodeId = -1;
   }
 
-  if (cheat_json.contains("mods")) {
-    auto mods = cheat_json["mods"];
+  cJSON *mods = orion_cjson::item(cheat_json.get(), "mods");
+  if (cJSON_IsArray(mods)) {
+    cJSON *mod = nullptr;
+    cJSON_ArrayForEach(mod, mods) {
+      if (!cJSON_IsObject(mod)) {
+        continue;
+      }
 
-    for (auto &mod : mods) {
-      if (mod.is_object()) {
-        CheatInfo mod_info;
+      const char *mod_name = orion_cjson::string_item(mod, "name");
+      if (!mod_name) {
+        continue;
+      }
 
-        if (mod.contains("name")) {
-          mod_info.name = mod["name"].get<std::string>();
-        } else {
-          continue;
-        }
+      CheatInfo mod_info;
+      mod_info.name = mod_name;
+      mod_info.description = orion_cjson::string_item(mod, "description", "");
+      mod_info.enabled = false;
+      mod_info.module_name = process_target;
 
-        if (mod.contains("description")) {
-          mod_info.description = mod["description"].get<std::string>();
-        }
+      //
+      // Parse memory patches
+      //
+      cJSON *memory_json = orion_cjson::item(mod, "memory");
+      if (cJSON_IsArray(memory_json)) {
+        cJSON *memory = nullptr;
+        cJSON_ArrayForEach(memory, memory_json) {
+          if (!cJSON_IsObject(memory)) {
+            continue;
+          }
 
-        mod_info.enabled = false;
-        mod_info.module_name = process_target;
+          std::string offset = orion_cjson::scalar_item(memory, "offset");
+          std::string on = orion_cjson::scalar_item(memory, "on");
+          std::string off = orion_cjson::scalar_item(memory, "off");
+          std::string section = orion_cjson::scalar_item(memory, "section");
 
-        //
-        // Parse memory patches
-        //
-        if (mod.contains("memory")) {
-          auto memory_json = mod["memory"];
+          if (on.size() && off.size() && offset.size()) {
+            CheatMemory mem;
+            mem.section = 0;
+            mem.codeCaveReloc = false;
+            mem.absolute = orion_cjson::bool_item(memory, "absolute", false);
 
-          for (auto &memory : memory_json) {
-            if (memory.is_object()) {
+            mem.Offset = strtol(offset.c_str(), nullptr, 16);
+            mem.On = Converters::unhexlify(on);
+            mem.Off = Converters::unhexlify(off);
 
-              std::string offset;
-              std::string on;
-              std::string off;
-              std::string section;
-
-              if (memory.contains("offset")) {
-                offset = memory["offset"];
-              }
-              if (memory.contains("on")) {
-                on = memory["on"];
-              }
-              if (memory.contains("off")) {
-                off = memory["off"];
-              }
-              if (memory.contains("section")) {
-                section = memory["section"];
-              }
-
-              if (on.size() && off.size() && offset.size()) {
-                CheatMemory mem;
-                mem.section = 0;
-                mem.codeCaveReloc = false;
-
-                mem.Offset = strtol(offset.c_str(), nullptr, 16);
-                mem.On = Converters::unhexlify(on);
-                mem.Off = Converters::unhexlify(off);
-
-                if (section.size()) {
-                  int section_num = atoi(section.c_str());
-                  if (section_num < MODULE_INFO_MAX_SECTIONS)
-                    mem.section = section_num;
-                }
-                mod_info.mods.push_back(mem);
-              }
+            if (section.size()) {
+              int section_num = atoi(section.c_str());
+              if (section_num < MODULE_INFO_MAX_SECTIONS)
+                mem.section = section_num;
             }
+            mod_info.mods.push_back(mem);
           }
         }
-        cheat->cheats.push_back(mod_info);
       }
+
+      cheat->cheats.push_back(mod_info);
     }
   }
 
   //
   // Parse authors
   //
-  if (cheat_json.contains("credits")) {
-    auto authors = cheat_json["credits"];
-
-    for (auto &author : authors) {
-      if (author.is_string()) {
-        cheat->authors.push_back(author.get<std::string>());
+  cJSON *authors = orion_cjson::item(cheat_json.get(), "credits");
+  if (cJSON_IsArray(authors)) {
+    cJSON *author = nullptr;
+    cJSON_ArrayForEach(author, authors) {
+      const char *author_name = orion_cjson::string_value(author);
+      if (author_name) {
+        cheat->authors.push_back(author_name);
       }
     }
   }
 
-  goto success;
-
-error:
-  etaHEN_log("CheatManager: Invalid cheat file %s", filename.c_str());
-
-success:
   free(cheat_data);
   return cheat;
 }
@@ -936,10 +918,10 @@ CheatManager::CheatManagerFormats::ParseMC4Cheat(const std::string &filename,
                                                  GameCheat *parsed) {
   GameCheat *cheat = nullptr;
   struct stat st;
-  etaHEN_log("Loading MC4 script %s!", filename.c_str());
+  OrionHEN_log("Loading MC4 script %s!", filename.c_str());
 
   if (stat(filename.c_str(), &st) != 0) {
-    etaHEN_log("CheatManager::ParseMC4Cheat: %s does not exist!",
+    OrionHEN_log("CheatManager::ParseMC4Cheat: %s does not exist!",
                filename.c_str());
     return cheat;
   }
@@ -947,7 +929,7 @@ CheatManager::CheatManagerFormats::ParseMC4Cheat(const std::string &filename,
   int cheat_fd = open(filename.c_str(), O_RDONLY);
 
   if (!cheat_fd) {
-    etaHEN_log("CheatManager::ParseMC4Cheat: Unable to open %s!",
+    OrionHEN_log("CheatManager::ParseMC4Cheat: Unable to open %s!",
                filename.c_str());
     return cheat;
   }
@@ -956,7 +938,7 @@ CheatManager::CheatManagerFormats::ParseMC4Cheat(const std::string &filename,
 
   if (read(cheat_fd, cheat_data, st.st_size) < 0) {
     free(cheat_data);
-    etaHEN_log("CheatManager::ParseMC4Cheat: Unable to read file %s",
+    OrionHEN_log("CheatManager::ParseMC4Cheat: Unable to read file %s",
                filename.c_str());
     return cheat;
   }
@@ -968,7 +950,7 @@ CheatManager::CheatManagerFormats::ParseMC4Cheat(const std::string &filename,
   //
   size_t decrypted_size = st.st_size;
   uint8_t *decrypted_xml = decrypt_data((uint8_t *)cheat_data, &decrypted_size);
-  etaHEN_log("Decrypted at %p size: %d bytes\n", decrypted_xml, decrypted_size);
+  OrionHEN_log("Decrypted at %p size: %d bytes\n", decrypted_xml, decrypted_size);
 
   if (decrypted_xml) {
     std::string cheat_xml = std::string((char *)decrypted_xml);
@@ -981,7 +963,7 @@ CheatManager::CheatManagerFormats::ParseMC4Cheat(const std::string &filename,
     //
     parsed = CheatManagerFormats::ParseXMLCheat(cheat_xml, parsed);
     if (!parsed) {
-      etaHEN_log("Unable to parse cheat file %s!", filename.c_str());
+      OrionHEN_log("Unable to parse cheat file %s!", filename.c_str());
     } else {
       cheat = parsed;
     }
@@ -989,7 +971,7 @@ CheatManager::CheatManagerFormats::ParseMC4Cheat(const std::string &filename,
   }
 
   else {
-    etaHEN_log("Unable to decrypt MC4 cheat file %s!", filename.c_str());
+    OrionHEN_log("Unable to decrypt MC4 cheat file %s!", filename.c_str());
   }
 
   free(cheat_data);
@@ -1004,10 +986,10 @@ CheatManager::CheatManagerFormats::ParseSHNCheat(const std::string &filename,
                                                  GameCheat *parsed) {
   GameCheat *cheat = parsed;
   struct stat st;
-  etaHEN_log("Loading SHN cheat file %s!", filename.c_str());
+  OrionHEN_log("Loading SHN cheat file %s!", filename.c_str());
 
   if (stat(filename.c_str(), &st) != 0) {
-    etaHEN_log("CheatManager::ParseSHNCheat: %s does not exist!",
+    OrionHEN_log("CheatManager::ParseSHNCheat: %s does not exist!",
                filename.c_str());
     return cheat;
   }
@@ -1015,7 +997,7 @@ CheatManager::CheatManagerFormats::ParseSHNCheat(const std::string &filename,
   int cheat_fd = open(filename.c_str(), O_RDONLY);
 
   if (!cheat_fd) {
-    etaHEN_log("CheatManager::ParseSHNCheat: Unable to open %s!",
+    OrionHEN_log("CheatManager::ParseSHNCheat: Unable to open %s!",
                filename.c_str());
     return cheat;
   }
@@ -1024,7 +1006,7 @@ CheatManager::CheatManagerFormats::ParseSHNCheat(const std::string &filename,
 
   if (read(cheat_fd, cheat_data, st.st_size) < 0) {
     free(cheat_data);
-    etaHEN_log("CheatManager::ParseSHNCheat: Unable to read file %s",
+    OrionHEN_log("CheatManager::ParseSHNCheat: Unable to read file %s",
                filename.c_str());
     return cheat;
   }
@@ -1035,7 +1017,7 @@ CheatManager::CheatManagerFormats::ParseSHNCheat(const std::string &filename,
   cheat = CheatManagerFormats::ParseXMLCheat(cheat_xml, cheat);
 
   if (!parsed) {
-    etaHEN_log("CheatManager::ParseSHNCheat failed to parse SHN file %s!",
+    OrionHEN_log("CheatManager::ParseSHNCheat failed to parse SHN file %s!",
                filename.c_str());
   }
 
@@ -1074,7 +1056,7 @@ CheatManager::CheatManagerFormats::ParseXMLCheat(const std::string &xml,
          cheatNode = cheatNode.next_sibling("Cheat")) {
       CheatInfo mod_info;
       std::string cheatTitle = cheatNode.attribute("Text").as_string();
-      // etaHEN_log("Cheat => %s\n", cheatTitle.c_str());
+      // OrionHEN_log("Cheat => %s\n", cheatTitle.c_str());
       mod_info.name = cheatTitle;
       mod_info.description = cheatNode.attribute("Description").as_string();
       mod_info.module_name = process_target;
@@ -1086,7 +1068,7 @@ CheatManager::CheatManagerFormats::ParseXMLCheat(const std::string &xml,
         std::string on = cheatLine.child("ValueOn").text().as_string();
         std::string off = cheatLine.child("ValueOff").text().as_string();
         std::string absolute = cheatLine.child("Absolute").text().as_string();  // 09/10/2025 xZenithy
-        // etaHEN_log("Offset: %s\nSection: %s\nOn: %s\nOff: %s\n",
+        // OrionHEN_log("Offset: %s\nSection: %s\nOn: %s\nOff: %s\n",
         //     offset.c_str(),
         //     section.c_str(),
         //     on.c_str(),
@@ -1096,6 +1078,7 @@ CheatManager::CheatManagerFormats::ParseXMLCheat(const std::string &xml,
         CheatMemory mem;
         mem.codeCaveReloc = false;
         mem.section = 0;
+        mem.absolute = false;
         if (on.size() && off.size() && offset.size()) {
           //
           // Remove the hyphen from the bytearray string
@@ -1185,14 +1168,14 @@ bool entry_exists_in_cache(const std::string &cache_path,
   return false;
 }
 
-// Extract game name from JSON file using the C TinyJSON library
+// Extract game name from JSON file using cJSON
 std::string extract_game_name_from_json(const std::string &file_path) {
   std::string game_name = "Unknown Game";
 
   // Read the file using standard C file operations
   FILE *file = fopen(file_path.c_str(), "r");
   if (!file) {
-    etaHEN_log("Failed to open JSON file: %s", file_path.c_str());
+    OrionHEN_log("Failed to open JSON file: %s", file_path.c_str());
     return game_name;
   }
 
@@ -1205,7 +1188,7 @@ std::string extract_game_name_from_json(const std::string &file_path) {
   char *buffer = (char *)malloc(file_size + 1);
   if (!buffer) {
     fclose(file);
-    etaHEN_log("Failed to allocate memory for JSON file");
+    OrionHEN_log("Failed to allocate memory for JSON file");
     return game_name;
   }
 
@@ -1213,33 +1196,20 @@ std::string extract_game_name_from_json(const std::string &file_path) {
   buffer[bytes_read] = '\0';
   fclose(file);
 
-// Parse the JSON using TinyJSON API - allocate memory for parse tree
-// Adjust the size as needed based on your JSON complexity
-#define MAX_JSON_TOKENS 0x1000
-  json_t json_mem[MAX_JSON_TOKENS];
-
-  // Parse the JSON
-  const json_t *json = json_create(buffer, json_mem, MAX_JSON_TOKENS);
+  orion_cjson::Root json(buffer);
   if (!json) {
-    etaHEN_log("JSON parse error for file: %s", file_path.c_str());
+    OrionHEN_log("JSON parse error for file: %s", file_path.c_str());
     free(buffer);
     return game_name;
   }
 
   // Find the "name" field
-  const json_t *name_field = json_getProperty(json, "name");
+  const char *name_field = orion_cjson::string_item(json.get(), "name");
   if (name_field) {
-    jsonType_t type = json_getType(name_field);
-    etaHEN_log("Type: %d", json_getType(name_field));
-    if (type == JSON_TEXT) {
-      etaHEN_log("It is JSON_TEXT");
-      game_name = json_getValue(name_field);
-      etaHEN_log("Name: %s\n", game_name.c_str());
-    } else {
-      etaHEN_log("It is not JSON_TEXT");
-    }
+    game_name = name_field;
+    OrionHEN_log("Name: %s\n", game_name.c_str());
   } else {
-    etaHEN_log("Name field not found");
+    OrionHEN_log("Name field not found");
   }
 
   // Clean up
@@ -1254,7 +1224,7 @@ std::string extract_game_name_from_shn(const std::string &file_path) {
   pugi::xml_parse_result result = doc.load_file(file_path.c_str());
 
   if (!result) {
-    etaHEN_log("XML parse error: %s", result.description());
+    OrionHEN_log("XML parse error: %s", result.description());
     return "Unknown Game";
   }
 
@@ -1282,7 +1252,7 @@ void update_cache_for_dir(
   // Open cache file in append mode
   std::ofstream cache_file(cache_path, std::ios::app);
   if (!cache_file.is_open()) {
-    etaHEN_log("Failed to open cache file: %s", cache_path.c_str());
+    OrionHEN_log("Failed to open cache file: %s", cache_path.c_str());
     return;
   }
 
@@ -1305,7 +1275,7 @@ void update_cache_for_dir(
 
   DIR *dir = opendir(dir_path.c_str());
   if (!dir) {
-    etaHEN_log("Failed to open directory: %s", dir_path.c_str());
+    OrionHEN_log("Failed to open directory: %s", dir_path.c_str());
     return;
   }
 
@@ -1344,7 +1314,7 @@ void update_cache_for_dir(
              total_files);
       last_ext = file_ext;
     } else if (current_time - last_notify_time >= 6) {
-      etaHEN_log("Processing %s files: (%d/%d)", file_ext.c_str(), processed,
+      OrionHEN_log("Processing %s files: (%d/%d)", file_ext.c_str(), processed,
                  total_files);
       last_notify_time = current_time;
     }
@@ -1375,26 +1345,26 @@ void update_cache_for_dir(
 
 // Main caching function
 void update_cheat_caches() {
-  etaHEN_log("Starting cheat cache update...");
+  OrionHEN_log("Starting cheat cache update...");
 
   // Create directories if they don't exist
-  mkdir("/data/etaHEN/cheats", 0777);
-  mkdir("/data/etaHEN/cheats/shn", 0777);
-  mkdir("/data/etaHEN/cheats/mc4", 0777);
-  mkdir("/data/etaHEN/cheats/json", 0777);
+  mkdir("/data/OrionHEN/cheats", 0777);
+  mkdir("/data/OrionHEN/cheats/shn", 0777);
+  mkdir("/data/OrionHEN/cheats/mc4", 0777);
+  mkdir("/data/OrionHEN/cheats/json", 0777);
 
   // Update JSON cache
-  update_cache_for_dir("/data/etaHEN/cheats/json",
-                       "/data/etaHEN/cheats/json.txt", ".json",
+  update_cache_for_dir("/data/OrionHEN/cheats/json",
+                       "/data/OrionHEN/cheats/json.txt", ".json",
                        extract_game_name_from_json);
 
   // Update SHN cache
-  update_cache_for_dir("/data/etaHEN/cheats/shn", "/data/etaHEN/cheats/shn.txt",
+  update_cache_for_dir("/data/OrionHEN/cheats/shn", "/data/OrionHEN/cheats/shn.txt",
                        ".shn", extract_game_name_from_shn);
 
   // For MC4, since we don't have a specific extraction method,
   // we'll use a simple lambda that returns a placeholder
-  update_cache_for_dir("/data/etaHEN/cheats/mc4", "/data/etaHEN/cheats/mc4.txt",
+  update_cache_for_dir("/data/OrionHEN/cheats/mc4", "/data/OrionHEN/cheats/mc4.txt",
                        ".mc4", [](const std::string &path) {
                          // Extract filename without path and extension
                          size_t lastSlash = path.find_last_of('/');
@@ -1404,7 +1374,7 @@ void update_cheat_caches() {
                          return filenameWithoutExt;
                        });
 
-  etaHEN_log("Cheat cache update completed.");
+  OrionHEN_log("Cheat cache update completed.");
 }
 
 void *ReloadCheatsCache(void *) {

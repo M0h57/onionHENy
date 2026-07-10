@@ -1,4 +1,4 @@
-/* Copyright (C) 2025 etaHEN / LightningMods
+/* Copyright (C) 2025 OrionHEN / LightningMods
 
 This program is free software; you can redistribute it and/or modify it
 under the terms of the GNU General Public License as published by the
@@ -22,7 +22,7 @@ along with this program; see the file COPYING. If not, see
 #include "launcher.hpp"
 #include "globalconf.hpp"
 #include "ipc.hpp"
-#include "../../extern/tiny-json/tiny-json.hpp"
+#include "../../extern/cJSON/orion_cjson.hpp"
 
 #include <atomic>
 #include <string>
@@ -80,7 +80,7 @@ enum Commands : int {
   KILL_APP_CMD,
   JAILBREAK_CMD,
   REMOUNT_FOLDER_CMD,
-  ETAHEN_VER_CMD,
+  ORIONHEN_VER_CMD,
   PATCH_LNC_DEBUG_CMD,
 
   TEST_CMD,
@@ -129,7 +129,7 @@ typedef struct app_info {
 } app_info_t;
 
 // Function declarations
-void etaHEN_log(const char *fmt, ...);
+void OrionHEN_log(const char *fmt, ...);
 void crash_log(const char *fmt, ...);
 bool if_exists(const char *path);
 void jailbreak_proc(int pid);
@@ -194,7 +194,7 @@ bool isProcessAlive(int pid) noexcept {
 static bool writeRecord(const char *filename, const char *tid, uint64_t duration) {
   FILE *file = fopen(filename, "a+b"); // Open in append mode to add new records without deleting old ones
   if (file == NULL) {
-    etaHEN_log("Failed to open file for writing: %s", strerror(errno));
+    OrionHEN_log("Failed to open file for writing: %s", strerror(errno));
     return false;
   }
 
@@ -202,13 +202,13 @@ static bool writeRecord(const char *filename, const char *tid, uint64_t duration
   strncpy(tid_padded, tid, MAX_TID_SIZE); // Safely copy the TID
 
   if (fwrite(tid_padded, sizeof(char), MAX_TID_SIZE, file) < MAX_TID_SIZE) {
-    etaHEN_log("Failed to write TID to file: %s", strerror(errno));
+    OrionHEN_log("Failed to write TID to file: %s", strerror(errno));
     fclose(file);
     return false;
   }
   
   if (fwrite(&duration, sizeof(uint64_t), 1, file) < 1) {
-    etaHEN_log("Failed to write duration to file: %s", strerror(errno));
+    OrionHEN_log("Failed to write duration to file: %s", strerror(errno));
     fclose(file);
     return false;
   }
@@ -220,7 +220,7 @@ static bool writeRecord(const char *filename, const char *tid, uint64_t duration
 static bool modifyRecordDuration(const char *filename, const char *target_tid, uint64_t &new_duration) {
   FILE *file = fopen(filename, "r+b"); // Read/Write mode, binary
   if (!file) {
-    etaHEN_log("Failed to open file for reading and writing: %s", strerror(errno));
+    OrionHEN_log("Failed to open file for reading and writing: %s", strerror(errno));
     return false;
   }
 
@@ -251,7 +251,7 @@ static bool getDurationForTID(const char *filename, const char *target_tid, uint
 
   FILE *file = fopen(filename, "rb");
   if (file == NULL) {
-    etaHEN_log("Failed to open file for reading: %s", strerror(errno));
+    OrionHEN_log("Failed to open file for reading: %s", strerror(errno));
     return false;
   }
 
@@ -278,7 +278,7 @@ static bool getDurationForTID(const char *filename, const char *target_tid, uint
 bool GetFileContents(const char *path, char **buffer) {
   FILE *fp = fopen(path, "rb");
   if (fp == NULL) {
-    etaHEN_log("failed to open %s", path);
+    OrionHEN_log("failed to open %s", path);
     return false;
   }
 
@@ -288,13 +288,13 @@ bool GetFileContents(const char *path, char **buffer) {
 
   if (size == 0) {
     fclose(fp);
-    etaHEN_log("size is 0");
+    OrionHEN_log("size is 0");
     return false;
   }
 
   *buffer = (char *)malloc(size + 1); // Allocate memory for the file content plus null terminator
   if (*buffer == NULL) {
-    etaHEN_log("failed to allocate memory (OOM)");
+    OrionHEN_log("failed to allocate memory (OOM)");
     fclose(fp);
     return false;
   }
@@ -331,7 +331,7 @@ void notify(bool show_watermark, const char *text, ...) {
   req.target_id = -1;
   strcpy(req.uri, "cxml://psnotification/tex_icon_system");
 
-  etaHEN_log("Notify: %s\n", req.message);
+  OrionHEN_log("Notify: %s\n", req.message);
   sceKernelSendNotificationRequest(0, &req, sizeof(req), 0);
 }
 
@@ -390,7 +390,7 @@ bool is_whitelisted_app(const std::string &tid) {
 }
 
 void *Play_time_thread(void *args) noexcept {
-  const char *filename = "/data/etaHEN/playtime.bin";
+  const char *filename = "/data/OrionHEN/playtime.bin";
   std::string tid;
   uint64_t duration = 0;
   int appid;
@@ -400,19 +400,19 @@ void *Play_time_thread(void *args) noexcept {
       continue;
     }
     
-    etaHEN_log("getting duration for %s", tid.c_str());
+    OrionHEN_log("getting duration for %s", tid.c_str());
     if (!getDurationForTID(filename, tid.c_str(), duration)) {
       continue;
     }
     
-    etaHEN_log("got duration for %s: %llu", tid.c_str(), duration);
+    OrionHEN_log("got duration for %s: %llu", tid.c_str(), duration);
     duration++;
     if (!modifyRecordDuration(filename, tid.c_str(), duration)) {
-      etaHEN_log("Failed to modify record duration for %s", tid.c_str());
+      OrionHEN_log("Failed to modify record duration for %s", tid.c_str());
       continue;
     }
     
-    etaHEN_log("Record duration for %s changed to %llu", tid.c_str(), duration);
+    OrionHEN_log("Record duration for %s changed to %llu", tid.c_str(), duration);
     sleep(59);
   }
 
@@ -433,7 +433,7 @@ bool isUserLoggedIn() {
     int userid = userIdList.user_id[i];
     if (userid != -1) {
       int ret = sceUserServiceGetUserName(userid, &username[0], sizeof(username));
-      etaHEN_log("sceUserServiceGetUserName returned %d", ret);
+      OrionHEN_log("sceUserServiceGetUserName returned %d", ret);
       if (ret == 0) {
         isLoggedIn = true;
         break;
@@ -459,19 +459,19 @@ pid_t find_pid(const char *name) {
   int pid = -1;
   // determine size of query response
   if (sysctl(mib, 4, NULL, &buf_size, NULL, 0)) {
-    etaHEN_log("sysctl failed: %s", strerror(errno));
+    OrionHEN_log("sysctl failed: %s", strerror(errno));
     return -1;
   }
 
   // allocate memory for query response
   if (!(buf = malloc(buf_size))) {
-    etaHEN_log("malloc failed %s", strerror(errno));
+    OrionHEN_log("malloc failed %s", strerror(errno));
     return -1;
   }
 
   // query the kernel for proc info
   if (sysctl(mib, 4, buf, &buf_size, NULL, 0)) {
-    etaHEN_log("sysctl failed: %s", strerror(errno));
+    OrionHEN_log("sysctl failed: %s", strerror(errno));
     free(buf);
     return -1;
   }
@@ -500,25 +500,25 @@ pid_t find_pid(const char *name) {
 
 bool Open_Utility_Elf(const char *path, uint8_t **buffer) {
   if (!path || !buffer) {
-    etaHEN_log("Invalid arguments: path or buffer is null.");
+    OrionHEN_log("Invalid arguments: path or buffer is null.");
     return false;
   }
 
   int fd = open(path, O_RDONLY);
   if (fd < 0) {
-    etaHEN_log("Failed to open file: %s (error: %s)", path, strerror(errno));
+    OrionHEN_log("Failed to open file: %s (error: %s)", path, strerror(errno));
     return false;
   }
 
   struct stat st;
   if (fstat(fd, &st) != 0) {
-    etaHEN_log("Failed to get file stats for %s (error: %s)", path, strerror(errno));
+    OrionHEN_log("Failed to get file stats for %s (error: %s)", path, strerror(errno));
     close(fd);
     return false;
   }
 
   if (st.st_size == 0) {
-    etaHEN_log("File %s is empty.", path);
+    OrionHEN_log("File %s is empty.", path);
     close(fd);
     return false;
   }
@@ -526,14 +526,14 @@ bool Open_Utility_Elf(const char *path, uint8_t **buffer) {
   // Allocate buffer and check for allocation failure
   uint8_t *buf = (uint8_t *)malloc(st.st_size);
   if (!buf) {
-    etaHEN_log("Failed to allocate memory for file %s (size: %ld bytes).", path, st.st_size);
+    OrionHEN_log("Failed to allocate memory for file %s (size: %ld bytes).", path, st.st_size);
     close(fd);
     return false;
   }
 
   ssize_t bytes_read = read(fd, buf, st.st_size);
   if (bytes_read != st.st_size) {
-    etaHEN_log("Failed to read the entire file %s (read: %ld bytes, expected: %ld bytes).",
+    OrionHEN_log("Failed to read the entire file %s (read: %ld bytes, expected: %ld bytes).",
                path, bytes_read, st.st_size);
     free(buf);
     close(fd);
@@ -551,8 +551,6 @@ bool set_fan_threshold(int THRESHOLDTEMP);
 bool cmd_enable_fps_new(int appid);
 void *fifo_and_dumper_thread(void *args) noexcept {
   char *json_str = nullptr;
-  constexpr uint32_t MAX_TOKENS = 256;
-  json_t pool[MAX_TOKENS]{};
   std::string tid, sandbox_dir_base;
   int retries = 0;
   bool fifo_found = false;
@@ -562,25 +560,25 @@ void *fifo_and_dumper_thread(void *args) noexcept {
   while (true) {
       std::string sandbox_dir;
       // restart the util services daemon if it crashes or exits
-      if (find_pid("util.elf") < 0 && find_pid("etaHEN Utility") < 0 &&
+      if (find_pid("util.elf") < 0 && find_pid("OrionHEN Utility") < 0 &&
           retries < MAX_RETIRES) {
           if (retries == 0) {
               notify(true, "OrionHEN Utility is not running, restarting via 9021...");
           }
 
           if (++retries >= MAX_RETIRES) {
-              notify(true, "OrionHEN Utility services failed to restart — check elfldr :9021 and /data/etaHEN/daemons/util.elf");
+              notify(true, "OrionHEN Utility services failed to restart — check elfldr :9021 and /data/OrionHEN/daemons/util.elf");
               continue;
           }
 
-          bool ok = elfldr_remote_send_file_uri("/data/etaHEN/daemons/util.elf");
+          bool ok = elfldr_remote_send_file_uri("/data/OrionHEN/daemons/util.elf");
           if (ok) {
               sleep(2);
-              etaHEN_log("  Launched util via 9021!");
+              OrionHEN_log("  Launched util via 9021!");
               notify(true, "OrionHEN Utility services successfully restarted");
               retries = 0;
           } else {
-              etaHEN_log("failed to launch util via 9021 (need elfldr + util.elf), retry: %d", retries);
+              OrionHEN_log("failed to launch util via 9021 (need elfldr + util.elf), retry: %d", retries);
           }
       }
 
@@ -616,7 +614,7 @@ void *fifo_and_dumper_thread(void *args) noexcept {
     for (int i = 0; i <= 50; ++i) {
       std::ostringstream oss;
       oss << std::setw(3) << std::setfill('0') << i; // Generate suffix with leading zeros
-      sandbox_dir = sandbox_dir_base + oss.str() + "/download0/etahen_jailbreak";
+      sandbox_dir = sandbox_dir_base + oss.str() + "/download0/orionhen_jailbreak";
 
       if (if_exists(sandbox_dir.c_str())) {
         // Found the directory
@@ -632,30 +630,30 @@ void *fifo_and_dumper_thread(void *args) noexcept {
     }
     
     if (!GetFileContents(sandbox_dir.c_str(), &json_str)) {
-      etaHEN_log("Failed to get command from %s", sandbox_dir.c_str());
+      OrionHEN_log("Failed to get command from %s", sandbox_dir.c_str());
       pthread_mutex_unlock(&jb_lock);
       continue;
     }
     
-    etaHEN_log("\nfound. %s for %s", json_str, tid.c_str());
-    json_t const *my_json = json_create(json_str, pool, MAX_TOKENS);
-    if (my_json == NULL) {
+    OrionHEN_log("\nfound. %s for %s", json_str, tid.c_str());
+    orion_cjson::Root my_json(json_str);
+    if (!my_json) {
       puts("Error parsing JSON");
-      etaHEN_log("Error parsing JSON");
+      OrionHEN_log("Error parsing JSON");
       pthread_mutex_unlock(&jb_lock);
       continue;
     }
 
-    const char *PID = json_getPropertyValue(my_json, "PID");
+    const char *PID = orion_cjson::string_item(my_json.get(), "PID");
     if (!PID) {
-      etaHEN_log("PID is null");
+      OrionHEN_log("PID is null");
       notify(true, "Jailbreak failed, PID is null");
       pthread_mutex_unlock(&jb_lock);
       continue;
     }
 
     int reserved_value = atoi(PID);
-    etaHEN_log("reserved_value: %d", reserved_value);
+    OrionHEN_log("reserved_value: %d", reserved_value);
 
     int retries = 0;
     // limit the hijackers scope
@@ -665,15 +663,15 @@ void *fifo_and_dumper_thread(void *args) noexcept {
       if (!spawned) {
         if (++retries > 30 || isProcessAlive(reserved_value)) {
           notify(true, "Jailbreak failed, PID is invaild");
-          etaHEN_log("Jailbreak failed, PID is invaild");
+          OrionHEN_log("Jailbreak failed, PID is invaild");
           break;
         }
       }
-      etaHEN_log("is null for PID %d", reserved_value);
+      OrionHEN_log("is null for PID %d", reserved_value);
     } while (spawned == nullptr);
 
     if (spawned) {
-      etaHEN_log("RIGHT Jailbreak command received: jailbreaking...");
+      OrionHEN_log("RIGHT Jailbreak command received: jailbreaking...");
 
       if(global_conf.debug_app_jb_msg)
           notify(true, "App (PID %i) has been granted a jailbreak", reserved_value);

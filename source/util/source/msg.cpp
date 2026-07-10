@@ -1,5 +1,5 @@
 
-/* Copyright (C) 2025 etaHEN / LightningMods
+/* Copyright (C) 2025 OrionHEN / LightningMods
 
 This program is free software; you can redistribute it and/or modify it
 under the terms of the GNU General Public License as published by the
@@ -33,11 +33,10 @@ int sceKernelMprotect(void *addr, size_t len, int prot);
 int sceSystemServiceLoadExec(const char *path, const char *arg);
 extern bool is_handler_enabled;
 }
-#include "../extern/tiny-json/tiny-json.hpp"
+#include "../../extern/cJSON/orion_cjson.hpp"
 #include <CheatManager.hpp>
 #include <fcntl.h>
 #include <fstream>
-#include <json.hpp>
 #include <memory>
 #include <sfo.hpp>
 #include <sstream>
@@ -70,7 +69,7 @@ bool LoadSettings();
 bool rmtree(const char *path) {
   DIR *dir = opendir(path);
   if (dir == NULL) {
-    etaHEN_log("Error opening directory %s", path);
+    OrionHEN_log("Error opening directory %s", path);
     return false;
   }
 
@@ -92,7 +91,7 @@ bool rmtree(const char *path) {
       // Delete files
       if (unlink(path_1) != 0) {
         // perror("Error deleting file");
-        etaHEN_log("Error deleting file %s", path);
+        OrionHEN_log("Error deleting file %s", path);
       }
     }
   }
@@ -102,7 +101,7 @@ bool rmtree(const char *path) {
   // Delete the empty folder
   if (rmdir(path) != 0) {
     // perror("Error deleting folder");
-    etaHEN_log("Error deleting folder %s", path);
+    OrionHEN_log("Error deleting folder %s", path);
   }
 
   return true;
@@ -120,10 +119,10 @@ struct sockaddr_in networkAdress(uint16_t port) {
 int networkListen(const char *soc_path) {
   struct sockaddr_un server;
   unlink(soc_path);
-  etaHEN_log("[Daemon] Deleted Socket...");
+  OrionHEN_log("[Daemon] Deleted Socket...");
   int s = socket(AF_UNIX, SOCK_STREAM, 0);
   if (s < 0) {
-    etaHEN_log("[Daemon] Socket failed! %s", strerror(errno));
+    OrionHEN_log("[Daemon] Socket failed! %s", strerror(errno));
     return INVAIL;
   }
 
@@ -133,15 +132,15 @@ int networkListen(const char *soc_path) {
 
   int r = bind(s, (struct sockaddr *)&server, SUN_LEN(&server));
   if (r < 0) {
-    etaHEN_log("[Daemon] Bind failed! %s", strerror(errno));
+    OrionHEN_log("[Daemon] Bind failed! %s", strerror(errno));
     return INVAIL;
   }
 
- // etaHEN_log("Socket has name %s", server.sun_path);
+ // OrionHEN_log("Socket has name %s", server.sun_path);
 
   r = listen(s, 100);
   if (r < 0) {
-    etaHEN_log("[Daemon] listen failed! %s", strerror(errno));
+    OrionHEN_log("[Daemon] listen failed! %s", strerror(errno));
     return INVAIL;
   }
 
@@ -154,7 +153,7 @@ int networkAccept(int socket) {
 
 int networkReceiveData(int socket, void *buffer, int32_t size) {
   int nu = recv(socket, buffer, size, 0);
-  etaHEN_log("got %i bytes", nu);
+  OrionHEN_log("got %i bytes", nu);
   return nu;
 }
 
@@ -180,7 +179,7 @@ void reply(int sender_socket, bool error, std::string out_var = "Nothing") {
   IPCMessage outputMessage;
   outputMessage.cmd = BREW_UTIL_RETURN_VALUE;
   outputMessage.error = error ? -1 : 0;
-  etaHEN_log("error: %d", outputMessage.error);
+  OrionHEN_log("error: %d", outputMessage.error);
   if (!inputStr.empty()) {
     strncpy(outputMessage.msg, inputStr.c_str(), sizeof(outputMessage.msg) - 1);
     // Null-terminate the destination array
@@ -195,7 +194,7 @@ std::vector<uint8_t> readFile(std::string filename) {
   // open the file:
   std::ifstream file(filename, std::ios::binary);
   if (!file.is_open()) {
-    etaHEN_log("Failed to open %s", filename.c_str());
+    OrionHEN_log("Failed to open %s", filename.c_str());
     return std::vector<uint8_t>();
   }
 
@@ -225,21 +224,24 @@ std::string GetPS5Version(const std::string &jsonpath) {
   try {
     std::ifstream input_file(jsonpath);
     if (!input_file.is_open()) {
-      etaHEN_log("Failed to open file for reading: %s", jsonpath.c_str());
+      OrionHEN_log("Failed to open file for reading: %s", jsonpath.c_str());
       return "Error Opening Json";
     }
 
-    nlohmann::json j;
-    input_file >> j;
+    std::stringstream buffer;
+    buffer << input_file.rdbuf();
     input_file.close();
 
-    if (j.contains("contentVersion"))
-      return std::string(j["contentVersion"]);
+    orion_cjson::Root j(buffer.str());
+    const char *content_version =
+        j ? orion_cjson::string_item(j.get(), "contentVersion") : nullptr;
+    if (content_version)
+      return std::string(content_version);
 
   } catch (const std::exception &e) {
     // Handle exceptions here, you can log the error or perform other error
     // handling tasks
-    etaHEN_log("An exception occurred: %s", e.what());
+    OrionHEN_log("An exception occurred: %s", e.what());
     return "Error getting version";
   }
 
@@ -255,8 +257,6 @@ size_t write_callback(void *contents, size_t size, size_t nmemb, void *userp) {
 void handleIPC(struct clientArgs *client, std::string &inputStr,
                DaemonCommands command) {
 
-  constexpr uint32_t MAX_TOKENS = 256;
-  json_t pool[MAX_TOKENS]{};
   int sender_app = client->socket;
 
   std::string path_buf, path_buf2, json_path;
@@ -264,15 +264,12 @@ void handleIPC(struct clientArgs *client, std::string &inputStr,
   char temp[0x255];
   std::string out_var = "Nothing"; // default send var
 
-  etaHEN_log("Received IPC command 0x%X", command);
-  // etaHEN_log("Received IPC data: %s", inputStr.c_str());
+  OrionHEN_log("Received IPC command 0x%X", command);
+  // OrionHEN_log("Received IPC data: %s", inputStr.c_str());
 
-  json_t const *my_json =
-      inputStr.empty()
-          ? NULL
-          : json_create((char *)inputStr.c_str(), pool, MAX_TOKENS);
+  orion_cjson::Root my_json(inputStr);
   if (!my_json) {
-    etaHEN_log("Error parsing JSON");
+    OrionHEN_log("Error parsing JSON");
     notify(true, "Error parsing JSON");
     reply(sender_app, true);
     return;
@@ -280,14 +277,14 @@ void handleIPC(struct clientArgs *client, std::string &inputStr,
 
   switch (command) {
   case BREW_UTIL_SHELLUI_ON_STANDBY: {
-    etaHEN_log("ShellUI on standby");
+    OrionHEN_log("ShellUI on standby");
     real_rest_mode_detected = no_network_rest_mode_action = true;
     reply(sender_app, false);
     break;
   }
   case BREW_UTIL_TOGGLE_FTP: {
-    bool turn_on = (bool)json_getInteger(json_getProperty(my_json, "toggle"));
-    etaHEN_log("FTP toggle: %d", turn_on);
+    bool turn_on = orion_cjson::bool_item(my_json.get(), "toggle");
+    OrionHEN_log("FTP toggle: %d", turn_on);
     if (turn_on) {
       if (StartFTP()) {
         notify(true, "FTP Server Started\nIP: %s Port: 1337", ip_address);
@@ -303,8 +300,8 @@ void handleIPC(struct clientArgs *client, std::string &inputStr,
     break;
   }
   case BREW_UTIL_TOGGLE_KLOG: {
-    bool turn_on = (bool)json_getInteger(json_getProperty(my_json, "toggle"));
-    etaHEN_log("klog toggle: %d", turn_on);
+    bool turn_on = orion_cjson::bool_item(my_json.get(), "toggle");
+    OrionHEN_log("klog toggle: %d", turn_on);
     if (turn_on) {
       if (start_klog()) {
         notify(true, "Klog Server Started\nIP: %s Port: 9081", ip_address);
@@ -319,9 +316,9 @@ void handleIPC(struct clientArgs *client, std::string &inputStr,
     break;
   }
   case BREW_UTIL_TOGGLE_DPI: {
-    bool turn_on = (bool)json_getInteger(json_getProperty(my_json, "toggle"));
-    bool is_v2 = (bool)json_getInteger(json_getProperty(my_json, "is_v2"));
-    etaHEN_log("DPI toggle: %d | is_v2 %s", turn_on, is_v2 ? "true" : "false");
+    bool turn_on = orion_cjson::bool_item(my_json.get(), "toggle");
+    bool is_v2 = orion_cjson::bool_item(my_json.get(), "is_v2");
+    OrionHEN_log("DPI toggle: %d | is_v2 %s", turn_on, is_v2 ? "true" : "false");
     if (turn_on) {
       if (startDirectPKGInstaller(is_v2)) {
         notify(true,
@@ -346,7 +343,7 @@ void handleIPC(struct clientArgs *client, std::string &inputStr,
     break;
   }
   case BREW_UTIL_GET_GAME_VER: {
-    auto tid = std::string(json_getPropertyValue(my_json, "tid"));
+    auto tid = std::string(orion_cjson::string_item(my_json.get(), "tid", ""));
     if (tid.empty()) {
       notify(true, "Failed to get tid");
       reply(sender_app, true);
@@ -359,14 +356,14 @@ void handleIPC(struct clientArgs *client, std::string &inputStr,
       // Attempt to load JSON files for PS5 games
       tmp = "/system_data/priv/appmeta/" + tid + "/param.json";
       if (!if_exists(tmp.c_str())) {
-        etaHEN_log("%s: json %s does not exist", tid.c_str(), tmp.c_str());
+        OrionHEN_log("%s: json %s does not exist", tid.c_str(), tmp.c_str());
         tmp = "/system_data/priv/appmeta/external/" + tid + "/param.json";
 
         if (!if_exists(tmp.c_str())) {
-          etaHEN_log("%s: json %s does not exist", tid.c_str(), tmp.c_str());
+          OrionHEN_log("%s: json %s does not exist", tid.c_str(), tmp.c_str());
           tmp = "/system_ex/app/" + tid + "/sce_sys/param.json";
           if (!if_exists(tmp.c_str())) {
-            etaHEN_log("%s: json %s does not exist", tid.c_str(), tmp.c_str());
+            OrionHEN_log("%s: json %s does not exist", tid.c_str(), tmp.c_str());
             notify(true, "Failed to get game version");
             reply(sender_app, true);
             break;
@@ -377,7 +374,7 @@ void handleIPC(struct clientArgs *client, std::string &inputStr,
       game_version = GetPS5Version(tmp);
       if (game_version.empty()) {
         notify(true, "Failed to get game version");
-        etaHEN_log("Failed to get game version for PS5 Game");
+        OrionHEN_log("Failed to get game version for PS5 Game");
         reply(sender_app, true);
         break;
       }
@@ -385,10 +382,10 @@ void handleIPC(struct clientArgs *client, std::string &inputStr,
       // Attempt to load SFO files for PS4 games
       tmp = "/system_data/priv/appmeta/" + tid + "/param.sfo";
       if (!if_exists(tmp.c_str())) {
-        etaHEN_log("%s: sfo %s does not exist", tid.c_str(), tmp.c_str());
+        OrionHEN_log("%s: sfo %s does not exist", tid.c_str(), tmp.c_str());
         tmp = "/system_data/priv/appmeta/external/" + tid + "/param.sfo";
         if (!if_exists(tmp.c_str())) {
-          etaHEN_log("%s: sfo %s does not exist", tid.c_str(), tmp.c_str());
+          OrionHEN_log("%s: sfo %s does not exist", tid.c_str(), tmp.c_str());
           notify(true, "Failed to get game version");
           reply(sender_app, true);
           break;
@@ -419,17 +416,17 @@ void handleIPC(struct clientArgs *client, std::string &inputStr,
       }
     }
 
-    etaHEN_log("Version: %s", game_version.c_str());
+    OrionHEN_log("Version: %s", game_version.c_str());
     reply(sender_app, false, game_version);
 
     break;
   }
   case BREW_UTIL_LAUNCH_PLUGIN: {
     std::string plugin_path =
-        std::string(json_getPropertyValue(my_json, "plugin_path"));
+        std::string(orion_cjson::string_item(my_json.get(), "plugin_path", ""));
     std::string title_id =
-        std::string(json_getPropertyValue(my_json, "title_id"));
-    etaHEN_log("Launching %s (TID: %s)", plugin_path.c_str(),
+        std::string(orion_cjson::string_item(my_json.get(), "title_id", ""));
+    OrionHEN_log("Launching %s (TID: %s)", plugin_path.c_str(),
                title_id.c_str());
     if (!load_plugin(plugin_path.c_str())) {
       notify(true, "Failed to Load in\nPath: %s\nTID: %s",
@@ -444,9 +441,10 @@ void handleIPC(struct clientArgs *client, std::string &inputStr,
   }
 
   case BREW_UTIL_GET_GAME_CHEAT: {
-    std::string title_id = std::string(json_getPropertyValue(my_json, "tid"));
+    std::string title_id =
+        std::string(orion_cjson::string_item(my_json.get(), "tid", ""));
     std::string version =
-        std::string(json_getPropertyValue(my_json, "version"));
+        std::string(orion_cjson::string_item(my_json.get(), "version", ""));
     GameCheat *cheat = CheatManager::GetGameCheat(title_id, version);
 
     if (cheat) {
@@ -454,36 +452,37 @@ void handleIPC(struct clientArgs *client, std::string &inputStr,
       // Build json response, we need escape the quotes because the IPC response
       // is also between quotes, which break the JSON response
       //
-      nlohmann::json res_json;
+      cJSON *res_json = cJSON_CreateObject();
+      cJSON *cheats = cJSON_AddArrayToObject(res_json, "cheats");
+      cJSON *authors = cJSON_AddArrayToObject(res_json, "authors");
+      cJSON_AddStringToObject(res_json, "name", cheat->name.c_str());
 
-      // Set the name
-      res_json["name"] = cheat->name;
-
-      // Build the cheats array
       for (size_t i = 0; i < cheat->cheats.size(); ++i) {
-        nlohmann::json cheat_entry;
-        cheat_entry["name"] = cheat->cheats[i].name;
-        cheat_entry["id"] = static_cast<int>(i);
-        cheat_entry["enabled"] = cheat->cheats[i].enabled;
-        cheat_entry["description"] = cheat->cheats[i].description;
-        res_json["cheats"].push_back(cheat_entry);
+        cJSON *cheat_entry = cJSON_CreateObject();
+        cJSON_AddStringToObject(cheat_entry, "name", cheat->cheats[i].name.c_str());
+        cJSON_AddNumberToObject(cheat_entry, "id", static_cast<int>(i));
+        cJSON_AddBoolToObject(cheat_entry, "enabled", cheat->cheats[i].enabled);
+        cJSON_AddStringToObject(cheat_entry, "description",
+                                cheat->cheats[i].description.c_str());
+        cJSON_AddItemToArray(cheats, cheat_entry);
       }
 
-      // Build the authors array
       for (size_t i = 0; i < cheat->authors.size(); ++i) {
-        res_json["authors"].push_back(cheat->authors[i]);
+        cJSON_AddItemToArray(authors, cJSON_CreateString(cheat->authors[i].c_str()));
       }
 
-      std::string res = res_json.dump();
+      orion_cjson::Printed printed(res_json);
+      std::string res = printed.str();
+      cJSON_Delete(res_json);
       #if SHELL_DEBUG == 1
-      etaHEN_log("Response json => %s (%d bytes)", res.c_str(), res.size());
+      OrionHEN_log("Response json => %s (%d bytes)", res.c_str(), res.size());
       #endif
 
       //
       // Create a shared file contained the parsed cheat
       //
 
-      std::string shm_path = "/user/data/etaHEN/" + title_id + "_cheats";
+      std::string shm_path = "/user/data/OrionHEN/" + title_id + "_cheats";
       unlink(shm_path.c_str());
 
       int fd = open(shm_path.c_str(), O_WRONLY | O_CREAT | O_TRUNC, 0666);
@@ -508,18 +507,17 @@ void handleIPC(struct clientArgs *client, std::string &inputStr,
   }
 
   case BREW_UTIL_TOGGLE_CHEAT: {
-    std::string title_id = std::string(json_getPropertyValue(my_json, "tid"));
-    json_t const *cheat_id_property = json_getProperty(my_json, "cheat_id");
-    json_t const *target_pid_property = json_getProperty(my_json, "pid");
-    int pid = json_getInteger(target_pid_property);
-    int cheat_id = json_getInteger(cheat_id_property);
+    std::string title_id =
+        std::string(orion_cjson::string_item(my_json.get(), "tid", ""));
+    int pid = orion_cjson::int_item(my_json.get(), "pid");
+    int cheat_id = orion_cjson::int_item(my_json.get(), "cheat_id");
     std::string cheat_name;
 
-    etaHEN_log("Received toggle command for cheat %d on %s PID %d ID %d",
+    OrionHEN_log("Received toggle command for cheat %d on %s PID %d ID %d",
                cheat_id, title_id.c_str(), pid, cheat_id);
 
     if (CheatManager::ToggleCheat(pid, title_id, cheat_id, cheat_name)) {
-      etaHEN_log("Cheat successfully activated!");
+      OrionHEN_log("Cheat successfully activated!");
       reply(sender_app, false, cheat_name);
     } else {
       reply(sender_app, true);
@@ -528,33 +526,32 @@ void handleIPC(struct clientArgs *client, std::string &inputStr,
   }
   case BREW_UTIL_LAUNCH_ELFLDR:
     /* 9021 elfldr service removed from OrionHEN — not bundled. */
-    etaHEN_log("BREW_UTIL_LAUNCH_ELFLDR: unsupported (no 9021 service)");
+    OrionHEN_log("BREW_UTIL_LAUNCH_ELFLDR: unsupported (no 9021 service)");
     reply(sender_app, true);
     break;
   case BREW_UTIL_DOWNLOAD_CHEATS: {
-    json_t const *target_repo_property = json_getProperty(my_json, "repo");
-    int repo = json_getInteger(target_repo_property);
+    int repo = orion_cjson::int_item(my_json.get(), "repo");
 
     if(!check_for_new_commit(repo)){
-      etaHEN_log("Failed to check for new commit or is up to date");
+      OrionHEN_log("Failed to check for new commit or is up to date");
       reply(sender_app, false);
       break;
     }
     notify(true, "Downloading the latest %s Cheats repo....", repo ? "GoldHEN PS4" : "OrionHEN PS5");
-    if (!download_file(repo ? "https://api.github.com/repos/GoldHEN/GoldHEN_Cheat_Repository/zipball" : "https://api.github.com/repos/etaHEN/PS5_Cheats/zipball",
-                       "/data/etaHEN/cheats.zip")) {
-      etaHEN_log("Failed to download cheats");
+    if (!download_file(repo ? "https://api.github.com/repos/GoldHEN/GoldHEN_Cheat_Repository/zipball" : "https://api.github.com/repos/OrionHEN/PS5_Cheats/zipball",
+                       "/data/OrionHEN/cheats.zip")) {
+      OrionHEN_log("Failed to download cheats");
       reply(sender_app, true);
       break;
     }
-    etaHEN_log("Extracting Zip to the cheats folder");
-    if (!extract_zip("/data/etaHEN/cheats.zip", "/data/etaHEN/cheats")) {
-      etaHEN_log("Failed to extract zip");
+    OrionHEN_log("Extracting Zip to the cheats folder");
+    if (!extract_zip("/data/OrionHEN/cheats.zip", "/data/OrionHEN/cheats")) {
+      OrionHEN_log("Failed to extract zip");
       reply(sender_app, true);
       break;
     }
 
-    unlink("/data/etaHEN/cheats.zip");
+    unlink("/data/OrionHEN/cheats.zip");
     MakeInitialCheatCache(NULL);
     notify(true, "Successfully updated & refreshed the OrionHEN Cheats with the latest cheats repo");
     reply(sender_app, false);
@@ -563,9 +560,9 @@ void handleIPC(struct clientArgs *client, std::string &inputStr,
   case BREW_UTIL_DOWNLOAD_KSTUFF: {
       notify(true, "Attempting to Download kstuff ...");
       if (!download_file("https://github.com/EchoStretch/kstuff/releases/latest/download/kstuff.elf",
-          "/data/etaHEN/kstuff.elf")) {
-		  unlink("/data/etaHEN/kstuff.elf");
-          etaHEN_log("Failed to download kstuff");
+          "/data/OrionHEN/kstuff.elf")) {
+		  unlink("/data/OrionHEN/kstuff.elf");
+          OrionHEN_log("Failed to download kstuff");
           reply(sender_app, true);
           break;
       }
@@ -581,8 +578,8 @@ void handleIPC(struct clientArgs *client, std::string &inputStr,
     break;
   }
   case BREW_UTIL_TOGGLE_LEGACY_CMD_SERVER: {
-    bool turn_on = (bool)json_getInteger(json_getProperty(my_json, "toggle"));
-    etaHEN_log("Legacy Command Server toggle: %d", turn_on);
+    bool turn_on = orion_cjson::bool_item(my_json.get(), "toggle");
+    OrionHEN_log("Legacy Command Server toggle: %d", turn_on);
     if (turn_on) {
       notify(true, "Legacy Command Server Enabled");
       global_conf.legacy_cmd_server = true;
@@ -618,7 +615,7 @@ void handleIPC(struct clientArgs *client, std::string &inputStr,
 
 void *ipc_client(void *args) {
   struct clientArgs *client = (struct clientArgs *)args;
-  etaHEN_log("[Daemon IPC] Thread created for Socket %i", client->socket);
+  OrionHEN_log("[Daemon IPC] Thread created for Socket %i", client->socket);
 
   uint32_t readSize = 0;
   IPCMessage ipcMessage; // Create an IPCMessage struct to store received data
@@ -631,7 +628,7 @@ void *ipc_client(void *args) {
       std::string message = ipcMessage.msg; // Retrieve the std::string message
       handleIPC(client, message, ipcMessage.cmd);
     } else {
-      etaHEN_log("[Daemon IPC][client %i] Invalid magic number",
+      OrionHEN_log("[Daemon IPC][client %i] Invalid magic number",
                  client->cl_nmb);
       ipcMessage.error = -1;
       networkSendData(client->socket, reinterpret_cast<void *>(&ipcMessage),
@@ -639,7 +636,7 @@ void *ipc_client(void *args) {
     }
   }
 
-  etaHEN_log(
+  OrionHEN_log(
       "[Daemon IPC][client %i] IPC Connection disconnected, Shutting down ...",
       client->cl_nmb);
 
@@ -654,7 +651,7 @@ void *IPC_loop(void *args) {
   // Listen on port
   int serverSocket = networkListen(UTIL_IPC_SOC);
   if (serverSocket < 0) {
-    etaHEN_log("[Daemon IPC] networkListen error %s", strerror(errno));
+    OrionHEN_log("[Daemon IPC] networkListen error %s", strerror(errno));
     return nullptr;
   }
 
@@ -664,12 +661,12 @@ void *IPC_loop(void *args) {
     // Accept a client connection
     int clientSocket = networkAccept(serverSocket);
     if (clientSocket < 0) {
-      etaHEN_log("[Daemon IPC] networkAccept error %s", strerror(errno));
+      OrionHEN_log("[Daemon IPC] networkAccept error %s", strerror(errno));
       break; // Breaking out of the loop on error to cleanup
     }
 
-    etaHEN_log("[Daemon IPC] Connection Accepted");
-    etaHEN_log("[Daemon IPC] cl_nmb %i", cli_new);
+    OrionHEN_log("[Daemon IPC] Connection Accepted");
+    OrionHEN_log("[Daemon IPC] cl_nmb %i", cli_new);
 
     // Build data to send to thread
     auto clientParams = new clientArgs();
@@ -677,7 +674,7 @@ void *IPC_loop(void *args) {
     clientParams->socket = clientSocket;
     clientParams->cl_nmb = cli_new;
 
-    etaHEN_log("[Daemon IPC] clientParams->cl_nmb %i", clientParams->cl_nmb);
+    OrionHEN_log("[Daemon IPC] clientParams->cl_nmb %i", clientParams->cl_nmb);
     pthread_t ipc_thread;
     pthread_create(&ipc_thread, NULL, ipc_client, clientParams);
     pthread_detach(ipc_thread); // Detach the thread to allow it to run independently

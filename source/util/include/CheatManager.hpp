@@ -14,9 +14,8 @@
 #include <sys/mman.h>
 #include <fcntl.h>
 #include <unistd.h>
-#include <json.hpp>
-#include "../extern/tiny-json/tiny-json.hpp"
-#include "../extern/pugixml-1.15/pugixml.hpp"
+#include "../../extern/cJSON/orion_cjson.hpp"
+#include "../../extern/pugixml-1.15/pugixml.hpp"
 
 
 extern "C"
@@ -30,10 +29,10 @@ extern "C"
 #define MAP_ANONYNMOUS 0x1000
 #define NO_ASLR_ADDR_PS4 0x00400000
 
-#define CHEATS_DIRECTORY "/data/etaHEN/cheats"
-#define JSON_CHEATS_LIST "/data/etaHEN/cheats/json.txt"
-#define MC4_CHEATS_LIST "/data/etaHEN/cheats/mc4.txt"
-#define SHN_CHEATS_LIST "/data/etaHEN/cheats/shn.txt"
+#define CHEATS_DIRECTORY "/data/OrionHEN/cheats"
+#define JSON_CHEATS_LIST "/data/OrionHEN/cheats/json.txt"
+#define MC4_CHEATS_LIST "/data/OrionHEN/cheats/mc4.txt"
+#define SHN_CHEATS_LIST "/data/OrionHEN/cheats/shn.txt"
 
 #define CACHE_LIMIT 100
 
@@ -155,7 +154,7 @@ typedef struct {
 extern "C"
 {
 #include "freebsd-helper.h"
-    void etaHEN_log(const char *fmt, ...);
+    void OrionHEN_log(const char *fmt, ...);
     module_info_t* get_module_handle(int, const char*);    
     int sceSystemServiceGetAppIdOfRunningBigApp();
 }

@@ -1,4 +1,4 @@
-/* Copyright (C) 2025 etaHEN / LightningMods
+/* Copyright (C) 2025 OrionHEN / LightningMods
 
 This program is free software; you can redistribute it and/or modify it
 under the terms of the GNU General Public License as published by the
@@ -25,7 +25,7 @@ along with this program; see the file COPYING. If not, see
 #include <errno.h>
 #include <fcntl.h>
 #include <iostream>
-#include <json.hpp>
+#include "../../extern/cJSON/orion_cjson.hpp"
 #include <memory>
 #include <msg.hpp>
 #include <mutex>
@@ -144,22 +144,21 @@ public:
       return -1;
     }
 
-    nlohmann::json j;
-    // parse the json from the payload buffer
-    try {
-      j = nlohmann::json::parse(msg.msg);
-    } catch (
-        const std::exception &e) { // so if it can parse it doesnt crash shellui
-      shellui_log("Failed to parse json: %s", e.what());
+    orion_cjson::Root j(msg.msg);
+    if (!j) {
+      shellui_log("Failed to parse json: %s",
+                  cJSON_GetErrorPtr() ? cJSON_GetErrorPtr()
+                                      : "unknown error");
       return -1;
     }
 
-    if (!j.contains("var")) {
+    const char *var = orion_cjson::string_item(j.get(), "var");
+    if (!var) {
       shellui_log("Daemon message does not contain the return obj");
       return -1;
     }
 
-    ipc_msg = j["var"];
+    ipc_msg = var;
     shellui_log("Daemon IPC return obj: %s", ipc_msg.c_str());
 
     return msg.error;
@@ -191,7 +190,6 @@ public:
 
     int ret = -1;
     std::string json;
-    nlohmann::json j;
     
     #if SHELL_DEBUG==1 
     shellui_log("Sending command to daemon: 0x%X", cmd);
@@ -200,9 +198,12 @@ public:
     IPCMessage msg;
     msg.cmd = cmd;
     if (cmd == BREW_REMOUNT_FOLDER) {
-      j["mount_src"] = ipc_msg1;
-      j["mount_dest"] = ipc_msg2;
-      json = j.dump();
+      cJSON *j = cJSON_CreateObject();
+      cJSON_AddStringToObject(j, "mount_src", ipc_msg1.c_str());
+      cJSON_AddStringToObject(j, "mount_dest", ipc_msg2.c_str());
+      orion_cjson::Printed printed(j);
+      json = printed.str();
+      cJSON_Delete(j);
     }
     else if (ipc_msg2.empty()) {
       if (cmd == BREW_DAEMON_PID || cmd == BREW_UTIL_DAEMON_PID) {

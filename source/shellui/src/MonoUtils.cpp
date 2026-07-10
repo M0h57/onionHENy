@@ -1,4 +1,4 @@
-﻿/* Copyright (C) 2025 etaHEN / LightningMods
+﻿/* Copyright (C) 2025 OrionHEN / LightningMods
 
 This program is free software; you can redistribute it and/or modify it
 under the terms of the GNU General Public License as published by the
@@ -26,10 +26,9 @@ along with this program; see the file COPYING. If not, see
 #include <unistd.h>
 #include <vector>
 #include <dirent.h>
-#include <json.hpp>
 #include <map>
 #include "external_symbols.hpp"
-#include "../../extern/tiny-json/tiny-json.hpp"
+#include "../../extern/cJSON/orion_cjson.hpp"
 #include "proc.h"
 
 #include <fstream>
@@ -38,24 +37,23 @@ along with this program; see the file COPYING. If not, see
 #include <random>
 #include <sys/mount.h>
 #include <sstream>
-using json = nlohmann::json;
 
 #define PIN_CODE_SIZE 30
 #define ACCOUNT_ID_BASE64_SIZE 16
 
-etaHENSettings global_conf;
+OrionHENSettings global_conf;
 
 std::vector<GameEntry> games_list;
 std::vector<Plugins> plugins_list, auto_list;
 std::vector<Payloads_Apps> payloads_apps_list, custom_pkg_list;
-Payloads_Apps custom_pkg_path = { .path = "/data/etaHEN/pkgs" };
+Payloads_Apps custom_pkg_path = { .path = "/data/OrionHEN/pkgs" };
 
 std::string running_tid;
 bool is_game_open = true;
 bool is_current_game_open = true;
 int cheatEnabledMap[256];
 
-static const char *INI_PATH = "/user/data/etaHEN/config.ini";
+static const char *INI_PATH = "/user/data/OrionHEN/config.ini";
 
 
 // #include <user_service.h>
@@ -570,7 +568,7 @@ bool LoadSettings()
     const char *disable_toolbox_auto_start_for_rest_mode = ini_parser_get(&parser, "Settings.disable_toolbox_auto_start_for_rest_mode", "0");
     const char *dip_tid = ini_parser_get(&parser, "Settings.Display_tids", "0");
     const char *jb_debug_msg_str = ini_parser_get(&parser, "Settings.APP_JB_Debug_Msg", "0");
-    const char *game_opts_str = ini_parser_get(&parser, "Settings.etaHEN_Game_Options", "1");
+    const char *game_opts_str = ini_parser_get(&parser, "Settings.OrionHEN_Game_Options", "1");
     const char *auto_eject_disc_str = ini_parser_get(&parser, "Settings.auto_eject_disc", "0");
 	  const char* overlay_ram = ini_parser_get(&parser, "Settings.overlay_ram", "1");
 	  const char* overlay_cpu = ini_parser_get(&parser, "Settings.overlay_cpu", "1");
@@ -586,7 +584,7 @@ bool LoadSettings()
     global_conf.enable_fan_speed = enable_fan_speed ? atoi(enable_fan_speed) : 0;
     global_conf.fan_threshold = fan_threshold ? atoi(fan_threshold) : 77;
     global_conf.FTP = FTP_str ? atoi(FTP_str) : 0;
-    global_conf.etaHEN_game_opts = game_opts_str ? atoi(game_opts_str) : 0;
+    global_conf.OrionHEN_game_opts = game_opts_str ? atoi(game_opts_str) : 0;
     global_conf.display_tids = dip_tid ? atoi(dip_tid) : 0;
     global_conf.game_rest_kill = game_rest_kill ? atoi(game_rest_kill) : 0;
     global_conf.util_rest_kill = util_rest_kill ? atoi(util_rest_kill) : 0;
@@ -710,7 +708,7 @@ bool SaveSettings()
   buff += "disable_toolbox_auto_start_for_rest_mode=" + std::to_string(global_conf.disable_toolbox_auto_start_for_rest_mode) + "\n";
   buff += "Display_tids=" + std::to_string(global_conf.display_tids) + "\n";
   buff += "APP_JB_Debug_Msg=" + std::to_string(global_conf.debug_app_jb_msg) + "\n";
-  buff += "etaHEN_Game_Options=" + std::to_string(global_conf.etaHEN_game_opts) + "\n";
+  buff += "OrionHEN_Game_Options=" + std::to_string(global_conf.OrionHEN_game_opts) + "\n";
   buff += "auto_eject_disc=" + std::to_string(global_conf.auto_eject_disc) + "\n";
   buff += "overlay_ram=" + std::to_string(global_conf.overlay_ram) + "\n";
   buff += "overlay_cpu=" + std::to_string(global_conf.overlay_cpu) + "\n";
@@ -800,7 +798,7 @@ MonoObject *InvokeByDesc(MonoClass *p_Class, const char *p_MethodDesc, void *p_I
 bool is_valid_plugin(CustomPluginHeader &header)
 {
   // Check if the prefix matches
-  if (strncmp(header.prefix, "etaHEN_PLUGIN", 13) != 0)
+  if (strncmp(header.prefix, "OrionHEN_PLUGIN", 14) != 0)
   {
     shellui_log("Plugin header prefix does not match");
     return false;
@@ -1028,17 +1026,17 @@ void generate_plugin_xml(std::string &xml_buffer, bool plugins_xml)
   int toggle_switch_id = 1;
 
   std::vector<std::string> directories = {
-      "/user/data/etaHEN/plugins",
-      "/usb0/etaHEN/plugins",
-      "/usb1/etaHEN/plugins",
-      "/usb2/etaHEN/plugins",
-      "/usb3/etaHEN/plugins",
+      "/user/data/OrionHEN/plugins",
+      "/usb0/OrionHEN/plugins",
+      "/usb1/OrionHEN/plugins",
+      "/usb2/OrionHEN/plugins",
+      "/usb3/OrionHEN/plugins",
 
-      "/user/data/etaHEN/payloads",
-      "/usb0/etaHEN/payloads",
-      "/usb1/etaHEN/payloads",
-      "/usb2/etaHEN/payloads",
-      "/usb3/etaHEN/payloads"
+      "/user/data/OrionHEN/payloads",
+      "/usb0/OrionHEN/payloads",
+      "/usb1/OrionHEN/payloads",
+      "/usb2/OrionHEN/payloads",
+      "/usb3/OrionHEN/payloads"
     };
 
   xml_buffer = "<?xml version=\"1.0\" encoding=\"UTF-8\" ?>\n"
@@ -1328,7 +1326,7 @@ void generate_cheats_xml(std::string &new_xml, std::string& not_open_tid, bool r
                  </list>
                 <button id="id_dl_cheats" title="下载/更新金手指" second_title="从所选 GitHub 仓库下载最新金手指"/>)";
 
-  std::string reload_cheats = R"(<button id="id_reload_cheats" title="缓存并重新加载金手指列表" second_title="添加到 /data/etaHEN/cheats/扩展名 的新金手指将被缓存并重新加载列表"/>)";
+  std::string reload_cheats = R"(<button id="id_reload_cheats" title="缓存并重新加载金手指列表" second_title="添加到 /data/OrionHEN/cheats/扩展名 的新金手指将被缓存并重新加载列表"/>)";
   //
 
   new_xml =
@@ -1397,22 +1395,17 @@ void generate_cheats_xml(std::string &new_xml, std::string& not_open_tid, bool r
       // Close the file descriptor
       close(fd);
       unlink(cheat_info_json.c_str());
-      // Create a json object from the string data
       std::string json_string(json_data, st.st_size);
-      nlohmann::json res_json;
-
-      try 
-      {
-        res_json = nlohmann::json::parse(json_string); 
-      } 
-      catch (nlohmann::json::parse_error& e) 
+      orion_cjson::Root res_json(json_string);
+      if (!res_json)
       {
         shellui_log("Failed to parse json from cheat response!");
         free(json_data);
         goto close;
       }
 
-      std::string game_name = res_json.value("name", "");
+      std::string game_name =
+          orion_cjson::string_item(res_json.get(), "name", "");
       escapeXML(game_name);
 
       new_xml += R"(<label id="id_cheat_title" title="★ )" + game_name + R"( ★" style="center"/>)";
@@ -1421,13 +1414,20 @@ void generate_cheats_xml(std::string &new_xml, std::string& not_open_tid, bool r
       new_xml += R"(<label id="credits" style="center" title="金手指作者: )";
 
       std::unordered_map<std::string, bool> knownAuthors;
-      if (res_json.contains("authors")) 
+      bool first_author = true;
+      cJSON *authors = orion_cjson::item(res_json.get(), "authors");
+      if (cJSON_IsArray(authors))
       {
-          for (const auto& author : res_json["authors"]) 
+          cJSON *author = nullptr;
+          cJSON_ArrayForEach(author, authors)
           {
-              std::string author_name = author.get<std::string>();
+              const char *author_value = orion_cjson::string_value(author);
+              if (!author_value)
+                continue;
+
+              std::string author_name = author_value;
               
-              if (knownAuthors.find(author) != knownAuthors.end())
+              if (knownAuthors.find(author_name) != knownAuthors.end())
               {
                 //
                 // repeated
@@ -1436,27 +1436,32 @@ void generate_cheats_xml(std::string &new_xml, std::string& not_open_tid, bool r
               }
               knownAuthors[author_name] = true;
               escapeXML(author_name);
-              new_xml += author_name;
-              if (&author != &res_json["authors"].back()) 
+              if (!first_author)
               {
                   new_xml += ", ";
               }
+              new_xml += author_name;
+              first_author = false;
           }
       }
       new_xml += R"(" />)";
 
       // Build toggle switch XML entry
-      if (res_json.contains("cheats")) 
+      cJSON *cheats = orion_cjson::item(res_json.get(), "cheats");
+      if (cJSON_IsArray(cheats))
       {
-          for (const auto& cheat_entry : res_json["cheats"]) 
+          cJSON *cheat_entry = nullptr;
+          cJSON_ArrayForEach(cheat_entry, cheats)
           {
-              std::string cheat_name = cheat_entry.value("name", "");
-              std::string description = cheat_entry.value("description", "开/关");
+              std::string cheat_name =
+                  orion_cjson::string_item(cheat_entry, "name", "");
+              std::string description =
+                  orion_cjson::string_item(cheat_entry, "description", "开/关");
               escapeXML(cheat_name);
               escapeXML(description);
 
-              int cheat_id = cheat_entry.value("id", 0);
-              bool enabled = cheat_entry.value("enabled", false);
+              int cheat_id = orion_cjson::int_item(cheat_entry, "id");
+              bool enabled = orion_cjson::bool_item(cheat_entry, "enabled");
               std::string enabled_value = enabled ? "1" : "0";
               std::string toggle_switch;
               if(is_game_open && is_current_game_open)

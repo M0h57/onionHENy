@@ -1,4 +1,4 @@
-/* Copyright (C) 2025 etaHEN / LightningMods
+/* Copyright (C) 2025 OrionHEN / LightningMods
 
 This program is free software; you can redistribute it and/or modify it
 under the terms of the GNU General Public License as published by the
@@ -17,6 +17,7 @@ along with this program; see the file COPYING. If not, see
 #include <string>
 #include <pthread.h>
 #include "error_translator.hpp"
+#include "../../extern/cJSON/orion_cjson.hpp"
 extern "C" {
 #include "common_utils.h"
 #include <dirent.h>
@@ -102,7 +103,7 @@ typedef struct {
   bool is_copy_only;
 } SceAppInstallStatusInstalled;
 
-void etaHEN_log(const char *fmt, ...);
+void OrionHEN_log(const char *fmt, ...);
 extern "C" {
 int sceAppInstUtilInstallByPackage(MetaInfo *arg1,
                                    SceAppInstallPkgInfo *pkg_info,
@@ -122,9 +123,6 @@ atomic_bool is_running = false, is_running_v2 = false;
 // make a new thread for installl pkgs
 void *runDirectPKGInstaller(void *args) {
   UNUSED(args);
-  json_t const *my_json = NULL;
-  const uint32_t MAX_TOKENS = 256;
-  json_t pool[MAX_TOKENS];
   const char *url = NULL;
   char json_str[0x255]; // Adjust the size based on your actual JSON content
   bool first_run = true;
@@ -161,34 +159,34 @@ void *runDirectPKGInstaller(void *args) {
     char buffer[1024] = {0};
     long valread = read(new_socket, buffer, 1024);
     if (valread > 0) {
-      my_json = json_create(buffer, pool, MAX_TOKENS);
+      orion_cjson::Root my_json(buffer);
       if (!my_json) {
-        etaHEN_log("Error parsing JSON");
+        OrionHEN_log("Error parsing JSON");
         notify(true, "Error parsing JSON");
         continue;
       }
 
-      if ((url = json_getPropertyValue(my_json, "url")) == NULL) {
+      if ((url = orion_cjson::string_item(my_json.get(), "url")) == NULL) {
         notify(true, "DPI: URL not found in JSON");
         continue;
       }
 
-      etaHEN_log("DPI: URL Received: %s", url);
+      OrionHEN_log("DPI: URL Received: %s", url);
 
-      const char* content_name = json_getPropertyValue(my_json, "content_name");
-      if (content_name) etaHEN_log("DPI: content_name: %s", content_name);
+      const char* content_name = orion_cjson::string_item(my_json.get(), "content_name");
+      if (content_name) OrionHEN_log("DPI: content_name: %s", content_name);
 
-      const char* content_id = json_getPropertyValue(my_json, "content_id");
-      if (content_id) etaHEN_log("DPI: content_id: %s", content_id);
+      const char* content_id = orion_cjson::string_item(my_json.get(), "content_id");
+      if (content_id) OrionHEN_log("DPI: content_id: %s", content_id);
       
-      const char* playgo_scenario_id = json_getPropertyValue(my_json, "playgo_scenario_id");
-      if (playgo_scenario_id) etaHEN_log("DPI: playgo_scenario_id: %s", playgo_scenario_id);
+      const char* playgo_scenario_id = orion_cjson::string_item(my_json.get(), "playgo_scenario_id");
+      if (playgo_scenario_id) OrionHEN_log("DPI: playgo_scenario_id: %s", playgo_scenario_id);
       
-      const char* ex_uri = json_getPropertyValue(my_json, "ex_uri");
-      if (ex_uri) etaHEN_log("DPI: ex_uri: %s", ex_uri);
+      const char* ex_uri = orion_cjson::string_item(my_json.get(), "ex_uri");
+      if (ex_uri) OrionHEN_log("DPI: ex_uri: %s", ex_uri);
       
-      const char* icon_url = json_getPropertyValue(my_json, "icon_url");
-      if (icon_url) etaHEN_log("DPI: icon_url: %s", icon_url);
+      const char* icon_url = orion_cjson::string_item(my_json.get(), "icon_url");
+      if (icon_url) OrionHEN_log("DPI: icon_url: %s", icon_url);
 
       MetaInfo arg1 = {.uri = url,
                        .ex_uri = ex_uri ? ex_uri : "",
@@ -205,7 +203,7 @@ void *runDirectPKGInstaller(void *args) {
       }
 
       snprintf(json_str, sizeof(json_str), "{\"res\":\"%d\"}", num);
-      etaHEN_log("DPI: Sending response: %s", json_str);
+      OrionHEN_log("DPI: Sending response: %s", json_str);
       send(new_socket, json_str, strlen(json_str), MSG_NOSIGNAL);
       #if 0
       SceAppInstallStatusInstalled status;
@@ -217,7 +215,7 @@ void *runDirectPKGInstaller(void *args) {
                  100.0f; // Cast to float and multiply by 100 for percentage
         }
 
-        etaHEN_log("DPI: content_id %s, Status: %s | error: %d | progress %.2f%% (%llu/%llu)",
+        OrionHEN_log("DPI: content_id %s, Status: %s | error: %d | progress %.2f%% (%llu/%llu)",
                    pkg_info.content_id,status.status, status.error_info.error_code, prog,
                    status.downloaded_size, status.total_size);
       }
@@ -238,11 +236,11 @@ void *runDirectPKGInstaller(void *args) {
 
 void shutdownDirectPKGInstaller(bool is_v2) {
   if (!is_v2 && !is_running) {
-    etaHEN_log("DPI: DirectPKGInstaller is not running");
+    OrionHEN_log("DPI: DirectPKGInstaller is not running");
     return;
   }
   if (is_v2 && !is_running_v2) {
-    etaHEN_log("DPI: DirectPKGInstallerV2 is not running");
+    OrionHEN_log("DPI: DirectPKGInstallerV2 is not running");
     return;
   }
 
@@ -277,11 +275,11 @@ void shutdownDirectPKGInstaller(bool is_v2) {
 void *DPI_v2(void *args);
 bool startDirectPKGInstaller(bool is_v2) {
   if (!is_v2 && is_running) {
-    etaHEN_log("DPI: DirectPKGInstaller is already running");
+    OrionHEN_log("DPI: DirectPKGInstaller is already running");
     return true;
   }
   if (is_v2 && is_running_v2) {
-    etaHEN_log("DPI: DirectPKGInstallerV2 is already running");
+    OrionHEN_log("DPI: DirectPKGInstallerV2 is already running");
     return true;
   }
 
@@ -1176,28 +1174,28 @@ static enum MHD_Result dpiv2_on_request(void* cls, struct MHD_Connection* conn,
 
             if (content_name && strlen(content_name) > 0) {
                 arg1.content_name = content_name;
-                etaHEN_log("DPIv2: content_name: %s", content_name);
+                OrionHEN_log("DPIv2: content_name: %s", content_name);
             }
             if (content_id && strlen(content_id) > 0) {
                 arg1.content_id = content_id;
-                etaHEN_log("DPIv2: content_id: %s", content_id);
+                OrionHEN_log("DPIv2: content_id: %s", content_id);
             }
             if (playgo_scenario_id && strlen(playgo_scenario_id) > 0) {
                 arg1.playgo_scenario_id = playgo_scenario_id;
-                etaHEN_log("DPIv2: playgo_scenario_id: %s", playgo_scenario_id);
+                OrionHEN_log("DPIv2: playgo_scenario_id: %s", playgo_scenario_id);
             }
             if (ex_uri && strlen(ex_uri) > 0) {
                 arg1.ex_uri = ex_uri;
-                etaHEN_log("DPIv2: ex_uri: %s", ex_uri);
+                OrionHEN_log("DPIv2: ex_uri: %s", ex_uri);
             }
             if (icon_url && strlen(icon_url) > 0) {
                 arg1.icon_url = icon_url;
-                etaHEN_log("DPIv2: icon_url: %s", icon_url);
+                OrionHEN_log("DPIv2: icon_url: %s", icon_url);
             }
         };
 
         if (url_value && strlen(url_value) > 0) {
-            etaHEN_log("Received URL: %s", url_value);
+            OrionHEN_log("Received URL: %s", url_value);
             arg1.uri = url_value;
             applyMetaInfo();
 
@@ -1293,11 +1291,11 @@ static void dpiv2_on_completed(void* cls, struct MHD_Connection* connection,
     }
 
     if (req->orig_filename) {
-        etaHEN_log("freeing og %p", req->orig_filename);
+        OrionHEN_log("freeing og %p", req->orig_filename);
         free(req->orig_filename), req->orig_filename = NULL;
     }
 
-    etaHEN_log("freeing data");
+    OrionHEN_log("freeing data");
     post_data_t* data;
     while ((data = req->data)) {
         req->data = data->next;
@@ -1322,7 +1320,7 @@ int DPIv2_listen(int port) {
     int connfd;
 
     if (getifaddrs(&ifaddr) == -1) {
-        etaHEN_log("getifaddrs");
+        OrionHEN_log("getifaddrs");
         return -1;
     }
 
@@ -1348,7 +1346,7 @@ int DPIv2_listen(int port) {
             continue;
         }
 
-        etaHEN_log("Serving on http://%s:%d (%s)", ip, port, ifa->ifa_name);
+        OrionHEN_log("Serving on http://%s:%d (%s)", ip, port, ifa->ifa_name);
         ifaddr_wait = 0;
     }
 
@@ -1407,7 +1405,7 @@ int DPIv2_listen(int port) {
 
         if (MHD_add_connection(httpd, connfd, (struct sockaddr*)&client_addr,
             addr_len) != MHD_YES) {
-            etaHEN_log("error: MHD_add_connection");
+            OrionHEN_log("error: MHD_add_connection");
             break;
         }
     }

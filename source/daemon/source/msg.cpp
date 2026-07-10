@@ -1,4 +1,4 @@
-/* Copyright (C) 2025 etaHEN / LightningMods
+/* Copyright (C) 2025 OrionHEN / LightningMods
 
 This program is free software; you can redistribute it and/or modify it
 under the terms of the GNU General Public License as published by the
@@ -15,8 +15,7 @@ along with this program; see the file COPYING. If not, see
 <http://www.gnu.org/licenses/>.  */
 
 #include "ipc.hpp"
-#include "../../extern/cJSON/cJSON.hpp"
-#include "../../extern/tiny-json/tiny-json.hpp"
+#include "../../extern/cJSON/orion_cjson.hpp"
 #include "globalconf.hpp"
 #include <atomic>
 #include <msg.hpp>
@@ -94,7 +93,7 @@ extern atomic_bool shortcut_activated;
 int launchApp(const char *titleId);
 int ItemzLaunchByUri(const char *uri);
 
-void etaHEN_log(const char *fmt, ...);
+void OrionHEN_log(const char *fmt, ...);
 
 extern "C" int unmount(const char *path, int flags);
 bool copyRecursive(const char *source, const char *destination);
@@ -151,29 +150,29 @@ int change_permissions_recursive(const char* path) {
     int result = 0;
 
     if (!path || strlen(path) == 0) {
-        etaHEN_log( "Invalid path provided");
+        OrionHEN_log( "Invalid path provided");
         return -1;
     }
 
     if (lstat(path, &statbuf) != 0) {
-        etaHEN_log( "Failed to stat '%s': %s", path, strerror(errno));
+        OrionHEN_log( "Failed to stat '%s': %s", path, strerror(errno));
         return -1;
     }
 
     if (S_ISLNK(statbuf.st_mode)) {
-        etaHEN_log("Skipping symbolic link: %s", path);
+        OrionHEN_log("Skipping symbolic link: %s", path);
         return 0;
     }
 
     // Skip special files (devices, pipes, sockets, etc.)
     if (!S_ISREG(statbuf.st_mode) && !S_ISDIR(statbuf.st_mode)) {
-        etaHEN_log("Skipping special file: %s", path);
+        OrionHEN_log("Skipping special file: %s", path);
         return 0;
     }
 
     if (!S_ISDIR(statbuf.st_mode)) {
         if (chmod(path, 0777) != 0) {
-            etaHEN_log( "Failed to chmod '%s': %s", path, strerror(errno));
+            OrionHEN_log( "Failed to chmod '%s': %s", path, strerror(errno));
             return -1;
         }
         return 0;
@@ -181,7 +180,7 @@ int change_permissions_recursive(const char* path) {
 
     dir = opendir(path);
     if (!dir) {
-        etaHEN_log( "Failed to open directory '%s': %s", path, strerror(errno));
+        OrionHEN_log( "Failed to open directory '%s': %s", path, strerror(errno));
         return -1;
     }
 
@@ -194,7 +193,7 @@ int change_permissions_recursive(const char* path) {
         size_t name_len = strlen(entry->d_name);
 
         if (path_len + name_len + 2 > PATH_MAX) {
-            etaHEN_log( "Path too long: %s/%s", path, entry->d_name);
+            OrionHEN_log( "Path too long: %s/%s", path, entry->d_name);
             result = -1;
             continue;
         }
@@ -202,7 +201,7 @@ int change_permissions_recursive(const char* path) {
         char newpath[PATH_MAX];
         int ret = snprintf(newpath, sizeof(newpath), "%s/%s", path, entry->d_name);
         if (ret >= sizeof(newpath)) {
-            etaHEN_log( "Path truncated: %s/%s", path, entry->d_name);
+            OrionHEN_log( "Path truncated: %s/%s", path, entry->d_name);
             result = -1;
             continue;
         }
@@ -213,14 +212,14 @@ int change_permissions_recursive(const char* path) {
     }
 
     if (errno != 0) {
-        etaHEN_log( "Error reading directory '%s': %s", path, strerror(errno));
+        OrionHEN_log( "Error reading directory '%s': %s", path, strerror(errno));
         result = -1;
     }
 
     closedir(dir);
 
     if (chmod(path, 0777) != 0) {
-        etaHEN_log( "Failed to chmod directory '%s': %s", path, strerror(errno));
+        OrionHEN_log( "Failed to chmod directory '%s': %s", path, strerror(errno));
         return -1;
     }
 
@@ -238,19 +237,19 @@ ConfigState config_state;
 
 void LoadSettings() {
   struct stat file_stat;
-  const char* config_path = "/data/etaHEN/config.ini";
+  const char* config_path = "/data/OrionHEN/config.ini";
   
   // Check if file exists and get its modification time
   if (stat(config_path, &file_stat) != 0) {
     // File doesn't exist, create default config
-    etaHEN_log("[Daemon] Config file not found. Creating default...");
+    OrionHEN_log("[Daemon] Config file not found. Creating default...");
     std::string ini_file(
       "[Settings]\nFTP=1\nAllow_data_in_sandbox=0\nDPI=0\ntoolbox_auto_start=1\nDPI_v2=0\nKlog=0\nAPP_JB_Debug_Msg=0\nauto_eject_disc=0\n");
     int fd = open(config_path, O_WRONLY | O_CREAT | O_TRUNC, 0777);
     if (fd >= 0) {
       write(fd, ini_file.c_str(), ini_file.length());
       close(fd);
-      notify(true, "OrionHEN config created! @ /data/etaHEN/config.ini");
+      notify(true, "OrionHEN config created! @ /data/OrionHEN/config.ini");
       config_state.last_modified = 0;
     }
     return;
@@ -262,11 +261,11 @@ void LoadSettings() {
   }
   
   // File has changed, proceed with loading
-  etaHEN_log("[Daemon] Loading Settings...");
+  OrionHEN_log("[Daemon] Loading Settings...");
   
   IniParser parser;
   if (ini_parser_load(&parser, config_path)) {
-    etaHEN_log("[Daemon] Reading Settings...");
+    OrionHEN_log("[Daemon] Reading Settings...");
     
     const char * libhijacker_cheats_str =
       ini_parser_get(&parser, "Settings.libhijacker_cheats", "0");
@@ -282,8 +281,8 @@ void LoadSettings() {
     const char* overlay_fps =
       ini_parser_get(&parser, "Settings.overlay_fps", "0");
 
-    etaHEN_log("fan_threshold: %s", fan_threshold);
-    etaHEN_log("enable_fan_speed: %s", enable_fan_speed);
+    OrionHEN_log("fan_threshold: %s", fan_threshold);
+    OrionHEN_log("enable_fan_speed: %s", enable_fan_speed);
     
     global_conf.fan_threshold = fan_threshold ? atoi(fan_threshold) : 77;
     global_conf.enable_fan_speed = enable_fan_speed ? atoi(enable_fan_speed) : 0;
@@ -355,10 +354,10 @@ static pid_t find_pid(const char *name) {
 int networkListen(const char *soc_path) {
   struct sockaddr_un server;
   unlink(soc_path);
-  etaHEN_log("[Daemon] Deleted Socket...");
+  OrionHEN_log("[Daemon] Deleted Socket...");
   int s = socket(AF_UNIX, SOCK_STREAM, 0);
   if (s < 0) {
-    etaHEN_log("[Daemon] Socket failed! %s", strerror(errno));
+    OrionHEN_log("[Daemon] Socket failed! %s", strerror(errno));
     return INVAIL;
   }
 
@@ -368,15 +367,15 @@ int networkListen(const char *soc_path) {
 
   int r = bind(s, (struct sockaddr *)&server, SUN_LEN(&server));
   if (r < 0) {
-    etaHEN_log("[Daemon] Bind failed! %s", strerror(errno));
+    OrionHEN_log("[Daemon] Bind failed! %s", strerror(errno));
     return INVAIL;
   }
 
-  //etaHEN_log("Socket has name %s", server.sun_path);
+  //OrionHEN_log("Socket has name %s", server.sun_path);
 
   r = listen(s, 100);
   if (r < 0) {
-    etaHEN_log("[Daemon] listen failed! %s", strerror(errno));
+    OrionHEN_log("[Daemon] listen failed! %s", strerror(errno));
     return INVAIL;
   }
 
@@ -390,7 +389,7 @@ int networkAccept(int socket) {
 
 int networkReceiveData(int socket, void *buffer, int32_t size) {
   int nu = recv(socket, buffer, size, 0);
-  etaHEN_log("got %i bytes", nu);
+  OrionHEN_log("got %i bytes", nu);
   return nu;
 }
 
@@ -416,20 +415,20 @@ int networkCloseDebugConnection() {
 
 bool test_sb_file(const char *filename) {
   if (!filename) {
-    etaHEN_log("test_sb_file: filename is null");
+    OrionHEN_log("test_sb_file: filename is null");
     return false;
   }
 
   int fd = open(filename, O_RDONLY);
   if (fd < 0) {
-    etaHEN_log("test_sb_file: Failed to open %s", filename);
+    OrionHEN_log("test_sb_file: Failed to open %s", filename);
     return false;
   }
 
   // Determine the size of the file
   struct stat fileInfo;
   if (fstat(fd, &fileInfo) < 0) {
-    etaHEN_log("test_sb_file: Failed to get file size for %s", filename);
+    OrionHEN_log("test_sb_file: Failed to get file size for %s", filename);
     close(fd);
     return false;
   }
@@ -439,7 +438,7 @@ bool test_sb_file(const char *filename) {
 
   // Read start
   if (read(fd, buffer, READ_SIZE) < 0) {
-    etaHEN_log("test_sb_file: Failed to read start of %s", filename);
+    OrionHEN_log("test_sb_file: Failed to read start of %s", filename);
     close(fd);
     return false;
   }
@@ -449,7 +448,7 @@ bool test_sb_file(const char *filename) {
       fileSize / 2 > READ_SIZE ? fileSize / 2 - READ_SIZE / 2 : 0;
   if (lseek(fd, middlePosition, SEEK_SET) < 0 ||
       read(fd, buffer, READ_SIZE) < 0) {
-    etaHEN_log("test_sb_file: Failed to read middle of %s", filename);
+    OrionHEN_log("test_sb_file: Failed to read middle of %s", filename);
     close(fd);
     return false;
   }
@@ -457,13 +456,13 @@ bool test_sb_file(const char *filename) {
   // Read end
   off_t endPosition = fileSize > READ_SIZE ? fileSize - READ_SIZE : 0;
   if (lseek(fd, endPosition, SEEK_SET) < 0 || read(fd, buffer, READ_SIZE) < 0) {
-    etaHEN_log("test_sb_file: Failed to read end of %s", filename);
+    OrionHEN_log("test_sb_file: Failed to read end of %s", filename);
     close(fd);
     return false;
   }
 
   close(fd);
-  etaHEN_log("test_sb_file: Successfully sampled %s", filename);
+  OrionHEN_log("test_sb_file: Successfully sampled %s", filename);
   return true;
 }
 extern "C" int sceSystemServiceKillApp(uint32_t appid, int opt, int method,
@@ -484,7 +483,7 @@ void reply(int sender_socket, bool error, std::string out_var = "Nothing") {
   IPCMessage outputMessage;
   outputMessage.cmd = BREW_RETURN_VALUE;
   outputMessage.error = error ? -1 : 0;
-  etaHEN_log("error: %d", outputMessage.error);
+  OrionHEN_log("error: %d", outputMessage.error);
   bzero(outputMessage.msg, sizeof(outputMessage.msg));
   if (!inputStr.empty()) {
     strncpy(outputMessage.msg, inputStr.c_str(), sizeof(outputMessage.msg) - 1);
@@ -528,7 +527,7 @@ int get_game_pid() {
         if (appid == bappid) {
             app_pid = j; // APP PID NOT TO BE CONFUSED WITH APPID
             if (sceKernelGetProcessName(app_pid, &proc_name[0]) < 0) {
-                etaHEN_log("sceKernelGetProcessName failed for (%d)", app_pid);
+                OrionHEN_log("sceKernelGetProcessName failed for (%d)", app_pid);
                 continue;
             }
             // cheat_log("Found %s (%d)", proc_name, app_pid);
@@ -565,7 +564,7 @@ extern "C" {
 
 void ForceKillProc(int pid) {
   if (pid < 0) {
-    etaHEN_log("Invalid PID: %d", pid);
+    OrionHEN_log("Invalid PID: %d", pid);
     return;
   }
   
@@ -574,9 +573,9 @@ void ForceKillProc(int pid) {
 
   int ret = 0;
   if (sceKernelTerminateProcess(pid, &ret) != 0) {
-    etaHEN_log("Failed to terminate process with PID: %d, error: %d", pid, ret);
+    OrionHEN_log("Failed to terminate process with PID: %d, error: %d", pid, ret);
   } else {
-    etaHEN_log("Successfully terminated process with PID: %d", pid);
+    OrionHEN_log("Successfully terminated process with PID: %d", pid);
   }
 
   set_proc_authid(getpid(), authid); // Restore original authid
@@ -664,43 +663,43 @@ static constexpr GameBuilder BUILDER_TEMPLATE{
 };
 
 bool HookGame(UniquePtr<Hijacker>& hijacker, uint64_t alsr_b) {
-    etaHEN_log("Patching Game Now");
+    OrionHEN_log("Patching Game Now");
 
     GameBuilder builder = BUILDER_TEMPLATE;
     GameStuff stuff{ *hijacker };
 
     UniquePtr<SharedLib> lib = hijacker->getLib("libScePad.sprx");
     if (lib.get() == nullptr) {
-        etaHEN_log("libScePad.sprx not found!");
+        OrionHEN_log("libScePad.sprx not found!");
         return false;
     }
-    etaHEN_log("libScePad.sprx addr: 0x%llx", lib->imagebase());
+    OrionHEN_log("libScePad.sprx addr: 0x%llx", lib->imagebase());
     stuff.scePadReadState = hijacker->getFunctionAddress(lib.get(), nid::scePadReadState);
 
     //libSceGnmDriver
     UniquePtr<SharedLib> gnmlib = hijacker->getLib("libSceGnmDriverForNeoMode.sprx");
     if (gnmlib.get() == nullptr) {
-        etaHEN_log("libSceGnmDriverForNeoMode.sprx not found!");
+        OrionHEN_log("libSceGnmDriverForNeoMode.sprx not found!");
         gnmlib = hijacker->getLib("libSceGnmDriver.sprx");
         if (gnmlib.get() == nullptr) {
-            etaHEN_log("libSceGnmDriver.sprx not found!");
+            OrionHEN_log("libSceGnmDriver.sprx not found!");
 			return false;
 		}   
     }
-    etaHEN_log("libSceGnmDriver.sprx addr: 0x%llx", gnmlib->imagebase());
+    OrionHEN_log("libSceGnmDriver.sprx addr: 0x%llx", gnmlib->imagebase());
     stuff.anything = hijacker->getFunctionAddress(gnmlib.get(), nid::sceGnmSubmitAndFlipCommandBuffersForWorkload);
 
-    etaHEN_log("scePadReadState addr: 0x%llx", stuff.scePadReadState);
+    OrionHEN_log("scePadReadState addr: 0x%llx", stuff.scePadReadState);
     if (stuff.scePadReadState == 0) {
-        etaHEN_log("failed to locate scePadReadState");
+        OrionHEN_log("failed to locate scePadReadState");
         return false;
     }
 
     stuff.ASLR_Base = alsr_b;
-    strcpy(stuff.prx_path, "/data/etaHEN/fps.prx");
+    strcpy(stuff.prx_path, "/data/OrionHEN/fps.prx");
 
     auto code = hijacker->getTextAllocator().allocate(GameBuilder::SHELLCODE_SIZE);
-    etaHEN_log("shellcode addr: 0x%llx", code);
+    OrionHEN_log("shellcode addr: 0x%llx", code);
     auto stuffAddr = hijacker->getDataAllocator().allocate(sizeof(GameStuff));
     // static constexpr Nid printfNid{"hcuQgD53UxM"};
     // static constexpr Nid amd64_set_fsbaseNid{"3SVaehJvYFk"};
@@ -717,7 +716,7 @@ bool HookGame(UniquePtr<Hijacker>& hijacker, uint64_t alsr_b) {
 
             // write the hook
             hijacker->write<uintptr_t>(hook_adr, code);
-            etaHEN_log("hook addr: 0x%llx", hook_adr);
+            OrionHEN_log("hook addr: 0x%llx", hook_adr);
             hijacker.release();
 
             return true;
@@ -747,7 +746,7 @@ bool set_fan_threshold(int THRESHOLDTEMP) {
         return false;
     }
     close(fd);
-    //etaHEN_log("Fan speed set to %d%% THRESHOLDTEMP", THRESHOLDTEMP);
+    //OrionHEN_log("Fan speed set to %d%% THRESHOLDTEMP", THRESHOLDTEMP);
     return true;
 }
 
@@ -756,11 +755,11 @@ bool set_fan_threshold(int THRESHOLDTEMP) {
 bool cmd_enable_fps_new(int appid) {
  
     if(done_appid == appid){
-       // etaHEN_log("FPS already enabled for %x", appid);
+       // OrionHEN_log("FPS already enabled for %x", appid);
         return true;
   	}
     
-    etaHEN_log("Enabling fps for appid %d", appid);
+    OrionHEN_log("Enabling fps for appid %d", appid);
 
     sleep(5);
 
@@ -790,7 +789,7 @@ bool cmd_enable_fps_new(int appid) {
 bool cmd_enable_fps(int appid) {
    
     if(done_appid == appid){
-       // etaHEN_log("FPS already enabled for %x", appid);
+       // OrionHEN_log("FPS already enabled for %x", appid);
         return true;
 	   }
 
@@ -803,7 +802,7 @@ bool cmd_enable_fps(int appid) {
 
         if (appid == bappid) {
             pid = j;
-            etaHEN_log("Game is running, appid 0x%X, pid %i", appid, pid);
+            OrionHEN_log("Game is running, appid 0x%X, pid %i", appid, pid);
             //printf_notification("Game is running, appid 0x%X, pid %i", appid, pid);
             break;
         }
@@ -819,19 +818,19 @@ bool cmd_enable_fps(int appid) {
     }
     else
     {
-        etaHEN_log("Failed to get hijacker for (%d)", pid);
+        OrionHEN_log("Failed to get hijacker for (%d)", pid);
        // printf_notification("Failed to get hijacker for (%d), try re-running the plugin", pid);
         return false;
     }
     if (text_base == 0 || text_size == 0)
     {
-        etaHEN_log("text_base == 0 || text_size == 0");
+        OrionHEN_log("text_base == 0 || text_size == 0");
         //printf_notification("text_base == 0 || text_size == 0 (%d), try re-running the plugin", pid);
         return false;
     }
 
     while (!HookGame(executable, text_base)) {
-        //etaHEN_log("Failed to patch the game");
+        //OrionHEN_log("Failed to patch the game");
         sleep(1);
     }
 
@@ -855,7 +854,7 @@ bool cmd_enable_toolbox(){
      * mprotect readiness.
      */
     if (find_pid("kstuff.elf") > 0 || find_pid("kstuff") > 0) {
-      etaHEN_log("kstuff present — waiting for mprotect before toolbox inject");
+      OrionHEN_log("kstuff present — waiting for mprotect before toolbox inject");
       for (int i = 0; i < 20; i++) {
         if (sceKernelMprotect(&buz[0], 100, 0x7) == 0)
           break;
@@ -864,10 +863,10 @@ bool cmd_enable_toolbox(){
       sleep(2);
     }
 
-    etaHEN_log("Activating toolbox...");
+    OrionHEN_log("Activating toolbox...");
     if (if_exists("/system_tmp/util_first_boot")) {
       LoadSettings();
-      etaHEN_log("sleeping for %llu", global_conf.seconds);
+      OrionHEN_log("sleeping for %llu", global_conf.seconds);
       sleep(global_conf.seconds);
     }
 
@@ -879,7 +878,7 @@ bool cmd_enable_toolbox(){
       notify(true, "Failed to get shellui pid");
       return false;
     }
-    etaHEN_log("Injecting toolbox into SceShellUI pid=%d", pid);
+    OrionHEN_log("Injecting toolbox into SceShellUI pid=%d", pid);
 
     if (!Inject_Toolbox(pid, shellui_elf_start)) {
       /* Do NOT ForceKill ShellUI — that loops home menu / coredumps */
@@ -888,7 +887,7 @@ bool cmd_enable_toolbox(){
     }
 
     while (!if_exists("/system_tmp/toolbox_online")) {
-      etaHEN_log("waiting for toolbox to start");
+      OrionHEN_log("waiting for toolbox to start");
       sleep(1);
       if (++wait >= 45) {
         /* Keep ShellUI alive; user can retry from Debug Settings */
@@ -897,15 +896,13 @@ bool cmd_enable_toolbox(){
       }
     }
     unlink("/system_tmp/toolbox_online");
-    etaHEN_log("Toolbox online");
+    OrionHEN_log("Toolbox online");
 
     return true;
 }
 void handleIPC(struct clientArgs *client, std::string &inputStr,
                DaemonCommands command) {
 
-  constexpr uint32_t MAX_TOKENS = 256;
-  json_t pool[MAX_TOKENS]{};
   int sender_app = client->socket;
 
   struct stat buffer;
@@ -916,14 +913,11 @@ void handleIPC(struct clientArgs *client, std::string &inputStr,
 
   std::string out_var = "Nothing"; // default send var
 
-  etaHEN_log("Received IPC command 0x%X", command);
+  OrionHEN_log("Received IPC command 0x%X", command);
 
-  json_t const *my_json =
-      inputStr.empty()
-          ? NULL
-          : json_create((char *)inputStr.c_str(), pool, MAX_TOKENS);
+  orion_cjson::Root my_json(inputStr);
   if (!my_json) {
-    etaHEN_log("Error parsing JSON");
+    OrionHEN_log("Error parsing JSON");
     notify(true, "Error parsing JSON");
     reply(sender_app, true);
     return;
@@ -950,10 +944,10 @@ void handleIPC(struct clientArgs *client, std::string &inputStr,
     // Generic decrypt IPC (no Itemzflow DUMP00000 hand-off)
     reply(sender_app, false);
     std::string dest_path =
-        std::string(json_getPropertyValue(my_json, "dest_path"));
+        std::string(orion_cjson::string_item(my_json.get(), "dest_path", ""));
     std::string sandbox_dir =
-        std::string(json_getPropertyValue(my_json, "src_path"));
-    etaHEN_log("Decrypt to %s", dest_path.c_str());
+        std::string(orion_cjson::string_item(my_json.get(), "src_path", ""));
+    OrionHEN_log("Decrypt to %s", dest_path.c_str());
     mkdir(dest_path.c_str(), 0777);
     notify(false, "Attempting to decrypt %s -> %s", sandbox_dir.c_str(),
            dest_path.c_str());
@@ -965,10 +959,10 @@ void handleIPC(struct clientArgs *client, std::string &inputStr,
     break;
   }
   case BREW_REMOUNT_FOLDER:
-    path_buf = std::string(json_getPropertyValue(my_json, "mount_dest"));
-    path_buf2 = std::string(json_getPropertyValue(my_json, "mount_src"));
+    path_buf = std::string(orion_cjson::string_item(my_json.get(), "mount_dest", ""));
+    path_buf2 = std::string(orion_cjson::string_item(my_json.get(), "mount_src", ""));
     json_path = path_buf + "/sce_sys/param.json";
-    etaHEN_log("change dir selected, %s", path_buf2.c_str());
+    OrionHEN_log("change dir selected, %s", path_buf2.c_str());
 
     if(path_buf.rfind("/user") == std::string::npos && path_buf.length() <= strlen("/system_ex/app/")) {
       notify(true, "Invalid path of size %d", path_buf.length());
@@ -979,13 +973,13 @@ void handleIPC(struct clientArgs *client, std::string &inputStr,
     mkdir(path_buf.c_str(), 0777);
 
     if (if_exists(json_path.c_str())) {
-      etaHEN_log("param.json exists, trying to unmount");
+      OrionHEN_log("param.json exists, trying to unmount");
       int retries = 0;
       do {
         if (retries == 0)
-          etaHEN_log("unmounting .....");
+          OrionHEN_log("unmounting .....");
         else
-          etaHEN_log("retrying attempt unmounting %d | prev. error %s", retries, strerror(errno));
+          OrionHEN_log("retrying attempt unmounting %d | prev. error %s", retries, strerror(errno));
 
         if (retries >= 20) {
           notify(true, "Failed to unmount | error %s",
@@ -1002,13 +996,13 @@ void handleIPC(struct clientArgs *client, std::string &inputStr,
       if (errno == EBADF || errno == EPERM ||
           errno == EIO) { // if anyone repots a game not mounting til the 2nd
                           // time look at this
-        etaHEN_log("trying to unmount");
+        OrionHEN_log("trying to unmount");
         unmount(path_buf.c_str(), MNT_FORCE);
       }
       if (!remount(path_buf2.c_str(), path_buf.c_str(), MNT_UPDATE)) {
         notify(true, "remount error: %s\nPath: %s", strerror(errno),
                path_buf2.c_str());
-        etaHEN_log("remount error: %s Path: %s", strerror(errno),
+        OrionHEN_log("remount error: %s Path: %s", strerror(errno),
                    path_buf2.c_str());
         reply(sender_app, true);
         break;
@@ -1018,49 +1012,49 @@ void handleIPC(struct clientArgs *client, std::string &inputStr,
     reply(sender_app, false);
     break;
   case BREW_STAT_CMD: {
-    path = json_getPropertyValue(my_json, "path");
+    path = orion_cjson::string_item(my_json.get(), "path");
     if (stat(path, &buffer) == 0) {
       snprintf(size_buf, sizeof(size_buf), "%ld", buffer.st_size);
-      etaHEN_log("%s exists | size %s", path, size_buf);
+      OrionHEN_log("%s exists | size %s", path, size_buf);
       reply(sender_app, false, size_buf);
     } else {
-      etaHEN_log("error for %s | %s", path, strerror(errno));
+      OrionHEN_log("error for %s | %s", path, strerror(errno));
       reply(sender_app, true);
     }
     break;
   }
   case BREW_CALC_DIR_SIZE: {
-    uint64_t size = calculateTotalSize(json_getPropertyValue(my_json, "path"));
+    uint64_t size = calculateTotalSize(orion_cjson::string_item(my_json.get(), "path"));
     snprintf(size_buf, sizeof(size_buf), "%lu", size);
-    etaHEN_log("size %lu", size_buf);
+    OrionHEN_log("size %lu", size_buf);
     reply(sender_app, false, size_buf);
     break;
   }
   case BREW_COPY_FILE: {
-    path = json_getPropertyValue(my_json, "path");
-    dest = json_getPropertyValue(my_json, "dest");
+    path = orion_cjson::string_item(my_json.get(), "path");
+    dest = orion_cjson::string_item(my_json.get(), "dest");
     if (copyFile(path, dest, false)) {
       reply(sender_app, false);
     } else {
-      etaHEN_log("error for %s | %s", path, strerror(errno));
+      OrionHEN_log("error for %s | %s", path, strerror(errno));
       reply(sender_app, true);
     }
     break;
   }
   case BREW_COPY_DIR: {
-    path = json_getPropertyValue(my_json, "path");
-    dest = json_getPropertyValue(my_json, "dest");
+    path = orion_cjson::string_item(my_json.get(), "path");
+    dest = orion_cjson::string_item(my_json.get(), "dest");
     snprintf(size_buf, sizeof(size_buf), "%lu", calculateTotalSize(path));
     if (copyRecursive(path, dest)) {
       reply(sender_app, false, size_buf);
     } else {
-      etaHEN_log("error for %s | %s", path, strerror(errno));
+      OrionHEN_log("error for %s | %s", path, strerror(errno));
       reply(sender_app, true);
     }
     break;
   }
   case BREW_DELETE_DIR: {
-    path = json_getPropertyValue(my_json, "path");
+    path = orion_cjson::string_item(my_json.get(), "path");
     if (rmtree(path)) {
       reply(sender_app, false);
     } else {
@@ -1069,7 +1063,7 @@ void handleIPC(struct clientArgs *client, std::string &inputStr,
     break;
   }
   case BREW_TEST_SB_FILE: {
-    reply(sender_app, !test_sb_file(json_getPropertyValue(my_json, "path")));
+    reply(sender_app, !test_sb_file(orion_cjson::string_item(my_json.get(), "path")));
     break;
   }
   case BREW_DAEMON_PID: {
@@ -1084,9 +1078,9 @@ void handleIPC(struct clientArgs *client, std::string &inputStr,
     break;
   }
   case BREW_ADJUST_FAN_SPEED: {
-    int speed = json_getInteger(json_getProperty(my_json, "speed"));
-    int enabled = json_getInteger(json_getProperty(my_json, "enabled"));
-    etaHEN_log("Adjusting Fan Speed to: %d", speed);
+    int speed = orion_cjson::int_item(my_json.get(), "speed");
+    int enabled = orion_cjson::int_item(my_json.get(), "enabled");
+    OrionHEN_log("Adjusting Fan Speed to: %d", speed);
     if (speed < 0 || speed > 100) {
       notify(true, "Invalid fan speed: %d. Must be between 0 and 100.", speed);
       reply(sender_app, true);
@@ -1120,9 +1114,9 @@ void handleIPC(struct clientArgs *client, std::string &inputStr,
     break;
   }
   case BREW_FORCE_KILL_PID: {
-    int pid = json_getInteger(json_getProperty(my_json, "pid"));
+    int pid = orion_cjson::int_item(my_json.get(), "pid");
     if (pid < 0) {
-      etaHEN_log("Invalid PID: %d", pid);
+      OrionHEN_log("Invalid PID: %d", pid);
       reply(sender_app, true);
       break;
     }
@@ -1138,10 +1132,10 @@ void handleIPC(struct clientArgs *client, std::string &inputStr,
     break;
   }
   case BREW_CHMOD_DIR: {
-	etaHEN_log("BREW_CHMOD_DIR called");
-    path = json_getPropertyValue(my_json, "path");
+	OrionHEN_log("BREW_CHMOD_DIR called");
+    path = orion_cjson::string_item(my_json.get(), "path");
     if(!path) {
-      etaHEN_log("Invalid path for chmod");
+      OrionHEN_log("Invalid path for chmod");
       reply(sender_app, true);
       break;
 	}
@@ -1159,7 +1153,7 @@ void handleIPC(struct clientArgs *client, std::string &inputStr,
 
 void *ipc_client(void *args) {
   struct clientArgs *client = (struct clientArgs *)args;
-  etaHEN_log("[Daemon IPC] Thread created for Socket %i", client->socket);
+  OrionHEN_log("[Daemon IPC] Thread created for Socket %i", client->socket);
 
   uint32_t readSize = 0;
   IPCMessage ipcMessage; // Create an IPCMessage struct to store received data
@@ -1172,7 +1166,7 @@ void *ipc_client(void *args) {
       std::string message = ipcMessage.msg; // Retrieve the string message
       handleIPC(client, message, ipcMessage.cmd);
     } else {
-      etaHEN_log("[Daemon IPC][client %i] Invalid magic number",
+      OrionHEN_log("[Daemon IPC][client %i] Invalid magic number",
                  client->cl_nmb);
       ipcMessage.error = -1;
       networkSendData(client->socket, reinterpret_cast<void *>(&ipcMessage),
@@ -1180,7 +1174,7 @@ void *ipc_client(void *args) {
     }
   }
 
-  etaHEN_log(
+  OrionHEN_log(
       "[Daemon IPC][client %i] IPC Connection disconnected, Shutting down ...",
       client->cl_nmb);
 
@@ -1195,7 +1189,7 @@ void *IPC_loop(void *args) {
   // Listen on port
   int serverSocket = networkListen(CRIT_IPC_SOC);
   if (serverSocket < 0) {
-    etaHEN_log("[Daemon IPC] networkListen error %s", strerror(errno));
+    OrionHEN_log("[Daemon IPC] networkListen error %s", strerror(errno));
     return nullptr;
   }
 
@@ -1205,12 +1199,12 @@ void *IPC_loop(void *args) {
     // Accept a client connection
     int clientSocket = networkAccept(serverSocket);
     if (clientSocket < 0) {
-      etaHEN_log("[Daemon IPC] networkAccept error %s", strerror(errno));
+      OrionHEN_log("[Daemon IPC] networkAccept error %s", strerror(errno));
       break; // Breaking out of the loop on error to cleanup
     }
 
-    etaHEN_log("[Daemon IPC] Connection Accepted");
-    etaHEN_log("[Daemon IPC] cl_nmb %i", cli_new);
+    OrionHEN_log("[Daemon IPC] Connection Accepted");
+    OrionHEN_log("[Daemon IPC] cl_nmb %i", cli_new);
 
     // Build data to send to thread
     auto clientParams = new clientArgs();
@@ -1218,7 +1212,7 @@ void *IPC_loop(void *args) {
     clientParams->socket = clientSocket;
     clientParams->cl_nmb = cli_new;
 
-    etaHEN_log("[Daemon IPC] clientParams->cl_nmb %i", clientParams->cl_nmb);
+    OrionHEN_log("[Daemon IPC] clientParams->cl_nmb %i", clientParams->cl_nmb);
     pthread_t ipc_thread;
     pthread_create(&ipc_thread, NULL, ipc_client, clientParams);
     cli_new++;
