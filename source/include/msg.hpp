@@ -13,9 +13,10 @@
 
 
 enum class IPC_Ret : int {
-  INVALID = -1,
   NO_ERROR = 0,
-  OPERATION_FAILED = -1,
+  INVALID = -1,
+  // Distinct from INVALID so callers can tell "wrong daemon" from "op failed".
+  OPERATION_FAILED = -2,
   DEFAULT_RET = -1337
 };
 

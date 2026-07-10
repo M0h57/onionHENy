@@ -58,3 +58,9 @@ source/bootstrapper/Byepervisor/hen/build/
 source/daemon/source/assets
 source/util/source/assets
 source/bootstrapper/source/assets
+
+# First-party static libs (built into source/lib/)
+source/lib/liborion_ipc.a
+source/lib/liborion_settings.a
+source/lib/liborion_detour.a
+source/lib/liborion_proc.a
