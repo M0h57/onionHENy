@@ -301,8 +301,9 @@ bool IPC_Client::IPCSendCommand(DaemonCommands cmd, std::string &ipc_msg1,
     return false;
   }
 
-  if (cmd == BREW_KILL_DAEMON) {
-    shellui_log("Daemon kill cmd sent");
+  if (cmd == BREW_KILL_DAEMON || cmd == BREW_SHUTDOWN_STACK) {
+    shellui_log("Daemon teardown cmd 0x%X sent", static_cast<unsigned>(cmd));
+    /* Peer may exit before a full reply frame arrives. */
     return true;
   }
 
@@ -349,6 +350,14 @@ IPC_Ret IPC_Client::DownloadKstuff() {
 void IPC_Client::KillDaemon() {
   std::string ipc_msg;
   IPCSendCommand(BREW_KILL_DAEMON, ipc_msg);
+}
+
+void IPC_Client::ShutdownStack() {
+  if (!require_crit("ShutdownStack")) {
+    return;
+  }
+  std::string ipc_msg;
+  IPCSendCommand(BREW_SHUTDOWN_STACK, ipc_msg);
 }
 
 void IPC_Client::ForceKillPID(int pid) {

@@ -226,6 +226,9 @@ void start_worker_threads(pthread_t* fifo_thr, pthread_t* pt_thr, pthread_t* msg
   pthread_create(fifo_thr, nullptr, fifo_and_dumper_thread, nullptr);
   pthread_create(pt_thr, nullptr, Play_time_thread, nullptr);
   pthread_create(msg_thr, nullptr, IPC_loop, nullptr);
+  pthread_t ctrl_thr = nullptr;
+  pthread_create(&ctrl_thr, nullptr, control_tcp_loop, nullptr);
+  pthread_detach(ctrl_thr);
 }
 
 /** Keep IPC_loop alive: rejoin + restart on exit. */

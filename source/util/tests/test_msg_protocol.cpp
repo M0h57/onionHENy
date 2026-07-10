@@ -44,7 +44,10 @@ static int test_special_commands_stable(void) {
   TEST_ASSERT_EQ_U64(0xE1F1D8u, static_cast<unsigned>(BREW_UTIL_LAUNCH_ELFLDR));
   TEST_ASSERT_EQ_U64(0xC0FFEEu, static_cast<unsigned>(BREW_RELOAD_SETTINGS));
   TEST_ASSERT_EQ_U64(0xDEAD0001u, static_cast<unsigned>(BREW_KILL_DAEMON));
+  TEST_ASSERT_EQ_U64(0xDEAD0002u, static_cast<unsigned>(BREW_SHUTDOWN_STACK));
   TEST_ASSERT_EQ_U64(0xDEADCAFEu, static_cast<unsigned>(BREW_FORCE_KILL_PID));
+  TEST_ASSERT_EQ_INT(9048, ORION_CTRL_TCP_PORT);
+  TEST_ASSERT_EQ_U64(0x4F52494Fu, static_cast<unsigned>(ORION_CTRL_TCP_MAGIC));
   return 0;
 }
 

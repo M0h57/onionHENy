@@ -68,8 +68,17 @@ enum DaemonCommands : unsigned int {
 
   //KILL MAIN DAEMOM
   BREW_KILL_DAEMON = 0xDEAD0001u,
+  /** Crit: kill util.elf → SceShellUI → exit daemon (PC TCP :9048 also). */
+  BREW_SHUTDOWN_STACK = 0xDEAD0002u,
   BREW_FORCE_KILL_PID = 0xDEADCAFEu,
 };
+
+/** TCP control port on crit daemon (LAN). Same wire as scripts/shutdown_orion.py. */
+#define ORION_CTRL_TCP_PORT 9048
+/** LE magic 'ORIO' for TCP control frames. */
+#define ORION_CTRL_TCP_MAGIC 0x4F52494Fu
+/** TCP cmd: full stack shutdown (util + ShellUI + daemon). */
+#define ORION_CTRL_TCP_CMD_SHUTDOWN 1u
 
 struct IPCMessage {
   int magic = 0xDEADBABE;

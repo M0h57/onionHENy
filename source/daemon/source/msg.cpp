@@ -6,6 +6,13 @@
 #include <msg.hpp>
 #include <string>
 
+#include <arpa/inet.h>
+#include <netinet/in.h>
+#include <sys/socket.h>
+#include <unistd.h>
+#include <cstring>
+#include <errno.h>
+
 bool is_handler_enabled = true;
 
 static void handleIPC_adapt(orion::IpcClientArgs *client, std::string &msg,
@@ -29,4 +36,71 @@ void *IPC_loop(void *args) {
   (void)args;
   orion::ipc_server_set_log(ipc_server_log_line);
   return orion::ipc_server_loop(&g_crit_ipc_opts);
+}
+
+/**
+ * PC control: TCP :9048
+ * Frame (little-endian):
+ *   u32 magic = ORION_CTRL_TCP_MAGIC (0x4F52494F 'ORIO')
+ *   u32 cmd   = ORION_CTRL_TCP_CMD_SHUTDOWN (1)
+ * Reply: 1 byte 0 = accepted, then daemon shuts the stack down.
+ */
+void *control_tcp_loop(void *args) {
+  (void)args;
+  int s = socket(AF_INET, SOCK_STREAM, 0);
+  if (s < 0) {
+    OrionHEN_log("control_tcp: socket failed: %s", strerror(errno));
+    return nullptr;
+  }
+  int yes = 1;
+  (void)setsockopt(s, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(yes));
+
+  sockaddr_in addr{};
+  addr.sin_family = AF_INET;
+  addr.sin_addr.s_addr = htonl(INADDR_ANY);
+  addr.sin_port = htons(ORION_CTRL_TCP_PORT);
+  if (bind(s, reinterpret_cast<sockaddr *>(&addr), sizeof(addr)) < 0) {
+    OrionHEN_log("control_tcp: bind :%d failed: %s", ORION_CTRL_TCP_PORT,
+                 strerror(errno));
+    close(s);
+    return nullptr;
+  }
+  if (listen(s, 2) < 0) {
+    OrionHEN_log("control_tcp: listen failed: %s", strerror(errno));
+    close(s);
+    return nullptr;
+  }
+  OrionHEN_log("control_tcp: listening on 0.0.0.0:%d (PC shutdown)",
+               ORION_CTRL_TCP_PORT);
+
+  while (is_handler_enabled) {
+    int client = accept(s, nullptr, nullptr);
+    if (client < 0) {
+      if (!is_handler_enabled)
+        break;
+      continue;
+    }
+
+    uint32_t frame[2] = {0, 0};
+    ssize_t n = recv(client, frame, sizeof(frame), MSG_WAITALL);
+    if (n == static_cast<ssize_t>(sizeof(frame)) &&
+        frame[0] == ORION_CTRL_TCP_MAGIC &&
+        frame[1] == ORION_CTRL_TCP_CMD_SHUTDOWN) {
+      const uint8_t ok = 0;
+      (void)send(client, &ok, 1, MSG_NOSIGNAL);
+      close(client);
+      close(s);
+      OrionHEN_log("control_tcp: SHUTDOWN from LAN client");
+      usleep(100 * 1000);
+      cmd_shutdown_orion_stack();
+      /* noreturn */
+    }
+
+    const uint8_t err = 1;
+    (void)send(client, &err, 1, MSG_NOSIGNAL);
+    close(client);
+  }
+
+  close(s);
+  return nullptr;
 }

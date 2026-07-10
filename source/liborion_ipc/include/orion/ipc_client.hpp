@@ -77,6 +77,8 @@ public:
   IPC_Ret ToggleSetting(DaemonCommands cmd, bool turn_on);
   IPC_Ret DownloadKstuff();
   void KillDaemon();
+  /** Crit Unix IPC: util → ShellUI → daemon exit (see BREW_SHUTDOWN_STACK). */
+  void ShutdownStack();
   void ForceKillPID(int pid);
   IPC_Ret CopyFile(std::string src, std::string dest);
   IPC_Ret LaunchPayload(std::string payload_path, std::string tid);

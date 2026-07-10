@@ -267,7 +267,8 @@ OverlayLayout         仅 shellui：由 overlay_pos 派生的像素坐标
 | `sync_vendor.sh` | 同步 kstuff 等 vendor |
 | `send_elf.py` / `send_payload.ps1` | 网络发送 ELF |
 | `launch.py` | IPC 控制应用 |
-| `kill_daemon.py` / `daemon_log.py` | 守护进程管理与日志 |
+| `shutdown_orion.py` / `kill_daemon.py` | 从 PC 关栈：util → ShellUI → daemon（TCP **9048**） |
+| `daemon_log.py` | 守护进程日志 |
 | `ps5_cmake.sh` | Prospero CMake 封装 |
 | `pack_bootstrapper.sh` | bootstrapper 尺寸记录 + lzma 打包 |
 

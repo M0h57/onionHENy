@@ -264,6 +264,34 @@ void ForceKillProc(int pid) {
   set_proc_authid(getpid(), authid); // Restore original authid
 }
 
+[[noreturn]] void cmd_shutdown_orion_stack(void) {
+  OrionHEN_log("cmd_shutdown_orion_stack: stopping util → ShellUI → self");
+
+  /* util.elf (ki_comm) — also try common display names. */
+  int util_pid = static_cast<int>(orion_find_pid("util.elf"));
+  if (util_pid < 0)
+    util_pid = static_cast<int>(orion_find_pid_substr("util.elf"));
+  if (util_pid > 0 && util_pid != getpid()) {
+    OrionHEN_log("shutdown: ForceKill util pid=%d", util_pid);
+    ForceKillProc(util_pid);
+  } else {
+    OrionHEN_log("shutdown: util.elf not found");
+  }
+
+  int shellui_pid = get_shellui_pid();
+  if (shellui_pid > 0 && shellui_pid != getpid()) {
+    OrionHEN_log("shutdown: ForceKill SceShellUI pid=%d", shellui_pid);
+    ForceKillProc(shellui_pid);
+  } else {
+    OrionHEN_log("shutdown: SceShellUI not found");
+  }
+
+  is_handler_enabled = false;
+  orion_notify(true, "OrionHEN stack shutdown (util + ShellUI + daemon)");
+  usleep(200 * 1000);
+  exit(0);
+}
+
 bool set_fan_threshold(int THRESHOLDTEMP) {
 
    if(THRESHOLDTEMP > 100){

@@ -275,11 +275,20 @@ void handleIPC(clientArgs *client, std::string &inputStr,
     }
     break;
   }
-  case BREW_KILL_DAEMON:{
+  case BREW_KILL_DAEMON: {
+    /* Soft self-exit only (legacy). Prefer BREW_SHUTDOWN_STACK for full teardown. */
     is_handler_enabled = false;
-    exit(1337);
-    kill(getpid(), SIGKILL);
     reply(sender_app, false);
+    usleep(50 * 1000);
+    exit(1337);
+    break;
+  }
+  case BREW_SHUTDOWN_STACK: {
+    /* Reply first so Unix/TCP clients get a frame before we tear down. */
+    OrionHEN_log("BREW_SHUTDOWN_STACK from client");
+    reply(sender_app, false, "shutting down");
+    usleep(100 * 1000);
+    cmd_shutdown_orion_stack();
     break;
   }
   case BREW_FORCE_KILL_PID: {

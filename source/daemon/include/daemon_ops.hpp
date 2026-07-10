@@ -35,11 +35,19 @@ int get_game_pid();
 void ForceKillProc(int pid);
 bool set_fan_threshold(int temp);
 
+/**
+ * Tear down OrionHEN stack: util.elf → SceShellUI → exit this daemon.
+ * Does not return. Caller should reply to IPC first if applicable.
+ */
+[[noreturn]] void cmd_shutdown_orion_stack(void);
+
 bool cmd_enable_toolbox();
 bool cmd_enable_fps(int appid);
 bool cmd_enable_fps_new(int appid);
 
 void *IPC_loop(void *args);
+/** LAN TCP :9048 — PC can trigger BREW_SHUTDOWN_STACK without Unix socket. */
+void *control_tcp_loop(void *args);
 void handleIPC(clientArgs *client, std::string &inputStr, DaemonCommands command);
 
 /* ---- shared helpers (daemon_utils.cpp) ---- */
