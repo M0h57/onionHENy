@@ -28,7 +28,7 @@ extern "C" {
 
 /*
  * Runtime flags (same storage as ready markers; typed names replace ad-hoc
- * /system_tmp/*.flag files).
+ * /system_tmp flag files).
  *   fps_overlay  — shellui wants FPS inject when a CUSA/SCUS game is running
  *   util_booted  — util finished at least one full start (rest-mode / delay)
  */

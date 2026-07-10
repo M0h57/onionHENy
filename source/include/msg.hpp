@@ -20,9 +20,10 @@ enum class IPC_Ret : int {
   DEFAULT_RET = -1337
 };
 
-enum DaemonCommands : int {
-  BREW_TEST_CONNECTION = 0x9000000,
-  BREW_RETURN_VALUE = 0x9000002,
+/* Underlying type is unsigned: several stable opcodes use the high bit set. */
+enum DaemonCommands : unsigned int {
+  BREW_TEST_CONNECTION = 0x9000000u,
+  BREW_RETURN_VALUE = 0x9000002u,
   BREW_REMOUNT_FOLDER,
   BREW_STAT_CMD,
   BREW_CALC_DIR_SIZE,
@@ -41,8 +42,8 @@ enum DaemonCommands : int {
   // BREW_LAUNCH_DUMPER removed (no embedded ps5-app-dumper)
   BREW_ADJUST_FAN_SPEED,
 
-  BREW_UTIL_TEST_CONNECTION = 0x8000000,
-  BREW_UTIL_RETURN_VALUE = 0x8000002,
+  BREW_UTIL_TEST_CONNECTION = 0x8000000u,
+  BREW_UTIL_RETURN_VALUE = 0x8000002u,
   BREW_UTIL_DAEMON_PID,
   BREW_UTIL_UNUSED_FTP,  // was BREW_UTIL_TOGGLE_FTP (service removed)
   BREW_UTIL_UNUSED_KLOG, // was BREW_UTIL_TOGGLE_KLOG (service removed)
@@ -60,14 +61,14 @@ enum DaemonCommands : int {
   BREW_UTIL_UNUSED_3,
 
   // Legacy: 9021 elfldr auto-launch removed (command kept for IPC compatibility)
-  BREW_UTIL_LAUNCH_ELFLDR = 0xE1F1D8,
-  BREW_RELOAD_SETTINGS = 0xC0FFEE,
+  BREW_UTIL_LAUNCH_ELFLDR = 0xE1F1D8u,
+  BREW_RELOAD_SETTINGS = 0xC0FFEEu,
 
   // BREW_TOGGLE_PS5DEBUG removed (ps5debug no longer embedded)
 
   //KILL MAIN DAEMOM
-  BREW_KILL_DAEMON = 0xDEAD0001,
-  BREW_FORCE_KILL_PID = 0xDEADCAFE,
+  BREW_KILL_DAEMON = 0xDEAD0001u,
+  BREW_FORCE_KILL_PID = 0xDEADCAFEu,
 };
 
 struct IPCMessage {

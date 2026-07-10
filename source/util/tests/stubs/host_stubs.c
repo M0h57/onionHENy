@@ -1,12 +1,18 @@
 /*
- * Host stubs for util cheat parser tests (no PS5 SDK).
+ * Host stubs for util unit tests (no PS5 SDK).
+ *
+ * Production OrionHEN_log / platform helpers are linked from
+ * liborion_platform when ORION_HOST_TEST builds include them.
+ * This file only supplies symbols that are PS5-runtime-only.
  */
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdint.h>
 
-void OrionHEN_log(const char *fmt, ...) {
+/* PS5 klog sink — silence unless verbose. */
+void klog_printf(const char *fmt, ...) {
   va_list args;
   if (getenv("ORION_TEST_VERBOSE") == NULL) {
     return;
@@ -16,6 +22,22 @@ void OrionHEN_log(const char *fmt, ...) {
   va_end(args);
   fputc('\n', stderr);
 }
+
+/* Notification hardware — no-op on host. */
+int32_t sceKernelSendNotificationRequest(int32_t device, void *req, size_t size,
+                                         int32_t blocking) {
+  (void)device;
+  (void)req;
+  (void)size;
+  (void)blocking;
+  return 0;
+}
+
+/* Fallback logger if a TU is compiled without liborion_platform log.c.
+ * When log.c is linked, that definition wins if this is weak — but most
+ * linkers take the first definition. Prefer always linking log.c and not
+ * defining OrionHEN_log here.
+ */
 
 int util_file_read_alloc(const char *path, char **buf_out, size_t *size_out,
                          size_t max_size) {
