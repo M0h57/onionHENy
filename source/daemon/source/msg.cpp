@@ -940,24 +940,16 @@ void handleIPC(struct clientArgs *client, std::string &inputStr,
     reply(sender_app, last_ipc_error, last_ipc_error ? "1" : "0");
     break;
   }
-  case BREW_DECRYPT_DIR: {
-    // Generic decrypt IPC (no Itemzflow DUMP00000 hand-off)
-    reply(sender_app, false);
-    std::string dest_path =
-        std::string(orion_cjson::string_item(my_json.get(), "dest_path", ""));
-    std::string sandbox_dir =
-        std::string(orion_cjson::string_item(my_json.get(), "src_path", ""));
-    OrionHEN_log("Decrypt to %s", dest_path.c_str());
-    mkdir(dest_path.c_str(), 0777);
-    notify(false, "Attempting to decrypt %s -> %s", sandbox_dir.c_str(),
-           dest_path.c_str());
-    last_ipc_error = !decrypt_dir(sandbox_dir, dest_path);
+  case BREW_UNUSED_DECRYPT_DIR:
+    /* SELF directory decrypt removed from OrionHEN. */
+    OrionHEN_log("BREW_DECRYPT_DIR: unsupported (removed)");
+    reply(sender_app, true);
     break;
-  }
-  case BREW_TESTKIT_CHECK: {
-    reply(sender_app, !if_exists("/system/priv/lib/libSceDeci5Ttyp.sprx"));
+  case BREW_UNUSED_TESTKIT_CHECK:
+    /* Prefer local probe in clients; keep ordinal for IPC compatibility. */
+    OrionHEN_log("BREW_TESTKIT_CHECK: unsupported (removed)");
+    reply(sender_app, true);
     break;
-  }
   case BREW_REMOUNT_FOLDER:
     path_buf = std::string(orion_cjson::string_item(my_json.get(), "mount_dest", ""));
     path_buf2 = std::string(orion_cjson::string_item(my_json.get(), "mount_src", ""));

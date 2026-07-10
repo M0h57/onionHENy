@@ -32,9 +32,9 @@ enum DaemonCommands : int {
   BREW_TEST_SB_FILE,
   BREW_DAEMON_PID,
   BREW_UNUSED_STORE_INSTALLER,
-  BREW_DECRYPT_DIR,
+  BREW_UNUSED_DECRYPT_DIR,  // was BREW_DECRYPT_DIR (SELF directory decrypt removed)
   BREW_LAST_RET,
-  BREW_TESTKIT_CHECK,
+  BREW_UNUSED_TESTKIT_CHECK, // was BREW_TESTKIT_CHECK (local probe used instead)
   BREW_ENABLE_TOOLBOX,
   BREW_CHMOD_DIR,
   // BREW_LAUNCH_DUMPER removed (no embedded ps5-app-dumper)
