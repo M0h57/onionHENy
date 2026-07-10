@@ -15,6 +15,7 @@ along with this program; see the file COPYING. If not, see
 <http://www.gnu.org/licenses/>.  */
 
 #include "../include/AccountActivator.h"
+#include <orion/reg_entity.h>
 
 
 Activator::Activator(bool skip_userservice_init)
@@ -183,15 +184,7 @@ uint64_t Activator::GenerateAccountID(const char* username)
 
 int Activator::GetEntityNumber(int a, int d, int e)
 {
-    int b = 16U;
-    int c = 65536U;
-
-    if (a < 1 || a > b) 
-    {
-        return e;
-    }
-
-    return (a - 1) * c + d;
+    return orion_reg_entity_number(a, d, e);
 }
 
 void Activator::GetPSAccount(std::string& account)

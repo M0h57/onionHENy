@@ -53,6 +53,16 @@ int ipc_network_recv(int socket_fd, void *buffer, int32_t size);
 int ipc_network_send(int socket_fd, void *buffer, int32_t size);
 int ipc_network_close(int socket_fd);
 
+/**
+ * Pure: JSON body for daemon/util replies.
+ * Shape is fixed for injectee parsers: {"res":N, "var":"..."}.
+ */
+inline std::string ipc_format_reply_body(bool error,
+                                         const std::string &out_var) {
+  return std::string("{\"res\":") + std::to_string(error ? -1 : 0) +
+         ", \"var\":\"" + out_var + "\"}";
+}
+
 // Build {"res":N,"var":"..."} reply with the process's return command ordinal.
 void ipc_reply(int sender_socket, DaemonCommands reply_cmd, bool error,
                const std::string &out_var = "Nothing");

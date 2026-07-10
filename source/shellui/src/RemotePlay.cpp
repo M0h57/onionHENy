@@ -15,42 +15,13 @@ along with this program; see the file COPYING. If not, see
 <http://www.gnu.org/licenses/>.  */
 
 #include "RemotePlay.h"
+#include <orion/account_id_b64.h>
 
 bool IsRunningConfirmRegistLoop = false;
 pthread_t ConfirmRegistLoop_Thread;
 
-static const char base64_table[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
-
-void Base64Encode(uint64_t input, char* output)
-{
-    // Convert uint64_t to byte array
-    unsigned char bytes[8];
-    for (int i = 0; i < 8; i++) {
-        bytes[i] = (input >> (i * 8)) & 0xFF;
-    }
-    
-    int i = 0, j = 0;
-    
-    // Process all bytes in groups of 3
-    while (i < 8) {
-        uint32_t octet_a = i < 8 ? bytes[i++] : 0;
-        uint32_t octet_b = i < 8 ? bytes[i++] : 0;
-        uint32_t octet_c = i < 8 ? bytes[i++] : 0;
-        
-        uint32_t triple = (octet_a << 16) | (octet_b << 8) | octet_c;
-        
-        output[j++] = base64_table[(triple >> 18) & 0x3F];
-        output[j++] = base64_table[(triple >> 12) & 0x3F];
-        output[j++] = base64_table[(triple >> 6) & 0x3F];
-        output[j++] = base64_table[triple & 0x3F];
-    }
-    
-    // Add padding
-    for (int k = 0; k < (3 - 8 % 3) % 3; k++) {
-        output[j - k - 1] = '=';
-    }
-    
-    output[j] = '\0';
+void Base64Encode(uint64_t input, char *output) {
+  orion_account_id_base64_encode(input, output);
 }
     
 

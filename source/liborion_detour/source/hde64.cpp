@@ -5,7 +5,8 @@
  *
  */
 
-#if defined(_M_X64) || defined(__x86_64__)
+/* Host tests decode x86_64 opcodes on any arch (no execution). */
+#if defined(_M_X64) || defined(__x86_64__) || defined(ORION_HOST_TEST)
 
 // #include <kernel.h>
 #include <orion/hde64.h>
@@ -332,4 +333,4 @@ unsigned int hde64_disasm(const void *code, hde64s *hs)
     return (unsigned int)hs->len;
 }
 
-#endif // defined(_M_X64) || defined(__x86_64__)
+#endif // x86_64 || ORION_HOST_TEST

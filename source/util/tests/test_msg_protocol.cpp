@@ -1,9 +1,11 @@
-/* Host tests for shared IPC protocol surface (msg.hpp). */
+/* Host tests for shared IPC protocol surface (msg.hpp + reply body). */
 #include "test_harness.h"
 
 #include <msg.hpp>
+#include <orion/ipc_server.hpp>
 
 #include <cstring>
+#include <string>
 #include <type_traits>
 
 static int test_ipc_paths_and_magic(void) {
@@ -66,6 +68,17 @@ static int test_message_pod_layout(void) {
   return 0;
 }
 
+static int test_ipc_format_reply_body(void) {
+  using orion::ipc_format_reply_body;
+  std::string ok = ipc_format_reply_body(false, "Nothing");
+  std::string err = ipc_format_reply_body(true, "fail");
+  std::string tid = ipc_format_reply_body(false, "CUSA12345");
+  TEST_ASSERT_STREQ("{\"res\":0, \"var\":\"Nothing\"}", ok.c_str());
+  TEST_ASSERT_STREQ("{\"res\":-1, \"var\":\"fail\"}", err.c_str());
+  TEST_ASSERT_STREQ("{\"res\":0, \"var\":\"CUSA12345\"}", tid.c_str());
+  return 0;
+}
+
 extern "C" int test_msg_protocol_suite(void) {
   int failures = 0;
   failures += orion_test_run("ipc_paths_magic", test_ipc_paths_and_magic);
@@ -74,5 +87,6 @@ extern "C" int test_msg_protocol_suite(void) {
   failures += orion_test_run("special_cmds_stable", test_special_commands_stable);
   failures += orion_test_run("ipc_ret_distinct", test_ipc_ret_distinct);
   failures += orion_test_run("message_pod_layout", test_message_pod_layout);
+  failures += orion_test_run("ipc_format_reply_body", test_ipc_format_reply_body);
   return failures;
 }

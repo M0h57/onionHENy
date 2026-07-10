@@ -16,11 +16,16 @@ KEYSTONE_CFLAGS := -I$(KEYSTONE_PREFIX)/include
 KEYSTONE_LDFLAGS := -L$(KEYSTONE_PREFIX)/lib -lkeystone
 
 COMMON_FLAGS := -Wall -Wextra -g -O0 -DORION_HOST_TEST=1 -DCBC=1 \
+	-DORION_TEST_DIR=\"$(CURDIR)\" \
 	-I$(UTIL_ROOT)/include \
 	-I$(UTIL_ROOT)/tests \
 	-I$(REPO_ROOT)/source/include \
 	-I$(REPO_ROOT)/source/liborion_settings/include \
 	-I$(REPO_ROOT)/source/liborion_platform/include \
+	-I$(REPO_ROOT)/source/liborion_plugin/include \
+	-I$(REPO_ROOT)/source/liborion_proc/include \
+	-I$(REPO_ROOT)/source/liborion_ipc/include \
+	-I$(REPO_ROOT)/source/liborion_detour/include \
 	-I$(REPO_ROOT)/source/liborion_ready \
 	-I$(REPO_ROOT)/source/extern/cJSON \
 	-I$(REPO_ROOT)/source/shellui/include \
@@ -37,6 +42,7 @@ LDFLAGS := $(KEYSTONE_LDFLAGS) -pthread
 PROD_C_SRCS := \
 	$(UTIL_ROOT)/source/cheats/cheat_engine_utils.c \
 	$(UTIL_ROOT)/source/cheats/cheat_engine_parser_shnext.c \
+	$(UTIL_ROOT)/source/cheats/cheat_flatten.c \
 	$(UTIL_ROOT)/source/cheats/third_party/aes.c \
 	$(UTIL_ROOT)/source/cheats/third_party/base64.c \
 	$(UTIL_ROOT)/source/cheats/third_party/miniz.c \
@@ -44,7 +50,9 @@ PROD_C_SRCS := \
 	$(REPO_ROOT)/source/liborion_platform/source/fs.c \
 	$(REPO_ROOT)/source/liborion_platform/source/log.c \
 	$(REPO_ROOT)/source/liborion_platform/source/notify.c \
-	$(REPO_ROOT)/source/liborion_ready/source/ready.c
+	$(REPO_ROOT)/source/liborion_ready/source/ready.c \
+	$(REPO_ROOT)/source/liborion_plugin/source/plugin.c \
+	$(REPO_ROOT)/source/liborion_playtime/source/playtime.c
 
 PROD_CXX_SRCS := \
 	$(UTIL_ROOT)/source/cheats/JsonCheatParser.cpp \
@@ -52,6 +60,7 @@ PROD_CXX_SRCS := \
 	$(UTIL_ROOT)/source/cheats/Mc4CheatParser.cpp \
 	$(UTIL_ROOT)/source/cheats/ShnExtCheatParser.cpp \
 	$(UTIL_ROOT)/source/cheats/CheatParserFactory.cpp \
+	$(UTIL_ROOT)/source/http_github.cpp \
 	$(REPO_ROOT)/source/extern/cJSON/cJSON.cpp \
 	$(REPO_ROOT)/source/liborion_settings/source/settings.cpp \
 	$(REPO_ROOT)/source/shellui/src/ps5_settings_ui.cpp \
@@ -61,6 +70,14 @@ TEST_C_SRCS := \
 	test_harness.c \
 	test_support.c \
 	test_cheat_utils.c \
+	test_cheat_flatten.c \
+	test_plugin.c \
+	test_base64.c \
+	test_aes_cbc.c \
+	test_hde64.c \
+	test_reg_entity.c \
+	test_account_id_b64.c \
+	test_playtime.c \
 	test_ready.c \
 	test_platform_fs.c \
 	test_platform_log.c \
@@ -73,6 +90,8 @@ TEST_CXX_SRCS := \
 	test_msg_protocol.cpp \
 	test_ps5_settings_ui.cpp \
 	test_toolbox_route.cpp \
+	test_toolbox_helpers.cpp \
+	test_http_github.cpp \
 	test_main.cpp
 
 PROD_C_OBJS := $(patsubst $(UTIL_ROOT)/%.c,$(BUILD_DIR)/prod/%.o,$(filter $(UTIL_ROOT)/%,$(PROD_C_SRCS)))
@@ -80,6 +99,9 @@ PROD_C_OBJS += $(BUILD_DIR)/prod/liborion_platform/fs.o
 PROD_C_OBJS += $(BUILD_DIR)/prod/liborion_platform/log.o
 PROD_C_OBJS += $(BUILD_DIR)/prod/liborion_platform/notify.o
 PROD_C_OBJS += $(BUILD_DIR)/prod/liborion_ready/ready.o
+PROD_C_OBJS += $(BUILD_DIR)/prod/liborion_plugin/plugin.o
+PROD_C_OBJS += $(BUILD_DIR)/prod/liborion_detour/hde64.o
+PROD_C_OBJS += $(BUILD_DIR)/prod/liborion_playtime/playtime.o
 
 PROD_CXX_OBJS := $(patsubst $(UTIL_ROOT)/%.cpp,$(BUILD_DIR)/prod/%.o,$(filter $(UTIL_ROOT)/%,$(PROD_CXX_SRCS)))
 PROD_CXX_OBJS += $(BUILD_DIR)/prod/extern/cJSON.o
@@ -101,7 +123,7 @@ THIRD_PARTY_FLAGS := -Wno-error -Wno-unused-function -Wno-sign-compare \
 all: $(BIN)
 
 test: $(BIN)
-	cd $(CURDIR) && $(BIN)
+	cd $(CURDIR) && ORION_TEST_ROOT=$(CURDIR) $(BIN)
 
 $(BIN): $(ALL_OBJS) | $(BUILD_DIR)
 	$(HOST_CXX) -o $@ $^ $(LDFLAGS)
@@ -151,6 +173,18 @@ $(BUILD_DIR)/prod/liborion_platform/log.o: $(REPO_ROOT)/source/liborion_platform
 	$(HOST_CC) $(CFLAGS) -c -o $@ $<
 
 $(BUILD_DIR)/prod/liborion_platform/notify.o: $(REPO_ROOT)/source/liborion_platform/source/notify.c | $(BUILD_DIR)
+	@mkdir -p $(dir $@)
+	$(HOST_CC) $(CFLAGS) -c -o $@ $<
+
+$(BUILD_DIR)/prod/liborion_plugin/plugin.o: $(REPO_ROOT)/source/liborion_plugin/source/plugin.c | $(BUILD_DIR)
+	@mkdir -p $(dir $@)
+	$(HOST_CC) $(CFLAGS) -c -o $@ $<
+
+$(BUILD_DIR)/prod/liborion_detour/hde64.o: $(REPO_ROOT)/source/liborion_detour/source/hde64.cpp | $(BUILD_DIR)
+	@mkdir -p $(dir $@)
+	$(HOST_CXX) $(CXXFLAGS) -c -o $@ $<
+
+$(BUILD_DIR)/prod/liborion_playtime/playtime.o: $(REPO_ROOT)/source/liborion_playtime/source/playtime.c | $(BUILD_DIR)
 	@mkdir -p $(dir $@)
 	$(HOST_CC) $(CFLAGS) -c -o $@ $<
 

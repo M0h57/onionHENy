@@ -136,8 +136,7 @@ int ipc_network_close(int socket_fd) { return close(socket_fd); }
 
 void ipc_reply(int sender_socket, DaemonCommands reply_cmd, bool error,
                const std::string &out_var) {
-  std::string body = "{\"res\":" + std::to_string(error ? -1 : 0) +
-                     ", \"var\":\"" + out_var + "\"}";
+  const std::string body = ipc_format_reply_body(error, out_var);
 
   IPCMessage outputMessage{};
   outputMessage.magic = 0xDEADBABE;

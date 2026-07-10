@@ -28,6 +28,7 @@
 #include <string>
 
 #include "shellui_state.hpp"
+#include "toolbox_helpers.hpp"
 
 int usbpath();
 void escapeXML(std::string& input);
@@ -76,15 +77,6 @@ void escapeXML(std::string& input) {
 
 namespace {
 
-/** UI-facing path: strip /user prefix, map /usb* → /mnt/usb*. */
-std::string display_path_for_ui(const std::string& path) {
-  if (path.rfind("/user", 0) == 0)
-    return path.substr(5);
-  if (path.rfind("/usb", 0) == 0)
-    return "/mnt" + path;
-  return path;
-}
-
 bool read_plugin_header(const std::string& path, CustomPluginHeader& header) {
   const int fd = open(path.c_str(), O_RDONLY, 0);
   if (fd < 0) {
@@ -100,17 +92,10 @@ bool read_plugin_header(const std::string& path, CustomPluginHeader& header) {
   return true;
 }
 
-bool is_plugin_or_elf_name(const char* name) {
-  const bool is_elf = strstr(name, ".elf") != nullptr;
-  const bool is_plugin_ext = strstr(name, ".plugin") != nullptr;
-  const bool is_auto = strstr(name, ".auto_start") != nullptr;
-  return (is_plugin_ext || is_elf) && !is_auto;
-}
-
 template <typename G>
 void append_plugin_entry(G& page, const std::string& directory, const char* filename,
                          bool plugins_xml, int& next_id) {
-  if (!is_plugin_or_elf_name(filename))
+  if (!toolbox::is_plugin_or_elf_name(filename))
     return;
 
   const bool is_elf = strstr(filename, ".elf") != nullptr;
@@ -131,7 +116,7 @@ void append_plugin_entry(G& page, const std::string& directory, const char* file
   }
   shellui_log("Valid plugin file.");
 
-  const std::string shown_path = display_path_for_ui(path);
+  const std::string shown_path = toolbox::display_path_for_ui(path);
   const std::string version_str =
       is_elf ? "" : ("(v" + std::string(header.plugin_version) + ")");
   const std::string id_prefix = plugins_xml ? "id_plugin_" : "id_auto_plugin_";
@@ -174,7 +159,7 @@ void append_homebrew_game(G& page, const std::string& game_dir, const char* dir_
 #endif
 
   std::string title_id, title, ver;
-  const std::string shown_path = display_path_for_ui(game_dir);
+  const std::string shown_path = toolbox::display_path_for_ui(game_dir);
   const std::string icon_path = game_dir + "/sce_sys/icon0.png";
 
   GameEntry game;

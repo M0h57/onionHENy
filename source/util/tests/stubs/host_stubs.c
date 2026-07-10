@@ -10,6 +10,53 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdint.h>
+#include <stdbool.h>
+#include <unistd.h>
+
+/* --- liborion_plugin / elfldr_remote (device-only launch path) --- */
+
+bool elfldr_remote_available(void) { return false; }
+
+bool elfldr_remote_send_bytes(const uint8_t *elf, size_t size) {
+  (void)elf;
+  (void)size;
+  return false;
+}
+
+bool elfldr_remote_send_file_uri(const char *abs_path) {
+  (void)abs_path;
+  return false;
+}
+
+bool elfldr_remote_write_and_launch(const char *abs_path, const uint8_t *elf,
+                                    size_t size) {
+  (void)abs_path;
+  (void)elf;
+  (void)size;
+  return false;
+}
+
+pid_t find_pid(const char *name) {
+  (void)name;
+  return -1;
+}
+
+pid_t orion_find_pid(const char *name) {
+  (void)name;
+  return -1;
+}
+
+pid_t orion_find_pid_substr(const char *substr) {
+  (void)substr;
+  return -1;
+}
+
+int sceKernelGetProcessName(int pid, char *name) {
+  (void)pid;
+  if (name)
+    name[0] = '\0';
+  return -1;
+}
 
 /* PS5 klog sink — silence unless verbose. */
 void klog_printf(const char *fmt, ...) {

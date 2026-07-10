@@ -15,6 +15,7 @@ along with this program; see the file COPYING. If not, see
 <http://www.gnu.org/licenses/>.  */
 
 #include "common_utils.h"
+#include "http_github.h"
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -464,43 +465,6 @@ bool extract_zip(const char* zip_path, const char* extract_dir) {
     return true;
 }
 
-// Function to extract SHA from JSON response
-static bool extract_commit_sha(const char* json_data, char* sha_buffer, size_t buffer_size) {
-    if (!json_data || !sha_buffer) {
-        return false;
-    }
-
-    OrionHEN_log("json_data %s", json_data);
-    
-    cJSON* root = cJSON_Parse(json_data);
-    if (!root) {
-        OrionHEN_log("Could not parse GitHub commit JSON");
-        return false;
-    }
-
-    cJSON* commit = cJSON_IsArray(root) ? cJSON_GetArrayItem(root, 0) : root;
-    cJSON* sha = cJSON_GetObjectItemCaseSensitive(commit, "sha");
-    if (!cJSON_IsString(sha) || !sha->valuestring) {
-        OrionHEN_log("Could not find 'sha' field in JSON response");
-        cJSON_Delete(root);
-        return false;
-    }
-
-    size_t sha_length = strlen(sha->valuestring);
-    if (sha_length >= buffer_size) {
-        OrionHEN_log("SHA too long for buffer");
-        cJSON_Delete(root);
-        return false;
-    }
-
-    strncpy(sha_buffer, sha->valuestring, sha_length);
-    sha_buffer[sha_length] = '\0';
-    cJSON_Delete(root);
-    
-    OrionHEN_log("Extracted commit SHA: %s", sha_buffer);
-    return true;
-}
-
 // Function to read stored commit hash from file
 static bool read_stored_commit_hash(char* hash_buffer, size_t buffer_size) {
     int fd = sceKernelOpen(COMMIT_HASH_FILE, O_RDONLY, 0);
@@ -569,7 +533,8 @@ bool check_for_new_commit(int repo) {
     }
     
     // Extract the latest commit SHA
-    if (!extract_commit_sha(json_data, latest_commit, sizeof(latest_commit))) {
+    if (!orion_http_extract_commit_sha(json_data, latest_commit,
+                                       sizeof(latest_commit))) {
         OrionHEN_log("Failed to extract commit SHA from JSON response");
         orion_notify(true, "Failed to parse update information\nUsing existing cheats repo");
         free(json_data);

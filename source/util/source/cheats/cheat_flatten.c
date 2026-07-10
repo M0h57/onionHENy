@@ -10,9 +10,13 @@
 
 void OrionHEN_log(const char *fmt, ...);
 
-static int is_cheat_ext(const char *name, char *ext_out, size_t ext_out_size) {
+int orion_cheat_match_ext(const char *name, char *ext_out, size_t ext_out_size) {
   static const char *exts[] = {".json", ".shn", ".mc4", ".ShnExt", ".shnext"};
-  size_t n = strlen(name);
+  size_t n;
+
+  if (name == NULL)
+    return 0;
+  n = strlen(name);
 
   for (size_t i = 0; i < sizeof(exts) / sizeof(exts[0]); ++i) {
     size_t el = strlen(exts[i]);
@@ -37,7 +41,7 @@ static int is_cheat_ext(const char *name, char *ext_out, size_t ext_out_size) {
  *   CUSA05786_01.04_eboot.bin.json
  *   PPSA01340_01.004.000.shn
  */
-static int build_flat_name(const char *filename, char *out, size_t out_size) {
+int orion_cheat_build_flat_name(const char *filename, char *out, size_t out_size) {
   char base[256];
   char ext[16];
   char title_id[32];
@@ -47,7 +51,10 @@ static int build_flat_name(const char *filename, char *out, size_t out_size) {
   const char *vend = NULL;
   size_t i = 0;
 
-  if (!is_cheat_ext(filename, ext, sizeof(ext))) {
+  if (filename == NULL || out == NULL || out_size == 0)
+    return -1;
+
+  if (!orion_cheat_match_ext(filename, ext, sizeof(ext))) {
     return -1;
   }
 
@@ -162,7 +169,7 @@ static void walk_and_flatten(const char *dir, int *copied, int *skipped) {
     if (!S_ISREG(st.st_mode)) {
       continue;
     }
-    if (build_flat_name(ent->d_name, flat, sizeof(flat)) < 0) {
+    if (orion_cheat_build_flat_name(ent->d_name, flat, sizeof(flat)) < 0) {
       continue;
     }
     snprintf(dest, sizeof(dest), ORION_CHEATS_DIR "/%s", flat);
@@ -183,6 +190,26 @@ static void walk_and_flatten(const char *dir, int *copied, int *skipped) {
  * Walk a tree (typically after zip extract) and install flat cheat files into
  * ORION_CHEATS_DIR as <TITLE_ID>_<VERSION>.<ext>.
  */
+void orion_cheat_normalize_version(const char *version, char *out,
+                                   size_t out_size) {
+  size_t j = 0;
+  if (out == NULL || out_size == 0)
+    return;
+  out[0] = '\0';
+  if (!version)
+    return;
+  for (size_t i = 0; version[i] && j + 1 < out_size; ++i) {
+    const unsigned char ch = (unsigned char)version[i];
+    if ((ch >= '0' && ch <= '9') || (ch >= 'A' && ch <= 'Z') ||
+        (ch >= 'a' && ch <= 'z') || ch == '.' || ch == '_' || ch == '-') {
+      out[j++] = (char)ch;
+    } else {
+      out[j++] = '_';
+    }
+  }
+  out[j] = '\0';
+}
+
 int orion_cheat_flatten_install_tree(const char *root) {
   int copied = 0;
   int skipped = 0;

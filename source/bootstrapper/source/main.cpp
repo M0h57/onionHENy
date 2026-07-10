@@ -642,6 +642,188 @@ void free_plugin_files(char **plugin_files) {
   free((void *)plugin_files);
 }
 
+/*=================== Launch pipeline (phased) =========================*/
+/*
+ * Policy: NO local spawn.
+ * 1) write_daemon_elfs  — util/daemon/kstuff to disk
+ * 2) launch_chain       — elfldr :9021 file: URI, util → kstuff → daemon
+ * 3) load_autostart_plugins — .plugin/.elf with .auto_start (skip *elfldr*)
+ */
+
+static bool write_elf_file(const char *path, const uint8_t *elf, size_t size) {
+  mkdir("/data/OrionHEN", 0777);
+  mkdir("/data/OrionHEN/daemons", 0777);
+  int fd = open(path, O_WRONLY | O_CREAT | O_TRUNC, 0777);
+  if (fd < 0)
+    return false;
+  size_t off = 0;
+  while (off < size) {
+    ssize_t n = write(fd, elf + off, size - off);
+    if (n <= 0) {
+      close(fd);
+      return false;
+    }
+    off += (size_t)n;
+  }
+  close(fd);
+  return true;
+}
+
+static void kill_by_name(const char *a, const char *b) {
+  int p = -1;
+  while ((p = orion_find_pid_substr(a)) > 0 ||
+         (p = orion_find_pid_substr(b)) > 0) {
+    kill(p, SIGKILL);
+    sleep(1);
+  }
+}
+
+static bool launch_path(const char *path, const char *label,
+                        const char *wait_name) {
+  klog_printf("9021 file: %s (%s)\n", path, label);
+  if (!elfldr_remote_send_file_uri(path)) {
+    klog_printf("  send FAILED %s\n", label);
+    return false;
+  }
+  for (int i = 0; i < 30; i++) {
+    if (wait_name && orion_find_pid_substr(wait_name) > 0) {
+      klog_printf("  running: %s\n", wait_name);
+      return true;
+    }
+    sleep(1);
+  }
+  klog_printf("  sent %s (process name not seen yet, continuing)\n", label);
+  return true;
+}
+
+/** Write util/daemon/kstuff ELF blobs under /data/OrionHEN. Returns 0 or -2. */
+static int write_daemon_elfs(void) {
+  klog_puts("Writing daemon ELFs to /data/OrionHEN/daemons ...");
+  if (!write_elf_file("/data/OrionHEN/daemons/util.elf", util_start, util_size)) {
+    notify("failed to write util.elf");
+    return -2;
+  }
+  if (!write_elf_file("/data/OrionHEN/daemons/daemon.elf", daemon_start,
+                      daemon_size)) {
+    notify("failed to write daemon.elf");
+    return -2;
+  }
+  if (!if_exists("/data/OrionHEN/kstuff.elf")) {
+    (void)write_elf_file("/data/OrionHEN/daemons/kstuff.elf", kstuff_start,
+                         (size_t)kstuff_size);
+  }
+  klog_puts("   Daemon ELFs written");
+  return 0;
+}
+
+/**
+ * Launch util → kstuff → daemon via elfldr :9021 (serialized).
+ * Soft-fails kstuff; hard-fails missing elfldr / util / daemon.
+ * Returns 0 or -2.
+ */
+static int launch_chain(const OrbisKernelSwVersion &sys_ver) {
+  char buz[100] = {0};
+
+  if (!elfldr_remote_available()) {
+    klog_puts("FATAL: no elfldr on 127.0.0.1:9021");
+    notify("Start elfldr on 9021 first, then re-run. ELFs are on disk under "
+           "/data/OrionHEN/daemons/");
+    return -2;
+  }
+  klog_puts("elfldr :9021 OK - launching via file URI (serialized)");
+  sleep(3); /* settle after remount/unmount */
+
+  /*
+   * Order: util → kstuff → daemon
+   * (daemon injects toolbox; kstuff must patch ShellUI first)
+   */
+  klog_puts("Starting util via 9021 ...");
+  kill_by_name("util.elf", "OrionHEN Utility");
+  orion_ready_clear(ORION_READY_UTIL);
+  orion_ready_clear(ORION_READY_KSTUFF);
+  orion_ready_clear(ORION_READY_DAEMON);
+  orion_ready_clear(ORION_READY_TOOLBOX);
+
+  if (!launch_path("/data/OrionHEN/daemons/util.elf", "util", "util.elf")) {
+    notify("failed to launch util via elfldr :9021");
+    return -2;
+  }
+  if (!orion_ready_wait(ORION_READY_UTIL, /*timeout_ms=*/15000, /*poll_ms=*/200))
+    klog_puts("util ready timeout — continuing (process may still be starting)");
+
+  const bool skip_kstuff =
+      if_exists("/mnt/usb0/no_kstuff") || if_exists("/data/OrionHEN/no_kstuff");
+  if (skip_kstuff) {
+    klog_puts("kstuff disabled via no_kstuff file");
+    orion_ready_signal(ORION_READY_KSTUFF);
+  } else if (sys_ver.version >= 0x3000000) {
+    klog_puts("Loading kstuff via 9021 (before daemon/toolbox) ...");
+    const char *kpath = if_exists("/data/OrionHEN/kstuff.elf")
+                            ? "/data/OrionHEN/kstuff.elf"
+                            : "/data/OrionHEN/daemons/kstuff.elf";
+    if (launch_path(kpath, "kstuff", "kstuff.elf")) {
+      int wait = 0;
+      bool not_loaded = true;
+      while ((not_loaded = (sceKernelMprotect(&buz[0], 100, 0x7) < 0))) {
+        if (wait++ > 15) {
+          notify("Failed to load kstuff, continuing without it");
+          break;
+        }
+        sleep(1);
+      }
+      if (!not_loaded) {
+        klog_puts("kstuff mprotect OK — signal ready");
+        orion_ready_signal(ORION_READY_KSTUFF);
+        sleep(1); /* brief settle for ShellUI trophy patches */
+      }
+    } else {
+      notify("Failed to load kstuff via 9021, continuing");
+    }
+  } else {
+    orion_ready_signal(ORION_READY_KSTUFF);
+  }
+
+  klog_puts("Starting daemon via 9021 (toolbox inject) ...");
+  kill_by_name("daemon.elf", "OrionHEN Critical");
+  orion_ready_clear(ORION_READY_DAEMON);
+  if (!launch_path("/data/OrionHEN/daemons/daemon.elf", "daemon",
+                   "daemon.elf")) {
+    notify("failed to launch daemon via elfldr :9021");
+    return -2;
+  }
+  if (!orion_ready_wait(ORION_READY_DAEMON, /*timeout_ms=*/20000,
+                        /*poll_ms=*/200))
+    klog_puts("daemon ready timeout — continuing");
+
+  sceNotificationSend(0xFE, true, &json_payload[0]);
+  return 0;
+}
+
+/** Autostart plugins with .auto_start marker; skip paths containing "elfldr". */
+static void load_autostart_plugins(void) {
+  char **plugin_paths = find_plugin_files();
+  if (!plugin_paths || plugin_count <= 0)
+    return;
+
+  int loaded_plugins = 0;
+  for (int i = 0; i < plugin_count; i++) {
+    if (strstr(plugin_paths[i], "elfldr") != nullptr)
+      continue;
+    klog_printf("Loading plugin: %s\n", plugin_paths[i]);
+    if (!load_plugin(plugin_paths[i], loaded_filenames[i])) {
+      snprintf(buff, sizeof(buff),
+               "[OrionHEN] Failed to load plugin!\nPath: %s", plugin_paths[i]);
+      notify(buff);
+      klog_puts("FAILED!");
+      continue;
+    }
+    klog_puts("Loaded!");
+    loaded_plugins++;
+  }
+  klog_printf("Successfully loaded %d plugins\n", loaded_plugins);
+  free_plugin_files(plugin_paths);
+}
+
 int main(void) {
   signal(SIGCHLD, SIG_IGN);
 
@@ -707,167 +889,15 @@ int main(void) {
     unmount("/update", 0);
   klog_puts("   Success!");
 
-  /*
-   * Launch policy: NO local spawn.
-   * 1) Write util/daemon/kstuff to disk first.
-   * 2) Ask external elfldr :9021 via file: URI (one at a time, wait between).
-   */
-  char buz[100] = {0};
+  int rc = write_daemon_elfs();
+  if (rc != 0)
+    return rc;
 
-  auto write_elf_file = [](const char *path, const uint8_t *elf,
-                           size_t size) -> bool {
-    mkdir("/data/OrionHEN", 0777);
-    mkdir("/data/OrionHEN/daemons", 0777);
-    int fd = open(path, O_WRONLY | O_CREAT | O_TRUNC, 0777);
-    if (fd < 0)
-      return false;
-    size_t off = 0;
-    while (off < size) {
-      ssize_t n = write(fd, elf + off, size - off);
-      if (n <= 0) {
-        close(fd);
-        return false;
-      }
-      off += (size_t)n;
-    }
-    close(fd);
-    return true;
-  };
+  rc = launch_chain(sys_ver);
+  if (rc != 0)
+    return rc;
 
-  auto kill_by_name = [](const char *a, const char *b) {
-    int p = -1;
-    while ((p = orion_find_pid_substr(a)) > 0 ||
-           (p = orion_find_pid_substr(b)) > 0) {
-      kill(p, SIGKILL);
-      sleep(1);
-    }
-  };
-
-  auto launch_path = [](const char *path, const char *label,
-                        const char *wait_name) -> bool {
-    klog_printf("9021 file: %s (%s)\n", path, label);
-    if (!elfldr_remote_send_file_uri(path)) {
-      klog_printf("  send FAILED %s\n", label);
-      return false;
-    }
-    for (int i = 0; i < 30; i++) {
-      if (wait_name && orion_find_pid_substr(wait_name) > 0) {
-        klog_printf("  running: %s\n", wait_name);
-        return true;
-      }
-      sleep(1);
-    }
-    klog_printf("  sent %s (process name not seen yet, continuing)\n", label);
-    return true;
-  };
-
-  klog_puts("Writing daemon ELFs to /data/OrionHEN/daemons ...");
-  if (!write_elf_file("/data/OrionHEN/daemons/util.elf", util_start, util_size)) {
-    notify("failed to write util.elf");
-    return -2;
-  }
-  if (!write_elf_file("/data/OrionHEN/daemons/daemon.elf", daemon_start, daemon_size)) {
-    notify("failed to write daemon.elf");
-    return -2;
-  }
-  if (!if_exists("/data/OrionHEN/kstuff.elf")) {
-    (void)write_elf_file("/data/OrionHEN/daemons/kstuff.elf", kstuff_start,
-                         (size_t)kstuff_size);
-  }
-  klog_puts("   Daemon ELFs written");
-
-  if (!elfldr_remote_available()) {
-    klog_puts("FATAL: no elfldr on 127.0.0.1:9021");
-    notify("Start elfldr on 9021 first, then re-run. ELFs are on disk under /data/OrionHEN/daemons/");
-    return -2;
-  }
-  klog_puts("elfldr :9021 OK - launching via file URI (serialized)");
-  sleep(3); /* settle after remount/unmount */
-
-  /*
-   * Order: util → kstuff → daemon
-   * (daemon injects toolbox; kstuff must patch ShellUI first)
-   */
-  klog_puts("Starting util via 9021 ...");
-  kill_by_name("util.elf", "OrionHEN Utility");
-  orion_ready_clear(ORION_READY_UTIL);
-  orion_ready_clear(ORION_READY_KSTUFF);
-  orion_ready_clear(ORION_READY_DAEMON);
-  orion_ready_clear(ORION_READY_TOOLBOX);
-
-  if (!launch_path("/data/OrionHEN/daemons/util.elf", "util", "util.elf")) {
-    notify("failed to launch util via elfldr :9021");
-    return -2;
-  }
-  if (!orion_ready_wait(ORION_READY_UTIL, /*timeout_ms=*/15000, /*poll_ms=*/200))
-    klog_puts("util ready timeout — continuing (process may still be starting)");
-
-  const bool skip_kstuff =
-      if_exists("/mnt/usb0/no_kstuff") || if_exists("/data/OrionHEN/no_kstuff");
-  if (skip_kstuff) {
-    klog_puts("kstuff disabled via no_kstuff file");
-    orion_ready_signal(ORION_READY_KSTUFF);
-  } else if (sys_ver.version >= 0x3000000) {
-    klog_puts("Loading kstuff via 9021 (before daemon/toolbox) ...");
-    const char *kpath = if_exists("/data/OrionHEN/kstuff.elf")
-                            ? "/data/OrionHEN/kstuff.elf"
-                            : "/data/OrionHEN/daemons/kstuff.elf";
-    if (launch_path(kpath, "kstuff", "kstuff.elf")) {
-      int wait = 0;
-      bool not_loaded = true;
-      while ((not_loaded = (sceKernelMprotect(&buz[0], 100, 0x7) < 0))) {
-        if (wait++ > 15) {
-          notify("Failed to load kstuff, continuing without it");
-          break;
-        }
-        sleep(1);
-      }
-      if (!not_loaded) {
-        klog_puts("kstuff mprotect OK — signal ready");
-        orion_ready_signal(ORION_READY_KSTUFF);
-        sleep(1); /* brief settle for ShellUI trophy patches */
-      }
-    } else {
-      notify("Failed to load kstuff via 9021, continuing");
-    }
-  } else {
-    orion_ready_signal(ORION_READY_KSTUFF);
-  }
-
-  klog_puts("Starting daemon via 9021 (toolbox inject) ...");
-  kill_by_name("daemon.elf", "OrionHEN Critical");
-  orion_ready_clear(ORION_READY_DAEMON);
-  if (!launch_path("/data/OrionHEN/daemons/daemon.elf", "daemon", "daemon.elf")) {
-    notify("failed to launch daemon via elfldr :9021");
-    return -2;
-  }
-  if (!orion_ready_wait(ORION_READY_DAEMON, /*timeout_ms=*/20000, /*poll_ms=*/200))
-    klog_puts("daemon ready timeout — continuing");
-
-  sceNotificationSend(0xFE, true, &json_payload[0]);
-
-  // Autostart plugins (skip elfldr.plugin)
-  char **plugin_paths = find_plugin_files();
-  if (plugin_paths && plugin_count > 0) {
-    int loaded_plugins = 0;
-    for (int i = 0; i < plugin_count; i++) {
-      if (strstr(plugin_paths[i], "elfldr") != nullptr)
-        continue;
-      klog_printf("Loading plugin: %s\n", plugin_paths[i]);
-      if (!load_plugin(plugin_paths[i], loaded_filenames[i])) {
-        snprintf(buff, sizeof(buff),
-                 "[OrionHEN] Failed to load plugin!\nPath: %s",
-                 plugin_paths[i]);
-        notify(buff);
-        klog_puts("FAILED!");
-        continue;
-      }
-      klog_puts("Loaded!");
-      loaded_plugins++;
-    }
-    klog_printf("Successfully loaded %d plugins\n", loaded_plugins);
-    free_plugin_files(plugin_paths);
-  }
+  load_autostart_plugins();
 
   klog_puts("============== Spawner (Bootstrapper) Finished =================");
   return 0;

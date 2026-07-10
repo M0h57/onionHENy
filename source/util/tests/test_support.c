@@ -97,11 +97,30 @@ int orion_test_fixture_path(const char *rel, char *out, size_t out_size) {
   if (rel == NULL || out == NULL || out_size == 0) {
     return -1;
   }
+
+  /* 1) Explicit root (Makefile sets ORION_TEST_ROOT). */
   if (root != NULL && root[0] != '\0') {
     snprintf(out, out_size, "%s/%s", root, rel);
-  } else {
-    /* Default: run from source/util/tests */
-    snprintf(out, out_size, "%s", rel);
+    if (access(out, R_OK) == 0)
+      return 0;
   }
-  return access(out, R_OK) == 0 ? 0 : -1;
+
+#ifdef ORION_TEST_DIR
+  /* 2) Compile-time tests directory (absolute, cwd-independent). */
+  snprintf(out, out_size, "%s/%s", ORION_TEST_DIR, rel);
+  if (access(out, R_OK) == 0)
+    return 0;
+#endif
+
+  /* 3) cwd-relative (make test cds into tests/). */
+  snprintf(out, out_size, "%s", rel);
+  if (access(out, R_OK) == 0)
+    return 0;
+
+  /* 4) Common when binary is run from repo root. */
+  snprintf(out, out_size, "source/util/tests/%s", rel);
+  if (access(out, R_OK) == 0)
+    return 0;
+
+  return -1;
 }
