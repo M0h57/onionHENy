@@ -36,6 +36,7 @@ NOTE:   String length must be evenly divisible by 16byte (str_len % 16 == 0)
 /* Includes:                                                                 */
 /*****************************************************************************/
 #define CBC 1
+#define CTR 1
 #include <string.h> // CBC mode, for memset
 #include "mc4/aes.h"
 

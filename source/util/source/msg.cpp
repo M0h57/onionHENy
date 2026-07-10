@@ -34,8 +34,14 @@ int sceSystemServiceLoadExec(const char *path, const char *arg);
 extern bool is_handler_enabled;
 }
 #include "../../extern/cJSON/orion_cjson.hpp"
-#include <CheatManager.hpp>
+extern "C" {
+#include "cheats/cheat_service.h"
+#include "cheats/runtime.h"
+}
+extern orion_cheat_service_state_t *g_cheat_service;
+#include <dirent.h>
 #include <fcntl.h>
+#include <sys/stat.h>
 #include <fstream>
 #include <memory>
 #include <sfo.hpp>
@@ -417,82 +423,56 @@ void handleIPC(struct clientArgs *client, std::string &inputStr,
         std::string(orion_cjson::string_item(my_json.get(), "tid", ""));
     std::string version =
         std::string(orion_cjson::string_item(my_json.get(), "version", ""));
-    GameCheat *cheat = CheatManager::GetGameCheat(title_id, version);
+    int pid = orion_cjson::int_item(my_json.get(), "pid");
+    int appid = orion_cjson::int_item(my_json.get(), "appid");
+    std::string shm_path = "/user/data/OrionHEN/" + title_id + "_cheats";
 
-    if (cheat) {
-      //
-      // Build json response, we need escape the quotes because the IPC response
-      // is also between quotes, which break the JSON response
-      //
-      cJSON *res_json = cJSON_CreateObject();
-      cJSON *cheats = cJSON_AddArrayToObject(res_json, "cheats");
-      cJSON *authors = cJSON_AddArrayToObject(res_json, "authors");
-      cJSON_AddStringToObject(res_json, "name", cheat->name.c_str());
+    extern orion_cheat_service_state_t *g_cheat_service;
+    if (g_cheat_service == nullptr) {
+      g_cheat_service = orion_cheat_service_state_create();
+    }
+    orion_cheat_service_ensure_dir();
 
-      for (size_t i = 0; i < cheat->cheats.size(); ++i) {
-        cJSON *cheat_entry = cJSON_CreateObject();
-        cJSON_AddStringToObject(cheat_entry, "name", cheat->cheats[i].name.c_str());
-        cJSON_AddNumberToObject(cheat_entry, "id", static_cast<int>(i));
-        cJSON_AddBoolToObject(cheat_entry, "enabled", cheat->cheats[i].enabled);
-        cJSON_AddStringToObject(cheat_entry, "description",
-                                cheat->cheats[i].description.c_str());
-        cJSON_AddItemToArray(cheats, cheat_entry);
-      }
-
-      for (size_t i = 0; i < cheat->authors.size(); ++i) {
-        cJSON_AddItemToArray(authors, cJSON_CreateString(cheat->authors[i].c_str()));
-      }
-
-      orion_cjson::Printed printed(res_json);
-      std::string res = printed.str();
-      cJSON_Delete(res_json);
-      #if SHELL_DEBUG == 1
-      OrionHEN_log("Response json => %s (%d bytes)", res.c_str(), res.size());
-      #endif
-
-      //
-      // Create a shared file contained the parsed cheat
-      //
-
-      std::string shm_path = "/user/data/OrionHEN/" + title_id + "_cheats";
-      unlink(shm_path.c_str());
-
-      int fd = open(shm_path.c_str(), O_WRONLY | O_CREAT | O_TRUNC, 0666);
-      if (fd >= 0) {
-        // Write the buffer to the file
-        if (write(fd, res.c_str(), res.length()) == -1) {
-          perror("write failed");
-        }
-        // Close the file descriptor
-        close(fd);
-      }
-
+    if (g_cheat_service &&
+        orion_cheat_service_export_list(g_cheat_service, title_id.c_str(),
+                                        version.c_str(), pid, appid,
+                                        shm_path.c_str()) == 0) {
       reply(sender_app, false, shm_path);
-
     } else {
       notify(true, "No cheats available for %s version %s!", title_id.c_str(),
              version.c_str());
       reply(sender_app, true);
     }
-
     break;
   }
 
   case BREW_UTIL_TOGGLE_CHEAT: {
     std::string title_id =
         std::string(orion_cjson::string_item(my_json.get(), "tid", ""));
+    std::string version =
+        std::string(orion_cjson::string_item(my_json.get(), "version", ""));
     int pid = orion_cjson::int_item(my_json.get(), "pid");
+    int appid = orion_cjson::int_item(my_json.get(), "appid");
     int cheat_id = orion_cjson::int_item(my_json.get(), "cheat_id");
-    std::string cheat_name;
+    char status[256] = {0};
 
-    OrionHEN_log("Received toggle command for cheat %d on %s PID %d ID %d",
-               cheat_id, title_id.c_str(), pid, cheat_id);
+    OrionHEN_log("Received toggle command for cheat %d on %s PID %d",
+                 cheat_id, title_id.c_str(), pid);
 
-    if (CheatManager::ToggleCheat(pid, title_id, cheat_id, cheat_name)) {
-      OrionHEN_log("Cheat successfully activated!");
-      reply(sender_app, false, cheat_name);
+    extern orion_cheat_service_state_t *g_cheat_service;
+    if (g_cheat_service == nullptr) {
+      g_cheat_service = orion_cheat_service_state_create();
+    }
+
+    if (g_cheat_service &&
+        orion_cheat_service_toggle_index(g_cheat_service, pid, appid,
+                                         title_id.c_str(), version.c_str(),
+                                         cheat_id, status, sizeof(status)) == 0) {
+      OrionHEN_log("Cheat toggle ok: %s", status);
+      reply(sender_app, false, status);
     } else {
-      reply(sender_app, true);
+      OrionHEN_log("Cheat toggle failed: %s", status);
+      reply(sender_app, true, status);
     }
     break;
   }
@@ -503,6 +483,7 @@ void handleIPC(struct clientArgs *client, std::string &inputStr,
     break;
   case BREW_UTIL_DOWNLOAD_CHEATS: {
     int repo = orion_cjson::int_item(my_json.get(), "repo");
+    const char *staging = "/data/OrionHEN/cheats_staging";
 
     if(!check_for_new_commit(repo)){
       OrionHEN_log("Failed to check for new commit or is up to date");
@@ -516,16 +497,24 @@ void handleIPC(struct clientArgs *client, std::string &inputStr,
       reply(sender_app, true);
       break;
     }
-    OrionHEN_log("Extracting Zip to the cheats folder");
-    if (!extract_zip("/data/OrionHEN/cheats.zip", "/data/OrionHEN/cheats")) {
+    mkdir(ORION_DATA_ROOT, 0777);
+    mkdir(staging, 0777);
+    OrionHEN_log("Extracting Zip to staging folder");
+    if (!extract_zip("/data/OrionHEN/cheats.zip", staging)) {
       OrionHEN_log("Failed to extract zip");
       reply(sender_app, true);
       break;
     }
 
     unlink("/data/OrionHEN/cheats.zip");
-    MakeInitialCheatCache(NULL);
-    notify(true, "Successfully updated & refreshed the OrionHEN Cheats with the latest cheats repo");
+    orion_cheat_service_ensure_dir();
+    if (orion_cheat_flatten_install_tree(staging) < 0) {
+      notify(true, "Downloaded repo but no flat cheat files were installed");
+      reply(sender_app, true);
+      break;
+    }
+    notify(true, "Successfully installed cheats to %s (flat TITLE_VERSION.ext)",
+           ORION_CHEATS_DIR);
     reply(sender_app, false);
     break;
   }
@@ -544,8 +533,8 @@ void handleIPC(struct clientArgs *client, std::string &inputStr,
       break;
   }
   case BREW_UTIL_RELOAD_CHEATS: {
-    notify(true, "Reloading cheats cache");
-    ReloadCheatsCache(NULL);
+    notify(true, "Cheats use hot-reload; ensuring directory %s", ORION_CHEATS_DIR);
+    orion_cheat_service_ensure_dir();
     reply(sender_app, false);
     break;
   }

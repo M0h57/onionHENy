@@ -15,7 +15,12 @@ along with this program; see the file COPYING. If not, see
 <http://www.gnu.org/licenses/>.  */
 
 #include "ipc.hpp"
-#include "CheatManager.hpp"
+extern "C" {
+#include "cheats/cheat_service.h"
+#include "cheats/runtime.h"
+#include "freebsd-helper.h"
+}
+orion_cheat_service_state_t *g_cheat_service = nullptr;
 #include <cstdint>
 #include <hijacker/hijacker.hpp>
 #include <sys/_pthreadtypes.h>
@@ -137,7 +142,7 @@ void LoadSettings(void) {
     }
 }
 int main(void) {
-    pthread_t ipc_server = 0, cheat_cache = 0;
+    pthread_t ipc_server = 0;
     char tmp_buf[200];
     
     sceNetCtlInit();
@@ -222,8 +227,11 @@ int main(void) {
         LoadSettings();
         OrionHEN_log("done loading settings...");
 
-        OrionHEN_log("Caching cheat list...");
-        pthread_create(&cheat_cache, NULL, MakeInitialCheatCache, NULL);
+        OrionHEN_log("Initializing cheat engine...");
+        orion_cheat_service_ensure_dir();
+        if (g_cheat_service == nullptr) {
+            g_cheat_service = orion_cheat_service_state_create();
+        }
 
         pthread_join(cmd_server, NULL);
 
