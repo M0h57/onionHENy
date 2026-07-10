@@ -552,13 +552,10 @@ bool LoadSettings()
   if (ini_parser_load(&parser, INI_PATH))
   {
 
-    const char *FTP_str = ini_parser_get(&parser, "Settings.FTP", "1");
-    const char *Klog_str = ini_parser_get(&parser, "Settings.Klog", "0");
     const char *DPI_str = ini_parser_get(&parser, "Settings.DPI", "0");
     const char *libhijacker_cheats_str = ini_parser_get(&parser, "Settings.libhijacker_cheats", "0");
     const char *testkit_str = ini_parser_get(&parser, "Settings.testkit", "0");
     const char *allow_data_n_sandbox = ini_parser_get(&parser, "Settings.Allow_data_in_sandbox", "1");
-    const char *ftp_dev_access = ini_parser_get(&parser, "Settings.ALLOW_FTP_DEV_ACCESS", "0");
     const char *start_option = ini_parser_get(&parser, "Settings.StartOption", "0");
     const char *Delay_seconds = ini_parser_get(&parser, "Settings.Rest_Mode_Delay_Seconds", "0");
     const char *util_rest_kill = ini_parser_get(&parser, "Settings.Util_rest_kill", "0");
@@ -583,18 +580,15 @@ bool LoadSettings()
     // Check if the strings are not nullptr before converting
     global_conf.enable_fan_speed = enable_fan_speed ? atoi(enable_fan_speed) : 0;
     global_conf.fan_threshold = fan_threshold ? atoi(fan_threshold) : 77;
-    global_conf.FTP = FTP_str ? atoi(FTP_str) : 0;
     global_conf.OrionHEN_game_opts = game_opts_str ? atoi(game_opts_str) : 0;
     global_conf.display_tids = dip_tid ? atoi(dip_tid) : 0;
     global_conf.game_rest_kill = game_rest_kill ? atoi(game_rest_kill) : 0;
     global_conf.util_rest_kill = util_rest_kill ? atoi(util_rest_kill) : 0;
     global_conf.rest_delay_seconds = Delay_seconds ? atol(Delay_seconds) : 0;
-    global_conf.Klog = Klog_str ? atoi(Klog_str) : 0;
     global_conf.DPI = DPI_str ? atoi(DPI_str) : 0;
     global_conf.libhijacker_cheats = libhijacker_cheats_str ? atoi(libhijacker_cheats_str) : 0;
     global_conf.testkit = testkit_str ? atoi(testkit_str) : 0;
     global_conf.allow_data_sandbox = allow_data_n_sandbox ? atoi(allow_data_n_sandbox) : 0;
-    global_conf.ftp_dev_access = ftp_dev_access ? atoi(ftp_dev_access) : 0;
     global_conf.start_option = start_option ? atoi(start_option) : 0;
     global_conf.toolbox_auto_start = toolbox_auto_start ? atoi(toolbox_auto_start) : 0;
     global_conf.DPI_v2 = DPI_v2 ? atoi(DPI_v2) : 0;
@@ -678,7 +672,6 @@ bool LoadSettings()
     }
 
 
-    // global_conf.FTP = FTP;
     return true;
   }
   else
@@ -693,12 +686,9 @@ bool SaveSettings()
   // Construct the settings string
   std::string buff = "[Settings]\n";
   buff += "libhijacker_cheats=" + std::to_string(global_conf.libhijacker_cheats) + "\n";
-  buff += "FTP=" + std::to_string(global_conf.FTP) + "\n";
   buff += "testkit=" + std::to_string(global_conf.testkit) + "\n";
-  buff += "Klog=" + std::to_string(global_conf.Klog) + "\n";
   buff += "DPI=" + std::to_string(global_conf.DPI) + "\n";
   buff += "Allow_data_in_sandbox=" + std::to_string(global_conf.allow_data_sandbox) + "\n";
-  buff += "ALLOW_FTP_DEV_ACCESS=" + std::to_string(global_conf.ftp_dev_access) + "\n";
   buff += "StartOption=" + std::to_string(global_conf.start_option) + "\n";
   buff += "Rest_Mode_Delay_Seconds=" + std::to_string(global_conf.rest_delay_seconds) + "\n";
   buff += "Util_rest_kill=" + std::to_string(global_conf.util_rest_kill) + "\n";

@@ -244,7 +244,7 @@ void LoadSettings() {
     // File doesn't exist, create default config
     OrionHEN_log("[Daemon] Config file not found. Creating default...");
     std::string ini_file(
-      "[Settings]\nFTP=1\nAllow_data_in_sandbox=0\nDPI=0\ntoolbox_auto_start=1\nDPI_v2=0\nKlog=0\nAPP_JB_Debug_Msg=0\nauto_eject_disc=0\n");
+      "[Settings]\nAllow_data_in_sandbox=0\nDPI=0\ntoolbox_auto_start=1\nDPI_v2=0\nAPP_JB_Debug_Msg=0\nauto_eject_disc=0\n");
     int fd = open(config_path, O_WRONLY | O_CREAT | O_TRUNC, 0777);
     if (fd >= 0) {
       write(fd, ini_file.c_str(), ini_file.length());

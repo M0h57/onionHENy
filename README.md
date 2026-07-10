@@ -173,7 +173,6 @@ Common ports: exploit elfldr **9020** and runtime elfldr **9021**. OrionHEN does
 - [Toolbox] Credits / supporters
 - [Toolbox] Custom debug settings text and icon
 - [Toolbox] Auto-open menu after load
-- React bundle (all FWs) & SELF (2.xx) FTP decryption support
 - Two daemons for stability (util daemon auto-restarted by the main daemon)
 - Custom system software version string
 - kstuff-related flows for fself / fpkg support
@@ -181,9 +180,9 @@ Common ports: exploit elfldr **9020** and runtime elfldr **9021**. OrionHEN does
 - Jailbreak IPC for homebrew apps
 - Update blocker (unmounts update partition)
 - Optional Illusions cheats/patches [plugin](https://github.com/LightningMods/etaHEN-SDK/tree/main/Plugin_samples/Illusion_cheats)
-- Optional FTP on port **1337**
+- ~~Optional FTP on port 1337~~ (removed)
+- ~~Optional Klog server on port 9081~~ (removed)
 - ~~Optional `/data` inside app sandboxes~~ (removed — was only sandbox path visibility, not jailbreak)
-- Klog server on port **9081**
 - ELF spawn via external **elfldr on port 9021** (not bundled)
 - Optional Direct PKG Installer v2 WebUI: `http://PS5_IP:12800`
 - Optional Direct PKG Installer service on port **9090**
@@ -202,17 +201,14 @@ Custom plugins are still developed against the public [etaHEN SDK](https://githu
 
 ## Configuration (`config.ini`)
 
-Settings file: **`/data/OrionHEN/config.ini`** (created on first run; reachable via built-in FTP).
+Settings file: **`/data/OrionHEN/config.ini`** (created on first run).
 
 | INI key | Description | Default |
 |---------|-------------|---------|
-| `FTP` | 0 = disable FTP, 1 = enable | 1 |
 | `toolbox_auto_start` | 0 = off, 1 = on | 1 |
 | `Allow_data_in_sandbox` | **Ignored** (sandbox `/data` patch removed) | 0 |
 | `DPI` | 0 = disable Direct PKG Installer, 1 = enable | 0 |
 | `DPI_v2` | 0 = disable DPI v2, 1 = enable | 0 |
-| `Klog` | 0 = disable kernel log server, 1 = enable | 0 |
-| `ALLOW_FTP_DEV_ACCESS` | 0 = disable FTP dev access, 1 = enable | 0 |
 | `Rest_Mode_Delay_Seconds` | Delay before shellui patch after rest | 0 |
 | `Util_rest_kill` | Kill util daemon on rest | 0 |
 | `Game_rest_kill` | Kill open game on rest | 0 |

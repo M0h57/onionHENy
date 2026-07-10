@@ -10,7 +10,7 @@ OrionHEN is based on etaHEN’s open-source release. See the [root README](../RE
 |------|-------------|
 | `bootstrapper/` | Main payload bootstrapper |
 | `daemon/` | Main daemon |
-| `util/` | Utility daemon (FTP, PKG, …) |
+| `util/` | Utility daemon (DPI, cheats, IPC, …) |
 | `shellui/` | Toolbox / ShellUI hooks |
 | `fps_elf/` | FPS overlay PRX |
 | `unpacker/` | Payload unpacker |

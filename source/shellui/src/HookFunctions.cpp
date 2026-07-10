@@ -398,7 +398,7 @@ MonoString* Hook_getIpMacHost(uint64_t inst, SceNetIfName name) {
         return mono_string_new(Root_Domain, full_text);
     }
 
-    snprintf(full_text, sizeof(full_text), "%s\nFTP: 1337\nDPI: 9090", full_text);
+    snprintf(full_text, sizeof(full_text), "%s\nDPI: 9090", full_text);
     return mono_string_new(Root_Domain, full_text);
 }
 
@@ -715,11 +715,8 @@ void* kstuff_download_thread(void* args) {
 
 int OnPress_Hook(MonoObject* Instance, MonoObject* element, MonoObject* e)
 {
-    bool& FTP = global_conf.FTP;
-    bool& Klog = global_conf.Klog;
     bool& DPI = global_conf.DPI;
     bool& Data_SB = global_conf.allow_data_sandbox;
-    bool& FTP_Dev_Access = global_conf.ftp_dev_access;
     int& StartOption = global_conf.start_option;
     bool& util_rest_kill = global_conf.util_rest_kill;
     bool& game_rest_kill = global_conf.game_rest_kill;
@@ -1190,19 +1187,6 @@ int OnPress_Hook(MonoObject* Instance, MonoObject* element, MonoObject* e)
         //SendShelluiNotify();
         // notify("LM's Test Button Pressed (123)");
     }
-    else if (id == "id_ftp_service") {
-        if (atol(value.c_str()) == FTP) {
-#if SHELL_DEBUG==1
-            shellui_log("FTP already %s", FTP ? "Enabled" : "Disabled");
-#endif
-            return oOnPress(Instance, element, e);
-        }
-        FTP = !FTP;
-        if (IPC_Client::getInstance(true).ToggleSetting(BREW_UTIL_TOGGLE_FTP, FTP) != IPC_Ret::NO_ERROR) {
-            notify(FTP ? "FTP Server Failed to Start ..." : "FTP Server Failed to Stop ...");
-            FTP = !FTP;
-        }
-    }
     else if (id == "id_orionhen_credits") {
         // notify("Home Menu Button Pressed");
         return oOnPress(Instance, element, e);
@@ -1219,18 +1203,6 @@ int OnPress_Hook(MonoObject* Instance, MonoObject* element, MonoObject* e)
         pthread_detach(thr);
         return oOnPress(Instance, element, e);
     }//
-    else if (id == "id_klog_service") {
-        // see if the resaults agress
-        if (atoi(value.c_str()) == Klog) {
-            shellui_log("Klog already %s", Klog ? "Enabled" : "Disabled");
-            return oOnPress(Instance, element, e);
-        }
-        Klog = !Klog;
-        if (IPC_Client::getInstance(true).ToggleSetting(BREW_UTIL_TOGGLE_KLOG, Klog) != IPC_Ret::NO_ERROR) {
-            notify(Klog ? "Klog Server Failed to Start ..." : "Klog Server Failed to Stop ...");
-            Klog = !Klog;
-        }//
-    }
     else if (id == "id_dpi_service") {
         if (atoi(value.c_str()) == DPI) {
             shellui_log("DPI already %s", DPI ? "Enabled" : "Disabled");
@@ -1306,13 +1278,6 @@ int OnPress_Hook(MonoObject* Instance, MonoObject* element, MonoObject* e)
             return oOnPress(Instance, element, e);
         }
         Data_SB = !Data_SB;
-    }
-    else if (id == "id_ftp_dev_access") {
-        if (atoi(value.c_str()) == FTP_Dev_Access) {
-            shellui_log("FTP Dev Access already %s", FTP_Dev_Access ? "Enabled" : "Disabled");
-            return oOnPress(Instance, element, e);
-        }
-        FTP_Dev_Access = !FTP_Dev_Access;
     }
     else if(id == "id_toolbox_auto_start"){
         if (atoi(value.c_str()) == global_conf.toolbox_auto_start) {
@@ -1722,8 +1687,6 @@ extern "C" int sceKernelGetPs4SystemSwVersion(OrbisKernelSwVersion *);
 
 MonoMethod* set_value_method = nullptr;
 int OnPreCreate_Hook(MonoObject* Instance, MonoObject* element) {
-    bool& FTP = global_conf.FTP;
-    bool& Klog = global_conf.Klog;
     bool& DPI = global_conf.DPI;
     bool& DPI_v2 = global_conf.DPI_v2;
     MonoString* s_MonoText = nullptr;
@@ -1823,12 +1786,6 @@ int OnPreCreate_Hook(MonoObject* Instance, MonoObject* element) {
     else if (id == "id_enable_fan_speed"){
         s_MonoText = mono_string_new(Root_Domain, global_conf.enable_fan_speed ? "1" : "0");
     }
-    else if (id == "id_ftp_service") {
-        s_MonoText = mono_string_new(Root_Domain, FTP ? "1" : "0");
-    }
-    else if (id == "id_klog_service") {
-        s_MonoText = mono_string_new(Root_Domain, Klog ?  "1" : "0");
-    }
     else if (id == "id_dpi_service") {
         s_MonoText = mono_string_new(Root_Domain, DPI ?  "1" : "0");
     }
@@ -1850,9 +1807,6 @@ int OnPreCreate_Hook(MonoObject* Instance, MonoObject* element) {
     else if (id == "id_data_sb") {
         s_MonoText = mono_string_new(Root_Domain, global_conf.allow_data_sandbox ? "1" : "0");
 	  }
-    else if (id == "id_ftp_dev_access") {
-		    s_MonoText = mono_string_new(Root_Domain, global_conf.ftp_dev_access ? "1" : "0");
- 	  }
     else if (id == "id_sistro_ps5debug") {
 		    s_MonoText = mono_string_new(Root_Domain, "0");
 	  }

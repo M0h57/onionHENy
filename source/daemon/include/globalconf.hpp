@@ -26,10 +26,7 @@ enum StartOpts {
 struct daemon_settings {
   bool libhijacker_cheats = false;
 
-  bool FTP = true;
-
   bool is_testkit = false;
-  bool has_ftp_dev = false;
   bool allow_data = false; /* sandbox /data patch removed from OrionHEN */
   bool DPIv2 = false;
   bool elf_loader = true;
@@ -76,13 +73,6 @@ typedef struct OrbisNetSockaddr {
   OrbisNetSaFamily_t sa_family;
   char sa_data[14];
 } OrbisNetSockaddr;
-
-typedef struct {
-  int klogFd;   // File descriptor for /dev/klog
-  int socketFd; // File descriptor for the socket
-} KlogServerArgs;
-
-void *runKlogServer(void *);
 
 extern "C" int sceNetHtons(int port);
 extern "C" int sceNetInetPton(int af, const char *src, void *dst);

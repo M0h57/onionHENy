@@ -15,7 +15,6 @@ along with this program; see the file COPYING. If not, see
 <http://www.gnu.org/licenses/>.  */
 
 #pragma once
-#include "tcp.h"
 #include <stdio.h>
 #include <ps5/payload.h>
 #include <netinet/in.h>
@@ -47,7 +46,9 @@ along with this program; see the file COPYING. If not, see
 #include <stddef.h>
 #include <sys/types.h>
 #include <ifaddrs.h>
-#include <cmd.h>
+
+/* Rest-mode loop sleep (was in tcp.h with the removed klog/ftp helpers) */
+#define SLEEP_PERIOD 1000000
 
 /*==================== DPI =========================*/
 #define PLAYGOSCENARIOID_SIZE 3
@@ -130,13 +131,10 @@ typedef struct notify_request
 /*================ SETTINGS ==============*/
 typedef struct
 {
-	bool FTP;
-	bool has_ftp_dev;
 	bool allow_data;
 	bool DPI;
 	bool toolbox_auto_start;
 	bool DPI_v2;
-	bool klog;
 	bool disable_toolbox_for_rest;
 	atomic_bool legacy_cmd_server;
 	atomic_bool legacy_cmd_server_exit;
@@ -157,8 +155,6 @@ bool load_plugin(const char *path);
 
 /*================== Threads =================*/
 extern pthread_t dpi_thread;
-extern pthread_t ftp;
-extern pthread_t klog_thread;
 extern pthread_t kernelrw_thread;
 /*================== Threads =================*/
 extern atomic_bool g_running;
@@ -229,11 +225,7 @@ int sceLncUtilLaunchApp(const char* tid, const char* argv[], LncAppParam* param)
 uint32_t sceLncUtilKillApp(uint32_t appId);
 bool copyFile(const char *source, const char *destination);
 
-bool start_klog(void);
-void stop_klog(void);
-bool StartFTP(void);
 void shutdownDirectPKGInstaller(bool is_v2);
-void ShutdownFTP(void);
 int32_t sceKernelSendNotificationRequest(int32_t device, OrbisNotificationRequest *req, size_t size, int32_t blocking);
 
 bool IniliatizeHTTP(void);

@@ -180,8 +180,6 @@ enum Cheats_Shortcut{
 
 typedef struct OrionHENSettings_t
 {
-    bool FTP = true;
-    bool Klog = true;
     bool DPI = true;
     bool DPI_v2 = false;
     bool libhijacker_cheats = false;
@@ -189,7 +187,6 @@ typedef struct OrionHENSettings_t
 
     bool testkit = false;
     bool allow_data_sandbox = false;
-    bool ftp_dev_access = false;
     bool util_rest_kill = false;
     bool game_rest_kill = false;
     bool toolbox_auto_start = false;

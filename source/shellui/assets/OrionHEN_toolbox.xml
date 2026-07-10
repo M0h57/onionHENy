@@ -6,11 +6,10 @@
     1. 软件包安装 — 把 PKG / 附加内容装进主机
     2. 插件与内核 — 在 HEN 之上加载扩展（插件 ELF / Kstuff）
     3. 游戏功能   — 玩游戏过程中用到的能力
-    4. 网络服务   — 常驻网络守护（FTP / Klog），不含安装器
-    5. 系统设置   — 主机行为、权限、存储与硬件
-    6. 启动与快捷键 — 如何打开工具箱 / 启动后做什么
-    7. 调试选项   — 开发调试与 TestKit
-    8. 关于
+    4. 系统设置   — 主机行为、权限、存储与硬件
+    5. 启动与快捷键 — 如何打开工具箱 / 启动后做什么
+    6. 调试选项   — 开发调试与 TestKit
+    7. 关于
   -->
   <setting_list id="id_debug_settings" title="★OrionHEN 工具箱" initial_focus_to="id_group_pkg">
 
@@ -57,15 +56,7 @@
       </setting_list>
     </setting_list>
 
-    <!-- ========== 4. 网络服务 ========== -->
-    <!-- 用途：常驻网络守护进程（传输/日志），与“安装”分开 -->
-    <setting_list id="id_services" title="网络服务" second_title="FTP 与内核日志服务" icon="//user//data//OrionHEN//assets//icon_xml_network.png" initial_focus_to="id_ftp_service">
-      <toggle_switch id="id_ftp_service" title="FTP" second_title="FTP 服务器端口 1337" value="0"/>
-      <toggle_switch id="id_ftp_dev_access" title="允许 FTP 访问 /dev 目录" second_title="扩展 FTP 可访问路径（需先开启 FTP）" value="0"/>
-      <toggle_switch id="id_klog_service" title="Klog" second_title="内核日志服务器端口 9081" value="0"/>
-    </setting_list>
-
-    <!-- ========== 5. 系统设置 ========== -->
+    <!-- ========== 4. 系统设置 ========== -->
     <!-- 用途：主机权限、硬件、存储与稳定性相关配置 -->
     <setting_list id="id_group_system" title="系统设置" second_title="权限、硬件、存储与休息模式" icon="//user//data//OrionHEN//assets//icon_xml_settings.png" initial_focus_to="id_data_sb">
       <toggle_switch id="id_data_sb" title="允许应用沙盒访问 /data" second_title="应用内可访问 /data 目录" confirm="更改将在下次重启后生效" value="1"/>
@@ -88,7 +79,7 @@
       <link id="id_licenseactivation" title="蓝光（许可证）激活" file="DebugSettings/data/debug_settings_licenseactivation.xml"/>
     </setting_list>
 
-    <!-- ========== 6. 启动与快捷键 ========== -->
+    <!-- ========== 5. 启动与快捷键 ========== -->
     <!-- 用途：如何进入工具箱、HEN 起来后默认打开什么 -->
     <setting_list id="id_utils" title="启动与快捷键" second_title="启动行为与手柄快捷键" icon="//user//data//OrionHEN//assets//icon_xml_shortcuts.png" initial_focus_to="id_start_opt">
       <list id="id_start_opt" title="OrionHEN 加载后自动打开" confirm="更改将在下次重启后生效" confirm_phrase="确定, 取消">
@@ -117,7 +108,7 @@
       </setting_list>
     </setting_list>
 
-    <!-- ========== 7. 调试选项 ========== -->
+    <!-- ========== 6. 调试选项 ========== -->
     <!-- 用途：开发调试、环境切换、TestKit 专用 -->
     <setting_list id="id_group_debug" title="调试选项" second_title="越狱调试、环境与 TestKit" icon="//user//data//OrionHEN//assets//icon_xml_debug.png" initial_focus_to="id_debug_jb">
       <toggle_switch id="id_debug_jb" title="应用越狱通知" second_title="在越狱应用时显示通知" value="0"/>
@@ -128,7 +119,7 @@
       <link id="id_testkit_menu" title="TestKit 菜单" file="testkit_menu.xml"/>
     </setting_list>
 
-    <!-- ========== 8. 关于 ========== -->
+    <!-- ========== 7. 关于 ========== -->
     <setting_list id="id_orionhen_credit_options" title="关于" second_title="致谢、捐赠与项目信息" icon="//user//data//OrionHEN//assets//icon_xml_about.png" style="center">
       <setting_list id="id_donation_methods" title="支持本项目" second_title="喜欢这个项目吗？欢迎捐赠支持">
         <label id="id_method_info" title="★ 捐赠方式" style="center"/>

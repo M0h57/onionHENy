@@ -113,7 +113,6 @@ uint64_t p_syscall = 0;
 char _end[1] = {};
 struct daemon_settings global_conf;
 int fd = -1;
-pthread_t klog_srv = nullptr;
 static constexpr auto DEFAULT_PRIORITY = 256;
 uintptr_t kernel_base = 0;
 
@@ -136,7 +135,6 @@ int elfldr_raise_privileges(pid_t pid);
 extern void makenewapp();
 
 // External function declarations
-extern void *start_ftp(void *);
 extern void *IPC_loop(void *);
 extern bool is_handler_enabled;
 

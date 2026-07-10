@@ -39,16 +39,10 @@ extern "C" {
   #include <ps5/payload.h>
 
   void * start_john_elf_loader(void * arg);
-  bool StartFTP(void);
-  void ShutdownFTP(void);
-  void shutdown_klog(void);
-  bool start_klog(void);
-  void * start_ftp(void * args);
   void * krw_server(void * args);
   int sceKernelGetAppInfo(pid_t pid, app_info_t * info);
   int sceKernelGetProcessName(int pid, char * out);
   int _sceApplicationGetAppId(int pid, uint32_t * appId);
-  void * start_j_ftp(void * args);
 
   struct proc * get_proc_by_pid(pid_t pid);
   //
@@ -102,10 +96,6 @@ bool if_exists(const char* path) {
 static void cleanup(void) {
     notify(true, "OrionHEN utilities daemon has crashed...\n\nAttemping to recover...");
 
-    if (global_conf.FTP)
-        ShutdownFTP();
-
-    shutdown_klog();
     pthread_join(kernelrw_thread, NULL);
 
     if (global_conf.DPI)
@@ -126,21 +116,15 @@ void LoadSettings(void) {
         IniParser parser;
 
         if (ini_parser_load(&parser, "/data/OrionHEN/config.ini")) {
-            const char* FTP_str = ini_parser_get(&parser, "Settings.FTP", "1");
             const char* DPI_str = ini_parser_get(&parser, "Settings.DPI", "0");
             const char* allow_data_n_sandbox = ini_parser_get(&parser, "Settings.Allow_data_in_sandbox", "1");
-            const char* ftp_dev_access = ini_parser_get(&parser, "Settings.ALLOW_FTP_DEV_ACCESS", "0");
             const char* DPI_v2 = ini_parser_get(&parser, "Settings.DPI_v2", "0");
-            const char* Klog_str = ini_parser_get(&parser, "Settings.Klog", "0");
-            const char* toolbox_for_rest = ini_parser_get(&parser, "Settings.disable_toolbox_auto_start_for_rest_mode", "0");\
+            const char* toolbox_for_rest = ini_parser_get(&parser, "Settings.disable_toolbox_auto_start_for_rest_mode", "0");
 				const char* legacy_cmd_server_str = ini_parser_get(&parser, "Settings.legacy_cmd_server", "0");
             global_conf.allow_data = allow_data_n_sandbox ? atoi(allow_data_n_sandbox) : 0;
-            global_conf.has_ftp_dev = ftp_dev_access ? atoi(ftp_dev_access) : 0;
-            global_conf.FTP = FTP_str ? atoi(FTP_str) : 0;
             global_conf.DPI = DPI_str ? atoi(DPI_str) : 0;
             global_conf.DPI_v2 = DPI_v2 ? atoi(DPI_v2) : 0;
             global_conf.toolbox_auto_start = atoi(ini_parser_get(&parser, "Settings.toolbox_auto_start", "1"));
-            global_conf.klog = Klog_str ? atoi(Klog_str) : 0;
             global_conf.disable_toolbox_for_rest = toolbox_for_rest ? atoi(toolbox_for_rest) : 0;
 			global_conf.legacy_cmd_server = legacy_cmd_server_str ? atoi(legacy_cmd_server_str) : 0;
             
@@ -161,7 +145,7 @@ bool sceKernelIsTestKit() {
 bool patchShellCoreTEST();
   
 int main(void) {
-    pthread_t ipc_server = 0, cheat_cache = 0;//, j_ftp = 0;
+    pthread_t ipc_server = 0, cheat_cache = 0;
     char tmp_buf[200];
     
     sceNetCtlInit();
@@ -185,11 +169,8 @@ int main(void) {
     global_conf.allow_data = false;
     global_conf.DPI = true;
     global_conf.seconds = 0;
-    global_conf.FTP = true;
-    global_conf.has_ftp_dev = false;
     global_conf.toolbox_auto_start = true;
     global_conf.DPI_v2 = false;
-    global_conf.klog = true;
 	global_conf.legacy_cmd_server_exit = false;
 
     unlink("/data/OrionHEN/OrionHEN_util_daemon.log");
@@ -244,12 +225,6 @@ int main(void) {
         }
         no_network_rest_mode_action = false;
 
-       // pthread_create(&j_ftp, NULL, start_j_ftp, NULL);   
-
-        if (global_conf.FTP) {
-            if (StartFTP())
-                OrionHEN_log("[Setting enabled] Starting FTP Server...");
-        }
         if (global_conf.DPI) {
             startDirectPKGInstaller(false);
         }
@@ -258,12 +233,6 @@ int main(void) {
             startDirectPKGInstaller(true);
         }
 
-        if(global_conf.klog){
-           OrionHEN_log("Starting klog thread...");
-           start_klog();
-        }
-        OrionHEN_log("started klog thread...");
-        
         pthread_create(&cmd_server, NULL, runCommandNControlServer, NULL);
         OrionHEN_log("loading settings...");
         LoadSettings();
@@ -273,12 +242,6 @@ int main(void) {
         pthread_create(&cheat_cache, NULL, MakeInitialCheatCache, NULL);
 
         pthread_join(cmd_server, NULL);
-
-        if(global_conf.klog)
-           shutdown_klog();
-
-        if (global_conf.FTP)
-            ShutdownFTP();
 
         if (global_conf.DPI)
             shutdownDirectPKGInstaller(false);

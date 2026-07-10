@@ -14,7 +14,7 @@
 | ps5-app-dumper | Optional dump payload; not embedded |
 | Byepervisor / hen.bin | 1.xx–2.xx HV path; not bundled |
 | Discord RPC | Optional util service; removed |
-| libSelfDecryptor | Optional alt decrypt; FTP uses local path |
+| libSelfDecryptor | Optional alt decrypt; not used |
 
 ```bash
 git submodule update --init --recursive

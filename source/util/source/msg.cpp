@@ -47,7 +47,6 @@ void* runCommandNControlServer(void*);
 #define MB(x) ((size_t)(x) << 20)
 #define READ_SIZE 0x1024
 
-extern "C" void shutdown_klog(void);
 extern atomic_bool no_network_rest_mode_action, real_rest_mode_detected;
 
 extern int shellui_pid_for_comp;
@@ -282,39 +281,12 @@ void handleIPC(struct clientArgs *client, std::string &inputStr,
     reply(sender_app, false);
     break;
   }
-  case BREW_UTIL_TOGGLE_FTP: {
-    bool turn_on = orion_cjson::bool_item(my_json.get(), "toggle");
-    OrionHEN_log("FTP toggle: %d", turn_on);
-    if (turn_on) {
-      if (StartFTP()) {
-        notify(true, "FTP Server Started\nIP: %s Port: 1337", ip_address);
-        reply(sender_app, false);
-        break;
-      } else
-        reply(sender_app, true);
-    } else {
-      ShutdownFTP();
-      notify(true, "FTP Server Stopped");
-      reply(sender_app, false);
-    }
+  case BREW_UTIL_UNUSED_FTP:
+  case BREW_UTIL_UNUSED_KLOG:
+    /* FTP (1337) and Klog (9081) servers removed from OrionHEN. */
+    OrionHEN_log("FTP/Klog toggle: unsupported (services removed)");
+    reply(sender_app, true);
     break;
-  }
-  case BREW_UTIL_TOGGLE_KLOG: {
-    bool turn_on = orion_cjson::bool_item(my_json.get(), "toggle");
-    OrionHEN_log("klog toggle: %d", turn_on);
-    if (turn_on) {
-      if (start_klog()) {
-        notify(true, "Klog Server Started\nIP: %s Port: 9081", ip_address);
-        reply(sender_app, false);
-      } else
-        reply(sender_app, true);
-    } else {
-      shutdown_klog();
-      notify(true, "Klog Server Stopped");
-      reply(sender_app, false);
-    }
-    break;
-  }
   case BREW_UTIL_TOGGLE_DPI: {
     bool turn_on = orion_cjson::bool_item(my_json.get(), "toggle");
     bool is_v2 = orion_cjson::bool_item(my_json.get(), "is_v2");

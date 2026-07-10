@@ -62,7 +62,6 @@ atomic_bool rest_mode_action = false;
 extern atomic_bool sce_cmd_srv_Running;
 extern atomic_bool ipc_server_2_running;
 extern atomic_int ipc_2_ret;
-extern pthread_t klog_srv;
 extern int shellui_pid_for_comp;
 extern int DISCORD_RPC_SERVER_PORT;
 
