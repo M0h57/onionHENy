@@ -10,36 +10,6 @@
 void OrionHEN_log(const char *fmt, ...);
 
 /**
- * 检查字符串中是否包含指定标记。
- *
- * @param haystack 待搜索的字符串。
- * @param needle 要查找的子串。
- * @return 包含时返回 true，否则返回 false。
- */
-bool orion_cheat_contains_token(const char *haystack, const char *needle) {
-  return strstr(haystack, needle) != NULL;
-}
-
-/**
- * 规范化 PS4 EBOOT 偏移量。
- * 当前为占位实现，直接返回原始偏移量。
- *
- * @param game 游戏上下文的指针（预留）。
- * @param module 模块信息指针（预留）。
- * @param offset 原始偏移量。
- * @param is_ps2 是否为 PS2 游戏（预留）。
- * @return 规范化后的偏移量。
- */
-uint64_t orion_cheat_normalize_ps4_eboot_offset(
-    const game_context_t *game, const util_module_info_t *module,
-    uint64_t offset, bool is_ps2) {
-  (void)game;
-  (void)module;
-  (void)is_ps2;
-  return offset;
-}
-
-/**
  * 跳过字符串中的空白字符。
  *
  * @param p 当前指针位置。

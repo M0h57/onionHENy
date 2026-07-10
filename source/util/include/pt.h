@@ -24,6 +24,9 @@ along with this program; see the file COPYING. If not, see
 #include <sys/wait.h>
 #include <ps5/kernel.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 int pt_detach_proc(pid_t pid, int sig);
 int pt_attach_proc(pid_t pid);
@@ -73,3 +76,7 @@ long pt_call(pid_t pid, intptr_t addr, ...);
 long pt_call2(pid_t pid, intptr_t addr, ...);
 
 intptr_t pt_sceKernelGetProcParam(pid_t pid);
+
+#ifdef __cplusplus
+}
+#endif

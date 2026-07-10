@@ -34,11 +34,8 @@ int sceSystemServiceLoadExec(const char *path, const char *arg);
 extern bool is_handler_enabled;
 }
 #include "../../extern/cJSON/orion_cjson.hpp"
-extern "C" {
-#include "cheats/cheat_service.h"
+#include "cheats/CheatService.hpp"
 #include "cheats/runtime.h"
-}
-extern orion_cheat_service_state_t *g_cheat_service;
 #include <dirent.h>
 #include <fcntl.h>
 #include <sys/stat.h>
@@ -427,16 +424,9 @@ void handleIPC(struct clientArgs *client, std::string &inputStr,
     int appid = orion_cjson::int_item(my_json.get(), "appid");
     std::string shm_path = "/user/data/OrionHEN/" + title_id + "_cheats";
 
-    extern orion_cheat_service_state_t *g_cheat_service;
-    if (g_cheat_service == nullptr) {
-      g_cheat_service = orion_cheat_service_state_create();
-    }
-    orion_cheat_service_ensure_dir();
-
-    if (g_cheat_service &&
-        orion_cheat_service_export_list(g_cheat_service, title_id.c_str(),
-                                        version.c_str(), pid, appid,
-                                        shm_path.c_str()) == 0) {
+    auto &cheats = orion::cheats::CheatService::instance();
+    cheats.ensureDir();
+    if (cheats.exportList(title_id, version, pid, appid, shm_path) == 0) {
       reply(sender_app, false, shm_path);
     } else {
       notify(true, "No cheats available for %s version %s!", title_id.c_str(),
@@ -454,24 +444,17 @@ void handleIPC(struct clientArgs *client, std::string &inputStr,
     int pid = orion_cjson::int_item(my_json.get(), "pid");
     int appid = orion_cjson::int_item(my_json.get(), "appid");
     int cheat_id = orion_cjson::int_item(my_json.get(), "cheat_id");
-    char status[256] = {0};
+    std::string status;
 
     OrionHEN_log("Received toggle command for cheat %d on %s PID %d",
                  cheat_id, title_id.c_str(), pid);
 
-    extern orion_cheat_service_state_t *g_cheat_service;
-    if (g_cheat_service == nullptr) {
-      g_cheat_service = orion_cheat_service_state_create();
-    }
-
-    if (g_cheat_service &&
-        orion_cheat_service_toggle_index(g_cheat_service, pid, appid,
-                                         title_id.c_str(), version.c_str(),
-                                         cheat_id, status, sizeof(status)) == 0) {
-      OrionHEN_log("Cheat toggle ok: %s", status);
+    auto &cheats = orion::cheats::CheatService::instance();
+    if (cheats.toggle(pid, appid, title_id, version, cheat_id, status) == 0) {
+      OrionHEN_log("Cheat toggle ok: %s", status.c_str());
       reply(sender_app, false, status);
     } else {
-      OrionHEN_log("Cheat toggle failed: %s", status);
+      OrionHEN_log("Cheat toggle failed: %s", status.c_str());
       reply(sender_app, true, status);
     }
     break;
@@ -507,8 +490,9 @@ void handleIPC(struct clientArgs *client, std::string &inputStr,
     }
 
     unlink("/data/OrionHEN/cheats.zip");
-    orion_cheat_service_ensure_dir();
-    if (orion_cheat_flatten_install_tree(staging) < 0) {
+    auto &cheats = orion::cheats::CheatService::instance();
+    cheats.ensureDir();
+    if (cheats.flattenInstallTree(staging) < 0) {
       notify(true, "Downloaded repo but no flat cheat files were installed");
       reply(sender_app, true);
       break;
@@ -532,12 +516,11 @@ void handleIPC(struct clientArgs *client, std::string &inputStr,
       reply(sender_app, false);
       break;
   }
-  case BREW_UTIL_RELOAD_CHEATS: {
-    notify(true, "Cheats use hot-reload; ensuring directory %s", ORION_CHEATS_DIR);
-    orion_cheat_service_ensure_dir();
-    reply(sender_app, false);
+  case BREW_UTIL_UNUSED_RELOAD_CHEATS:
+    /* Old full-tree index rebuild removed; load uses file signature hot-reload. */
+    OrionHEN_log("RELOAD_CHEATS: unsupported (hot-reload only)");
+    reply(sender_app, true);
     break;
-  }
   case BREW_UTIL_TOGGLE_LEGACY_CMD_SERVER: {
     bool turn_on = orion_cjson::bool_item(my_json.get(), "toggle");
     OrionHEN_log("Legacy Command Server toggle: %d", turn_on);

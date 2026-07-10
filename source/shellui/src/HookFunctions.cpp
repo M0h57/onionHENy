@@ -404,22 +404,6 @@ void* download_cheats_thr(void*){
     return nullptr;
 }
 
-void* reload_cheats_thr(void*){
-    if(cheat_action_in_progress){
-        notify("Cheat action already in progress, please wait for it to complete...");
-        pthread_exit(nullptr);
-        return nullptr;
-    }
-    cheat_action_in_progress = true;
-    IPC_Client& util_ipc = IPC_Client::getInstance(true);
-    if (util_ipc.Cheats_Action(RELOAD_CHEATS, 0)) 
-       notify("The Cheats have been Cache and cheats list has been successfully reloaded");
-
-    cheat_action_in_progress = false;
-    pthread_exit(nullptr);
-    return nullptr;
-}
-
 void* kstuff_download_thread(void* args) {
     if (download_kstuff_thread_in_progress) {
         notify("Download action already in progress, please wait for it to complete...");
@@ -449,7 +433,6 @@ int OnPress_Hook(MonoObject* Instance, MonoObject* element, MonoObject* e)
     // Define the array of IDs to exclude (you can put this at the top of your function or as a static/global)
     const std::vector<std::string> excludedIds = {
         "id_dl_cheats",
-        "id_reload_cheats",
         "id_save_rp_info",
         "id_download_kstuff",
         "id_delete_kstuff"
@@ -913,12 +896,6 @@ int OnPress_Hook(MonoObject* Instance, MonoObject* element, MonoObject* e)
     else if (id == "id_dl_cheats") {
         pthread_t thr;
         pthread_create(&thr, nullptr, download_cheats_thr, nullptr);
-        pthread_detach(thr);
-        return oOnPress(Instance, element, e);
-    }//
-    else if (id == "id_reload_cheats") {
-        pthread_t thr;
-        pthread_create(&thr, nullptr, reload_cheats_thr, nullptr);
         pthread_detach(thr);
         return oOnPress(Instance, element, e);
     }//

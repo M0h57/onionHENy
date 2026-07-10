@@ -1307,13 +1307,12 @@ void generate_cheats_xml(std::string &new_xml, std::string& not_open_tid, bool r
   std::string list_id = running_as_debug_settings ? "id_debug_settings" : "id_cheat_title";
 
   // buttons for if nothing is found
+  /* Download only; no RELOAD/index rebuild — util hot-reloads on file signature. */
   std::string dl_cheats = R"(<list id="id_selected_cheats_repo" title="金手指仓库来源" >
                    <list_item id="id_selected_cheats_repo_1" title="OrionHEN PS5 金手指仓库" value="0"/>
                    <list_item id="id_selected_cheats_repo_2" title="GoldHEN PS4 金手指仓库" value="1"/>
                  </list>
-                <button id="id_dl_cheats" title="下载/更新金手指" second_title="从所选 GitHub 仓库下载最新金手指"/>)";
-
-  std::string reload_cheats = R"(<button id="id_reload_cheats" title="重新扫描金手指目录" second_title="新金手指请放到 /data/OrionHEN/cheats/ 下，命名为 TITLEID_VERSION.ext（json/shn/mc4/ShnExt）"/>)";
+                <button id="id_dl_cheats" title="下载/更新金手指" second_title="从所选 GitHub 仓库下载到 /data/OrionHEN/cheats/（TITLEID_VERSION.ext）"/>)";
   //
 
   new_xml =
@@ -1329,8 +1328,6 @@ void generate_cheats_xml(std::string &new_xml, std::string& not_open_tid, bool r
     new_xml += "<setting_list id=\"" + list_id + "\" title=\"OrionHEN 金手指 - 当前"
                "没有打开的游戏\">\n";
     new_xml += dl_cheats;
-    new_xml += reload_cheats;
-    
   }
   else
   {
@@ -1467,7 +1464,6 @@ void generate_cheats_xml(std::string &new_xml, std::string& not_open_tid, bool r
     }
     else{
       new_xml += dl_cheats;
-      new_xml += reload_cheats;
     }
   }
 close:

@@ -157,7 +157,7 @@ OrionHEN/
 | DPI | **9090** | Direct PKG Installer（TCP + JSON） |
 | DPI v2 | **12800** | WebUI 版 PKG 安装 |
 | Legacy CMD | **9028** | 旧版 hijacker 协议（app jailbreak 等） |
-| Cheats | IPC | flat-file cheat engine（flat `TITLE_VERSION.ext` + mdbg/kdirect） |
+| Cheats | IPC | flat-file cheat engine（flat `TITLE_VERSION.ext` + mdbg/kdirect）；详见 [util_arch](util_arch/) |
 | ShellCore / ShellUI 补丁 | — | 休息模式恢复、toolbox 激活等 |
 
 > **已移除：** FTP（1337）、Klog 网络服务（9081）。  
@@ -246,7 +246,7 @@ struct IPCMessage {
 
 - `BREW_UTIL_TOGGLE_DPI` / `BREW_UTIL_LAUNCH_PLUGIN`
 - `BREW_UTIL_GET_GAME_VER` / `BREW_UTIL_GET_GAME_CHEAT` / `BREW_UTIL_TOGGLE_CHEAT`
-- `BREW_UTIL_DOWNLOAD_CHEATS` / `BREW_UTIL_RELOAD_CHEATS`
+- `BREW_UTIL_DOWNLOAD_CHEATS`（`RELOAD_CHEATS` 已移除，热重载靠文件签名）
 - `BREW_UTIL_DOWNLOAD_KSTUFF`
 - `BREW_UTIL_TOGGLE_LEGACY_CMD_SERVER`
 - `BREW_UTIL_SHELLUI_ON_STANDBY`

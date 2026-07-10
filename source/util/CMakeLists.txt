@@ -50,6 +50,7 @@ file(GLOB SrcFiles
   ${D_SRC}/*.c
   ${D_SRC}/*.cpp
   ${D_SRC}/cheats/*.c
+  ${D_SRC}/cheats/*.cpp
   ${D_SRC}/cheats/third_party/*.c
   ${D_SRC}/../include/*.h
   ${D_SRC}/../include/*.hpp

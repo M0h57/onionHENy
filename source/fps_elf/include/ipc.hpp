@@ -40,7 +40,6 @@ along with this program; see the file COPYING. If not, see
 
 enum Cheat_Actions {
   DOWNLOAD_CHEATS = 0,
-  RELOAD_CHEATS,
 };
 
 extern bool cheats_shortcut_activate;
@@ -432,25 +431,16 @@ public:
 
 
   bool Cheats_Action(Cheat_Actions act) {
-    DaemonCommands cmd;
     if (!util_daemon) {
       game_log("This IPC command is NOT in the main daemon");
       return false;
     }
-    switch (act) {
-    case DOWNLOAD_CHEATS:
-      cmd = BREW_UTIL_DOWNLOAD_CHEATS;
-      break;
-    case RELOAD_CHEATS:
-      cmd = BREW_UTIL_RELOAD_CHEATS;
-      break;
-    default:
-      game_log("Invalid action");
+    if (act != DOWNLOAD_CHEATS) {
+      game_log("Invalid cheat action");
       return false;
-    
     }
     std::string ipc_msg;
-    if (!IPCSendCommand(cmd, ipc_msg)) {
+    if (!IPCSendCommand(BREW_UTIL_DOWNLOAD_CHEATS, ipc_msg)) {
       return false;
     }
     return true;

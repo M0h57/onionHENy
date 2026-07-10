@@ -7,12 +7,11 @@
 
 #include "util_platform.h"
 
-#ifndef ORION_MAX_CHEATS
-#define ORION_MAX_CHEATS 128
+#ifdef __cplusplus
+extern "C" {
 #endif
-#ifndef ORION_MAX_PATCHES
-#define ORION_MAX_PATCHES 128
-#endif
+
+/* Patch byte cap (fixed arrays in orion_patch_t). Cheat/patch counts are dynamic. */
 #ifndef ORION_MAX_PATCH_BYTES
 #define ORION_MAX_PATCH_BYTES 1024
 #endif
@@ -58,13 +57,8 @@ void orion_cheat_file_clear(orion_cheat_file_t *f);
 int orion_cheat_file_ensure_cheat(orion_cheat_file_t *f);
 int orion_cheat_entry_ensure_patch(orion_cheat_entry_t *e);
 
-int orion_load_cheat_file(const char *path, orion_cheat_file_t *out);
+/* Load path: orion::cheats::CheatParserFactory / CheatRepository (C++ only). */
 
-int orion_cheat_load_buffer(const char *format, const unsigned char *data,
-                            size_t data_len, orion_cheat_file_t *out);
-
-int orion_toggle_cheat(const game_context_t *game, orion_cheat_file_t *file,
-                       int cheat_index, char *status_out,
-                       size_t status_out_size);
-
-void orion_cheat_reset_state(orion_cheat_file_t *file);
+#ifdef __cplusplus
+}
+#endif

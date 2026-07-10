@@ -1,32 +1,49 @@
-# OrionHEN Cheat Engine
+# OrionHEN Cheats (C++ orchestration)
 
-Flat path + mdbg/kdirect memory writes. Formats: **json / shn / mc4 / ShnExt** (no KCF/WMDW).
+## Architecture
 
-## Layout
+See [docs/util_arch/cheats_cpp.md](../../../../docs/util_arch/cheats_cpp.md).
+
+```text
+IPC / main
+  └─ orion::cheats::CheatService          # Facade + mutex + hot-reload state
+       ├─ CheatRepository                 # path resolve, load, flatten
+       │    └─ CheatParserFactory         # Strategy by extension
+       │         ├─ JsonCheatParser
+       │         ├─ XmlCheatParser (.shn)
+       │         ├─ Mc4CheatParser
+       │         └─ ShnExtCheatParser → C
+       ├─ CheatApplier                    # apply patches
+       │    └─ IMemoryBackend (Strategy)
+       │         ├─ MdbgMemoryBackend
+       │         └─ KdirectMemoryBackend  # MemoryBackendFactory
+       └─ C helpers                       # utils / ShnExt crypto / flatten
+```
+
+## Patterns
+
+| Pattern | Class |
+|---------|--------|
+| Facade | `CheatService` |
+| Singleton | `CheatService::instance()` |
+| Strategy | `IMemoryBackend`, `ICheatParser` |
+| Factory | `MemoryBackendFactory`, `CheatParserFactory` |
+| Adapter | `ShnExtCheatParser` |
+| RAII | `std::lock_guard` on service state |
+
+## Formats / paths
 
 ```text
 /data/OrionHEN/cheats/<TITLE_ID>_<VERSION>.{json,shn,mc4,ShnExt}
 ```
 
-## Platform reuse
+Priority: json → shn → mc4 → ShnExt. No KCF/WMDW.
 
-Cheats do **not** carry a private process/fw/file stack. Shared helpers live in:
-
-| API | Purpose |
-|-----|---------|
-| `util_system_fw_major()` | Prospero SW major (mdbg vs kdirect). *Not* `kern.sdk_version` (hijacker offsets). |
-| `util_file_read_alloc()` | Whole-file read for loaders / version JSON+SFO |
-| `util_resolve_game_version()` | Same path discovery idea as `BREW_UTIL_GET_GAME_VER` |
-| `util_get_running_bigapp()` | Current BigApp pid/title/process |
-| `util_find_module()` | Dynlib lookup (same rules as NineS `get_module_info`) + eboot base fallback |
-
-NineS `get_module_info()` / improved `get_module_handle()` name matching is shared by injector and other callers.
-
-## Memory backends
+## Memory
 
 | FW major | Backend |
 |---------|---------|
 | `< 0x840` | mdbg |
 | `>= 0x840` | kdirect |
 
-Code-cave uses existing `pt_attach_proc` / `pt_mmap` / `pt_detach_proc` (no `pt_*_proc` shim layer).
+Code cave: `pt_attach_proc` + `pt_mmap` + `kernel_mprotect`.

@@ -5,5 +5,6 @@ OrionHEN continues **etaHEN** (LightningMods) for PS5, in the same AIO-HEN tradi
 | Document | Description |
 |----------|-------------|
 | [arch.md](arch.md) | Project architecture, modules, features, and dependencies |
+| [util_arch/](util_arch/) | util.elf daemon: boot order, modules, IPC, cheats, DPI/CMD |
 | [pkg-writeup.md](pkg-writeup.md) | PS5 PKG technical writeup |
 | [shellui-injection.md](shellui-injection.md) | ShellUI inject path + kylin-core libNineS stability fixes |

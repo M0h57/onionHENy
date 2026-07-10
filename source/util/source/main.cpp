@@ -15,12 +15,10 @@ along with this program; see the file COPYING. If not, see
 <http://www.gnu.org/licenses/>.  */
 
 #include "ipc.hpp"
+#include "cheats/CheatService.hpp"
 extern "C" {
-#include "cheats/cheat_service.h"
-#include "cheats/runtime.h"
 #include "freebsd-helper.h"
 }
-orion_cheat_service_state_t *g_cheat_service = nullptr;
 #include <cstdint>
 #include <hijacker/hijacker.hpp>
 #include <sys/_pthreadtypes.h>
@@ -228,10 +226,7 @@ int main(void) {
         OrionHEN_log("done loading settings...");
 
         OrionHEN_log("Initializing cheat engine...");
-        orion_cheat_service_ensure_dir();
-        if (g_cheat_service == nullptr) {
-            g_cheat_service = orion_cheat_service_state_create();
-        }
+        orion::cheats::CheatService::instance().ensureDir();
 
         pthread_join(cmd_server, NULL);
 
