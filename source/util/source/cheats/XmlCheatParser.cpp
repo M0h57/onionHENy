@@ -97,6 +97,8 @@ int parseXmlMutating(char *xml, orion_cheat_file_t &out) {
   orion_cheat_replace_all(xml, 65536, "\\&quot;", "\"");
   orion_cheat_replace_all(xml, 65536, "&quot;", "\"");
 
+  char moder[ORION_AUTHOR_NAME_LEN];
+
   if (findXmlAttr(xml, "Trainer", "Process", process, sizeof(process)) < 0 ||
       findXmlAttr(xml, "Trainer", "Game", game_name, sizeof(game_name)) < 0) {
     OrionHEN_log("[engine] parse_xml trainer attrs missing");
@@ -104,6 +106,12 @@ int parseXmlMutating(char *xml, orion_cheat_file_t &out) {
   }
   std::snprintf(out.process, sizeof(out.process), "%s", process);
   std::snprintf(out.name, sizeof(out.name), "%s", game_name);
+  /* GoldHEN SHN/MC4: Moder="AuthorName" on Trainer */
+  moder[0] = '\0';
+  if (findXmlAttr(xml, "Trainer", "Moder", moder, sizeof(moder)) == 0 &&
+      moder[0] != '\0') {
+    orion_cheat_file_add_author(&out, moder);
+  }
   OrionHEN_log("[engine] parse_xml trainer process=%s game=%s", out.process,
                out.name);
 

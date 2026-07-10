@@ -103,6 +103,58 @@ int parseModObject(const char *start, const char *end, const char *process_name,
   return 0;
 }
 
+/** GoldHEN uses "credits"; some files may use "authors". Both are string arrays. */
+void parseAuthorArray(const char *json, size_t size, const char *key,
+                      orion_cheat_file_t &out) {
+  const char *end = json + size;
+  const char *arr = orion_cheat_find_key(json, end, key);
+  const char *arr_end = nullptr;
+  const char *p = nullptr;
+
+  if (arr == nullptr) {
+    return;
+  }
+  arr = orion_cheat_skip_ws(arr, end);
+  if (arr >= end || *arr != '[') {
+    return;
+  }
+  arr_end = orion_cheat_find_matching(arr, end, '[', ']');
+  if (arr_end == nullptr) {
+    return;
+  }
+
+  p = arr + 1;
+  while (p < arr_end) {
+    p = orion_cheat_skip_ws(p, arr_end);
+    if (p >= arr_end) {
+      break;
+    }
+    if (*p == '"') {
+      const char *q = ++p;
+      char name[ORION_AUTHOR_NAME_LEN];
+      size_t len = 0;
+      while (q < arr_end && !(*q == '"' && q[-1] != '\\')) {
+        ++q;
+      }
+      if (q >= arr_end) {
+        break;
+      }
+      len = static_cast<size_t>(q - p);
+      if (len >= sizeof(name)) {
+        len = sizeof(name) - 1;
+      }
+      if (len > 0) {
+        std::memcpy(name, p, len);
+        name[len] = '\0';
+        orion_cheat_file_add_author(&out, name);
+      }
+      p = q + 1;
+      continue;
+    }
+    ++p;
+  }
+}
+
 } // namespace
 
 class JsonCheatParser final : public ICheatParser {
@@ -126,6 +178,10 @@ public:
                                    sizeof(out.name)) < 0) {
       return -1;
     }
+
+    /* Prefer credits (GoldHEN); also accept authors. Dedup via add_author. */
+    parseAuthorArray(json, size, "credits", out);
+    parseAuthorArray(json, size, "authors", out);
 
     mods = orion_cheat_find_key(json, json + size, "mods");
     if (mods == nullptr) {

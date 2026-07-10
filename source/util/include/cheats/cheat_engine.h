@@ -16,6 +16,14 @@ extern "C" {
 #define ORION_MAX_PATCH_BYTES 1024
 #endif
 
+/* File-level credit authors (GoldHEN credits / SHN Moder / ShnExt author). */
+#ifndef ORION_MAX_AUTHORS
+#define ORION_MAX_AUTHORS 16
+#endif
+#ifndef ORION_AUTHOR_NAME_LEN
+#define ORION_AUTHOR_NAME_LEN 64
+#endif
+
 /* Section bounds (matches util_module_info_t / NineS util_module_info_t) */
 #ifndef MODULE_INFO_MAX_SECTIONS
 #define MODULE_INFO_MAX_SECTIONS UTIL_MODULE_INFO_MAX_SECTIONS
@@ -46,6 +54,8 @@ typedef struct {
 typedef struct {
   char name[128];
   char process[128];
+  size_t author_count;
+  char authors[ORION_MAX_AUTHORS][ORION_AUTHOR_NAME_LEN];
   size_t cheat_count;
   size_t cheat_capacity;
   int master_code_id;
@@ -54,6 +64,8 @@ typedef struct {
 } orion_cheat_file_t;
 
 void orion_cheat_file_clear(orion_cheat_file_t *f);
+/** Append unique non-empty author; returns 0 on success/duplicate, -1 if full/invalid. */
+int orion_cheat_file_add_author(orion_cheat_file_t *f, const char *author);
 int orion_cheat_file_ensure_cheat(orion_cheat_file_t *f);
 int orion_cheat_entry_ensure_patch(orion_cheat_entry_t *e);
 

@@ -34,7 +34,8 @@ int test_parse_json_buffer_success() {
       "\"off\":\"11223344\","
       "\"section\":1"
       "}]"
-      "}]"
+      "}],"
+      "\"credits\":[\"Alice\",\"Bob\"]"
       "}";
   static orion_cheat_file_t file;
   const uint8_t on_expected[] = {0xAA, 0xBB, 0xCC, 0xDD};
@@ -43,6 +44,9 @@ int test_parse_json_buffer_success() {
   TEST_ASSERT_EQ_INT(0, load_buf("json", json, file));
   TEST_ASSERT_STREQ("eboot.bin", file.process);
   TEST_ASSERT_STREQ("Demo", file.name);
+  TEST_ASSERT_EQ_INT(2, static_cast<int>(file.author_count));
+  TEST_ASSERT_STREQ("Alice", file.authors[0]);
+  TEST_ASSERT_STREQ("Bob", file.authors[1]);
   TEST_ASSERT_EQ_INT(1, static_cast<int>(file.cheat_count));
   TEST_ASSERT_STREQ("Infinite HP", file.cheats[0].name);
   TEST_ASSERT_EQ_INT(1, static_cast<int>(file.cheats[0].patch_count));
@@ -52,6 +56,32 @@ int test_parse_json_buffer_success() {
                     sizeof(on_expected));
   TEST_ASSERT_MEMEQ(off_expected, file.cheats[0].patches[0].off,
                     sizeof(off_expected));
+  orion_cheat_file_clear(&file);
+  return 0;
+}
+
+int test_parse_json_authors_alias_and_dedup() {
+  const char *json =
+      "{"
+      "\"process\":\"eboot.bin\","
+      "\"name\":\"Demo\","
+      "\"mods\":[{"
+      "\"name\":\"Patch\","
+      "\"memory\":[{"
+      "\"offset\":\"10\","
+      "\"on\":\"AA\","
+      "\"off\":\"BB\""
+      "}]"
+      "}],"
+      "\"credits\":[\"Same\"],"
+      "\"authors\":[\"Same\",\"Extra\"]"
+      "}";
+  static orion_cheat_file_t file;
+
+  TEST_ASSERT_EQ_INT(0, load_buf("json", json, file));
+  TEST_ASSERT_EQ_INT(2, static_cast<int>(file.author_count));
+  TEST_ASSERT_STREQ("Same", file.authors[0]);
+  TEST_ASSERT_STREQ("Extra", file.authors[1]);
   orion_cheat_file_clear(&file);
   return 0;
 }
@@ -102,7 +132,7 @@ int test_parse_json_ignores_out_of_range_section() {
 
 int test_parse_xml_buffer_success() {
   const char *xml =
-      "<Trainer Process=\"eboot.bin\" Game=\"Demo\">"
+      "<Trainer Process=\"eboot.bin\" Game=\"Demo\" Moder=\"Yharnam\">"
       "<Cheat Text=\"Infinite Ammo\" Description=\"No reload\">"
       "<Cheatline><Offset>1234</Offset><Section>2</Section>"
       "<ValueOn>AA-BB</ValueOn><ValueOff>00-11</ValueOff></Cheatline>"
@@ -115,6 +145,8 @@ int test_parse_xml_buffer_success() {
   TEST_ASSERT_EQ_INT(0, load_buf("shn", xml, file));
   TEST_ASSERT_STREQ("eboot.bin", file.process);
   TEST_ASSERT_STREQ("Demo", file.name);
+  TEST_ASSERT_EQ_INT(1, static_cast<int>(file.author_count));
+  TEST_ASSERT_STREQ("Yharnam", file.authors[0]);
   TEST_ASSERT_EQ_INT(1, static_cast<int>(file.cheat_count));
   TEST_ASSERT_STREQ("Infinite Ammo", file.cheats[0].name);
   TEST_ASSERT_EQ_INT(1, static_cast<int>(file.cheats[0].patch_count));
@@ -176,6 +208,8 @@ int test_fixture_json_file_loads() {
   /* extract_string does not unescape JSON; keep raw \u014d sequence */
   TEST_ASSERT_STREQ("Ghost of Y\\u014dtei", file.name);
   TEST_ASSERT_STREQ("eboot.bin", file.process);
+  TEST_ASSERT_EQ_INT(1, static_cast<int>(file.author_count));
+  TEST_ASSERT_STREQ("Yharnam", file.authors[0]);
   TEST_ASSERT_EQ_INT(3, static_cast<int>(file.cheat_count));
   TEST_ASSERT_STREQ("Infi Health", file.cheats[0].name);
   orion_cheat_file_clear(&file);
@@ -192,6 +226,8 @@ int test_fixture_shn_file_loads() {
   TEST_ASSERT_EQ_INT(0, load_path(path, file));
   TEST_ASSERT_STREQ("Silent Hill f", file.name);
   TEST_ASSERT_STREQ("eboot.bin", file.process);
+  TEST_ASSERT_EQ_INT(1, static_cast<int>(file.author_count));
+  TEST_ASSERT_STREQ("Yharnam", file.authors[0]);
   TEST_ASSERT_EQ_INT(9, static_cast<int>(file.cheat_count));
   TEST_ASSERT_STREQ("Infi Health", file.cheats[0].name);
   orion_cheat_file_clear(&file);
@@ -237,6 +273,8 @@ int test_fixture_shnext_file_loads() {
 
   TEST_ASSERT_STREQ("Enemys Dont See You", file.cheats[0].name);
   TEST_ASSERT_STREQ("by Anonyme", file.cheats[0].description);
+  TEST_ASSERT_TRUE(file.author_count >= 1);
+  TEST_ASSERT_STREQ("Anonyme", file.authors[0]);
   TEST_ASSERT_STREQ("eboot.bin", file.cheats[0].module_name);
   TEST_ASSERT_EQ_INT(1, static_cast<int>(file.cheats[0].patch_count));
   TEST_ASSERT_EQ_U64(109230218, file.cheats[0].patches[0].offset);
@@ -285,6 +323,8 @@ extern "C" int test_cheat_parsers_suite(void) {
 
   failures += orion_test_run("cheat json parse success",
                              test_parse_json_buffer_success);
+  failures += orion_test_run("cheat json authors alias and dedup",
+                             test_parse_json_authors_alias_and_dedup);
   failures += orion_test_run("cheat json rejects invalid hex",
                              test_parse_json_buffer_rejects_invalid_hex);
   failures += orion_test_run("cheat json ignores out-of-range section",

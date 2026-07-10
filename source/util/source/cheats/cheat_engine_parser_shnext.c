@@ -511,6 +511,7 @@ int orion_cheat_parse_shnext_buffer(const char *data, size_t size,
     if (cJSON_IsString(entry_field) && entry_field->valuestring != NULL) {
       snprintf(cheat->description, sizeof(cheat->description), "by %s",
                entry_field->valuestring);
+      orion_cheat_file_add_author(out, entry_field->valuestring);
     }
 
     if (out->process[0] != '\0') {

@@ -326,6 +326,25 @@ void orion_cheat_file_clear(orion_cheat_file_t *f) {
   f->master_code_id = -1;
 }
 
+int orion_cheat_file_add_author(orion_cheat_file_t *f, const char *author) {
+  size_t i = 0;
+
+  if (f == NULL || author == NULL || author[0] == '\0') {
+    return -1;
+  }
+  for (i = 0; i < f->author_count; ++i) {
+    if (strcmp(f->authors[i], author) == 0) {
+      return 0;
+    }
+  }
+  if (f->author_count >= ORION_MAX_AUTHORS) {
+    return -1;
+  }
+  snprintf(f->authors[f->author_count], ORION_AUTHOR_NAME_LEN, "%s", author);
+  ++f->author_count;
+  return 0;
+}
+
 int orion_cheat_file_ensure_cheat(orion_cheat_file_t *f) {
   if (f == NULL) return -1;
   if (f->cheat_count < f->cheat_capacity) return 0;

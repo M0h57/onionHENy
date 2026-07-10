@@ -176,7 +176,14 @@ int CheatService::writeListJson(const std::string &out_path) const {
     return o;
   };
 
-  ofs << "{\"name\":\"" << esc(file_.name) << "\",\"authors\":[],\"cheats\":[";
+  ofs << "{\"name\":\"" << esc(file_.name) << "\",\"authors\":[";
+  for (size_t a = 0; a < file_.author_count; ++a) {
+    if (a) {
+      ofs << ',';
+    }
+    ofs << '"' << esc(file_.authors[a]) << '"';
+  }
+  ofs << "],\"cheats\":[";
   for (size_t i = 0; i < file_.cheat_count; ++i) {
     if (i) {
       ofs << ',';
