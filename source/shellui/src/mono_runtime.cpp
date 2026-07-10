@@ -9,6 +9,7 @@
 #include "ipc.hpp" // shellui_log
 #include <string>
 #include <cstring>
+#include <mutex>
 #include <unistd.h>
 
 MonoImage * getDLLimage(const char* dll_file){
@@ -234,21 +235,47 @@ MonoObject *InvokeByDesc(MonoClass *p_Class, const char *p_MethodDesc, void *p_I
   return mono_runtime_invoke(s_ClassMethod, p_Instance, (void **)p_Args, nullptr);
 }
 
-/* One pin for the live toolbox MemoryStream; free on replace so rapid
- * DebugSettings / notification opens do not accumulate pinned GC roots. */
-static uint32_t g_xml_stream_gchandle = 0;
+/* Keep a few recent streams rooted because Settings can consume returned
+ * streams after rapid resource re-entry. Old slots are released on reuse. */
+static std::mutex g_xml_stream_gchandle_lock;
+static constexpr size_t kXmlStreamHandleSlots = 4;
+static uint32_t g_xml_stream_gchandles[kXmlStreamHandleSlots] = {};
+static size_t g_xml_stream_gchandle_cursor = 0;
 
-MonoObject *New_Mono_XML_From_String(std::string xml_doc)
+static uint32_t root_xml_stream(MonoObject *stream)
 {
-  shellui_log("[GMRS] New_Mono_XML_From_String: xml_size=%zu Root_Domain=%p MemoryStream_IO=%p",
-              xml_doc.size(), (void *)Root_Domain, (void *)MemoryStream_IO);
+  if (!stream || !mono_gchandle_new)
+    return 0;
+
+  std::lock_guard<std::mutex> lock(g_xml_stream_gchandle_lock);
+  uint32_t old_handle = g_xml_stream_gchandles[g_xml_stream_gchandle_cursor];
+  if (old_handle != 0 && mono_gchandle_free)
+    mono_gchandle_free(old_handle);
+
+  uint32_t handle = mono_gchandle_new(stream, /*pinned=*/1);
+  g_xml_stream_gchandles[g_xml_stream_gchandle_cursor] = handle;
+  g_xml_stream_gchandle_cursor =
+      (g_xml_stream_gchandle_cursor + 1) % kXmlStreamHandleSlots;
+  return handle;
+}
+
+MonoObject *New_Mono_XML_From_String(std::string xml_doc, MonoDomain *domain)
+{
+  if (!domain)
+    domain = (mono_domain_get ? mono_domain_get() : nullptr);
+  if (!domain)
+    domain = Root_Domain;
+
+  shellui_log("[GMRS] New_Mono_XML_From_String: xml_size=%zu domain=%p Root_Domain=%p MemoryStream_IO=%p",
+              xml_doc.size(), (void *)domain, (void *)Root_Domain,
+              (void *)MemoryStream_IO);
 
   if (xml_doc.empty()) {
     shellui_log("[GMRS] New_Mono_XML_From_String: empty xml_doc");
     return nullptr;
   }
-  if (!Root_Domain) {
-    shellui_log("[GMRS] New_Mono_XML_From_String: Root_Domain is null");
+  if (!domain) {
+    shellui_log("[GMRS] New_Mono_XML_From_String: domain is null");
     return nullptr;
   }
   if (!MemoryStream_IO) {
@@ -256,7 +283,7 @@ MonoObject *New_Mono_XML_From_String(std::string xml_doc)
     return nullptr;
   }
 
-  MonoArray *Array = mono_array_new(Root_Domain, mono_get_byte_class(), xml_doc.size());
+  MonoArray *Array = mono_array_new(domain, mono_get_byte_class(), xml_doc.size());
   if (!Array)
   {
     shellui_log("[GMRS] New_Mono_XML_From_String: Failed to create byte[] array (size=%zu)", xml_doc.size());
@@ -274,7 +301,7 @@ MonoObject *New_Mono_XML_From_String(std::string xml_doc)
    * a notification (Hermes/RN still busy). Mono byte[] is already writable. */
   memcpy(Array_addr, xml_doc.data(), xml_doc.size());
 
-  MonoObject *stream = mono_object_new(Root_Domain, MemoryStream_IO);
+  MonoObject *stream = mono_object_new(domain, MemoryStream_IO);
   if (!stream)
   {
     MemoryStream_IO = nullptr;
@@ -284,16 +311,10 @@ MonoObject *New_Mono_XML_From_String(std::string xml_doc)
   void *args[] = {Array};
   InvokeByDesc(MemoryStream_IO, ":.ctor(byte[])", stream, args);
 
-  if (g_xml_stream_gchandle != 0 && mono_gchandle_free) {
-    mono_gchandle_free(g_xml_stream_gchandle);
-    g_xml_stream_gchandle = 0;
-  }
-  if (mono_gchandle_new) {
-    g_xml_stream_gchandle = mono_gchandle_new(stream, /*pinned=*/1);
-  }
+  uint32_t gchandle = root_xml_stream(stream);
 
   shellui_log("[GMRS] New_Mono_XML_From_String: ok instance=%p gchandle=%u",
-              (void *)stream, g_xml_stream_gchandle);
+              (void *)stream, gchandle);
   return stream;
 }
 
@@ -360,4 +381,3 @@ void ReloadRNPSApp(const char* title_id){
         shellui_log("Failed to find reload method, not reloading scene");
     }
 }
-

@@ -20,12 +20,19 @@ void generate_cheats_xml(std::string &new_xml, std::string &not_open_tid,
                          bool running_as_debug_settings,
                          bool show_while_not_open);
 
+static MonoDomain *current_mono_domain() {
+  MonoDomain *domain = (mono_domain_get ? mono_domain_get() : nullptr);
+  return domain ? domain : Root_Domain;
+}
+
 uint64_t GetManifestResourceStream_Hook(uint64_t inst, MonoString *FileName) {
   std::string new_xml_string;
   std::string resourceName = Mono_to_String(FileName);
+  MonoDomain *domain = current_mono_domain();
 
 #if SHELL_DEBUG == 1
-  shellui_log("GetManifestResourceStream_Hook: %s", resourceName.c_str());
+  shellui_log("GetManifestResourceStream_Hook: %s domain=%p root=%p",
+              resourceName.c_str(), (void *)domain, (void *)Root_Domain);
 #endif
 
   const bool shortcut = g_ui.any_cheat_shortcut();
@@ -55,8 +62,12 @@ uint64_t GetManifestResourceStream_Hook(uint64_t inst, MonoString *FileName) {
   }
 
   if (route.page == toolbox::Page::RedirectOgDebug) {
+    MonoString *debug_resource =
+        (domain && mono_string_new)
+            ? mono_string_new(domain, debug_settings_xml.c_str())
+            : FileName;
     return GetManifestResourceStream_Original(
-        inst, mono_string_new(Root_Domain, debug_settings_xml.c_str()));
+        inst, debug_resource);
   }
 
   if (route.page == toolbox::Page::None ||
@@ -65,8 +76,16 @@ uint64_t GetManifestResourceStream_Hook(uint64_t inst, MonoString *FileName) {
   }
 
   if (!MemoryStream_IO) {
+    if (!domain) {
+      shellui_log("GetManifestResourceStream_Hook: no mono domain");
+      return GetManifestResourceStream_Original(inst, FileName);
+    }
     MonoAssembly *Assembly = mono_domain_assembly_open(
-        Root_Domain, "/system_ex/common_ex/lib/mscorlib.dll");
+        domain, "/system_ex/common_ex/lib/mscorlib.dll");
+    if (!Assembly) {
+      shellui_log("Failed to open mscorlib assembly");
+      return GetManifestResourceStream_Original(inst, FileName);
+    }
     MonoImage *mscorelib_image = mono_assembly_get_image(Assembly);
     if (!mscorelib_image) {
       shellui_log("Failed to get mscorelib image");
@@ -111,7 +130,7 @@ uint64_t GetManifestResourceStream_Hook(uint64_t inst, MonoString *FileName) {
     return GetManifestResourceStream_Original(inst, FileName);
   }
 
-  MemoryStream_Instance = New_Mono_XML_From_String(new_xml_string);
+  MemoryStream_Instance = New_Mono_XML_From_String(new_xml_string, domain);
   if (!MemoryStream_Instance) {
     return GetManifestResourceStream_Original(inst, FileName);
   }

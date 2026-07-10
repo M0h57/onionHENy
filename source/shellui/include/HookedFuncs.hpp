@@ -143,7 +143,7 @@ uint64_t GetManifestResourceStream_Hook(uint64_t inst, MonoString* FileName);
 uint64_t GetManifestResourceInternal_Hook(MonoObject* instance, MonoString* name, int* size, MonoObject& module);
 void DebugSettings_GetModel_Hook(MonoObject* instance, MonoObject* param, MonoObject* promise);
 void ReactNavigatorManager_UpdateNavigationState_Hook(MonoObject* instance, MonoObject* state);
-MonoObject* New_Mono_XML_From_String(std::string xml_doc);
+MonoObject* New_Mono_XML_From_String(std::string xml_doc, MonoDomain* domain);
 bool write_asset(const char* path, const void* start, uint32_t size);
 int ini_parser_load(IniParser* parser, const char* filename);
 const char* ini_parser_get(IniParser* parser, const char* key, const char* default_value);
