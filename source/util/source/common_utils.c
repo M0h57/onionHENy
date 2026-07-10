@@ -1,4 +1,4 @@
-/* Copyright (C) 2025 etaHEN / LightningMods
+/* Copyright (C) 2025 OrionHEN / LightningMods
 
 This program is free software; you can redistribute it and/or modify it
 under the terms of the GNU General Public License as published by the
@@ -113,7 +113,7 @@ error:
 	return -1;
 }
 
-void etaHEN_log(const char * fmt, ...) {
+void OrionHEN_log(const char * fmt, ...) {
   char msg[0x1000];
   va_list args;
   va_start(args, fmt);
@@ -130,10 +130,10 @@ void etaHEN_log(const char * fmt, ...) {
     msg[sizeof(msg) - 1] = '\0';
   }
 
-  printf("[etaHEN utils]: %s", msg); // msg already includes a newline
+  printf("[OrionHEN utils]: %s", msg); // msg already includes a newline
   klog_printf("%s", msg); // msg already includes a newline
 
-  int fd = open("/data/etaHEN/etaHEN_util_daemon.log", O_WRONLY | O_CREAT | O_APPEND, 0777);
+  int fd = open("/data/OrionHEN/OrionHEN_util_daemon.log", O_WRONLY | O_CREAT | O_APPEND, 0777);
   if (fd < 0) {
     return;
   }
@@ -176,7 +176,7 @@ void notify(bool show_watermark, const char *text, ...)
     req.target_id = -1;
     strcpy(req.uri, "cxml://psnotification/tex_icon_system");
 
-	etaHEN_log("Notify: %s", req.message);
+	OrionHEN_log("Notify: %s", req.message);
 	sceKernelSendNotificationRequest(0, &req, sizeof(req), 0);
 }
 
@@ -188,7 +188,7 @@ bool copyFile(const char *source, const char *destination)
     if (src == NULL)
     {
         notify(false, "copyFile failed for %s", source);
-        etaHEN_log("copyFile failed for %s", source);
+        OrionHEN_log("copyFile failed for %s", source);
         return false;
     }
 
@@ -196,7 +196,7 @@ bool copyFile(const char *source, const char *destination)
     if (dest == NULL)
     {
         notify(false, "copyFile failed for %s", destination);
-        etaHEN_log("copyFile failed for %s", destination);
+        OrionHEN_log("copyFile failed for %s", destination);
         fclose(src);
         return false;
     }
@@ -310,7 +310,7 @@ bool make_plugin_app(const char *tid, const void *start,
 bool is_valid_plugin(const unsigned char *file_buffer)
 {
   // Check if the prefix matches
-  if (strncmp((const char *)file_buffer, "etaHEN_PLUGIN", 13) != 0)
+  if (strncmp((const char *)file_buffer, "OrionHEN_PLUGIN", 14) != 0)
   {
     puts("Plugin header prefix does not match");
     return false;
@@ -373,21 +373,21 @@ pid_t find_pid(const char *name)
   //  size of query response
   if (sysctl(mib, 4, NULL, &buf_size, NULL, 0))
   {
-    etaHEN_log("sysctl failed: %s", strerror(errno));
+    OrionHEN_log("sysctl failed: %s", strerror(errno));
     return -1;
   }
 
   // allocate memory for query response
   if (!(buf = malloc(buf_size)))
   {
-    etaHEN_log("malloc failed %s", strerror(errno));
+    OrionHEN_log("malloc failed %s", strerror(errno));
     return -1;
   }
 
   // query the kernel for proc info
   if (sysctl(mib, 4, buf, &buf_size, NULL, 0))
   {
-    etaHEN_log("sysctl failed: %s", strerror(errno));
+    OrionHEN_log("sysctl failed: %s", strerror(errno));
     free(buf);
     return -1;
   }
@@ -429,14 +429,14 @@ bool load_plugin(const char *path)
   int fd = open(path, O_RDONLY);
   if (fd < 0)
   {
-    etaHEN_log("Failed to open file, %s (error %s)", path, strerror(errno));
+    OrionHEN_log("Failed to open file, %s (error %s)", path, strerror(errno));
     return false;
   }
 
   struct stat st;
   if (fstat(fd, &st) != 0)
   {
-    etaHEN_log("Failed to get file stats");
+    OrionHEN_log("Failed to get file stats");
     close(fd);
     return false;
   }
@@ -445,14 +445,14 @@ bool load_plugin(const char *path)
   uint8_t *buf = (uint8_t *)malloc(st.st_size);
   if (!buf)
   {
-    etaHEN_log("Failed to allocate memory for Plugin file");
+    OrionHEN_log("Failed to allocate memory for Plugin file");
     close(fd);
     return false;
   }
 
   if (read(fd, buf, st.st_size) != st.st_size)
   {
-    etaHEN_log("Failed to read Plugin file");
+    OrionHEN_log("Failed to read Plugin file");
     free(buf);
     close(fd);
     return false;
@@ -464,11 +464,11 @@ bool load_plugin(const char *path)
 
   if (strstr(filename, ".elf") != NULL)
   {
-    etaHEN_log("ELF detected: %s", filename);
+    OrionHEN_log("ELF detected: %s", filename);
 
     if (!is_elf_file(buf, st.st_size))
     {
-      etaHEN_log("Invalid ELF file.");
+      OrionHEN_log("Invalid ELF file.");
       notify(true, "Invalid ELF file: %s", filename);
       free(buf);
       return false;
@@ -496,7 +496,7 @@ bool load_plugin(const char *path)
       char name[32];
       if (sceKernelGetProcessName(pid, name) < 0)
       {
-        etaHEN_log("Stale plugin PID file detected for %s, removing", header->titleID);
+        OrionHEN_log("Stale plugin PID file detected for %s, removing", header->titleID);
         unlink(pbuf);
         pid = -1;
       }
@@ -504,15 +504,15 @@ bool load_plugin(const char *path)
 
     if (pid > 0)
     {
-      etaHEN_log("killing pid %d (plugin: %s)", pid, header->titleID);
+      OrionHEN_log("killing pid %d (plugin: %s)", pid, header->titleID);
       kill(pid, SIGKILL);
       unlink(pbuf);
     }
 
-    etaHEN_log("loading elf via 9021 %s", filename);
+    OrionHEN_log("loading elf via 9021 %s", filename);
     {
       char epath[256];
-      snprintf(epath, sizeof(epath), "/data/etaHEN/plugins/%s.elf", header->titleID);
+      snprintf(epath, sizeof(epath), "/data/OrionHEN/plugins/%s.elf", header->titleID);
       if (elfldr_remote_write_and_launch(epath, buf, (size_t)st.st_size)) {
         char nbuf[64];
         sleep(2);
@@ -522,9 +522,9 @@ bool load_plugin(const char *path)
           pid = find_pid(header->titleID);
         if (pid < 0)
           pid = 1;
-        etaHEN_log("  Launched via 9021!");
+        OrionHEN_log("  Launched via 9021!");
       } else {
-        etaHEN_log("  Failed 9021 launch");
+        OrionHEN_log("  Failed 9021 launch");
         pid = -1;
       }
     }
@@ -552,16 +552,16 @@ bool load_plugin(const char *path)
 
   if (!is_valid_plugin(buf))
   {
-    etaHEN_log("Invalid plugin file.");
+    OrionHEN_log("Invalid plugin file.");
     free(buf);
     return false;
   }
 
-  etaHEN_log("============== Plugin info ===============");
-  etaHEN_log("Plugin Prefix: %s", header->prefix);
-  etaHEN_log("Plugin TitleID: %s", header->titleID);
-  etaHEN_log("Plugin Version: %s", header->plugin_version);
-  etaHEN_log("=========================================");
+  OrionHEN_log("============== Plugin info ===============");
+  OrionHEN_log("Plugin Prefix: %s", header->prefix);
+  OrionHEN_log("Plugin TitleID: %s", header->titleID);
+  OrionHEN_log("Plugin Version: %s", header->plugin_version);
+  OrionHEN_log("=========================================");
 
   char pbuf[256];
   snprintf(pbuf, sizeof(pbuf), "/system_tmp/%s.PID", header->titleID);
@@ -585,16 +585,16 @@ bool load_plugin(const char *path)
     char name[32];
     if (sceKernelGetProcessName(pid, name) < 0)
     {
-      etaHEN_log("Stale plugin PID file detected for %s, removing", header->titleID);
+      OrionHEN_log("Stale plugin PID file detected for %s, removing", header->titleID);
       unlink(pbuf);
       pid = -1;
     }
   }
 
-  etaHEN_log("seeing if plugin is running");
+  OrionHEN_log("seeing if plugin is running");
   if (pid > 0)
   {
-    etaHEN_log("killing pid %d (plugin: %s)", pid, header->titleID);
+    OrionHEN_log("killing pid %d (plugin: %s)", pid, header->titleID);
     kill(pid, SIGKILL);
     unlink(pbuf);
   }
@@ -602,11 +602,11 @@ bool load_plugin(const char *path)
   uint8_t *elf = get_elf_header_address(buf);
   make_plugin_app(header->titleID, elf, st.st_size - sizeof(CustomPluginHeader));
 
-  etaHEN_log("loading plugin via 9021 %s", path);
+  OrionHEN_log("loading plugin via 9021 %s", path);
   {
     char epath[256];
     size_t elf_sz = (size_t)st.st_size - sizeof(CustomPluginHeader);
-    snprintf(epath, sizeof(epath), "/data/etaHEN/plugins/%s.elf", header->titleID);
+    snprintf(epath, sizeof(epath), "/data/OrionHEN/plugins/%s.elf", header->titleID);
     if (elfldr_remote_write_and_launch(epath, elf, elf_sz)) {
       char nbuf[64];
       sleep(2);
@@ -616,9 +616,9 @@ bool load_plugin(const char *path)
         pid = find_pid(header->titleID);
       if (pid < 0)
         pid = 1;
-      etaHEN_log("  Launched via 9021!");
+      OrionHEN_log("  Launched via 9021!");
     } else {
-      etaHEN_log("  Failed 9021 launch");
+      OrionHEN_log("  Failed 9021 launch");
       pid = -1;
     }
   }
@@ -654,7 +654,7 @@ int launchApp(const char *titleId)
 		printf("sceUserServiceGetForegroundUser failed: 0x%x\n", res);
 		return res;
 	}
-	etaHEN_log("[LA] user id %u", id);
+	OrionHEN_log("[LA] user id %u", id);
 
     LncAppParam param;
 	param.sz = sizeof(LncAppParam);
@@ -666,7 +666,7 @@ int launchApp(const char *titleId)
 
 	puts("calling sceLncUtilLaunchApp");
 	int err = sceLncUtilLaunchApp(titleId, NULL, &param);
-	etaHEN_log("sceLncUtilLaunchApp returned 0x%x", (uint32_t)err);
+	OrionHEN_log("sceLncUtilLaunchApp returned 0x%x", (uint32_t)err);
 	if (err >= 0)
 	{
 		return err;
@@ -674,14 +674,14 @@ int launchApp(const char *titleId)
 	switch ((uint32_t)err)
 	{
 	case SCE_LNC_UTIL_ERROR_ALREADY_RUNNING:
-		etaHEN_log("app %s is already running", titleId);
+		OrionHEN_log("app %s is already running", titleId);
 		break;
 	case SCE_LNC_ERROR_APP_NOT_FOUND:
-		etaHEN_log("app %s not found", titleId);
+		OrionHEN_log("app %s not found", titleId);
 		notify(true, "app %s not found", titleId);
 		break;
 	default:
-		etaHEN_log("[LA] unknown error 0x%x", (uint32_t)err);
+		OrionHEN_log("[LA] unknown error 0x%x", (uint32_t)err);
 		// notify(true, "unknown error 0x%llx", (uint32_t)err);
 		break;
 	}

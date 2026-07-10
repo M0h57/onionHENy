@@ -1,4 +1,4 @@
-/* Copyright (C) 2025 etaHEN / LightningMods
+/* Copyright (C) 2025 OrionHEN / LightningMods
 
 This program is free software; you can redistribute it and/or modify it
 under the terms of the GNU General Public License as published by the
@@ -118,7 +118,7 @@ static constexpr auto DEFAULT_PRIORITY = 256;
 uintptr_t kernel_base = 0;
 
 // Function declarations
-void etaHEN_log(const char *fmt, ...);
+void OrionHEN_log(const char *fmt, ...);
 void notify(bool show_watermark, const char *text, ...);
 bool touch_file(const char *destfile);
 int launchApp(const char *titleId);
@@ -150,7 +150,7 @@ const char *whitelisted_psids[] = {
 };
 
 // Function implementations
-void etaHEN_log(const char *fmt, ...) {
+void OrionHEN_log(const char *fmt, ...) {
     char msg[0x1000];
     va_list args;
     va_start(args, fmt);
@@ -167,10 +167,10 @@ void etaHEN_log(const char *fmt, ...) {
         msg[sizeof(msg) - 1] = '\0';
     }
 
-    printf("[etaHEN]: %s", msg); // msg already includes a newline
+    printf("[OrionHEN]: %s", msg); // msg already includes a newline
     klog_printf("%s", msg); // msg already includes a newline
 
-    int fd = open("/data/etaHEN/etaHEN.log", O_WRONLY | O_CREAT | O_APPEND, 0777);
+    int fd = open("/data/OrionHEN/OrionHEN.log", O_WRONLY | O_CREAT | O_APPEND, 0777);
     if (fd < 0) {
         return;
     }
@@ -196,7 +196,7 @@ int launchApp(const char *titleId) {
         printf("sceUserServiceGetForegroundUser failed: 0x%x", res);
         return res;
     }
-    etaHEN_log("[LA] user id %u", id);
+    OrionHEN_log("[LA] user id %u", id);
 
     // the thread will clean this up
     Flag flag = Flag_None;
@@ -204,21 +204,21 @@ int launchApp(const char *titleId) {
 
     puts("calling sceLncUtilLaunchApp");
     int err = sceLncUtilLaunchApp(titleId, nullptr, &param);
-    etaHEN_log("sceLncUtilLaunchApp returned 0x%x", (uint32_t)err);
+    OrionHEN_log("sceLncUtilLaunchApp returned 0x%x", (uint32_t)err);
     if (err >= 0) {
         return err;
     }
     
     switch ((uint32_t)err) {
     case SCE_LNC_UTIL_ERROR_ALREADY_RUNNING:
-        etaHEN_log("app %s is already running", titleId);
+        OrionHEN_log("app %s is already running", titleId);
         break;
     case SCE_LNC_ERROR_APP_NOT_FOUND:
-        etaHEN_log("app %s not found", titleId);
+        OrionHEN_log("app %s not found", titleId);
         notify(true, "app %s not found", titleId);
         break;
     default:
-        etaHEN_log("[LA] unknown error 0x%x", (uint32_t)err);
+        OrionHEN_log("[LA] unknown error 0x%x", (uint32_t)err);
         // notify(true, "unknown error 0x%llx", (uint32_t)err);
         break;
     }
@@ -227,13 +227,13 @@ int launchApp(const char *titleId) {
 
 void sig_handler(int signo) {
     if(!is_handler_enabled){
-        etaHEN_log("Signal handler is disabled, ignoring signal %d", signo);
+        OrionHEN_log("Signal handler is disabled, ignoring signal %d", signo);
         return;
     }
     notify(true,
-          "OrionHEN has crashed ...\n\nPlease send /data/etaHEN/etaHEN_crash.log "
+          "OrionHEN has crashed ...\n\nPlease send /data/OrionHEN/OrionHEN_crash.log "
           "to the PKG-Zone discord: https://discord.gg/BduZHudWGj");
-    etaHEN_log("main etaHEN has crashed ...");
+    OrionHEN_log("main OrionHEN has crashed ...");
     //printBacktraceForCrash();
     exit(1);
 }
@@ -281,7 +281,7 @@ int ItemzLaunchByUri(const char* uri) {
     KERNEL_DLSYM(libcmi, sceShellUIUtilInitialize);
     KERNEL_DLSYM(libcmi, sceShellUIUtilLaunchByUri);
     if (!sceShellUIUtilInitialize || !sceShellUIUtilLaunchByUri) {
-        etaHEN_log("failed to load libSceShellUIUtil.sprx");
+        OrionHEN_log("failed to load libSceShellUIUtil.sprx");
         return -1;
     }
     //
@@ -319,13 +319,13 @@ int main() {
     for (int i = 0; i < 12; i++)
         sigaction(i, &new_SIG_action, NULL);
 
-    unlink("/data/etaHEN/etaHEN.log");
-    unlink("/data/etaHEN/etaHEN_crash.log");
+    unlink("/data/OrionHEN/OrionHEN.log");
+    unlink("/data/OrionHEN/OrionHEN_crash.log");
 
     payload_args_t *args = payload_get_args();
     kernel_base = args->kdata_base_addr;
 
-    etaHEN_log("=========== starting etaHEN (0x%X) ... ===========", fw_ver);
+    OrionHEN_log("=========== starting OrionHEN (0x%X) ... ===========", fw_ver);
     (void)sceKernelMprotect(&buz[0], 100, 0x7); // probe mprotect / kstuff state
     bool toolbox_only = (fw_ver >= 0x10000);
     is_800 = (fw_ver >= 0x800);
@@ -336,7 +336,7 @@ int main() {
 #if 0
     // Check if running on a test kit
     if (sceKernelIsTestKit()) {
-        etaHEN_log("no NO NO");
+        OrionHEN_log("no NO NO");
         return -1;
         raise(SIGSEGV);
     }
@@ -348,14 +348,14 @@ int main() {
     pthread_create(&pt_thr, nullptr, Play_time_thread, nullptr);
     pthread_create(&msg_thr, nullptr, IPC_loop, nullptr);
 
-    etaHEN_log("is toolbox only: %s | ver: %x", toolbox_only ? "Yes" : "No", sys_ver.version);
+    OrionHEN_log("is toolbox only: %s | ver: %x", toolbox_only ? "Yes" : "No", sys_ver.version);
     // Initialize toolbox if needed
     if (global_conf.toolbox_auto_start) {
         cmd_enable_toolbox();
     }
     else if (!global_conf.toolbox_auto_start) {
         notify(true, "the OrionHEN Toolbox auto start is disabled in the config.ini\n\n"
-                    "Re-enable toolbox_auto_start in /data/etaHEN/config.ini or open Debug Settings");
+                    "Re-enable toolbox_auto_start in /data/OrionHEN/config.ini or open Debug Settings");
     }
 
      const char json_payload[] =
@@ -371,7 +371,7 @@ int main() {
      "      \"icon\": {\n"
      "        \"type\": \"Url\",\n"
      "        \"parameters\": {\n"
-     "          \"url\": \"/user/data/etaHEN/etahen.png\"\n"
+     "          \"url\": \"/user/data/OrionHEN/orionhen.png\"\n"
      "        }\n"
      "      },\n"
      "      \"message\": {\n"
@@ -413,7 +413,7 @@ int main() {
 	sceNotificationSend(0xFE, true, &json_payload[0]);
 
 
-    etaHEN_log("StartUp thread created!! - welcome to etaHEN");
+    OrionHEN_log("StartUp thread created!! - welcome to OrionHEN");
 
     // Launch the appropriate app based on configuration
     const char *URI = nullptr;
@@ -434,12 +434,12 @@ int main() {
         break;
     }
     default:
-        etaHEN_log("unknown opt %d", global_conf.start_opt);
+        OrionHEN_log("unknown opt %d", global_conf.start_opt);
         break;
     }
 
     if (URI)
-        etaHEN_log("ret %d", ItemzLaunchByUri(URI));
+        OrionHEN_log("ret %d", ItemzLaunchByUri(URI));
 
     if(global_conf.auto_eject_disc){
         sceShellCoreUtilRequestEjectDevice("/dev/cd0");

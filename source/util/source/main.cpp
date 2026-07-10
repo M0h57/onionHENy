@@ -1,4 +1,4 @@
-/* Copyright (C) 2025 etaHEN / LightningMods
+/* Copyright (C) 2025 OrionHEN / LightningMods
 
 This program is free software; you can redistribute it and/or modify it
 under the terms of the GNU General Public License as published by the
@@ -122,10 +122,10 @@ void __stack_chk_fail(void) {
 }
 
 void LoadSettings(void) {
-    if (if_exists("/data/etaHEN/config.ini")) {
+    if (if_exists("/data/OrionHEN/config.ini")) {
         IniParser parser;
 
-        if (ini_parser_load(&parser, "/data/etaHEN/config.ini")) {
+        if (ini_parser_load(&parser, "/data/OrionHEN/config.ini")) {
             const char* FTP_str = ini_parser_get(&parser, "Settings.FTP", "1");
             const char* DPI_str = ini_parser_get(&parser, "Settings.DPI", "0");
             const char* allow_data_n_sandbox = ini_parser_get(&parser, "Settings.Allow_data_in_sandbox", "1");
@@ -147,7 +147,7 @@ void LoadSettings(void) {
             if (if_exists("/mnt/usb0/toolbox_auto_start"))
                 global_conf.toolbox_auto_start = false;
         } else {
-            etaHEN_log("Failed to load config.ini");
+            OrionHEN_log("Failed to load config.ini");
             notify(true, "Failed to load config.ini");
         }
     }
@@ -166,16 +166,16 @@ int main(void) {
     
     sceNetCtlInit();
     sceUserServiceInitialize(NULL);
-    etaHEN_log("util daemon entered");
+    OrionHEN_log("util daemon entered");
 
     if (setjmp(g_catch_buf) == 0)
-        etaHEN_log("jump has been set");
+        OrionHEN_log("jump has been set");
     else
         notify(true, "The Fatal error has been successfully resolved\n\nyou have nothing to worry about");
 
-    etaHEN_log("Registering signal handler...");
+    OrionHEN_log("Registering signal handler...");
     fault_handler_init(cleanup);
-    etaHEN_log("   Success!");
+    OrionHEN_log("   Success!");
 
     payload_args_t* args = payload_get_args();
     kernel_base = args->kdata_base_addr;
@@ -192,17 +192,17 @@ int main(void) {
     global_conf.klog = true;
 	global_conf.legacy_cmd_server_exit = false;
 
-    unlink("/data/etaHEN/etaHEN_util_daemon.log");
-    unlink("/data/etaHEN/etaHEN_util_crash.log");
+    unlink("/data/OrionHEN/OrionHEN_util_daemon.log");
+    unlink("/data/OrionHEN/OrionHEN_util_crash.log");
 
-    etaHEN_log("=========== starting etaHEN Utilities... ===========");
+    OrionHEN_log("=========== starting OrionHEN Utilities... ===========");
    // if(!sceKernelIsTestKit())
    //     patchShellCoreTEST();
 
     LoadSettings();
 
     if(sceKernelIsTestKit()){
-       etaHEN_log("Kit detected, patching acti time...");
+       OrionHEN_log("Kit detected, patching acti time...");
        patchShellActi();
     }
     /* Allow_data_in_sandbox / patchShellCore removed from OrionHEN:
@@ -213,12 +213,12 @@ int main(void) {
     pthread_create(&ipc_server, NULL, IPC_loop, NULL);
 
     if (!IniliatizeHTTP()) {
-        etaHEN_log("Failed to initialize HTTP lib");
+        OrionHEN_log("Failed to initialize HTTP lib");
         notify(true, "Failed to initialize the HTTP lib, downloading cheats will not work");
     }
 
     if (global_conf.toolbox_auto_start && if_exists("/system_tmp/util_first_boot")) {
-        etaHEN_log("not First boot detected, activating toolbox");
+        OrionHEN_log("not First boot detected, activating toolbox");
         patch_checker();
     }
 
@@ -248,7 +248,7 @@ int main(void) {
 
         if (global_conf.FTP) {
             if (StartFTP())
-                etaHEN_log("[Setting enabled] Starting FTP Server...");
+                OrionHEN_log("[Setting enabled] Starting FTP Server...");
         }
         if (global_conf.DPI) {
             startDirectPKGInstaller(false);
@@ -259,17 +259,17 @@ int main(void) {
         }
 
         if(global_conf.klog){
-           etaHEN_log("Starting klog thread...");
+           OrionHEN_log("Starting klog thread...");
            start_klog();
         }
-        etaHEN_log("started klog thread...");
+        OrionHEN_log("started klog thread...");
         
         pthread_create(&cmd_server, NULL, runCommandNControlServer, NULL);
-        etaHEN_log("loading settings...");
+        OrionHEN_log("loading settings...");
         LoadSettings();
-        etaHEN_log("done loading settings...");
+        OrionHEN_log("done loading settings...");
 
-        etaHEN_log("Caching cheat list...");
+        OrionHEN_log("Caching cheat list...");
         pthread_create(&cheat_cache, NULL, MakeInitialCheatCache, NULL);
 
         pthread_join(cmd_server, NULL);

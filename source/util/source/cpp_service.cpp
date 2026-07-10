@@ -1,4 +1,4 @@
-/* Copyright (C) 2025 etaHEN / LightningMods
+/* Copyright (C) 2025 OrionHEN / LightningMods
 
 This program is free software; you can redistribute it and/or modify it
 under the terms of the GNU General Public License as published by the
@@ -147,7 +147,7 @@ void *start_ftp(void *args);
 void *klog(void *args);
 void *krw_server(void *args);
 bool RunDPIThread();
-void etaHEN_log(const char *fmt, ...);
+void OrionHEN_log(const char *fmt, ...);
 void notify(bool show_watermark, const char *text, ...);
 bool if_exists(const char *path);
 bool LoadSettings();
@@ -285,7 +285,7 @@ int get_shellcore_pid() {
 
 bool enable_toolbox() {
     int wait = 0, DaemonSocket = 0;
-    const char *path = "/system_tmp/etaHEN_crit_service";
+    const char *path = "/system_tmp/OrionHEN_crit_service";
     while (!if_exists(path)) {
         sleep(1);
 
@@ -300,7 +300,7 @@ bool enable_toolbox() {
     sockaddr_un server;
     DaemonSocket = socket(AF_UNIX, SOCK_STREAM, 0);
     if (DaemonSocket == -1) {
-        etaHEN_log("Failed to create socket");
+        OrionHEN_log("Failed to create socket");
         return false;
     }
     
@@ -308,7 +308,7 @@ bool enable_toolbox() {
     strncpy(server.sun_path, path, sizeof(server.sun_path) - 1);
     if (connect(DaemonSocket, (struct sockaddr *)&server, SUN_LEN(&server)) == -1) {
         close(DaemonSocket);
-        etaHEN_log("Failed to connect to socket");
+        OrionHEN_log("Failed to connect to socket");
         return false;
     }
 
@@ -318,14 +318,14 @@ bool enable_toolbox() {
     if (send(DaemonSocket, reinterpret_cast<const void *>(&msg), sizeof(msg),
             MSG_NOSIGNAL) < 0) {
         close(DaemonSocket);
-        etaHEN_log("Failed to send message to daemon");
+        OrionHEN_log("Failed to send message to daemon");
         return false;
     }
 
     if (recv(DaemonSocket, reinterpret_cast<void *>(&msg), sizeof(msg),
             MSG_NOSIGNAL) < 0) {
         close(DaemonSocket);
-        etaHEN_log("Failed to receive message from daemon");
+        OrionHEN_log("Failed to receive message from daemon");
         return false;
     }
 
@@ -352,7 +352,7 @@ bool isUserLoggedIn() {
         int userid = userIdList.user_id[i];
         if (userid != -1) {
             int ret = sceUserServiceGetUserName(userid, &username[0], sizeof(username));
-            etaHEN_log("sceUserServiceGetUserName returned %d", ret);
+            OrionHEN_log("sceUserServiceGetUserName returned %d", ret);
             if (ret == 0) {
                 isLoggedIn = true;
                 break;
@@ -416,8 +416,8 @@ __attribute__((noinline)) static uint8_t* hexstrtochar2(const char* hexstr, size
 }
 
 void write_bytes32(pid_t pid, uint64_t addr, const uint32_t val) {
-    etaHEN_log("addr: 0x%lx", addr);
-    etaHEN_log("val: 0x%08x", val);
+    OrionHEN_log("addr: 0x%lx", addr);
+    OrionHEN_log("val: 0x%08x", val);
     dbg::write(pid, addr, (void*)&val, sizeof(uint32_t));
 }
 
@@ -430,17 +430,17 @@ void write_bytes(pid_t pid, uint64_t addr, const char* hexString) {
         return;
     }
 
-    etaHEN_log("addr: 0x%lx", addr);
+    OrionHEN_log("addr: 0x%lx", addr);
     dbg::write(pid, addr, byteArray, bytesize);
 
     dbg::read(pid, addr, byteArray, bytesize);
     if (byteArray) {
-        etaHEN_log("freeing byteArray at 0x%p", byteArray);
+        OrionHEN_log("freeing byteArray at 0x%p", byteArray);
         free(byteArray);
     }
 }
 uint8_t *PatternScan(const uint64_t module_base, const uint64_t module_size, const char *signature) {
-    etaHEN_log("module_base: 0x%lx module_size: 0x%lx", module_base, module_size);
+    OrionHEN_log("module_base: 0x%lx module_size: 0x%lx", module_base, module_size);
     if (!module_base || !module_size) {
         return nullptr;
     }
@@ -450,8 +450,8 @@ uint8_t *PatternScan(const uint64_t module_base, const uint64_t module_size, con
     int32_t patternLength = pattern_to_byte(signature, patternBytes);
     
     if (patternLength <= 0 || patternLength >= 256) {
-        etaHEN_log("Pattern length too large or invalid! %i (0x%08x)", patternLength, patternLength);
-        etaHEN_log("Input Pattern %s", signature);
+        OrionHEN_log("Pattern length too large or invalid! %i (0x%08x)", patternLength, patternLength);
+        OrionHEN_log("Input Pattern %s", signature);
         return nullptr;
     }
     
@@ -465,7 +465,7 @@ uint8_t *PatternScan(const uint64_t module_base, const uint64_t module_size, con
             }
         }
         if (found) {
-            etaHEN_log("found pattern at 0x%p", &scanBytes[i]);
+            OrionHEN_log("found pattern at 0x%p", &scanBytes[i]);
             return &scanBytes[i];
         }
     }
@@ -476,7 +476,7 @@ uint8_t *PatternScan(const uint64_t module_base, const uint64_t module_size, con
 // OrionHEN: sandbox /data mount patch disabled (see main.cpp). Kept as stub so
 // any leftover callers link; does not touch SceShellCore.
 bool patchShellCore() {
-    etaHEN_log("patchShellCore: disabled (Allow_data_in_sandbox not used)");
+    OrionHEN_log("patchShellCore: disabled (Allow_data_in_sandbox not used)");
     return false;
 #if 0 /* historical: force /data into app sandboxes via SceShellCore patches */
     const UniquePtr<Hijacker> executable = Hijacker::getHijacker(get_shellcore_pid());
@@ -501,12 +501,12 @@ bool patchShellCore() {
         return false;
     }
 
-    etaHEN_log("allocating 0x%lx bytes", shellcore_size);
+    OrionHEN_log("allocating 0x%lx bytes", shellcore_size);
     char* shellcore_copy = (char*)malloc(shellcore_size);
-    etaHEN_log("shellcore_copy: 0x%p", shellcore_copy);
+    OrionHEN_log("shellcore_copy: 0x%p", shellcore_copy);
 
     if (!shellcore_copy) {
-        etaHEN_log("shellcore_copy is nullptr");
+        OrionHEN_log("shellcore_copy is nullptr");
         return false;
     }
 
@@ -633,13 +633,13 @@ bool patchShellCore() {
             );
             break;
         default:
-            etaHEN_log("Unknown firmware: 0x%08x", getSystemSwVersion());
+            OrionHEN_log("Unknown firmware: 0x%08x", getSystemSwVersion());
             break;
         }
 
-        etaHEN_log("shellcore_offset_data1: 0x%p", shellcore_offset_data1);
-        etaHEN_log("shellcore_offset_data2: 0x%p", shellcore_offset_data2);
-        etaHEN_log("patch_checker_offset: 0x%p", patch_checker_offset);
+        OrionHEN_log("shellcore_offset_data1: 0x%p", shellcore_offset_data1);
+        OrionHEN_log("shellcore_offset_data2: 0x%p", shellcore_offset_data2);
+        OrionHEN_log("patch_checker_offset: 0x%p", patch_checker_offset);
 
 
         // uint64_t addr = shellcore_base +  (uint64_t)0x10C01F0;
@@ -657,7 +657,7 @@ bool patchShellCore() {
             write_bytes(g_ShellCorePid, shellcore_offset_patch1, "b801000000");
             write_bytes(g_ShellCorePid, shellcore_offset_patch2, "b801000000");
 
-            etaHEN_log("Patched shellcore for `/data` mount\n"
+            OrionHEN_log("Patched shellcore for `/data` mount\n"
                 "g_ShellCorePid: 0x%08x\n"
                 "mkdir(\"/user/devbin\", 0777): 0x%08x\n"
                 "mkdir(\"/user/devlog\", 0777): 0x%08x",
@@ -668,13 +668,13 @@ bool patchShellCore() {
         if (patch_checker_offset) {
             shellcore_offset_patch = shellcore_base +
                 ((uint64_t)patch_checker_offset - (uint64_t)shellcore_copy);
-            etaHEN_log("shellcore_offset_patch: 0x%lx", shellcore_offset_patch);
+            OrionHEN_log("shellcore_offset_patch: 0x%lx", shellcore_offset_patch);
             write_bytes(g_ShellCorePid, shellcore_offset_patch, "554889E5B8142618805DC3");
         }
     }
 
     if (shellcore_copy) {
-        etaHEN_log("freeing shellcore_copy from 0x%p", shellcore_copy);
+        OrionHEN_log("freeing shellcore_copy from 0x%p", shellcore_copy);
         free(shellcore_copy);
         shellcore_copy = nullptr;
     }
@@ -698,7 +698,7 @@ static void replyOk(int sock) {
 void cmd_server(int sock, Command &cmd) {
     pthread_mutex_lock(&jb_lock);
     UniquePtr<Hijacker> spawned = nullptr;
-    etaHEN_log("command: %u", cmd.cmd);
+    OrionHEN_log("command: %u", cmd.cmd);
     
     if (cmd.cmd == 0) {
         numb_of_tries++;
@@ -721,23 +721,23 @@ void cmd_server(int sock, Command &cmd) {
             break;
         }
         
-        etaHEN_log("WRONG Jailbreak command received: jailbreaking...");
+        OrionHEN_log("WRONG Jailbreak command received: jailbreaking...");
         {
             do { 
                 spawned = Hijacker::getHijacker(cmd.PID);
                 if (spawned == nullptr) {
                     if (isProcessAlive(cmd.PID)) {
-                        etaHEN_log("process died");
+                        OrionHEN_log("process died");
                         break;
                     }
                     retries++;
                     if (retries > 30) {
                         notify(true, "Jailbreak failed, PID is invaild");
-                        etaHEN_log("Jailbreak failed, PID is invaild");
+                        OrionHEN_log("Jailbreak failed, PID is invaild");
                         break;
                     }
                 }
-                etaHEN_log("is null for PID %d", cmd.PID);
+                OrionHEN_log("is null for PID %d", cmd.PID);
             } while (spawned == nullptr);
 
             retries = 0;
@@ -745,7 +745,7 @@ void cmd_server(int sock, Command &cmd) {
             notify(true, "[Legacy] App has been granted a jailbreak\n\nAn update for "
                       "this PKG is available");
             spawned->jailbreak(true);
-            etaHEN_log("jailbroke app %s", cmd.msg1);
+            OrionHEN_log("jailbroke app %s", cmd.msg1);
         }
         replyOk(sock);
         break;
@@ -800,7 +800,7 @@ void *runCommandNControlServer(void *) {
     }
 
     if(global_conf.legacy_cmd_server)
-	   etaHEN_log("[Daemon LEGACY IPC] Server started on port 9028");
+	   OrionHEN_log("[Daemon LEGACY IPC] Server started on port 9028");
 
     // Accept clients
     while (!global_conf.legacy_cmd_server_exit) {
@@ -812,13 +812,13 @@ void *runCommandNControlServer(void *) {
             break;
         }
         if (client > 0 && global_conf.legacy_cmd_server) {
-            etaHEN_log("[Daemon IPC] Client connected");
+            OrionHEN_log("[Daemon IPC] Client connected");
             while ((readSize = recv(client, reinterpret_cast<void *>(&cmd),
                                   sizeof(cmd), MSG_NOSIGNAL)) > 0) {
                 if (cmd.magic == 0xDEADBEEF ) {
                     cmd_server(client, cmd);
                 } else {
-                    etaHEN_log("[Daemon IPC] Invalid magic number");
+                    OrionHEN_log("[Daemon IPC] Invalid magic number");
                 }
             }
         }
@@ -830,7 +830,7 @@ void *runCommandNControlServer(void *) {
     if (s >= 0)
         close(s), s = -1;
 
-    etaHEN_log("[Daemon IPC] Server stopped");
+    OrionHEN_log("[Daemon IPC] Server stopped");
 
     if (global_conf.legacy_cmd_server_exit) {
         global_conf.legacy_cmd_server_exit = false;
@@ -862,17 +862,17 @@ void check_addr_change(void) {
         } else if (rest_mode_action && !no_network_patched && !not_connected &&
                   real_rest_mode_detected) {
             LoadSettings();
-            etaHEN_log("sleeping for %lld secs", global_conf.seconds);
+            OrionHEN_log("sleeping for %lld secs", global_conf.seconds);
             sleep(global_conf.seconds);
             notify(true, "Coming out of Rest Mode detected, restarting server(s)");
-            etaHEN_log("waiting for logged in user");
+            OrionHEN_log("waiting for logged in user");
             
             while (!isUserLoggedIn()) {
                 sleep(2);
             }
             
-            etaHEN_log("user is logged in");
-            etaHEN_log("Coming out rest mode, activating patches");
+            OrionHEN_log("user is logged in");
+            OrionHEN_log("Coming out rest mode, activating patches");
             
 
             if (global_conf.toolbox_auto_start  && !global_conf.disable_toolbox_for_rest && !enable_toolbox()) {
@@ -907,22 +907,22 @@ void start_ip_thread(void) {
 // System recovery and patch checker
 void patch_checker() {
     if (!isUserLoggedIn()) {
-        etaHEN_log("User is not logged in yet, skipping...");
+        OrionHEN_log("User is not logged in yet, skipping...");
         return;
     }
 
     LoadSettings();
     if(global_conf.disable_toolbox_for_rest){
-        etaHEN_log("Toolbox auto start for rest mode is disabled");
+        OrionHEN_log("Toolbox auto start for rest mode is disabled");
         return;
     }
-    etaHEN_log("sleeping for %lld secs", global_conf.seconds);
+    OrionHEN_log("sleeping for %lld secs", global_conf.seconds);
     sleep(global_conf.seconds);
 
     notify(true, "(No Network) Coming out of Rest Mode detected\nre-activating "
                 "the OrionHEN toolbox...");
 
-    etaHEN_log("************************************\n\nShellUI is not "
+    OrionHEN_log("************************************\n\nShellUI is not "
               "patched\n\n************************************");
 
     if (!enable_toolbox()) {

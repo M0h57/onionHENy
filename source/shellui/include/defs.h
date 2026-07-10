@@ -1,4 +1,4 @@
-/* Copyright (C) 2025 etaHEN / LightningMods
+/* Copyright (C) 2025 OrionHEN / LightningMods
 
 This program is free software; you can redistribute it and/or modify it
 under the terms of the GNU General Public License as published by the
@@ -18,7 +18,7 @@ along with this program; see the file COPYING. If not, see
 #define PUBLIC_TEST 0
 #define PRE_RELEASE 0
 #define SHELL_DEBUG 0
-#define etaHEN_VERSION "2.5"
+#define OrionHEN_VERSION "2.5"
 
 #define libSceKernelHandle 0x2001
 #define KERNEL_DLSYM(handle, sym) \

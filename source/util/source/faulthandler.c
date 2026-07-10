@@ -1,4 +1,4 @@
-/* Copyright (C) 2025 etaHEN / LightningMods
+/* Copyright (C) 2025 OrionHEN / LightningMods
 
 This program is free software; you can redistribute it and/or modify it
 under the terms of the GNU General Public License as published by the
@@ -83,7 +83,7 @@ void crash_log(const char *fmt, ...) {
 		msg[sizeof(msg) - 1] = '\0';
 	}
 
-	int fd = open("/data/etaHEN/etaHEN_util_crash.log", O_WRONLY | O_CREAT | O_APPEND, 0777);
+	int fd = open("/data/OrionHEN/OrionHEN_util_crash.log", O_WRONLY | O_CREAT | O_APPEND, 0777);
 	if (fd < 0) {
 		return;
 	}

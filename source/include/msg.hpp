@@ -7,8 +7,8 @@
 #include <sys/param.h>
 
 #define INVAIL -1
-#define CRIT_IPC_SOC "/system_tmp/etaHEN_crit_service"
-#define UTIL_IPC_SOC "/system_tmp/etaHEN_util_service"
+#define CRIT_IPC_SOC "/system_tmp/OrionHEN_crit_service"
+#define UTIL_IPC_SOC "/system_tmp/OrionHEN_util_service"
 #define DAEMON_BUFF_MAX 0x1000
 
 

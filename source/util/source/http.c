@@ -1,4 +1,4 @@
-/* Copyright (C) 2025 etaHEN / LightningMods
+/* Copyright (C) 2025 OrionHEN / LightningMods
 
 This program is free software; you can redistribute it and/or modify it
 under the terms of the GNU General Public License as published by the
@@ -25,16 +25,17 @@ along with this program; see the file COPYING. If not, see
 #include <stdbool.h>
 #include <libhttp2.h>
 #include <minizip/unzip.h>
-#include "../extern/tiny-json/tiny-json.hpp"
+#include "../../extern/cJSON/cJSON.hpp"
 
-#define TEST_USER_AGENT "etaHEN_Downloader"
+#define TEST_USER_AGENT "OrionHEN_Downloader"
 #include <curl/curl.h>
 
 #define NET_HEAP_SIZE	(32 * 1024)
 #define MAX_CONCURRENT_REQUEST	(4)
 #define PRIVATE_CA_CERT_NUM		(0)
-#define COMMIT_HASH_FILE "/data/etaHEN/cheat_commit_hash.txt"
-#define ETAHEN_GITHUB_API_URL "https://api.github.com/repos/etaHEN/PS5_Cheats/commits"
+#define COMMIT_HASH_FILE "/data/OrionHEN/cheat_commit_hash.txt"
+/* PS5 cheats repository used by OrionHEN (public GitHub source) */
+#define ORIONHEN_GITHUB_API_URL "https://api.github.com/repos/etaHEN/PS5_Cheats/commits"
 #define GOLDHEN_GITHUB_API_URL "https://api.github.com/repos/GoldHEN/GoldHEN_Cheat_Repository/commits"
 
 uint64_t sceKernelGetProcessTime(void);
@@ -57,11 +58,11 @@ struct json_data {
 bool IniliatizeHTTP() {
     CURLcode res = curl_global_init(CURL_GLOBAL_DEFAULT);
     if (res != CURLE_OK) {
-        etaHEN_log("curl_global_init() error: %s", curl_easy_strerror(res));
+        OrionHEN_log("curl_global_init() error: %s", curl_easy_strerror(res));
         return false;
     }
 
-	etaHEN_log("cURL initialized successfully, version %s", curl_version());
+	OrionHEN_log("cURL initialized successfully, version %s", curl_version());
     return true;
 }
 
@@ -72,7 +73,7 @@ static size_t write_file_callback(void* contents, size_t size, size_t nmemb, voi
 
     ssize_t written = sceKernelWrite(progress->fd, contents, real_size);
     if (written != real_size) {
-        etaHEN_log("sceKernelWrite() error: written %ld, expected %zu", written, real_size);
+        OrionHEN_log("sceKernelWrite() error: written %ld, expected %zu", written, real_size);
         return 0; // This will cause curl to abort
     }
 
@@ -126,7 +127,7 @@ bool download_file(const char* url, const char* dst) {
     // Open file for writing
     int fd = sceKernelOpen(dst, O_WRONLY | O_CREAT, 0777);
     if (fd < 0) {
-        etaHEN_log("Failed to open destination file: %s (error: 0x%08X)", dst, fd);
+        OrionHEN_log("Failed to open destination file: %s (error: 0x%08X)", dst, fd);
         return false;
     }
 
@@ -141,13 +142,13 @@ bool download_file(const char* url, const char* dst) {
     // Initialize curl
     curl = curl_easy_init();
     if (!curl) {
-        etaHEN_log("curl_easy_init() failed");
+        OrionHEN_log("curl_easy_init() failed");
         sceKernelClose(fd);
         return false;
     }
 
     // Initial notification
-    etaHEN_log("Downloading %s to %s", url, dst);
+    OrionHEN_log("Downloading %s to %s", url, dst);
 
     // Set curl options
     curl_easy_setopt(curl, CURLOPT_URL, url);
@@ -171,14 +172,14 @@ bool download_file(const char* url, const char* dst) {
     res = curl_easy_perform(curl);
 
     if (res != CURLE_OK) {
-        etaHEN_log("curl_easy_perform() failed: %s", curl_easy_strerror(res));
+        OrionHEN_log("curl_easy_perform() failed: %s", curl_easy_strerror(res));
         notify(true, "Failed to download the %s!\n\nCheck your internet connection and try again.\nError: %s", filename, curl_easy_strerror(res));
     }
     else {
         // Check HTTP response code
         long response_code;
         curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &response_code);
-        etaHEN_log("Response status code: %ld", response_code);
+        OrionHEN_log("Response status code: %ld", response_code);
 
         if (response_code == 200) {
             // Get download size info
@@ -189,11 +190,11 @@ bool download_file(const char* url, const char* dst) {
                 "Successfully downloaded the %s\nTotal Size: %.1f MB", filename,
                 (float)download_size / (1024 * 1024));
             notify(true, notifyMsg);
-            etaHEN_log("Download complete: %lld bytes", download_size);
+            OrionHEN_log("Download complete: %lld bytes", download_size);
             success = true;
         }
         else {
-            etaHEN_log("HTTP error: unexpected status code %ld", response_code);
+            OrionHEN_log("HTTP error: unexpected status code %ld", response_code);
             notify(true, "Failed to download the %s!\n\nServer returned an error.", filename);
         }
     }
@@ -219,7 +220,7 @@ static size_t write_json_callback(void* contents, size_t size, size_t nmemb, voi
 
         char* new_data = realloc(json->data, new_capacity);
         if (!new_data) {
-            etaHEN_log("Failed to reallocate memory for JSON data");
+            OrionHEN_log("Failed to reallocate memory for JSON data");
             return 0; // This will cause curl to abort
         }
 
@@ -248,10 +249,10 @@ static char* download_json(const char* url) {
         .capacity = 0x1000
     };
 
-    etaHEN_log("Downloading JSON data from %s", url);
+    OrionHEN_log("Downloading JSON data from %s", url);
 
     if (!json.data) {
-        etaHEN_log("Failed to allocate initial memory for JSON data");
+        OrionHEN_log("Failed to allocate initial memory for JSON data");
         return NULL;
     }
 
@@ -260,7 +261,7 @@ static char* download_json(const char* url) {
     // Initialize curl
     curl = curl_easy_init();
     if (!curl) {
-        etaHEN_log("curl_easy_init() failed");
+        OrionHEN_log("curl_easy_init() failed");
         free(json.data);
         return NULL;
     }
@@ -279,7 +280,7 @@ static char* download_json(const char* url) {
     res = curl_easy_perform(curl);
 
     if (res != CURLE_OK) {
-        etaHEN_log("curl_easy_perform() failed: %s", curl_easy_strerror(res));
+        OrionHEN_log("curl_easy_perform() failed: %s", curl_easy_strerror(res));
         free(json.data);
     }
     else {
@@ -288,11 +289,11 @@ static char* download_json(const char* url) {
         curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &response_code);
 
         if (response_code == 200) {
-            etaHEN_log("Downloaded %zu bytes of JSON data", json.size);
+            OrionHEN_log("Downloaded %zu bytes of JSON data", json.size);
             result = json.data; // Return the data
         }
         else {
-            etaHEN_log("HTTP error: unexpected status code %ld", response_code);
+            OrionHEN_log("HTTP error: unexpected status code %ld", response_code);
             free(json.data);
         }
     }
@@ -315,7 +316,7 @@ static void ensure_directory(const char* path) {
 bool extract_zip(const char* zip_path, const char* extract_dir) {
     unzFile zip = unzOpen(zip_path);
     if (!zip) {
-        etaHEN_log("Failed to open zip file: %s", zip_path);
+        OrionHEN_log("Failed to open zip file: %s", zip_path);
         notify(true, "Failed to open zip file");
         return false;
     }
@@ -324,7 +325,7 @@ bool extract_zip(const char* zip_path, const char* extract_dir) {
 
     // Go to the first file
     if (unzGoToFirstFile(zip) != UNZ_OK) {
-        etaHEN_log("Empty zip file");
+        OrionHEN_log("Empty zip file");
         unzClose(zip);
         notify(true, "Empty zip file");
         return false;
@@ -355,7 +356,7 @@ bool extract_zip(const char* zip_path, const char* extract_dir) {
     char notifyMsg[256];
     snprintf(notifyMsg, sizeof(notifyMsg), "Preparing to extract the cheats repo (%d files)", total_files);
     notify(true, notifyMsg);
-    etaHEN_log("%s", notifyMsg);
+    OrionHEN_log("%s", notifyMsg);
 
     // Get current time for notification timing
     last_notify_time = sceKernelGetProcessTime();
@@ -374,7 +375,7 @@ bool extract_zip(const char* zip_path, const char* extract_dir) {
         root_folder_len = first_slash - filename + 1;
         strncpy(root_folder, filename, root_folder_len);
         root_folder[root_folder_len] = '\0';
-        etaHEN_log("Detected root folder: %s", root_folder);
+        OrionHEN_log("Detected root folder: %s", root_folder);
     }
 
     // Reset to the first file
@@ -398,7 +399,7 @@ bool extract_zip(const char* zip_path, const char* extract_dir) {
 
         // Check if this is a directory
         if (filename[strlen(filename) - 1] == '/') {
-            etaHEN_log("Creating directory: %s", full_path);
+            OrionHEN_log("Creating directory: %s", full_path);
             ensure_directory(full_path);
             processed_files++;
             continue;
@@ -414,14 +415,14 @@ bool extract_zip(const char* zip_path, const char* extract_dir) {
 
         // Extract the file
         if (unzOpenCurrentFile(zip) != UNZ_OK) {
-            etaHEN_log("Failed to open file in zip");
+            OrionHEN_log("Failed to open file in zip");
             continue;
         }
 
         // Open with POSIX open() instead of fopen()
         int out = open(full_path, O_WRONLY | O_CREAT | O_TRUNC, 0644);
         if (out == -1) {
-            etaHEN_log("Failed to create output file: %s (error: %d)", full_path, errno);
+            OrionHEN_log("Failed to create output file: %s (error: %d)", full_path, errno);
             unzCloseCurrentFile(zip);
             continue;
         }
@@ -446,7 +447,7 @@ bool extract_zip(const char* zip_path, const char* extract_dir) {
                 "Extracting the cheats: %d/%d files (%d%%)",
                 processed_files, total_files, progress_percent);
             notify(true, notifyMsg);
-            etaHEN_log("%s", notifyMsg);
+            OrionHEN_log("%s", notifyMsg);
             last_notify_time = current_time;
         }
 
@@ -457,7 +458,7 @@ bool extract_zip(const char* zip_path, const char* extract_dir) {
         "Cheats Extraction complete (%d files)",
         processed_files);
     notify(true, notifyMsg);
-    etaHEN_log("%s", notifyMsg);
+    OrionHEN_log("%s", notifyMsg);
 
     unzClose(zip);
     return true;
@@ -469,48 +470,34 @@ static bool extract_commit_sha(const char* json_data, char* sha_buffer, size_t b
         return false;
     }
 
-    etaHEN_log("json_data %s", json_data);
+    OrionHEN_log("json_data %s", json_data);
     
-    // Look for the first "sha" field in the JSON
-    const char* sha_start = strstr(json_data, "\"sha\":");
-    if (!sha_start) {
-        etaHEN_log("Could not find 'sha' field in JSON response");
+    cJSON* root = cJSON_Parse(json_data);
+    if (!root) {
+        OrionHEN_log("Could not parse GitHub commit JSON");
         return false;
     }
-    
-    // Move past "sha":
-    sha_start += 6;
-    
-    // Skip whitespace and find the opening quote
-    while (*sha_start == ' ' || *sha_start == '\t') {
-        sha_start++;
-    }
-    
-    if (*sha_start != '"') {
-        etaHEN_log("Invalid JSON format - expected quote after 'sha':");
+
+    cJSON* commit = cJSON_IsArray(root) ? cJSON_GetArrayItem(root, 0) : root;
+    cJSON* sha = cJSON_GetObjectItemCaseSensitive(commit, "sha");
+    if (!cJSON_IsString(sha) || !sha->valuestring) {
+        OrionHEN_log("Could not find 'sha' field in JSON response");
+        cJSON_Delete(root);
         return false;
     }
-    
-    sha_start++; // Skip the opening quote
-    
-    // Find the closing quote
-    const char* sha_end = strchr(sha_start, '"');
-    if (!sha_end) {
-        etaHEN_log("Invalid JSON format - no closing quote for sha value");
-        return false;
-    }
-    
-    // Calculate length and copy
-    size_t sha_length = sha_end - sha_start;
+
+    size_t sha_length = strlen(sha->valuestring);
     if (sha_length >= buffer_size) {
-        etaHEN_log("SHA too long for buffer");
+        OrionHEN_log("SHA too long for buffer");
+        cJSON_Delete(root);
         return false;
     }
-    
-    strncpy(sha_buffer, sha_start, sha_length);
+
+    strncpy(sha_buffer, sha->valuestring, sha_length);
     sha_buffer[sha_length] = '\0';
+    cJSON_Delete(root);
     
-    etaHEN_log("Extracted commit SHA: %s", sha_buffer);
+    OrionHEN_log("Extracted commit SHA: %s", sha_buffer);
     return true;
 }
 
@@ -518,7 +505,7 @@ static bool extract_commit_sha(const char* json_data, char* sha_buffer, size_t b
 static bool read_stored_commit_hash(char* hash_buffer, size_t buffer_size) {
     int fd = sceKernelOpen(COMMIT_HASH_FILE, O_RDONLY, 0);
     if (fd < 0) {
-        etaHEN_log("No stored commit hash file found");
+        OrionHEN_log("No stored commit hash file found");
         return false;
     }
     
@@ -526,7 +513,7 @@ static bool read_stored_commit_hash(char* hash_buffer, size_t buffer_size) {
     sceKernelClose(fd);
     
     if (read_bytes <= 0) {
-        etaHEN_log("Failed to read stored commit hash");
+        OrionHEN_log("Failed to read stored commit hash");
         return false;
     }
     
@@ -539,7 +526,7 @@ static bool read_stored_commit_hash(char* hash_buffer, size_t buffer_size) {
         end--;
     }
     
-    etaHEN_log("Read stored commit hash: %s", hash_buffer);
+    OrionHEN_log("Read stored commit hash: %s", hash_buffer);
     return true;
 }
 
@@ -547,7 +534,7 @@ static bool read_stored_commit_hash(char* hash_buffer, size_t buffer_size) {
 static bool write_commit_hash(const char* hash) {
     int fd = sceKernelOpen(COMMIT_HASH_FILE, O_WRONLY | O_CREAT | O_TRUNC, 0644);
     if (fd < 0) {
-        etaHEN_log("Failed to open commit hash file for writing: 0x%08X", fd);
+        OrionHEN_log("Failed to open commit hash file for writing: 0x%08X", fd);
         return false;
     }
     
@@ -555,11 +542,11 @@ static bool write_commit_hash(const char* hash) {
     sceKernelClose(fd);
     
     if (written != (int)strlen(hash)) {
-        etaHEN_log("Failed to write commit hash to file");
+        OrionHEN_log("Failed to write commit hash to file");
         return false;
     }
     
-    etaHEN_log("Stored new commit hash: %s", hash);
+    OrionHEN_log("Stored new commit hash: %s", hash);
     return true;
 }
 
@@ -570,20 +557,20 @@ bool check_for_new_commit(int repo) {
     char stored_commit[64] = {0};
     bool has_new_commit = false;
     
-    etaHEN_log("Checking for new commits...");
+    OrionHEN_log("Checking for new commits...");
     notify(true, "Checking for updates to the cheats repo...");
     
     // Download the latest commit information
-    json_data = download_json(repo ? GOLDHEN_GITHUB_API_URL : ETAHEN_GITHUB_API_URL);
+    json_data = download_json(repo ? GOLDHEN_GITHUB_API_URL : ORIONHEN_GITHUB_API_URL);
     if (!json_data) {
-        etaHEN_log("Failed to download commit information from GitHub API");
+        OrionHEN_log("Failed to download commit information from GitHub API");
         notify(true, "Failed to check the cheats repo for updates\nCheck your Connection and try again");
         return false;
     }
     
     // Extract the latest commit SHA
     if (!extract_commit_sha(json_data, latest_commit, sizeof(latest_commit))) {
-        etaHEN_log("Failed to extract commit SHA from JSON response");
+        OrionHEN_log("Failed to extract commit SHA from JSON response");
         notify(true, "Failed to parse update information\nUsing existing cheats repo");
         free(json_data);
         return false;
@@ -592,15 +579,15 @@ bool check_for_new_commit(int repo) {
     // Read the stored commit hash
     bool has_stored_hash = read_stored_commit_hash(stored_commit, sizeof(stored_commit));
     if (!has_stored_hash) {
-        etaHEN_log("No stored commit hash - treating as new commit");
+        OrionHEN_log("No stored commit hash - treating as new commit");
         has_new_commit = true;
     } else {
         // Compare the commits
         if (strcmp(latest_commit, stored_commit) != 0) {
-            etaHEN_log("New commit detected: %s (was: %s)", latest_commit, stored_commit);
+            OrionHEN_log("New commit detected: %s (was: %s)", latest_commit, stored_commit);
             has_new_commit = true;
         } else {
-            etaHEN_log("No new commits - repo is up to date");
+            OrionHEN_log("No new commits - repo is up to date");
             has_new_commit = false;
         }
     }
@@ -608,7 +595,7 @@ bool check_for_new_commit(int repo) {
     // If there's a new commit, store the new hash
     if (has_new_commit) {
         if (!write_commit_hash(latest_commit)) {
-            etaHEN_log("Warning: Failed to store new commit hash");
+            OrionHEN_log("Warning: Failed to store new commit hash");
         }
         notify(true, "New cheats update found!\nDownloading latest version...");
     } else {

@@ -1,4 +1,4 @@
-/* Copyright (C) 2025 etaHEN / LightningMods
+/* Copyright (C) 2025 OrionHEN / LightningMods
 
 This program is free software; you can redistribute it and/or modify it
 under the terms of the GNU General Public License as published by the
@@ -174,11 +174,11 @@ enum Cheats_Shortcut{
  };
 
  enum cheats_repo_source{
-    CHEATS_REPO_ETAHEN = 0,
+    CHEATS_REPO_ORIONHEN = 0,
     CHEATS_REPO_GOLDHEN
  };
 
-typedef struct etaHENSettings_t
+typedef struct OrionHENSettings_t
 {
     bool FTP = true;
     bool Klog = true;
@@ -197,7 +197,7 @@ typedef struct etaHENSettings_t
     bool display_tids = false;
     bool debug_app_jb_msg = false;
     bool debug_legacy_cmd_server = false;
-    bool etaHEN_game_opts = true;
+    bool OrionHEN_game_opts = true;
     bool auto_eject_disc = false;
     bool overlay_gpu = true;
     bool overlay_cpu = true;
@@ -233,15 +233,15 @@ typedef struct etaHENSettings_t
 	float overlay_ip_y = 110.0f;
 
     overlay_positions overlay_pos = OVERLAY_POS_TOP_LEFT; //0=top left, 1=top right, 2=bottom left, 3=bottom right
-    cheats_repo_source selected_cheats_repo = CHEATS_REPO_ETAHEN;
+    cheats_repo_source selected_cheats_repo = CHEATS_REPO_ORIONHEN;
 
-} etaHENSettings;
+} OrionHENSettings;
 
 
-extern etaHENSettings global_conf;
+extern OrionHENSettings global_conf;
 typedef struct
 {
-    char prefix[14];  // "etaHEN_PLUGIN" + null terminator
+    char prefix[15];  // "OrionHEN_PLUGIN" + null terminator
     char titleID[10]; // 4 uppercase letters, 5 numbers, and a null terminator
     char plugin_version[5];
 } CustomPluginHeader;
@@ -363,9 +363,7 @@ void notify(const char* text, ...);
 extern uint64_t(*GetManifestResourceStream_Original)(uint64_t inst, MonoString* FileName);
 extern uint64_t(*GetManifestResourceInternal_Orig)(MonoObject* instance, MonoString* name, int* size, MonoObject& module);
 extern void (*DebugSettings_GetModel_Orig)(MonoObject* instance, MonoObject* param, MonoObject* promise);
-extern void (*UI3_NavigationScene_PushScene_Orig)(MonoObject* instance, MonoObject* newScene);
-extern void (*UI3_NavigationScene_PushScene2_Orig)(MonoObject* instance, MonoObject* newScene, MonoObject* animation);
-extern void (*UI3_NavigationScene_PushScene3_Orig)(MonoObject* instance, MonoObject* newScene, MonoObject* animation, MonoObject* animationForPreviousScene);
+extern void (*ReactNavigatorManager_UpdateNavigationState_Orig)(MonoObject* instance, MonoObject* state);
 extern  void (*OnShareButton_orig)(MonoObject* data);
 extern void (*CaptureScreen_orig_old)(MonoObject * inst, int userId, long deviceId, int capType, MonoObject* capacityInfo);
 extern void (*CaptureScreen_orig_new)(MonoObject* inst, int userId, long deviceId, int capType,  MonoString* format, MonoObject* capInfo);
@@ -388,9 +386,7 @@ uint64_t Get_Address_of_Method(MonoImage* Assembly_Image, MonoClass* klass, cons
 uint64_t GetManifestResourceStream_Hook(uint64_t inst, MonoString* FileName);
 uint64_t GetManifestResourceInternal_Hook(MonoObject* instance, MonoString* name, int* size, MonoObject& module);
 void DebugSettings_GetModel_Hook(MonoObject* instance, MonoObject* param, MonoObject* promise);
-void UI3_NavigationScene_PushScene_Hook(MonoObject* instance, MonoObject* newScene);
-void UI3_NavigationScene_PushScene2_Hook(MonoObject* instance, MonoObject* newScene, MonoObject* animation);
-void UI3_NavigationScene_PushScene3_Hook(MonoObject* instance, MonoObject* newScene, MonoObject* animation, MonoObject* animationForPreviousScene);
+void ReactNavigatorManager_UpdateNavigationState_Hook(MonoObject* instance, MonoObject* state);
 MonoObject* New_Mono_XML_From_String(std::string xml_doc);
 bool write_asset(const char* path, const void* start, uint32_t size);
 int ini_parser_load(IniParser* parser, const char* filename);

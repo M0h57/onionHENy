@@ -1,4 +1,4 @@
-/* Copyright (C) 2025 etaHEN / LightningMods
+/* Copyright (C) 2025 OrionHEN / LightningMods
 
 This program is free software; you can redistribute it and/or modify it
 under the terms of the GNU General Public License as published by the
@@ -83,27 +83,27 @@ void notify(const char *text, ...) {
 
 __asm__(".intel_syntax noprefix\n"
         ".section .data\n"
-        ".global etahen_compressed\n"
-        ".type   etahen_compressed, @object\n"
+        ".global orionhen_compressed\n"
+        ".type   orionhen_compressed, @object\n"
         ".align  16\n"
-        "etahen_compressed:\n"
+        "orionhen_compressed:\n"
         ".incbin \"../bin/bootstrapper.elf.lzma\"\n"
-        "etahen_compressed_end:\n"
-        ".global etahen_compressed_size\n"
-        ".type  etahen_compressed_size, @object\n"
+        "orionhen_compressed_end:\n"
+        ".global orionhen_compressed_size\n"
+        ".type  orionhen_compressed_size, @object\n"
         ".align  4\n"
-        "etahen_compressed_size:\n"
-        ".int    etahen_compressed_end - etahen_compressed\n"
-        ".global etahen_decompressed_size\n"
-        ".type   etahen_decompressed_size, @object\n"
+        "orionhen_compressed_size:\n"
+        ".int    orionhen_compressed_end - orionhen_compressed\n"
+        ".global orionhen_decompressed_size\n"
+        ".type   orionhen_decompressed_size, @object\n"
         ".align  16\n"
-        "etahen_decompressed_size:\n"
+        "orionhen_decompressed_size:\n"
         ".incbin \"../bin/bootstrapper.elf.lzma.size\"\n");
 
-extern uint32_t etahen_compressed_size;
-extern uint8_t etahen_compressed[];
-extern uint8_t etahen_compressed_end[];
-extern uint8_t etahen_decompressed_size[];
+extern uint32_t orionhen_compressed_size;
+extern uint8_t orionhen_compressed[];
+extern uint8_t orionhen_compressed_end[];
+extern uint8_t orionhen_decompressed_size[];
 
 bool send_to_elfldr(const void* buffer, size_t buffer_size) {
     int sockfd = -1;
@@ -159,22 +159,22 @@ bool send_to_elfldr(const void* buffer, size_t buffer_size) {
 
 int main() {
 
-  if (etahen_compressed_size <= 0) {
-    printf("Invalid etaHEN payload! unable to unpack it!");
+  if (orionhen_compressed_size <= 0) {
+    printf("Invalid OrionHEN payload! unable to unpack it!");
     return 0;
   }
 
-  size_t decompress_size = atoi((char *)etahen_decompressed_size);
+  size_t decompress_size = atoi((char *)orionhen_decompressed_size);
   // printf("Decompressed size: %zu bytes\nCompressed: %d\n", size,
-  // etahen_compressed_size); printf("Payload has %d bytes, decompressing...\n",
-  // etahen_compressed_size);
+  // orionhen_compressed_size); printf("Payload has %d bytes, decompressing...\n",
+  // orionhen_compressed_size);
   uint8_t *decompressed = (uint8_t *)malloc(decompress_size);
   if (!decompressed) {
     notify("Failed to allocate memory for decompressed OrionHEN payload!");
     return -1;
   }
   size_t size = decompress_size;
-  size_t srcLen = etahen_compressed_size;
+  size_t srcLen = orionhen_compressed_size;
 
   //
   // The PROPS used by the LZMA is located at the first 5 bytes of the file, the
@@ -182,19 +182,19 @@ int main() {
   // compressed data
   //
   int res = LzmaUncompress(decompressed, &size,
-                           etahen_compressed + LZMA_CLI_HEADER_SIZE, &srcLen,
-                           etahen_compressed, LZMA_PROPS_SIZE);
+                           orionhen_compressed + LZMA_CLI_HEADER_SIZE, &srcLen,
+                           orionhen_compressed, LZMA_PROPS_SIZE);
   if (res != 0) {
     notify("Failed to decompress OrionHEN payload! error: %d", res);
     free(decompressed);
     return -1;
   }
 
-  puts("Bootstrapping etaHEN.elf...");
+  puts("Bootstrapping OrionHEN.elf...");
 
-  mkdir("/data/etaHEN", 0777);
+  mkdir("/data/OrionHEN", 0777);
   // cache decompressed payload for re-launch / recovery
-  int fd = open("/data/etaHEN/etaHEN.bin", O_WRONLY | O_CREAT | O_TRUNC, 0666);
+  int fd = open("/data/OrionHEN/OrionHEN.bin", O_WRONLY | O_CREAT | O_TRUNC, 0666);
   if (fd >= 0) {
 
     // Write the buffer to the file

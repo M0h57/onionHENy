@@ -1,4 +1,4 @@
-/* Copyright (C) 2025 etaHEN / LightningMods
+/* Copyright (C) 2025 OrionHEN / LightningMods
 
 This program is free software; you can redistribute it and/or modify it
 under the terms of the GNU General Public License as published by the
@@ -36,7 +36,6 @@ along with this program; see the file COPYING. If not, see
 #include <fcntl.h>
 #include <unistd.h>
 #include "faulthandler.h"
-#include "../extern/tiny-json/tiny-json.hpp"
 #include <pthread.h>
 #include <fcntl.h>
 #include <sys/socket.h>
@@ -149,7 +148,7 @@ extern util_settings global_conf;
 // Define your custom header structure for clarity
 typedef struct
 {
-	char prefix[14];  // "etaHEN_PLUGIN" + null terminator
+	char prefix[15];  // "OrionHEN_PLUGIN" + null terminator
 	char titleID[10]; // 4 uppercase letters, 5 numbers, and a null terminator
 	char plugin_version[5];
 } CustomPluginHeader;
@@ -174,7 +173,7 @@ enum Commands
 	KILL_APP_CMD,
 	JAILBREAK_CMD,
 	REMOUNT_FOLDER_CMD,
-	ETAHEN_VER_CMD,
+	ORIONHEN_VER_CMD,
 	PATCH_LNC_DEBUG_CMD,
 	TEST_CMD,
 	SYMLINK_CMD,
@@ -245,7 +244,7 @@ bool extract_zip(const char *zip_path, const char *extract_dir);
 
 /*============ Back up JB server ==============*/
 int get_ip_address(char *ip_address);
-void etaHEN_log(const char *fmt, ...);
+void OrionHEN_log(const char *fmt, ...);
 bool touch_file(const char *destfile);
 void notify(bool show_watermark, const char *text, ...);
 int sceNetCtlInit(void);

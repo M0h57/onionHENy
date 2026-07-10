@@ -1,4 +1,4 @@
-/* Copyright (C) 2025 etaHEN / LightningMods
+/* Copyright (C) 2025 OrionHEN / LightningMods
 
 This program is free software; you can redistribute it and/or modify it
 under the terms of the GNU General Public License as published by the
@@ -40,12 +40,12 @@ bool klog_started = false;
 
 int sceNetSocketAbort(int s, int flags);
 
-void etaHEN_log(const char *fmt, ...);
+void OrionHEN_log(const char *fmt, ...);
 static int klog_get_available_size(int fd) {
   int res = 0;
   const int err = ioctl(fd, FIONREAD, &res);
   if (err == -1) {
-    etaHEN_log("klog ioctl FIONREAD failed %s", strerror(errno));
+    OrionHEN_log("klog ioctl FIONREAD failed %s", strerror(errno));
     return 0;
   }
   return res;
@@ -58,7 +58,7 @@ int send_klog(tcp_socket_t *restrict sock) {
   static char klogbuf[KLOG_BUF_SIZE];
   int fd = open("/dev/klog", O_NONBLOCK, 0);
   if (fd == -1) {
-    etaHEN_log("send_klog open /dev/klog failed %s", strerror(errno));
+    OrionHEN_log("send_klog open /dev/klog failed %s", strerror(errno));
     return -1;
   }
   while (true) {
@@ -75,13 +75,13 @@ int send_klog(tcp_socket_t *restrict sock) {
     int res = poll(readfds, sizeof(readfds) / sizeof(struct pollfd), INFTIM);
     if (res == -1 || res == 0) {
       // error occured
-      etaHEN_log("send_klog poll failed %s", strerror(errno));
+      OrionHEN_log("send_klog poll failed %s", strerror(errno));
       close(fd);
       return -1;
     }
 
     if (readfds[1].revents & POLLHUP) {
-      etaHEN_log("send_klog readfds[1].revents & POLLHUP: %d",
+      OrionHEN_log("send_klog readfds[1].revents & POLLHUP: %d",
                  readfds[1].revents);
       // connection was closed
       close(fd);
@@ -93,12 +93,12 @@ int send_klog(tcp_socket_t *restrict sock) {
         read(fd, klogbuf, (n >= sizeof(klogbuf)) ? sizeof(klogbuf) : n);
     if (nread == -1) {
       // error occured
-      etaHEN_log("send_klog read failed %s", strerror(errno));
+      OrionHEN_log("send_klog read failed %s", strerror(errno));
       close(fd);
       return -1;
     }
     if (tcp_write(sock, klogbuf, nread)) {
-      etaHEN_log("send_klog tcp_write failed %s", strerror(errno));
+      OrionHEN_log("send_klog tcp_write failed %s", strerror(errno));
       close(fd);
       return 0;
     }
@@ -122,7 +122,7 @@ void *klog(void *args) {
     const int err = tcp_accept(&sock);
     if (err) {
       if (err == REST_MODE_ERR || rest_mode_action || errno == REST_MODE_ERR) {
-        etaHEN_log("rest mode error");
+        OrionHEN_log("rest mode error");
         break;
       }
       notify(true, "Failed to start klog server\ntcp_accept failed %s",
@@ -132,7 +132,7 @@ void *klog(void *args) {
     done = send_klog(&sock);
   }
   if (tcp_close_connection(&sock)) {
-    etaHEN_log("tcp_close_connection failed %s", strerror(errno));
+    OrionHEN_log("tcp_close_connection failed %s", strerror(errno));
     notify(true, "Failed to start klog server\ntcp_close_connection failed %s",
            strerror(errno));
   }
@@ -143,7 +143,7 @@ void *klog(void *args) {
 
 void shutdown_klog(void) {
   if (!klog_started) {
-    etaHEN_log("klog not started");
+    OrionHEN_log("klog not started");
     return;
   }
   pthread_mutex_lock(&shutdown_mutex);
@@ -177,7 +177,7 @@ bool sceKernelIsTestKit() {
 
 bool start_klog(void) {
   if (klog_started || sceKernelIsTestKit()) {
-    etaHEN_log("klog already started");
+    OrionHEN_log("klog already started");
     return true;
   }
   pthread_mutex_lock(&shutdown_mutex);
@@ -185,12 +185,12 @@ bool start_klog(void) {
   pthread_mutex_unlock(&shutdown_mutex);
 
   if (tcp_init(&sock, 1, KLOG_PORT)) {
-    etaHEN_log("tcp_init failed");
+    OrionHEN_log("tcp_init failed");
     return false;
   }
 
   if (pthread_create(&klog_thread, NULL, klog, NULL) != 0) {
-    etaHEN_log("Failed to create klog thread");
+    OrionHEN_log("Failed to create klog thread");
   }
   pthread_detach(klog_thread);
 

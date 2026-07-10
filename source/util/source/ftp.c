@@ -30,7 +30,7 @@ extern char ip_address[];
 
 int close(int fd);
 void* malloc(size_t size);
-void etaHEN_log(const char *fmt, ...);
+void OrionHEN_log(const char *fmt, ...);
 void free(void *ptr);
 bool if_exists(const char *path);
 int sceNetSocketAbort(int socket, unsigned int flags);
@@ -264,7 +264,7 @@ static struct ftp_command *ftp_commands; // Points to available FTP commands
 // In some cases, return values for PS4 functions are < 0 instead of exactly -1.
 #define debug_retval(ret_val)                                                  \
   do {                                                                         \
-    etaHEN_log("Line %d: Return value: %d, errno: %d (\"%s\").", __LINE__,    \
+    OrionHEN_log("Line %d: Return value: %d, errno: %d (\"%s\").", __LINE__,    \
               ret_val, errno, strerror(errno));                                \
     errno = 0;                                                                 \
   } while (0)
@@ -274,7 +274,7 @@ static struct ftp_command *ftp_commands; // Points to available FTP commands
 #define debug_func(ret_val)                                                    \
   do {                                                                         \
     if (ret_val) {                                                             \
-      etaHEN_log("Line %d: " #ret_val ": Return value: %d, errno:"              \
+      OrionHEN_log("Line %d: " #ret_val ": Return value: %d, errno:"              \
                 " %d (\"%s\").",                                             \
                 __LINE__, ret_val, errno, strerror(errno));                    \
       errno = 0;                                                               \
@@ -397,18 +397,18 @@ int decrypt_self(const char* path, const char* out_path) {
     void* segment_data;
     char note_buf[0x1000];
 
-    etaHEN_log("decrypt_self: path=[%s]", path);
+    OrionHEN_log("decrypt_self: path=[%s]", path);
 
     // Open SELF file
     self_fd = open(path, O_RDONLY);
     if (self_fd < 0) {
-        etaHEN_log("Failed to open SELF file: %s", strerror(errno));
+        OrionHEN_log("Failed to open SELF file: %s", strerror(errno));
         return self_fd;
     }
 
     self_file_data = (char *) mmap(NULL, 0x1000, PROT_READ, MAP_SHARED, self_fd, 0);
     if (self_file_data == MAP_FAILED) {
-        etaHEN_log("Failed to map self file errno: %d : %s", errno, strerror(errno));
+        OrionHEN_log("Failed to map self file errno: %d : %s", errno, strerror(errno));
         close(self_fd);
         return -ENOMEM;
     }
@@ -440,7 +440,7 @@ int decrypt_self(const char* path, const char* out_path) {
     // Map buffer for output data
     out_file_data = (char *) mmap(NULL, final_file_size, PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
     if (out_file_data == MAP_FAILED) {
-        etaHEN_log("Failed to map out_file_data errno: %d : %s", errno, strerror(errno));
+        OrionHEN_log("Failed to map out_file_data errno: %d : %s", errno, strerror(errno));
         munmap(self_file_data, 0x1000);
         close(self_fd);
         return -12;
@@ -454,21 +454,21 @@ int decrypt_self(const char* path, const char* out_path) {
     cur_phdr = start_phdrs;
     for (uint64_t i = 0; i < elf_header->e_phnum; i++) {
         if (cur_phdr->p_type == PT_LOAD || cur_phdr->p_type == 0x61000000) {
-            //etaHEN_log("decrypt_self: seg=0x%lx", i);
+            //OrionHEN_log("decrypt_self: seg=0x%lx", i);
             segment_data = mmap(NULL, cur_phdr->p_filesz, PROT_READ, MAP_SHARED | 0x80000, self_fd, (i << 32));
             if (segment_data == MAP_FAILED) {
-                etaHEN_log("Failed to map segment_data errno: %d : %s", errno, strerror(errno));
+                OrionHEN_log("Failed to map segment_data errno: %d : %s", errno, strerror(errno));
                 munmap(self_file_data, 0x1000);
                 close(self_fd);
                 return -EIO;
             }
 
-            //etaHEN_log("decrypt_self: copying %p (size = 0x%lx)", segment_data, cur_phdr->p_filesz);
+            //OrionHEN_log("decrypt_self: copying %p (size = 0x%lx)", segment_data, cur_phdr->p_filesz);
             //DumpHex(segment_data, 0x100);
             memcpy(out_file_data + cur_phdr->p_offset, segment_data, cur_phdr->p_filesz);
-            //etaHEN_log("decrypt_self: unmap %p", segment_data);
+            //OrionHEN_log("decrypt_self: unmap %p", segment_data);
             munmap(segment_data, cur_phdr->p_filesz);
-            //etaHEN_log("decrypt_self: done");
+            //OrionHEN_log("decrypt_self: done");
         }
 
         if (cur_phdr->p_type == 0x6FFFFF00) {
@@ -486,7 +486,7 @@ int decrypt_self(const char* path, const char* out_path) {
     int out_fd = open(out_path, O_RDWR | O_CREAT | O_TRUNC, 0666);
     if (out_fd < 0) {
         munmap(out_file_data, final_file_size);
-        etaHEN_log("Failed to open output file: %s", strerror(errno));
+        OrionHEN_log("Failed to open output file: %s", strerror(errno));
         return -EIO;
     }
 
@@ -494,14 +494,14 @@ int decrypt_self(const char* path, const char* out_path) {
     if (written_bytes != final_file_size) {
         munmap(out_file_data, final_file_size);
         close(out_fd);
-        etaHEN_log("Failed to write entire output file: %s", strerror(errno));
+        OrionHEN_log("Failed to write entire output file: %s", strerror(errno));
         return -EIO;
     }
 
     munmap(out_file_data, final_file_size);
     close(out_fd);
 
-    etaHEN_log("Successfully decrypted and saved to %s", out_path);
+    OrionHEN_log("Successfully decrypted and saved to %s", out_path);
     return 0;
 }
 
@@ -514,7 +514,7 @@ int decrypt_self(const char* path, const char* out_path) {
   int magic = 0;
   int file_fd = open(path, O_RDONLY, 0);
   if (file_fd < 0) {
-    etaHEN_log("Error opening file: %s", path);
+    OrionHEN_log("Error opening file: %s", path);
     return false;
   }
 
@@ -546,7 +546,7 @@ static int decrypt_temp(struct client_info *client, char *file_path, char *buf,
     char temp_path[bufsize];
 
     if(strstr(file_path, "safemode.elf") != NULL){
-      etaHEN_log("safemode.elf CANNOT be decrypted");
+      OrionHEN_log("safemode.elf CANNOT be decrypted");
       return -1;
     }
 
@@ -560,16 +560,16 @@ static int decrypt_temp(struct client_info *client, char *file_path, char *buf,
         return -1;
     }
     while (-ftp_file_exists(temp_path) && strlen(temp_path) + 1 < bufsize) {
-        etaHEN_log("Temporary file \"%s\" already exists.", temp_path);
+        OrionHEN_log("Temporary file \"%s\" already exists.", temp_path);
         strcat(temp_path, "_");
     }
 
-    etaHEN_log("Decrypting file \"%s\", using temporary file \"%s\"...",
+    OrionHEN_log("Decrypting file \"%s\", using temporary file \"%s\"...",
         file_path, temp_path);
 
     // libSelfDecryptor removed — always use local decrypt_self
     if (decrypt_self(file_path, temp_path) != 0) {
-        etaHEN_log("decrypt_self failed for %s", file_path);
+        OrionHEN_log("decrypt_self failed for %s", file_path);
         return -1;
     }
 
@@ -599,7 +599,7 @@ int rnps_decrypt_block(void* buffer, int size)
   int error;
   if (ioctl(handle, 0xC0105203, &args) < 0)
   {
-    etaHEN_log("ioctl failed: %s", strerror(errno));
+    OrionHEN_log("ioctl failed: %s", strerror(errno));
     return -1;
   }
   else
@@ -622,7 +622,7 @@ static int decrypt_rnps(struct client_info *client, char *file_path, char *buf,
     // Open the input file for reading
     fd_in = open(file_path, O_RDONLY);
     if (fd_in < 0) {
-        etaHEN_log("Failed to open input file %s", file_path);
+        OrionHEN_log("Failed to open input file %s", file_path);
         return -1;
     }
 
@@ -630,7 +630,7 @@ static int decrypt_rnps(struct client_info *client, char *file_path, char *buf,
     const size_t BUFFER_SIZE = 0x10000000; // 16 MB
     file_buf = (unsigned char*)malloc(BUFFER_SIZE);
     if (!file_buf) {
-        etaHEN_log("Failed to allocate memory %d", BUFFER_SIZE);
+        OrionHEN_log("Failed to allocate memory %d", BUFFER_SIZE);
         result = -2;
         goto cleanup;
     }
@@ -645,7 +645,7 @@ static int decrypt_rnps(struct client_info *client, char *file_path, char *buf,
 
     // Decrypt the data
     if (rnps_decrypt_block(file_buf, (unsigned int)bytes_read) != 0) {
-      //  etaHEN_log("Failed DECRYPTION OF %S", file_buf);
+      //  OrionHEN_log("Failed DECRYPTION OF %S", file_buf);
         result = -4;
         goto cleanup;
     }
@@ -661,13 +661,13 @@ static int decrypt_rnps(struct client_info *client, char *file_path, char *buf,
         goto cleanup;
     }
 
-    etaHEN_log("Decrypting file \"%s\", using temporary file \"%s\"...",
+    OrionHEN_log("Decrypting file \"%s\", using temporary file \"%s\"...",
         file_path, temp_path);
 
     // Open the output file for writing
     fd_out = open(temp_path, O_WRONLY | O_CREAT | O_TRUNC, 0644);
     if (fd_out < 0) {
-        etaHEN_log("Failed to open output file %s, %s", temp_path, strerror(errno));
+        OrionHEN_log("Failed to open output file %s, %s", temp_path, strerror(errno));
         result = -5;
         goto cleanup;
     }
@@ -675,7 +675,7 @@ static int decrypt_rnps(struct client_info *client, char *file_path, char *buf,
     // Write the decrypted data to the output file
     ssize_t bytes_written = write(fd_out, file_buf, bytes_read);
     if (bytes_written < 0 || bytes_written != bytes_read) {
-        etaHEN_log("Failed to write to output file %s, %s", temp_path, strerror(errno));
+        OrionHEN_log("Failed to write to output file %s, %s", temp_path, strerror(errno));
         result = -6;
         goto cleanup;
     }
@@ -836,7 +836,7 @@ static int gen_ftp_path(char *buf, size_t buf_size, struct client_info *client,
                  client->cur_path[1] == '\0' ? "" : "/", pathname);
 
   if (n >= 0 && (unsigned int)n + 1 > buf_size) { // FTP path got truncated.
-    etaHEN_log("Generated path larger than buffer.");
+    OrionHEN_log("Generated path larger than buffer.");
     return -1;
   } else {
     return 0;
@@ -849,7 +849,7 @@ static int gen_ftp_path(char *buf, size_t buf_size, struct client_info *client,
 // Used in FTP commands MKD and PWD.
 static int gen_quoted_path(char *buf, int buf_size, char *source) {
   if (source == NULL) {
-    etaHEN_log("String is NULL.");
+    OrionHEN_log("String is NULL.");
     return -1;
   }
 
@@ -862,7 +862,7 @@ static int gen_quoted_path(char *buf, int buf_size, char *source) {
   }
 
   if (buf_i > buf_size - 1) {
-    etaHEN_log("Buffer too small.");
+    OrionHEN_log("Buffer too small.");
     return -1;
   }
 
@@ -1528,7 +1528,7 @@ clean_up:
   return;
 
 out_of_memory:
-  etaHEN_log("Could not allocate memory.");
+  OrionHEN_log("Could not allocate memory.");
   close_data_connection(client);
   send_ctrl_msg(client, RC_451);
   goto clean_up;
@@ -2138,7 +2138,7 @@ static int create_command_list(void) {
   size_t list_size = sizeof(command_list);
   ftp_commands = (struct ftp_command *)malloc(list_size);
   if (ftp_commands == NULL) {
-    etaHEN_log("Could not allocate memory.");
+    OrionHEN_log("Could not allocate memory.");
     return -1;
   }
   memcpy(ftp_commands, command_list, list_size);
@@ -2247,7 +2247,7 @@ static void *client_thread(void *arg) {
   debug_func(pthread_detach(pthread_self()));
 
   struct client_info *client = (struct client_info *)arg;
-  etaHEN_log("Client %s connects to socket %d.", client->ipv4,
+  OrionHEN_log("Client %s connects to socket %d.", client->ipv4,
           client->ctrl_sockfd);
   send_ctrl_msg(client, "220 FTP server 1.0A for PS5 by LM." CRLF);
 
@@ -2269,9 +2269,9 @@ static void *client_thread(void *arg) {
           *cmd_end = '\0';
       } else {
         if (n == sizeof(client->cmd_line) - 1) {
-          etaHEN_log("Received command line too long.");
+          OrionHEN_log("Received command line too long.");
         } else {
-          etaHEN_log("Received command line not terminated.");
+          OrionHEN_log("Received command line not terminated.");
         }
         send_ctrl_msg(client, RC_500);
         break; // Kick client for sending garbage.
@@ -2292,24 +2292,24 @@ static void *client_thread(void *arg) {
     } else if (n < 0) {
 #ifdef PS4
       if (n != (int)SCE_NET_ERROR_EINTR) { // Would happen on fini().
-        etaHEN_log("Error %d in client %s@%d's thread.", n, client->ipv4,
+        OrionHEN_log("Error %d in client %s@%d's thread.", n, client->ipv4,
                   client->ctrl_sockfd);
       }
 #else
-      etaHEN_log("Error in client %s@%d's thread: %s.", client->ipv4,
+      OrionHEN_log("Error in client %s@%d's thread: %s.", client->ipv4,
                 client->ctrl_sockfd, strerror(errno));
 #endif
       break;
     }
   }
 
-  etaHEN_log("Client %s@%d disconnects.", client->ipv4, client->ctrl_sockfd);
+  OrionHEN_log("Client %s@%d disconnects.", client->ipv4, client->ctrl_sockfd);
 
   // Clean up.
   client_list_delete(client);
   debug_func(SOCKETCLOSE(client->ctrl_sockfd));
   close_data_connection(client);
-  etaHEN_log("Client %s@%d's thread exits.", client->ipv4,
+  OrionHEN_log("Client %s@%d's thread exits.", client->ipv4,
             client->ctrl_sockfd);
   free(client);
   return NULL;
@@ -2344,14 +2344,14 @@ static void *server_thread(void *arg) {
   server_sockfd = socket(AF_INET, SOCK_STREAM, 0);
   if(!server_sockfd) {
     notify(true, "FTP failed to start!\nError %s", strerror(errno));
-    etaHEN_log("FTP failed to start! Error %s", strerror(errno));
+    OrionHEN_log("FTP failed to start! Error %s", strerror(errno));
     run = 0; // On error, trigger server shutdown.
     return NULL;
   }
   int option_value = 1;
   int ret = sceNetSetsockopt(server_sockfd, SOL_SOCKET, SO_REUSEADDR, &option_value,
              sizeof(option_value));
-  etaHEN_log("sceNetSetsockopt: %d", ret);
+  OrionHEN_log("sceNetSetsockopt: %d", ret);
   sceNetSetsockopt(server_sockfd, SOL_SOCKET, SO_REUSEPORT, &option_value,
              sizeof(option_value));
 
@@ -2368,7 +2368,7 @@ static void *server_thread(void *arg) {
   if (sceNetBind(server_sockfd, (const SceNetSockaddr *)&serveraddr, sizeof(serveraddr)) < 0) {
     // printf_notification("Port %u already in use", server_port);
     notify(true, "FTP failed to bind to the required port!\nError %s", strerror(errno));
-    etaHEN_log("Port %u already in use", server_port);
+    OrionHEN_log("Port %u already in use", server_port);
     run = 0; // On error, trigger server shutdown.
     return NULL;
   }
@@ -2376,7 +2376,7 @@ static void *server_thread(void *arg) {
   // Start listening.
   if (listen(server_sockfd, 128) < 0) {
     notify(true, "FTP failed to start!\n(listen) Error %s", strerror(errno));
-    etaHEN_log("FTP failed to start! Error %s", strerror(errno));
+    OrionHEN_log("FTP failed to start! Error %s", strerror(errno));
     run = 0; // On error, trigger server shutdown.
     return NULL;
   }
@@ -2405,7 +2405,7 @@ static void *server_thread(void *arg) {
       struct client_info *client =
           (struct client_info *)calloc(sizeof(*client), 1);
       if (client == NULL) {
-        etaHEN_log("Could not allocate memory.");
+        OrionHEN_log("Could not allocate memory.");
         debug_func(SOCKETCLOSE(client_sockfd));
         continue;
       }
@@ -2430,7 +2430,7 @@ static void *server_thread(void *arg) {
 
       // Create a new thread for the client.
       if (pthread_create(&client->thid, NULL, client_thread, client)) {
-        etaHEN_log("Could not create a client thread.");
+        OrionHEN_log("Could not create a client thread.");
         free(client);
         debug_func(SOCKETCLOSE(client_sockfd));
       }
@@ -2438,7 +2438,7 @@ static void *server_thread(void *arg) {
   }
 
   debug_func(SOCKETCLOSE(server_sockfd));
-  etaHEN_log("Server thread exits.");
+  OrionHEN_log("Server thread exits.");
   ftp_started = false;
   return NULL;
 }
@@ -2450,14 +2450,14 @@ int init(const char *ip, unsigned short port, const char *default_directory) {
   // Store server port and server IPv4 address globally.
   server_port = port;
   if (inet_pton(AF_INET, ip, &server_ip) == 0) {
-    etaHEN_log("Invalid IPv4 address: \"%s\"", ip);
+    OrionHEN_log("Invalid IPv4 address: \"%s\"", ip);
     return -1;
   }
 
   // Create client list mutex.
   ret = pthread_mutex_init(&client_list_mtx, NULL);
   if (ret) {
-    etaHEN_log("Could not create the client list mutex (error %d).", ret);
+    OrionHEN_log("Could not create the client list mutex (error %d).", ret);
     return -1;
   }
 
@@ -2465,7 +2465,7 @@ int init(const char *ip, unsigned short port, const char *default_directory) {
   ret = pthread_create(&server_thid, NULL, server_thread,
                        (void *)default_directory);
   if (ret) {
-    etaHEN_log("Could not create the server thread (error %d).", ret);
+    OrionHEN_log("Could not create the server thread (error %d).", ret);
     pthread_mutex_destroy(&client_list_mtx);
     return -1;
   }
@@ -2481,11 +2481,11 @@ void fini(void) {
   // unblock on PS4 and some other systems.
 
   debug_func(sceNetSocketAbort(server_sockfd, 0));
-  etaHEN_log("Waiting for server thread to exit...");
+  OrionHEN_log("Waiting for server thread to exit...");
   debug_func(pthread_join(server_thid, NULL));
 
   // Exit client threads.
-  etaHEN_log("Waiting for client threads to exit...");
+  OrionHEN_log("Waiting for client threads to exit...");
   client_list_terminate();
 
   free(ftp_commands);
@@ -2500,7 +2500,7 @@ bool StartFTP(void) {
   srand(time(NULL) ^ getpid());
   ftp_started = false;
   if (get_ip_address(&ip_address[0]) < 0){
-    etaHEN_log("[FTP Module] Failed to get IP address");
+    OrionHEN_log("[FTP Module] Failed to get IP address");
     notify(true, "FTP failed to start!\nFailed to get IP address");
     return false;
   }
@@ -2509,7 +2509,7 @@ bool StartFTP(void) {
 }
 void ShutdownFTP(void) {
    if(!ftp_started){
-      etaHEN_log("[FTP Module] FTP server not started");
+      OrionHEN_log("[FTP Module] FTP server not started");
       return;
    }
 	 fini(); 
@@ -2522,7 +2522,7 @@ void check_ftp_addr_change(void) {
     return;
 
   if (strcmp(&ip_address[0], &func_ip_address[0]) != 0) {
-    etaHEN_log("[FTP Module] IP Address changed, restarting FTP server");
+    OrionHEN_log("[FTP Module] IP Address changed, restarting FTP server");
     ShutdownFTP();
     StartFTP();
   }

@@ -1,4 +1,4 @@
-/* Copyright (C) 2025 etaHEN / LightningMods
+/* Copyright (C) 2025 OrionHEN / LightningMods
 
 This program is free software; you can redistribute it and/or modify it
 under the terms of the GNU General Public License as published by the
@@ -43,7 +43,7 @@ std::string dump_message;
 pthread_t notifyThread;
 #define SELF_PROSPERO_MAGIC     0xEEF51454
 
-void etaHEN_log(const char *fmt, ...);
+void OrionHEN_log(const char *fmt, ...);
 bool if_exists(const char *path);
 void notify(bool show_watermark, const char *text, ...);
 
@@ -52,7 +52,7 @@ bool rmtree(const char *path)
     DIR *dir = opendir(path);
     if (dir == NULL)
     {
-        etaHEN_log("Error opening directory %s", path);
+        OrionHEN_log("Error opening directory %s", path);
         return false;
     }
 
@@ -80,7 +80,7 @@ bool rmtree(const char *path)
             if (unlink(path_1) != 0)
             {
                 // perror("Error deleting file");
-                etaHEN_log("Error deleting file %s", path);
+                OrionHEN_log("Error deleting file %s", path);
             }
         }
     }
@@ -91,7 +91,7 @@ bool rmtree(const char *path)
     if (rmdir(path) != 0)
     {
         // perror("Error deleting folder");
-        etaHEN_log("Error deleting folder %s", path);
+        OrionHEN_log("Error deleting folder %s", path);
     }
 
     return true;
@@ -174,7 +174,7 @@ bool copyFile(const char *source, const char *destination, bool for_dumper)
     if (src == NULL)
     {
         notify(false, "copyFile failed for %s", source);
-        etaHEN_log("copyFile failed for %s", source);
+        OrionHEN_log("copyFile failed for %s", source);
         return false;
     }
 
@@ -182,7 +182,7 @@ bool copyFile(const char *source, const char *destination, bool for_dumper)
     if (dest == NULL)
     {
         notify(false, "copyFile failed for %s", destination);
-        etaHEN_log("copyFile failed for %s", destination);
+        OrionHEN_log("copyFile failed for %s", destination);
         fclose(src);
         return false;
     }
@@ -264,19 +264,19 @@ int decrypt_self(const char* path, const char* out_path) {
     void* segment_data;
     char note_buf[0x1000];
 
-    etaHEN_log("decrypt_self: path=[%s]", path);
+    OrionHEN_log("decrypt_self: path=[%s]", path);
 
 
     // Open SELF file
     self_fd = open(path, O_RDONLY);
     if (self_fd < 0) {
-        etaHEN_log("Failed to open SELF file: %s", strerror(errno));
+        OrionHEN_log("Failed to open SELF file: %s", strerror(errno));
         return self_fd;
     }
 
     self_file_data = (char *) mmap(NULL, 0x1000, PROT_READ, MAP_SHARED, self_fd, 0);
     if (self_file_data == MAP_FAILED) {
-        etaHEN_log("Failed to map self file errno: %d : %s", errno, strerror(errno));
+        OrionHEN_log("Failed to map self file errno: %d : %s", errno, strerror(errno));
         close(self_fd);
         return -ENOMEM;
     }
@@ -308,7 +308,7 @@ int decrypt_self(const char* path, const char* out_path) {
     // Map buffer for output data
     out_file_data = (char *) mmap(NULL, final_file_size, PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
     if (out_file_data == MAP_FAILED) {
-        etaHEN_log("Failed to map out_file_data errno: %d : %s", errno, strerror(errno));
+        OrionHEN_log("Failed to map out_file_data errno: %d : %s", errno, strerror(errno));
         munmap(self_file_data, 0x1000);
         close(self_fd);
         return -12;
@@ -322,21 +322,21 @@ int decrypt_self(const char* path, const char* out_path) {
     cur_phdr = start_phdrs;
     for (uint64_t i = 0; i < elf_header->e_phnum; i++) {
         if (cur_phdr->p_type == PT_LOAD || cur_phdr->p_type == 0x61000000) {
-            //etaHEN_log("decrypt_self: seg=0x%lx\n", i);
+            //OrionHEN_log("decrypt_self: seg=0x%lx\n", i);
             segment_data = mmap(NULL, cur_phdr->p_filesz, PROT_READ, MAP_SHARED | 0x80000, self_fd, (i << 32));
             if (segment_data == MAP_FAILED) {
-                etaHEN_log("Failed to map segment_data errno: %d : %s", errno, strerror(errno));
+                OrionHEN_log("Failed to map segment_data errno: %d : %s", errno, strerror(errno));
                 munmap(self_file_data, 0x1000);
                 close(self_fd);
                 return -EIO;
             }
 
-            //etaHEN_log("decrypt_self: copying %p (size = 0x%lx)\n", segment_data, cur_phdr->p_filesz);
+            //OrionHEN_log("decrypt_self: copying %p (size = 0x%lx)\n", segment_data, cur_phdr->p_filesz);
             //DumpHex(segment_data, 0x100);
             memcpy(out_file_data + cur_phdr->p_offset, segment_data, cur_phdr->p_filesz);
-            //etaHEN_log("decrypt_self: unmap %p\n", segment_data);
+            //OrionHEN_log("decrypt_self: unmap %p\n", segment_data);
             munmap(segment_data, cur_phdr->p_filesz);
-            //etaHEN_log("decrypt_self: done\n");
+            //OrionHEN_log("decrypt_self: done\n");
         }
 
         if (cur_phdr->p_type == 0x6FFFFF00) {
@@ -354,7 +354,7 @@ int decrypt_self(const char* path, const char* out_path) {
     int out_fd = open(out_path, O_RDWR | O_CREAT | O_TRUNC, 0666);
     if (out_fd < 0) {
         munmap(out_file_data, final_file_size);
-        etaHEN_log("Failed to open output file: %s", strerror(errno));
+        OrionHEN_log("Failed to open output file: %s", strerror(errno));
         return -EIO;
     }
 
@@ -362,14 +362,14 @@ int decrypt_self(const char* path, const char* out_path) {
     if (written_bytes != final_file_size) {
         munmap(out_file_data, final_file_size);
         close(out_fd);
-        etaHEN_log("Failed to write entire output file: %s", strerror(errno));
+        OrionHEN_log("Failed to write entire output file: %s", strerror(errno));
         return -EIO;
     }
 
     munmap(out_file_data, final_file_size);
     close(out_fd);
 
-    etaHEN_log("Successfully decrypted and saved to %s", out_path);
+    OrionHEN_log("Successfully decrypted and saved to %s", out_path);
     return 0;
 }
 bool ends_with(const std::string& str, const std::string& suffix) {
@@ -382,14 +382,14 @@ bool ends_with(const std::string& str, const std::string& suffix) {
   if (path.empty() || std::all_of(path.begin(), path.end(), [](char c) {
       return std::isspace(c);
     })) {
-    etaHEN_log("Empty path argument!");
+    OrionHEN_log("Empty path argument!");
     return false;
   }
 
   int magic = 0;
   int file_fd = open(path.c_str(), O_RDONLY, 0);
   if (file_fd < 0) {
-    etaHEN_log("Error opening file: %s", path.c_str());
+    OrionHEN_log("Error opening file: %s", path.c_str());
     return false;
   }
 
@@ -405,7 +405,7 @@ bool decrypt_dir(const std::string& inputPath, const std::string& outputPath) {
     // Always use local mmap-based decrypt_self (no libSelfDecryptor)
     DIR* dir = opendir(inputPath.c_str());
     if (!dir){
-		etaHEN_log("Failed to open directory %s", inputPath.c_str());
+		OrionHEN_log("Failed to open directory %s", inputPath.c_str());
 		return false;
 	}
 
@@ -421,7 +421,7 @@ bool decrypt_dir(const std::string& inputPath, const std::string& outputPath) {
         if (dp->d_type == DT_DIR) {
             mkdir(destinationPath.c_str(), 0777);
             if (!decrypt_dir(sourcePath, destinationPath)) {
-                etaHEN_log("Failed to decrypt directory %s", sourcePath.c_str());
+                OrionHEN_log("Failed to decrypt directory %s", sourcePath.c_str());
                 result = false;
                 break;  // Stop processing further and clean up
             }
@@ -436,11 +436,11 @@ bool decrypt_dir(const std::string& inputPath, const std::string& outputPath) {
 
             if (is_common_self_ext && (Check_ELF_Magic(sourcePath, SELF_PROSPERO_MAGIC ) || Check_ELF_Magic(sourcePath, SELF_ORBIS_MAGIC ) )) {
                 if (decrypt_self(sourcePath.c_str(), destinationPath.c_str()) != 0) {
-                    etaHEN_log("Failed to decrypt %s", sourcePath.c_str());
+                    OrionHEN_log("Failed to decrypt %s", sourcePath.c_str());
                     result = false;
                     break;  // Stop processing further and clean up
                 }
-                etaHEN_log("Decrypted %s", sourcePath.c_str());
+                OrionHEN_log("Decrypted %s", sourcePath.c_str());
             }
         }
     }

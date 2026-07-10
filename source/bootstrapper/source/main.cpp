@@ -1,4 +1,4 @@
-/* Copyright (C) 2025 etaHEN / LightningMods
+/* Copyright (C) 2025 OrionHEN / LightningMods
 
 This program is free software; you can redistribute it and/or modify it
 under the terms of the GNU General Public License as published by the
@@ -90,7 +90,7 @@ const char json_payload[] =
      "      \"icon\": {\n"
      "        \"type\": \"Url\",\n"
      "        \"parameters\": {\n"
-     "          \"url\": \"/user/data/etaHEN/etahen.png\"\n"
+     "          \"url\": \"/user/data/OrionHEN/orionhen.png\"\n"
      "        }\n"
      "      },\n"
      "      \"message\": {\n"
@@ -216,7 +216,7 @@ const char json_payload[] =
  } OrbisKernelSwVersion;
  
  typedef struct {
-   char prefix[14];  // "etaHEN_PLUGIN" + null terminator
+   char prefix[15];  // "OrionHEN_PLUGIN" + null terminator
    char titleID[10]; // 4 uppercase letters, 5 numbers, and a null terminator
    char plugin_version[5];
  } CustomPluginHeader;
@@ -349,8 +349,8 @@ static void cleanup(void);
   }
 
   void write_embedded_assets() {
-    mkdir("/data/etaHEN/", 0777);
-    mkdir("/data/etaHEN/assets/", 0777);
+    mkdir("/data/OrionHEN/", 0777);
+    mkdir("/data/OrionHEN/assets/", 0777);
 #if 0
     int fd = open("/system_ex/common_ex/lib/shell.prx", O_WRONLY | O_CREAT | O_TRUNC, 0666);
     if (fd == -1) {
@@ -364,8 +364,8 @@ static void cleanup(void);
     close(fd);
 #endif
 #if 0
-   /// if (!if_exists("/data/etaHEN/fps.prx")) {
-        int fd = open("/data/etaHEN/fps.prx", O_WRONLY | O_CREAT | O_TRUNC, 0777);
+   /// if (!if_exists("/data/OrionHEN/fps.prx")) {
+        int fd = open("/data/OrionHEN/fps.prx", O_WRONLY | O_CREAT | O_TRUNC, 0777);
         if (fd == -1) {
             perror("open failed");
             return;
@@ -377,27 +377,27 @@ static void cleanup(void);
   //  }
 #endif
 
-    if (!if_exists("/data/etaHEN/etahen.png")) {
-      write_blob_file("/data/etaHEN/etahen.png", &sicon_start, sicon_size);
+    if (!if_exists("/data/OrionHEN/orionhen.png")) {
+      write_blob_file("/data/OrionHEN/orionhen.png", &sicon_start, sicon_size);
     }
 
     // Toolbox category icons (always overwrite so asset updates take effect)
-    write_blob_file("/data/etaHEN/assets/icon_xml_package.png", &icon_xml_package_start, icon_xml_package_size);
-    write_blob_file("/data/etaHEN/assets/icon_xml_plugins.png", &icon_xml_plugins_start, icon_xml_plugins_size);
-    write_blob_file("/data/etaHEN/assets/icon_xml_game.png", &icon_xml_game_start, icon_xml_game_size);
-    write_blob_file("/data/etaHEN/assets/icon_xml_network.png", &icon_xml_network_start, icon_xml_network_size);
-    write_blob_file("/data/etaHEN/assets/icon_xml_settings.png", &icon_xml_settings_start, icon_xml_settings_size);
-    write_blob_file("/data/etaHEN/assets/icon_xml_shortcuts.png", &icon_xml_shortcuts_start, icon_xml_shortcuts_size);
-    write_blob_file("/data/etaHEN/assets/icon_xml_debug.png", &icon_xml_debug_start, icon_xml_debug_size);
-    write_blob_file("/data/etaHEN/assets/icon_xml_about.png", &icon_xml_about_start, icon_xml_about_size);
+    write_blob_file("/data/OrionHEN/assets/icon_xml_package.png", &icon_xml_package_start, icon_xml_package_size);
+    write_blob_file("/data/OrionHEN/assets/icon_xml_plugins.png", &icon_xml_plugins_start, icon_xml_plugins_size);
+    write_blob_file("/data/OrionHEN/assets/icon_xml_game.png", &icon_xml_game_start, icon_xml_game_size);
+    write_blob_file("/data/OrionHEN/assets/icon_xml_network.png", &icon_xml_network_start, icon_xml_network_size);
+    write_blob_file("/data/OrionHEN/assets/icon_xml_settings.png", &icon_xml_settings_start, icon_xml_settings_size);
+    write_blob_file("/data/OrionHEN/assets/icon_xml_shortcuts.png", &icon_xml_shortcuts_start, icon_xml_shortcuts_size);
+    write_blob_file("/data/OrionHEN/assets/icon_xml_debug.png", &icon_xml_debug_start, icon_xml_debug_size);
+    write_blob_file("/data/OrionHEN/assets/icon_xml_about.png", &icon_xml_about_start, icon_xml_about_size);
  
-    if (!if_exists("/system_ex/rnps/apps/NPXS40008/assets/src/modules/categoriesList/assets/texture/etahen_sicon.png")) {
-      write_blob_file("/system_ex/rnps/apps/NPXS40008/assets/src/modules/categoriesList/assets/texture/etahen_sicon.png",
+    if (!if_exists("/system_ex/rnps/apps/NPXS40008/assets/src/modules/categoriesList/assets/texture/orionhen_sicon.png")) {
+      write_blob_file("/system_ex/rnps/apps/NPXS40008/assets/src/modules/categoriesList/assets/texture/orionhen_sicon.png",
                       &sicon_start, sicon_size);
     }
  
-    if (!if_exists("/mnt/rnps/apps/NPXS40008/assets/src/modules/categoriesList/assets/texture/etahen_sicon.png")) {
-      write_blob_file("/mnt/rnps/apps/NPXS40008/assets/src/modules/categoriesList/assets/texture/etahen_sicon.png",
+    if (!if_exists("/mnt/rnps/apps/NPXS40008/assets/src/modules/categoriesList/assets/texture/orionhen_sicon.png")) {
+      write_blob_file("/mnt/rnps/apps/NPXS40008/assets/src/modules/categoriesList/assets/texture/orionhen_sicon.png",
                       &sicon_start, sicon_size);
     }
 }
@@ -411,7 +411,7 @@ static void cleanup(void);
 
 
   uint8_t* get_kstuff_address(bool& require_cleanup) {
-      const char* path = "/data/etaHEN/kstuff.elf";
+      const char* path = "/data/OrionHEN/kstuff.elf";
       long offset = 0;
       off_t size;
       uint8_t* address;
@@ -566,7 +566,7 @@ static void cleanup(void);
  // Function to check if the file buffer contains a valid custom plugin header
  bool is_valid_plugin(const unsigned char *file_buffer) {
    // Check if the prefix matches
-   if (strncmp((const char *)file_buffer, "etaHEN_PLUGIN", 13) != 0) {
+   if (strncmp((const char *)file_buffer, "OrionHEN_PLUGIN", 14) != 0) {
      puts("Plugin header prefix does not match");
      return false;
    }
@@ -755,7 +755,7 @@ bool load_plugin(const char *path, const char *filename)
     printf("loading elf via 9021 %s\n", filename);
     {
       char epath[256];
-      snprintf(epath, sizeof(epath), "/data/etaHEN/plugins/%s.elf", header->titleID);
+      snprintf(epath, sizeof(epath), "/data/OrionHEN/plugins/%s.elf", header->titleID);
       if (elfldr_remote_write_and_launch(epath, buf, (size_t)st.st_size)) {
         sleep(2);
         pid = find_pid(header->titleID);
@@ -852,7 +852,7 @@ bool load_plugin(const char *path, const char *filename)
   {
     char epath[256];
     size_t elf_sz = (size_t)st.st_size - sizeof(CustomPluginHeader);
-    snprintf(epath, sizeof(epath), "/data/etaHEN/plugins/%s.elf", header->titleID);
+    snprintf(epath, sizeof(epath), "/data/OrionHEN/plugins/%s.elf", header->titleID);
     if (elfldr_remote_write_and_launch(epath, elf, elf_sz)) {
       sleep(2);
       pid = find_pid(header->titleID);
@@ -890,16 +890,16 @@ bool load_plugin(const char *path, const char *filename)
 char **find_plugin_files() {
   const char *base_dirs[] = {
     // Plugin directories
-    "/mnt/usb0/etahen/plugins", "/mnt/usb0/etaHEN/plugins",
-    "/mnt/usb1/etahen/plugins", "/mnt/usb2/etahen/plugins",
-    "/mnt/usb3/etahen/plugins", "/user/data/etaHEN/plugins",
-    "/user/data/etahen/plugins",
+    "/mnt/usb0/orionhen/plugins", "/mnt/usb0/OrionHEN/plugins",
+    "/mnt/usb1/orionhen/plugins", "/mnt/usb2/orionhen/plugins",
+    "/mnt/usb3/orionhen/plugins", "/user/data/OrionHEN/plugins",
+    "/user/data/orionhen/plugins",
     
     // Payload directories
-    "/mnt/usb0/etahen/payloads", "/mnt/usb0/etaHEN/payloads",
-    "/mnt/usb1/etahen/payloads", "/mnt/usb2/etahen/payloads",
-    "/mnt/usb3/etahen/payloads", "/user/data/etaHEN/payloads",
-    "/user/data/etahen/payloads"
+    "/mnt/usb0/orionhen/payloads", "/mnt/usb0/OrionHEN/payloads",
+    "/mnt/usb1/orionhen/payloads", "/mnt/usb2/orionhen/payloads",
+    "/mnt/usb3/orionhen/payloads", "/user/data/OrionHEN/payloads",
+    "/user/data/orionhen/payloads"
 };
 
   int base_dirs_count = sizeof(base_dirs) / sizeof(base_dirs[0]);
@@ -934,9 +934,9 @@ char **find_plugin_files() {
             for (int j = 0; j < plugin_count; j++) {
               if (strcmp(loaded_filenames[j], entry->d_name) == 0) {
                 skip = true;
-                // Only print the message for /data/etaHEN/plugins/elfldr.plugin
+                // Only print the message for /data/OrionHEN/plugins/elfldr.plugin
                 // as per specific requirement
-                if ((strcmp(base_dirs[i], "/data/etaHEN/plugins") == 0) || (strcmp(entry->d_name, "/data/etaHEN/payloads") == 0)) {
+                if ((strcmp(base_dirs[i], "/data/OrionHEN/plugins") == 0) || (strcmp(entry->d_name, "/data/OrionHEN/payloads") == 0)) {
                   printf("skipping duplicate plugin: %s | already loaded: %s\n",
                          full_path, loaded_filenames[j]);
                 }
@@ -1045,7 +1045,7 @@ int main(void) {
 
 
   klog_printf("   Success!\n");
-  if(if_exists("/data/I_want_logging_for_etahen")){
+  if(if_exists("/data/I_want_logging_for_orionhen")){
       klog_printf("Redirecting stdout and stderr to logger ...");
      if(initStdout() >= 0)
          klog_puts("   Success!");
@@ -1066,12 +1066,12 @@ int main(void) {
 
   klog_puts("============== Spawner (Bootstrapper) Started =================");
 
-  mkdir("/data/etaHEN", 0777);
-  mkdir("/data/etaHEN/plugins", 0777);
-  mkdir("/data/etaHEN/payloads", 0777);
-  mkdir("/data/etaHEN/daemons", 0777);
-  mkdir("/data/etaHEN/assets", 0777);
-  mkdir("/data/etaHEN/games", 0777);
+  mkdir("/data/OrionHEN", 0777);
+  mkdir("/data/OrionHEN/plugins", 0777);
+  mkdir("/data/OrionHEN/payloads", 0777);
+  mkdir("/data/OrionHEN/daemons", 0777);
+  mkdir("/data/OrionHEN/assets", 0777);
+  mkdir("/data/OrionHEN/games", 0777);
 
   klog_printf("Registering signal handler ...");
   fault_handler_init(cleanup);
@@ -1114,8 +1114,8 @@ int main(void) {
 
   auto write_elf_file = [](const char *path, const uint8_t *elf,
                            size_t size) -> bool {
-    mkdir("/data/etaHEN", 0777);
-    mkdir("/data/etaHEN/daemons", 0777);
+    mkdir("/data/OrionHEN", 0777);
+    mkdir("/data/OrionHEN/daemons", 0777);
     int fd = open(path, O_WRONLY | O_CREAT | O_TRUNC, 0777);
     if (fd < 0)
       return false;
@@ -1132,25 +1132,25 @@ int main(void) {
     return true;
   };
 
-  klog_puts("Writing daemon ELFs to /data/etaHEN/daemons ...");
-  if (!write_elf_file("/data/etaHEN/daemons/util.elf", util_start, util_size)) {
+  klog_puts("Writing daemon ELFs to /data/OrionHEN/daemons ...");
+  if (!write_elf_file("/data/OrionHEN/daemons/util.elf", util_start, util_size)) {
     notify("failed to write util.elf");
     return -2;
   }
-  if (!write_elf_file("/data/etaHEN/daemons/daemon.elf", daemon_start,
+  if (!write_elf_file("/data/OrionHEN/daemons/daemon.elf", daemon_start,
                       daemon_size)) {
     notify("failed to write daemon.elf");
     return -2;
   }
-  if (!if_exists("/data/etaHEN/kstuff.elf")) {
-    (void)write_elf_file("/data/etaHEN/daemons/kstuff.elf", kstuff_start,
+  if (!if_exists("/data/OrionHEN/kstuff.elf")) {
+    (void)write_elf_file("/data/OrionHEN/daemons/kstuff.elf", kstuff_start,
                          (size_t)kstuff_size);
   }
   klog_puts("   Daemon ELFs written");
 
   if (!elfldr_remote_available()) {
     klog_puts("FATAL: no elfldr on 127.0.0.1:9021");
-    notify("Start elfldr on 9021 first, then re-run. ELFs are on disk under /data/etaHEN/daemons/");
+    notify("Start elfldr on 9021 first, then re-run. ELFs are on disk under /data/OrionHEN/daemons/");
     return -2;
   }
   klog_puts("elfldr :9021 OK - launching via file URI (serialized)");
@@ -1185,25 +1185,26 @@ int main(void) {
    * Launching daemon+kstuff together races ptrace on ShellUI → toolbox timeout.
    */
   klog_puts("Starting util via 9021 ...");
-  while ((pid = find_pid("util.elf")) > 0 || (pid = find_pid("etaHEN Utility")) > 0) {
+  while ((pid = find_pid("util.elf")) > 0 ||
+         (pid = find_pid("OrionHEN Utility")) > 0) {
     kill(pid, SIGKILL);
     sleep(1);
   }
-  if (!launch_path("/data/etaHEN/daemons/util.elf", "util", "util.elf")) {
+  if (!launch_path("/data/OrionHEN/daemons/util.elf", "util", "util.elf")) {
     notify("failed to launch util via elfldr :9021");
     return -2;
   }
   sleep(2);
 
   bool dont_load_kstuff =
-      (if_exists("/mnt/usb0/no_kstuff") || if_exists("/data/etaHEN/no_kstuff"));
+      (if_exists("/mnt/usb0/no_kstuff") || if_exists("/data/OrionHEN/no_kstuff"));
   if (dont_load_kstuff) {
     klog_puts("kstuff disabled via no_kstuff file");
   } else if (sys_ver.version >= 0x3000000) {
     klog_puts("Loading kstuff via 9021 (before daemon/toolbox) ...");
-    const char *kpath = if_exists("/data/etaHEN/kstuff.elf")
-                            ? "/data/etaHEN/kstuff.elf"
-                            : "/data/etaHEN/daemons/kstuff.elf";
+    const char *kpath = if_exists("/data/OrionHEN/kstuff.elf")
+                            ? "/data/OrionHEN/kstuff.elf"
+                            : "/data/OrionHEN/daemons/kstuff.elf";
     if (launch_path(kpath, "kstuff", "kstuff.elf")) {
       int wait = 0;
       bool not_loaded = true;
@@ -1226,11 +1227,11 @@ int main(void) {
 
   klog_puts("Starting daemon via 9021 (toolbox inject) ...");
   while ((pid = find_pid("daemon.elf")) > 0 ||
-         (pid = find_pid("etaHEN Critical")) > 0) {
+         (pid = find_pid("OrionHEN Critical")) > 0) {
     kill(pid, SIGKILL);
     sleep(1);
   }
-  if (!launch_path("/data/etaHEN/daemons/daemon.elf", "daemon", "daemon.elf")) {
+  if (!launch_path("/data/OrionHEN/daemons/daemon.elf", "daemon", "daemon.elf")) {
     notify("failed to launch daemon via elfldr :9021");
     return -2;
   }

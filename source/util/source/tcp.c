@@ -1,4 +1,4 @@
-/* Copyright (C) 2025 etaHEN / LightningMods
+/* Copyright (C) 2025 OrionHEN / LightningMods
 
 This program is free software; you can redistribute it and/or modify it
 under the terms of the GNU General Public License as published by the
@@ -52,7 +52,7 @@ static int tcp_bind(int server, short port) {
 	};
 	 if (sceNetBind(server, (const SceNetSockaddr *)&server_addr, sizeof(server_addr)) < 0) {
 		LOG_PERROR("bind failed");
-		etaHEN_log("Failed to bind to port %d | error: %s", port, strerror(errno));
+		OrionHEN_log("Failed to bind to port %d | error: %s", port, strerror(errno));
 		return -1;
 	}
 	return 0;
@@ -80,7 +80,7 @@ int tcp_init(tcp_socket_t *restrict self, int backlog, short port) {
     int option_value = 1;
     int ret = sceNetSetsockopt(server, SOL_SOCKET, SO_REUSEADDR, &option_value,
              sizeof(option_value));
-    etaHEN_log("sceNetSetsockopt: %d", ret);
+    OrionHEN_log("sceNetSetsockopt: %d", ret);
 	sceNetSetsockopt(server, SOL_SOCKET, SO_REUSEPORT, &option_value, sizeof(option_value));
 
 	if (tcp_bind(server, port)) {
