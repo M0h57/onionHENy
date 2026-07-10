@@ -103,9 +103,19 @@ void *fifo_and_dumper_thread(void *args) noexcept {
       continue;
     }
 
+    /*
+     * FPS probe inject (CUSA/SCUS BC + PPSA). FW>=8 uses fps_elf inject;
+     * older FW uses HookGame + fps.prx.
+     *
+     * KNOWN ISSUE: soft-inject works, but arming the GNM-WL detour freezes
+     * titles (docs/fps-overlay-known-issues.md). fps_elf ships with
+     * ORION_FPS_ARM_GNM_HOOK=0 so inject is SHM-only until a safe probe
+     * exists. Keep calling inject so the pipeline stays exercised.
+     */
     if (orion_ready_is_set(ORION_FLAG_FPS_OVERLAY) &&
         (tid.rfind("CUSA") != std::string::npos ||
-         tid.rfind("SCUS") != std::string::npos)) {
+         tid.rfind("SCUS") != std::string::npos ||
+         tid.rfind("PPSA") != std::string::npos)) {
       if (is_800)
         cmd_enable_fps_new(bappid);
       else

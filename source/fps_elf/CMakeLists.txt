@@ -61,6 +61,7 @@ target_sources(${PROJECT_NAME} PRIVATE ${SrcFiles})
 add_dependencies(${PROJECT_NAME} orion_ipc orion_detour orion_proc)
 target_include_directories(${PROJECT_NAME} PRIVATE
 	"${D_CWD}/include"
+	"${PROJECT_ROOT}/include"
 	"${PROJECT_ROOT}/liborion_ipc/include"
 	"${PROJECT_ROOT}/liborion_detour/include"
 	"${PROJECT_ROOT}/liborion_proc/include"

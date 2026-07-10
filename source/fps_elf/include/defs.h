@@ -18,7 +18,11 @@ along with this program; see the file COPYING. If not, see
 #include <stdint.h>
 #include <stddef.h>
 
-extern "C" int sceKernelMprotect(void *addr, size_t len, int prot);
+/*
+ * sceKernelMprotect is provided as a *function pointer* (external_symbols.cpp)
+ * and filled via sceKernelDlsym — same shape as shellui. Do NOT declare a
+ * real function here: DetourFunction calls through that pointer.
+ */
 
 #define libSceKernelHandle 0x2001
 #define KERNEL_DLSYM(handle, sym) \

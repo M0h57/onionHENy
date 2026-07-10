@@ -86,7 +86,14 @@ MonoObject* CreateLabel(const char* name, float x, float y, const char* text, Mo
     Set_Property_Invoke(labelClass, labelInstance, "TextColor", CreateUIColor(r, g, b, a));
 
     Set_Property(labelClass, labelInstance, "FitWidthToText", true);
-    Set_Property(labelClass, labelInstance, "FitHeightToText", true);
+    /*
+     * FitHeightToText=true sizes the widget to glyphs and treats Y as top —
+     * text then sits on the bar's top edge. For overlay bar cells we set an
+     * explicit Height (= bar) and VerticalAlignment=Center instead.
+     */
+    Set_Property(labelClass, labelInstance, "FitHeightToText", false);
+    /* PHU overlay: EnableThemedTextShadow = true for readable HUD text. */
+    Set_Property(labelClass, labelInstance, "EnableThemedTextShadow", true);
 
     return labelInstance;
 }

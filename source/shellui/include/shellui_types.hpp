@@ -123,11 +123,16 @@ enum Cheats_Shortcut{
     TOOLBOX_SINGLE_SHARE,
  };
 
+ /**
+  * Anchor for the Game++-style single-row monitor bar.
+  * Content is always horizontally centered; pos only picks top vs bottom.
+  * Values 1/3 keep legacy TR/BR mapping → same as top/bottom center.
+  */
  enum overlay_positions{
-    OVERLAY_POS_TOP_LEFT = 0,
-    OVERLAY_POS_TOP_RIGHT,
-    OVERLAY_POS_BOTTOM_LEFT,
-    OVERLAY_POS_BOTTOM_RIGHT
+    OVERLAY_POS_TOP_LEFT = 0,     /* top-center bar */
+    OVERLAY_POS_TOP_RIGHT,        /* top-center (legacy alias) */
+    OVERLAY_POS_BOTTOM_LEFT,      /* bottom-center bar */
+    OVERLAY_POS_BOTTOM_RIGHT      /* bottom-center (legacy alias) */
  };
 
  enum cheats_repo_source{
@@ -137,17 +142,25 @@ enum Cheats_Shortcut{
 
 extern orion::Settings g_settings;
 
+/**
+ * PHU flex banner layout: full-width edge strip + centered metric segments.
+ * bar_x/bar_w are always 0 / screen width; bar_y is 0 or (H - bar_h).
+ */
 struct OverlayLayout {
-    float overlay_gpu_x = 10.0f;
-    float overlay_gpu_y = 10.0f;
-    float overlay_cpu_x = 10.0f;
-    float overlay_cpu_y = 35.0f;
-    float overlay_ram_x = 10.0f;
-    float overlay_ram_y = 60.0f;
-    float overlay_fps_x = 10.0f;
-    float overlay_fps_y = 85.0f;
-    float overlay_ip_x = 10.0f;
-    float overlay_ip_y = 110.0f;
+    float bar_x = 0.0f;
+    float bar_y = 0.0f;
+    float bar_w = 1920.0f;
+    float bar_h = 24.0f;
+    float overlay_fps_x = 24.0f;
+    float overlay_fps_y = 12.0f;
+    float overlay_cpu_x = 160.0f;
+    float overlay_cpu_y = 12.0f;
+    float overlay_gpu_x = 360.0f;
+    float overlay_gpu_y = 12.0f;
+    float overlay_ram_x = 560.0f;
+    float overlay_ram_y = 12.0f;
+    float overlay_ip_x = 740.0f;
+    float overlay_ip_y = 12.0f;
 };
 extern OverlayLayout g_overlay_layout;
 // g_all_cpu_usage → shellui_state.hpp

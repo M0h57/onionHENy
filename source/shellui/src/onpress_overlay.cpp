@@ -1,71 +1,76 @@
 /* Copyright (C) 2025 OrionHEN / LightningMods — OnPress overlay domain */
 #include "onpress.hpp"
 #include <orion/ready.h>
+#include <orion/fps_shm.h>
 #include <cstdlib>
 #include <unistd.h>
 
 void RemoveGameWidget(RemoveWidget widget);
 void CreateGameWidget(CreateWidget widget);
 
+/** Tear down all segments, recompute horizontal packing, rebuild enabled ones. */
+static void rebuild_overlay_bar() {
+  RemoveGameWidget(REMOVE_ALL_OVERLAYS);
+  apply_overlay_layout();
+  if (g_settings.overlay_fps)
+    CreateGameWidget(CREATE_FPS_OVERLAY);
+  if (g_settings.overlay_cpu || g_ui.all_cpu_usage)
+    CreateGameWidget(CREATE_CPU_OVERLAY);
+  if (g_settings.overlay_gpu)
+    CreateGameWidget(CREATE_GPU_OVERLAY);
+  if (g_settings.overlay_ram)
+    CreateGameWidget(CREATE_RAM_OVERLAY);
+  if (g_settings.overlay_ip)
+    CreateGameWidget(CREATE_IP_OVERLAY);
+}
+
 static OnPressResult toggle_overlay_flag(OnPressContext &ctx, bool &flag,
-                                         RemoveWidget rem, CreateWidget cre,
                                          bool fps_special = false) {
   if (atoi(ctx.value.c_str()) == flag) {
     return OnPressResult::EarlyReturn;
   }
-  if (!atoi(ctx.value.c_str())) {
-    if (fps_special) {
-      RemoveGameWidget(rem);
-      orion_ready_clear(ORION_FLAG_FPS_OVERLAY);
-    } else {
-      RemoveGameWidget(rem);
-    }
-  } else {
-    CreateGameWidget(cre);
-    if (fps_special) {
-      orion_ready_signal(ORION_FLAG_FPS_OVERLAY);
-    }
-  }
   flag = !flag;
+  if (fps_special) {
+    if (flag)
+      orion_ready_signal(ORION_FLAG_FPS_OVERLAY);
+    else
+      orion_ready_clear(ORION_FLAG_FPS_OVERLAY);
+  }
+  rebuild_overlay_bar();
   return OnPressResult::Handled;
 }
 
 static OnPressResult id_overlay_gpu(OnPressContext &ctx) {
-  return toggle_overlay_flag(ctx, g_settings.overlay_gpu, REMOVE_GPU_OVERLAY,
-                             CREATE_GPU_OVERLAY);
+  return toggle_overlay_flag(ctx, g_settings.overlay_gpu);
 }
 
 static OnPressResult id_overlay_cpu(OnPressContext &ctx) {
   if (atoi(ctx.value.c_str()) == g_settings.overlay_cpu) {
     return OnPressResult::EarlyReturn;
   }
-  if (!atoi(ctx.value.c_str())) {
-    if (!g_ui.all_cpu_usage) {
-      RemoveGameWidget(REMOVE_CPU_OVERLAY);
-    } else {
-      notify("To disable CPU overlay, please disable the All CPU usage option first");
-      return OnPressResult::EarlyReturn;
-    }
-  } else {
-    CreateGameWidget(CREATE_CPU_OVERLAY);
+  if (!atoi(ctx.value.c_str()) && g_ui.all_cpu_usage) {
+    notify("To disable CPU overlay, please disable the All CPU usage option first");
+    return OnPressResult::EarlyReturn;
   }
   g_settings.overlay_cpu = !g_settings.overlay_cpu;
+  rebuild_overlay_bar();
   return OnPressResult::Handled;
 }
 
 static OnPressResult id_overlay_ram(OnPressContext &ctx) {
-  return toggle_overlay_flag(ctx, g_settings.overlay_ram, REMOVE_RAM_OVERLAY,
-                             CREATE_RAM_OVERLAY);
+  return toggle_overlay_flag(ctx, g_settings.overlay_ram);
 }
 
 static OnPressResult id_overlay_fps(OnPressContext &ctx) {
-  return toggle_overlay_flag(ctx, g_settings.overlay_fps, REMOVE_FPS_OVERLAY,
-                             CREATE_FPS_OVERLAY, true);
+  OnPressResult r = toggle_overlay_flag(ctx, g_settings.overlay_fps, true);
+  /* Privileged: pre-create SHM so the next game inject can open it. */
+  if (g_settings.overlay_fps)
+    (void)orion_fps_shm_ensure();
+  return r;
 }
 
 static OnPressResult id_overlay_ip(OnPressContext &ctx) {
-  return toggle_overlay_flag(ctx, g_settings.overlay_ip, REMOVE_IP_OVERLAY,
-                             CREATE_IP_OVERLAY);
+  return toggle_overlay_flag(ctx, g_settings.overlay_ip);
 }
 
 static OnPressResult id_all_cpu_usage(OnPressContext &ctx) {
@@ -77,6 +82,7 @@ static OnPressResult id_all_cpu_usage(OnPressContext &ctx) {
     return OnPressResult::EarlyReturn;
   }
   g_ui.all_cpu_usage = !g_ui.all_cpu_usage;
+  rebuild_overlay_bar();
   return OnPressResult::Handled;
 }
 
@@ -85,28 +91,7 @@ static OnPressResult id_overlay_change_pos(OnPressContext &ctx) {
     return OnPressResult::EarlyReturn;
   }
   g_settings.overlay_pos = atoi(ctx.value.c_str());
-  apply_overlay_layout();
-
-  if (g_settings.overlay_cpu) {
-    RemoveGameWidget(REMOVE_CPU_OVERLAY);
-    CreateGameWidget(CREATE_CPU_OVERLAY);
-  }
-  if (g_settings.overlay_ram) {
-    RemoveGameWidget(REMOVE_RAM_OVERLAY);
-    CreateGameWidget(CREATE_RAM_OVERLAY);
-  }
-  if (g_settings.overlay_gpu) {
-    RemoveGameWidget(REMOVE_GPU_OVERLAY);
-    CreateGameWidget(CREATE_GPU_OVERLAY);
-  }
-  if (g_settings.overlay_fps) {
-    RemoveGameWidget(REMOVE_FPS_OVERLAY);
-    CreateGameWidget(CREATE_FPS_OVERLAY);
-  }
-  if (g_settings.overlay_ip) {
-    RemoveGameWidget(REMOVE_IP_OVERLAY);
-    CreateGameWidget(CREATE_IP_OVERLAY);
-  }
+  rebuild_overlay_bar();
   return OnPressResult::Handled;
 }
 

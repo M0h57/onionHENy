@@ -7,6 +7,7 @@
 #include <orion/ready.h>
 #include <orion/settings.hpp>
 #include <orion/toolbox_timing.h>
+#include <orion/fps_shm.h>
 #include "globalconf.hpp"
 #include "dbg/dbg.hpp"
 #include "elf/elf.hpp"
@@ -16,10 +17,6 @@
 #include <vector>
 
 extern "C" {
-int32_t sceKernelPrepareToSuspendProcess(pid_t pid);
-int32_t sceKernelSuspendProcess(pid_t pid);
-int32_t sceKernelPrepareToResumeProcess(pid_t pid);
-int32_t sceKernelResumeProcess(pid_t pid);
 int sceKernelMprotect(void *addr, size_t len, int prot);
 bool Inject_Toolbox(int pid, uint8_t *elf);
 extern uint8_t shellui_elf_start[];
@@ -29,21 +26,10 @@ extern const unsigned int fps_elf_size;
 int _sceApplicationGetAppId(int pid, int *appid);
 }
 
-static void SuspendApp(pid_t pid)
-{
-    sceKernelPrepareToSuspendProcess(pid);
-    sceKernelSuspendProcess(pid);
-}
-
-static void ResumeApp(pid_t pid)
-{
-    // we need to sleep the thread after suspension
-    // because this will cause a kernel panic when user quits the process after sometime
-    // the kernel will not be very happy with us.
-    usleep(1000);
-    sceKernelPrepareToResumeProcess(pid);
-    sceKernelResumeProcess(pid);
-}
+/*
+ * NOTE: Do not sceKernelSuspendProcess for FPS inject. GPU CWSR suspend +
+ * ptrace hangs the title on the load screen (see cmd_enable_fps_new).
+ */
 struct GameStuff {
     uintptr_t scePadReadState;
     uintptr_t debugout;
@@ -161,6 +147,33 @@ bool HookGame(UniquePtr<Hijacker>& hijacker, uint64_t alsr_b) {
 int done_appid;
 extern "C" int sceKernelGetCurrentFanDuty(int *unk, int *duty);
 
+/*
+ * SCE appid != process pid. Suspend/resume/ptrace must use the process pid.
+ * Prefer the BigApp lookup; fall back to appid→pid scan.
+ */
+static int resolve_game_pid_for_appid(int appid) {
+    int pid = get_game_pid();
+    if (pid > 0) {
+        int got = 0;
+        if (_sceApplicationGetAppId(pid, &got) == 0 && got == appid)
+            return pid;
+        /* BigApp pid may still be the right target even if appid probe fails. */
+        if (got == 0 || got == appid)
+            return pid;
+    }
+
+    for (int j = 1; j <= 9999; j++) {
+        int bappid = 0;
+        if (_sceApplicationGetAppId(j, &bappid) < 0)
+            continue;
+        if (bappid == appid) {
+            OrionHEN_log("resolved appid 0x%X -> pid %d", appid, j);
+            return j;
+        }
+    }
+    return -1;
+}
+
 bool cmd_enable_fps_new(int appid) {
  
     if(done_appid == appid){
@@ -168,29 +181,40 @@ bool cmd_enable_fps_new(int appid) {
         return true;
   	}
     
-    OrionHEN_log("Enabling fps for appid %d", appid);
+    OrionHEN_log("Enabling fps for appid 0x%X", appid);
 
-    sleep(5);
+    /*
+     * Pre-create world-writable sample files. Game sandbox cannot mkdir/create
+     * under /data or /system_tmp; fps_elf only opens existing.
+     */
+    if (orion_fps_shm_ensure() != 0)
+      OrionHEN_log("orion_fps_shm_ensure failed — fps_elf may not publish");
+    else
+      OrionHEN_log("fps SHM files ready for sandboxed writer");
 
-    SuspendApp(appid);
+    /*
+     * Do NOT sceKernelSuspendProcess here.
+     * Suspending the BigApp freezes GPU CWSR and then ptrace attach hangs
+     * ("gc_suspend_phase0" then stuck on inject). Soft-inject while the game
+     * keeps running; fps_elf defers the GNM detour until load completes.
+     */
+    sleep(3);
 
-    int pid = get_game_pid();
+    int pid = resolve_game_pid_for_appid(appid);
     if (pid < 0) {
         orion_notify(true, "Failed to get game pid");
         return false;
     }
+    OrionHEN_log("fps inject (no-suspend): appid=0x%X pid=%d", appid, pid);
 
     if (!Inject_Toolbox(pid, fps_elf_start)) {
-        ForceKillProc(pid);
-        orion_notify(true, "Failed to inject fps");
+        /* Do NOT kill the game — inject failure must not terminate titles. */
+        orion_notify(true, "Failed to inject fps (game left running)");
         return false;
     }
 
-    sleep(1);
-    ResumeApp(pid);
-
     done_appid = appid;
-
+    OrionHEN_log("fps inject done pid=%d (hooks deferred inside fps_elf)", pid);
     return true;
 }
 
@@ -202,21 +226,19 @@ bool cmd_enable_fps(int appid) {
         return true;
 	   }
 
-    SuspendApp(appid);
+    (void)orion_fps_shm_ensure();
 
-    int bappid = 0, pid = 0;
-    for (size_t j = 0; j <= 9999; j++) {
-        if (_sceApplicationGetAppId(j, &bappid) < 0)
-            continue;
-
-        if (appid == bappid) {
-            pid = j;
-            OrionHEN_log("Game is running, appid 0x%X, pid %i", appid, pid);
-            //printf_notification("Game is running, appid 0x%X, pid %i", appid, pid);
-            break;
-        }
+    int pid = resolve_game_pid_for_appid(appid);
+    if (pid < 0) {
+        OrionHEN_log("cmd_enable_fps: failed to resolve pid for appid 0x%X", appid);
+        return false;
     }
+    OrionHEN_log("Game is running, appid 0x%X, pid %i (no-suspend HookGame)", appid, pid);
 
+    /*
+     * Same policy as fps_new: never SuspendApp for FPS. A failed resume leaves
+     * titles permanently stuck on the load screen.
+     */
     UniquePtr<Hijacker> executable = Hijacker::getHijacker(pid);
     uintptr_t text_base = 0;
     uint64_t text_size = 0;
@@ -228,23 +250,23 @@ bool cmd_enable_fps(int appid) {
     else
     {
         OrionHEN_log("Failed to get hijacker for (%d)", pid);
-       // printf_notification("Failed to get hijacker for (%d), try re-running the inject", pid);
         return false;
     }
     if (text_base == 0 || text_size == 0)
     {
         OrionHEN_log("text_base == 0 || text_size == 0");
-        //printf_notification("text_base == 0 || text_size == 0 (%d), try re-running the inject", pid);
         return false;
     }
 
-    while (!HookGame(executable, text_base)) {
-        //OrionHEN_log("Failed to patch the game");
+    for (int attempt = 0; attempt < 30; ++attempt) {
+        if (HookGame(executable, text_base))
+            break;
         sleep(1);
+        if (attempt == 29) {
+            OrionHEN_log("HookGame failed for pid %d", pid);
+            return false;
+        }
     }
-
-    sleep(1);
-    ResumeApp(pid);
 
     done_appid = appid;
     return true;

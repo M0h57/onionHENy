@@ -6,8 +6,14 @@
 #include "external_symbols.hpp"
 #include "Detour.h"
 #include <orion/settings.hpp>
+#include <orion/fps_shm.h>
 #include <cstring>
 #include <cstdio>
+#include <cstdlib>
+#include <fcntl.h>
+#include <unistd.h>
+#include <vector>
+#include <string>
 
 extern void (*OnRender_orig)(MonoObject* instance);
 extern MonoObject* rootWidget;
@@ -228,6 +234,30 @@ void ShellHexDump(const void* data, size_t size) {
 }
 AtomicString fps_string;
 ssize_t(*read_orig)(int fd, void *buf, size_t count) = nullptr;
+
+/** Publish a sample into the SHM file (ShellUI is privileged; can create). */
+static void publish_fps_shm(float fps, const char *api_name) {
+  if (orion_fps_shm_ensure() != 0)
+    return;
+  int n = 0;
+  const char *const *paths = orion_fps_shm_paths(&n);
+  orion_fps_shm_t blk{};
+  blk.magic = ORION_FPS_SHM_MAGIC;
+  blk.version = ORION_FPS_SHM_VERSION;
+  blk.fps = fps;
+  blk.hooks_armed = 1;
+  blk.flags = 1;
+  std::snprintf(blk.api_name, sizeof(blk.api_name), "%s",
+                api_name ? api_name : "scrape");
+  for (int i = 0; i < n; ++i) {
+    int fd = open(paths[i], O_RDWR);
+    if (fd < 0)
+      continue;
+    (void)pwrite(fd, &blk, sizeof(blk), 0);
+    close(fd);
+  }
+}
+
 ssize_t read_hook(int fd, void* buf, size_t count) {
     ssize_t ret = read_orig(fd, buf, count);
    // shellui_log("read_hook called: fd=%d, count=%zu, ret=%zd", fd, count, ret);
@@ -251,7 +281,10 @@ ssize_t read_hook(int fd, void* buf, size_t count) {
 
             if (!fps_value.empty()) {
                 fps_string.store(fps_value);
-              //  shellui_log("Captured FPS: %s", fps_value.c_str());
+                /* Classic Orion scrape → SHM so the overlay has one channel. */
+                float v = 0.f;
+                if (std::sscanf(fps_value.c_str(), "%f", &v) == 1 && v > 0.f)
+                  publish_fps_shm(v, "notify-scrape");
             }
             return -1;
         }
@@ -266,24 +299,177 @@ namespace {
 constexpr int kMaxProcThreads = 3072;
 constexpr int kCpuCores = 8;
 constexpr int kOverlayUpdateIntervalFrames = 60;
-constexpr int kOverlayFontSize = 22;
+/* PHU flex banner default: font_size=18 (phu_overlay.cfg). */
+constexpr int kOverlayFontSize = 18;
 constexpr int kClockIdRealtime = 4;
 constexpr int kVmSystem = 1;
 constexpr int kPageTableRam = 1;
 constexpr int kPageTableVram = 2;
 
-void set_label_text(const char* widget_name, const char* text) {
-  MonoObject* root = Get_Property<MonoObject*>(pui_img, "Sce.PlayStation.PUI.UI2",
-                                               "Scene", Game, "RootWidget");
-  MonoClass* widget_cls =
+MonoObject *find_label(const char *widget_name) {
+  MonoObject *root = Get_Property<MonoObject *>(
+      pui_img, "Sce.PlayStation.PUI.UI2", "Scene", Game, "RootWidget");
+  MonoClass *widget_cls =
       mono_class_from_name(pui_img, "Sce.PlayStation.PUI.UI2", "Widget");
-  MonoClass* label_cls =
+  return Invoke<MonoObject *>(pui_img, widget_cls, root, "FindWidgetByName",
+                              mono_string_new(Root_Domain, widget_name));
+}
+
+void set_label_text(const char *widget_name, const char *text) {
+  MonoClass *label_cls =
       mono_class_from_name(pui_img, "Sce.PlayStation.PUI.UI2", "Label");
-  MonoObject* label = Invoke<MonoObject*>(
-      pui_img, widget_cls, root, "FindWidgetByName",
-      mono_string_new(Root_Domain, widget_name));
+  MonoObject *label = find_label(widget_name);
   if (label)
     Set_Property(label_cls, label, "Text", mono_string_new(Root_Domain, text));
+}
+
+void set_label_xy(const char *widget_name, float x, float y) {
+  MonoClass *label_cls =
+      mono_class_from_name(pui_img, "Sce.PlayStation.PUI.UI2", "Label");
+  MonoObject *label = find_label(widget_name);
+  if (!label)
+    return;
+  Set_Property(label_cls, label, "X", x);
+  /* Y tracks the bar band; height + VCenter keep glyphs middle of strip. */
+  Set_Property(label_cls, label, "Y", g_overlay_layout.bar_y);
+  Set_Property(label_cls, label, "Height", g_overlay_layout.bar_h);
+  Set_Property(label_cls, label, "VerticalAlignment", 1); /* Center */
+  Set_Property(label_cls, label, "FitHeightToText", false);
+  (void)y;
+}
+
+/** Read FPS sample written by fps_elf (file pre-created by daemon/shellui). */
+bool read_fps_shm(float &out_fps, char *api_out, size_t api_sz,
+                  uint32_t *hooks_out) {
+  int n = 0;
+  const char *const *paths = orion_fps_shm_paths(&n);
+  for (int i = 0; i < n; ++i) {
+    int fd = open(paths[i], O_RDONLY);
+    if (fd < 0)
+      continue;
+    orion_fps_shm_t blk{};
+    const ssize_t nr = pread(fd, &blk, sizeof(blk), 0);
+    close(fd);
+    if (nr != (ssize_t)sizeof(blk))
+      continue;
+    if (blk.magic != ORION_FPS_SHM_MAGIC || blk.version != ORION_FPS_SHM_VERSION)
+      continue;
+    out_fps = blk.fps;
+    if (api_out && api_sz)
+      std::snprintf(api_out, api_sz, "%s", blk.api_name);
+    if (hooks_out)
+      *hooks_out = blk.hooks_armed;
+    return true;
+  }
+  return false;
+}
+
+/**
+ * Lay out metrics as comfortable PHU-style slots, centered as a group on the
+ * full-width bar. Each label cell is vertically centered in the strip via
+ * Height=bar_h + VerticalAlignment=Center (not top-stuck FitHeightToText).
+ *
+ * Horizontal: fixed min slot widths + stat_gap — not packed tight by glyph.
+ */
+void layout_bar_labels(const char *fps_val, const char *cpu_temp,
+                       const char *cpu_usage, const char *gpu_temp,
+                       const char *gpu_usage, const char *ram_str,
+                       const char *ip_str) {
+  constexpr float kScreenW = 1920.0f;
+  constexpr float kCharW = 10.0f;
+  constexpr float kPairGap = 8.0f;   /* label → first value */
+  constexpr float kValGap = 10.0f;   /* value → value (temp / usage) */
+  constexpr float kSegGap = 28.0f;   /* between metric groups (air, not squeeze) */
+  constexpr float kOff = -4096.0f;
+
+  struct Piece {
+    const char *id;
+    const char *text;
+    float width;
+  };
+  std::vector<Piece> pieces;
+  pieces.reserve(16);
+
+  auto text_w = [](const char *s) -> float {
+    if (!s || !s[0])
+      return 0.f;
+    /* Min width so short tags ("FPS") do not collapse; pad a little. */
+    const float raw = static_cast<float>(std::strlen(s)) * kCharW + 4.f;
+    return raw < 28.f ? 28.f : raw;
+  };
+
+  auto add_group = [&](const char *id_l, const char *lab, const char *id_v0,
+                       const char *v0, const char *id_v1, const char *v1) {
+    if (!v0 || !v0[0])
+      return;
+    pieces.push_back({id_l, lab, text_w(lab)});
+    pieces.push_back({id_v0, v0, text_w(v0)});
+    if (id_v1 && v1 && v1[0])
+      pieces.push_back({id_v1, v1, text_w(v1)});
+  };
+
+  if (g_settings.overlay_fps && fps_val)
+    add_group("id_fps_label", "FPS", "id_fps_value", fps_val, nullptr, nullptr);
+  if ((g_settings.overlay_cpu || g_ui.all_cpu_usage) && cpu_temp)
+    add_group("id_cpu_label", "CPU", "id_cpu_temp_value", cpu_temp,
+              "id_cpu_usage_value", cpu_usage);
+  if (g_settings.overlay_gpu && gpu_temp)
+    add_group("id_gpu_label", "GPU", "id_gpu_temp_value", gpu_temp,
+              "id_gpu_usage_value", gpu_usage);
+  if (g_settings.overlay_ram && ram_str)
+    add_group("id_ram_label", "RAM", "id_ram_value", ram_str, nullptr, nullptr);
+  if (g_settings.overlay_ip && ip_str)
+    add_group("id_ip_label", "IP", "id_ip_value", ip_str, nullptr, nullptr);
+
+  if (pieces.empty())
+    return;
+
+  auto is_group_label = [](const char *id) {
+    return std::strcmp(id, "id_fps_label") == 0 ||
+           std::strcmp(id, "id_cpu_label") == 0 ||
+           std::strcmp(id, "id_gpu_label") == 0 ||
+           std::strcmp(id, "id_ram_label") == 0 ||
+           std::strcmp(id, "id_ip_label") == 0;
+  };
+
+  float total = 0.f;
+  for (size_t i = 0; i < pieces.size(); ++i) {
+    total += pieces[i].width;
+    if (i + 1 >= pieces.size())
+      break;
+    if (is_group_label(pieces[i].id))
+      total += kPairGap;
+    else if (is_group_label(pieces[i + 1].id))
+      total += kSegGap; /* next piece starts a new group */
+    else
+      total += kValGap;
+  }
+
+  float x = (kScreenW - total) * 0.5f;
+  const float y = g_overlay_layout.bar_y; /* cell top = bar top; VCenter does rest */
+
+  static const char *kAll[] = {
+      "id_fps_label",        "id_fps_value",       "id_cpu_label",
+      "id_cpu_temp_value",   "id_cpu_usage_value", "id_gpu_label",
+      "id_gpu_temp_value",   "id_gpu_usage_value", "id_ram_label",
+      "id_ram_value",        "id_ip_label",        "id_ip_value",
+  };
+  for (const char *id : kAll)
+    set_label_xy(id, kOff, y);
+
+  for (size_t i = 0; i < pieces.size(); ++i) {
+    set_label_xy(pieces[i].id, x, y);
+    set_label_text(pieces[i].id, pieces[i].text);
+    x += pieces[i].width;
+    if (i + 1 >= pieces.size())
+      break;
+    if (is_group_label(pieces[i].id))
+      x += kPairGap;
+    else if (is_group_label(pieces[i + 1].id))
+      x += kSegGap;
+    else
+      x += kValGap;
+  }
 }
 
 void discover_idle_thread_ids(unsigned int idle_tid[kCpuCores]) {
@@ -309,18 +495,33 @@ void init_overlay_once(unsigned int idle_tid[kCpuCores]) {
 
   rootWidget = Get_Property<MonoObject*>(pui_img, "Sce.PlayStation.PUI.UI2", "Scene",
                                          Game, "RootWidget");
-  font = CreateUIFont(kOverlayFontSize, 0, 0);
+  /* PHU: font_size=18, style=Bold(1), weight=900 */
+  font = CreateUIFont(kOverlayFontSize, 1, 900);
 
-  if (g_settings.overlay_cpu)
-    CreateGameWidget(CREATE_CPU_OVERLAY);
-  if (g_settings.overlay_ram)
-    CreateGameWidget(CREATE_RAM_OVERLAY);
-  if (g_settings.overlay_gpu)
-    CreateGameWidget(CREATE_GPU_OVERLAY);
+  if (g_settings.overlay_fps)
+    (void)orion_fps_shm_ensure();
+
+  apply_overlay_layout();
   if (g_settings.overlay_fps)
     CreateGameWidget(CREATE_FPS_OVERLAY);
+  if (g_settings.overlay_cpu || g_ui.all_cpu_usage)
+    CreateGameWidget(CREATE_CPU_OVERLAY);
+  if (g_settings.overlay_gpu)
+    CreateGameWidget(CREATE_GPU_OVERLAY);
+  if (g_settings.overlay_ram)
+    CreateGameWidget(CREATE_RAM_OVERLAY);
   if (g_settings.overlay_ip)
     CreateGameWidget(CREATE_IP_OVERLAY);
+
+  /* First paint: center placeholders on the full-width bar. */
+  layout_bar_labels(
+      g_settings.overlay_fps ? "--.-" : nullptr,
+      (g_settings.overlay_cpu || g_ui.all_cpu_usage) ? "--C" : nullptr,
+      (g_settings.overlay_cpu || g_ui.all_cpu_usage) ? "--%" : nullptr,
+      g_settings.overlay_gpu ? "--C" : nullptr,
+      g_settings.overlay_gpu ? "--%" : nullptr,
+      g_settings.overlay_ram ? "---- MB" : nullptr,
+      g_settings.overlay_ip ? "---.---.---.---" : nullptr);
 }
 
 /** Sample CPU into Usage[]; formats CPU_USAGE. Returns false if sampling skipped. */
@@ -369,6 +570,8 @@ void update_overlay_metrics(unsigned int idle_tid[kCpuCores], int& current_bank)
   char cpu_temp[32] = {};
   char cpu_usage[120] = {};
   char ram_str[32] = {};
+  char ip_address[64] = {};
+  char fps_buf[32] = {};
 
   sample_cpu_usage(idle_tid, current_bank, cpu_usage, sizeof(cpu_usage));
 
@@ -388,32 +591,60 @@ void update_overlay_metrics(unsigned int idle_tid[kCpuCores], int& current_bank)
     snprintf(gpu_usage, sizeof(gpu_usage), "%.0f%%", VRAM.Percentage);
   }
 
-  if (g_settings.overlay_ip) {
-    char ip_address[64] = {};
+  if (g_settings.overlay_ip)
     get_ip_address(ip_address);
-    set_label_text("id_ip_value", ip_address);
-  }
-
-  if (g_settings.overlay_gpu) {
-    set_label_text("id_gpu_temp_value", gpu_temp);
-    set_label_text("id_gpu_usage_value", gpu_usage);
-  }
 
   if (g_settings.overlay_cpu || g_ui.all_cpu_usage) {
     int cpu_t = 0;
     sceKernelGetCpuTemperature(&cpu_t);
     snprintf(cpu_temp, sizeof(cpu_temp), "%dC", cpu_t);
-    set_label_text("id_cpu_temp_value", cpu_temp);
-    set_label_text("id_cpu_usage_value", cpu_usage);
   }
-
-  if (g_settings.overlay_ram)
-    set_label_text("id_ram_value", ram_str);
 
   if (g_settings.overlay_fps) {
-    const std::string current_fps = fps_string.load();
-    set_label_text("id_fps_value", current_fps.c_str());
+    float shm_fps = 0.f;
+    char api[32] = {};
+    uint32_t hooks = 0;
+    static float s_last_good = 0.f;
+
+    /*
+     * Single display channel: SHM.
+     * Writers: fps_elf (GNM flip count) and/or ShellUI notify-scrape.
+     */
+    if (read_fps_shm(shm_fps, api, sizeof(api), &hooks)) {
+      if (shm_fps > 0.05f) {
+        s_last_good = shm_fps;
+        snprintf(fps_buf, sizeof(fps_buf), "%.1f", shm_fps);
+      } else if (s_last_good > 0.05f) {
+        /* Hold last sample between 2 Hz publish ticks. */
+        snprintf(fps_buf, sizeof(fps_buf), "%.1f", s_last_good);
+      } else {
+        /* Waiting for first sample (deferred GNM hook or scrape). */
+        snprintf(fps_buf, sizeof(fps_buf), "...");
+      }
+    } else {
+      /* Fallback: in-process scrape string if SHM not ready yet. */
+      const std::string scraped = fps_string.load();
+      float v = 0.f;
+      if (!scraped.empty() && scraped != "LOADING" &&
+          std::sscanf(scraped.c_str(), "%f", &v) == 1 && v > 0.f) {
+        s_last_good = v;
+        snprintf(fps_buf, sizeof(fps_buf), "%.1f", v);
+        publish_fps_shm(v, "notify-scrape");
+      } else {
+        snprintf(fps_buf, sizeof(fps_buf), "--.-");
+      }
+    }
   }
+
+  /* Re-center the whole metric run on the full-width edge bar every tick. */
+  layout_bar_labels(
+      g_settings.overlay_fps ? fps_buf : nullptr,
+      (g_settings.overlay_cpu || g_ui.all_cpu_usage) ? cpu_temp : nullptr,
+      (g_settings.overlay_cpu || g_ui.all_cpu_usage) ? cpu_usage : nullptr,
+      g_settings.overlay_gpu ? gpu_temp : nullptr,
+      g_settings.overlay_gpu ? gpu_usage : nullptr,
+      g_settings.overlay_ram ? ram_str : nullptr,
+      g_settings.overlay_ip ? ip_address : nullptr);
 }
 
 } // namespace

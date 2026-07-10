@@ -37,19 +37,17 @@
       <link id="id_cheats" title="金手指（开发中）" file="cheats.xml"/>
       <link id="remote_play" title="远程游玩" file="remote_play.xml"/>
       <toggle_switch id="id_custom_game_opts" title="OrionHEN 游戏选项" second_title="在游戏选项菜单中显示 OrionHEN 相关选项（金手指、转储等）" value="1"/>
-      <setting_list id="id_overlay_opts" title="游戏覆盖层" second_title="游戏运行时的状态显示" initial_focus_to="id_overlay_change_pos">
-        <list id="id_overlay_change_pos" title="覆盖层位置" second_title="更改覆盖层在屏幕上的位置">
-          <list_item id="id_overlay_pos_1" title="左上" value="0"/>
-          <list_item id="id_overlay_pos_2" title="右上" value="1"/>
-          <list_item id="id_overlay_pos_3" title="左下" value="2"/>
-          <list_item id="id_overlay_pos_4" title="右下" value="3"/>
+      <setting_list id="id_overlay_opts" title="游戏覆盖层" second_title="贴边全宽横条 + 半透明黑底（PHU flex banner）" initial_focus_to="id_overlay_change_pos">
+        <list id="id_overlay_change_pos" title="监控条位置" second_title="贴屏幕边缘、宽度 100%；指标居中：FPS · CPU · GPU · RAM · IP">
+          <list_item id="id_overlay_pos_1" title="顶部贴边" value="0"/>
+          <list_item id="id_overlay_pos_3" title="底部贴边" value="2"/>
         </list>
-        <toggle_switch id="id_overlay_fps" title="*实验性* PS4 FPS 区域" description="切换游戏覆盖层中的 FPS 区域 注意：目前不建议日常使用" value="0"/>
-        <toggle_switch id="id_overlay_gpu" title="GPU 区域" description="切换游戏覆盖层中的 GPU 区域" value="0"/>
-        <toggle_switch id="id_overlay_cpu" title="CPU 区域" description="切换游戏覆盖层中的 CPU 区域" value="0"/>
-        <toggle_switch id="id_all_cpu_usage" title="显示全部 CPU 核心使用率" description="切换游戏覆盖层中的高级 CPU 使用率显示" value="0"/>
-        <toggle_switch id="id_overlay_ram" title="内存区域" description="切换游戏覆盖层中的内存区域" value="0"/>
-        <toggle_switch id="id_overlay_ip" title="IP 地址区域" description="切换游戏覆盖层中的 IP 区域" value="0"/>
+        <toggle_switch id="id_overlay_fps" title="*实验性* FPS" description="显示 FPS 段（依赖游戏内 FPS 字符串捕获，可能不稳定）" value="0"/>
+        <toggle_switch id="id_overlay_gpu" title="GPU" description="显示 GPU 温度与显存占用" value="0"/>
+        <toggle_switch id="id_overlay_cpu" title="CPU" description="显示 CPU 温度与平均使用率" value="0"/>
+        <toggle_switch id="id_all_cpu_usage" title="显示全部 CPU 核心使用率" description="CPU 段改为 8 核分别显示（监控条会加宽）" value="0"/>
+        <toggle_switch id="id_overlay_ram" title="内存" description="显示系统内存占用" value="0"/>
+        <toggle_switch id="id_overlay_ip" title="IP 地址" description="显示主机局域网 IP" value="0"/>
       </setting_list>
     </setting_list>
 
