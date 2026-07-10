@@ -375,7 +375,8 @@ void init_resource_names() {
 // ---------------------------------------------------------------------------
 
 bool init_version_string(const OrbisKernelSwVersion& sw) {
-  const char enc_ver[] = "\x30\x44\x0d\x1c\x13\x08\x69\x35\x3d\x44\x0d\x46";
+  /* XOR with base64_decode(kXorKeyB64) == "SISTR0_I_SEE_YOU" (not the b64 text). */
+  const char enc_ver[] = "\x1c\x3b\x3a\x3b\x3c\x78\x1a\x07\x7f"; /* "OrionHEN " */
   const std::string key = base64_decode(kXorKeyB64);
   auto dev_ver_bytes =
       encrypt_decrypt(reinterpret_cast<const unsigned char*>(enc_ver),
