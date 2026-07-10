@@ -7,7 +7,7 @@ daemon: cmd_enable_toolbox()          [daemon/source/msg.cpp]
   ├─ get_shellui_pid()                // find SceShellUI
   └─ Inject_Toolbox(pid, shellui.elf) [libNineS/src/main.c]
        └─ inject_elf(proc, elf)       [libNineS/src/injector.c]
-            ├─ elevate authid once (debugger / ptrace)
+            ├─ set_ucred_to_ptrace() once (PTRACE_AUTHID)
             ├─ pt_attach(SceShellUI)
             ├─ init_remote_function_pointers()  // malloc, pthread_create, …
             ├─ elfldr_load()                    // map ELF into target
@@ -29,7 +29,7 @@ kylin-core uses the same `inject_elf()` path for ShellUI overlay injection (`ove
 |------|-----------------|------------|------|
 | `sys_ptrace` | Flip authid to debugger **on every** ptrace call, then restore | Direct `syscall(SYS_ptrace)` | **Thread-unsafe race** between concurrent ptrace ops; can SIGSEGV daemon or corrupt authid |
 | `pt_call2` | `pt_continue` then **immediately** `pt_setregs(bak)` | `pt_continue` → **`waitpid`** → then restore regs | **Critical race**: restores ShellUI registers while bootstrap still runs → crash / freeze / power loss |
-| `inject_elf` authid | `set_ucred_to_debugger()` with **no restore** | Backup original authid → elevate → restore on all exits | Daemon stuck elevated; failed inject leaves bad state |
+| `inject_elf` authid | wrong id / no restore (historical) | `set_ucred_to_ptrace()` + restore on all exits | Wrong id → attach fails; no restore → daemon stuck elevated |
 | Error paths | Often leave `status=true` on load/mmap failure | Set `status=false` on each failure | Caller thinks inject succeeded |
 | `MAP_FAILED` | Only checks `!bootstrap` | Also rejects `(uint64_t)-1` | mmap failure treated as success addr |
 | mprotect / copyin | Unchecked | Checked, fail inject | Partial maps then trigger entry |
@@ -39,13 +39,12 @@ kylin-core uses the same `inject_elf()` path for ShellUI overlay injection (`ove
 
 Ported into `source/libNineS/src/pt.c` and `source/libNineS/src/injector.c` (without kylin-specific logger; uses `ps5/klog`).
 
-1. **Scoped ptrace authid** at `inject_elf` entry/exit only — must use  
-   `PTRACE_AUTHID` (`0x4800000000010003`), **not** `DEBUG_AUTHID` (`…0006`).  
-   Wrong id → `PT_ATTACH` then `waitpid` fails with **errno 10 (ECHILD)**.  
+1. **`set_ucred_to_ptrace()`** at `inject_elf` entry/exit — sets  
+   `PTRACE_AUTHID` (`0x4800000000010003`), never `DEBUG_AUTHID` (`…0006`).  
 2. **No per-ptrace authid flip** in `sys_ptrace`  
 3. **`waitpid` after stager `pt_continue`** in `pt_call2`  
 4. **Strict validation** of null args, entry/args, mmap, mprotect, copyin  
-5. **Clear `attached`** on successful detach; always try authid restore  
+5. **Clear `attached`** on successful detach; always restore prior authid  
 
 ## Not ported (higher-level kylin-core only)
 

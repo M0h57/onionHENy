@@ -12,10 +12,9 @@ void* remote_pthread_join = NULL;
 SCEFunctions sce_functions = {0};
 
 /*
- * Scoped debugger authid helpers (kylin-core).
- * Elevate once for the whole inject_elf() window instead of inside every
- * ptrace syscall (see pt.c sys_ptrace). Always restore on exit so the daemon
- * does not stay on debugger authid after a failed inject.
+ * Scoped PTRACE_AUTHID for the inject_elf() window (not DEBUG_AUTHID).
+ * Elevate once via set_ucred_to_ptrace(); restore on every exit. No per-call
+ * flip inside sys_ptrace (see liborion_elfldr pt.c).
  */
 static int read_self_authid(uint64_t *authid_out)
 {
@@ -99,11 +98,11 @@ int inject_elf(struct proc* proc, void* elf)
 {
     int status = true;
     uint64_t original_authid = 0;
-    int debugger_authid_changed = 0;
+    int ptrace_authid_changed = 0;
     uint64_t sce_ptr_mem;
     uint64_t shellcode_size = get_shellcode_size();
 
-    klog_puts("[+] Elevating injector...[+]");
+    klog_puts("[+] Elevating for ptrace (PTRACE_AUTHID)...[+]");
 
     if (proc == NULL || elf == NULL)
     {
@@ -113,14 +112,10 @@ int inject_elf(struct proc* proc, void* elf)
         goto exit;
     }
 
-    /*
-     * ShellUI ptrace attach still requires the debugger authid on some boots.
-     * Keep this scoped to the injector entrypoint instead of flipping authid
-     * inside every ptrace syscall. (kylin-core)
-     */
+    /* Scoped PTRACE_AUTHID for attach/load only (not DEBUG_AUTHID). */
     if (read_self_authid(&original_authid) == 0)
     {
-        debugger_authid_changed = 1;
+        ptrace_authid_changed = 1;
         klog_printf("[+] inject: backup authid=0x%lx\n",
                     (unsigned long)original_authid);
     }
@@ -128,7 +123,7 @@ int inject_elf(struct proc* proc, void* elf)
     {
         klog_puts("[-] inject: authid backup failed (continuing)");
     }
-    set_ucred_to_debugger();
+    set_ucred_to_ptrace();
 
     if (pt_attach(proc->pid) < 0)
     {
@@ -237,7 +232,7 @@ detach:
     klog_puts("[+] ELF injection finished! [+]");
     klog_puts("[+] Detached [+]");
 exit:
-    if (debugger_authid_changed)
+    if (ptrace_authid_changed)
     {
         if (write_self_authid(original_authid) == 0)
         {

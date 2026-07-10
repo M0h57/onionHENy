@@ -31,19 +31,14 @@ along with this program; see the file COPYING. If not, see
 
 #include <orion/pt.h>
 
-/* usleep for attach wait retries */
-extern int usleep(useconds_t);
-
 
 static int
 sys_ptrace(int request, pid_t pid, caddr_t addr, int data) {
   /*
    * Do NOT flip ucred authid around every ptrace syscall.
    *
-   * The daemon is elevated once at inject_elf() entry (debugger authid),
-   * and restored on exit. Per-call authid toggling is redundant, racy under
-   * multi-threaded injectors, and has been observed to SIGSEGV / hang ShellUI.
-   * (Adopted from kylin-core libNineS.)
+   * Caller elevates once with set_ucred_to_ptrace() (PTRACE_AUTHID) for the
+   * inject window, then restores. No per-call authid flip here.
    */
   return (int)syscall(SYS_ptrace, request, pid, addr, data);
 }
@@ -66,29 +61,14 @@ pt_attach(pid_t pid) {
   int status = 0;
 
   if (sys_ptrace(PT_ATTACH, pid, 0, 0) == -1) {
-    klog_printf("pt_attach: PT_ATTACH pid=%d errno=%d\n", (int)pid, errno);
     return -1;
   }
 
-  /*
-   * Wait until the target stops. Some firmwares race with ECHILD/EINTR right
-   * after attach; retry briefly. Use WUNTRACED so stop notifications are seen.
-   */
-  for (int i = 0; i < 50; i++) {
-    const pid_t w = waitpid(pid, &status, WUNTRACED);
-    if (w == pid) {
-      return 0;
-    }
-    if (w < 0 && errno != ECHILD && errno != EINTR) {
-      klog_printf("pt_attach: waitpid pid=%d errno=%d\n", (int)pid, errno);
-      return -1;
-    }
-    usleep(10000);
+  if (waitpid(pid, &status, WUNTRACED) == -1) {
+    return -1;
   }
 
-  klog_printf("pt_attach: waitpid timeout pid=%d last_errno=%d\n", (int)pid,
-              errno);
-  return -1;
+  return 0;
 }
 
 

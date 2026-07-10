@@ -7,16 +7,16 @@ Single implementation of ptrace helpers (`pt_*`) and inject-path ELF loading
 
 **Do not** flip ucred authid around every `ptrace` syscall.
 
-Callers that need ptrace must elevate **once** for the inject window with
-**`PTRACE_AUTHID` (`0x4800000000010003`)** via `set_ucred_to_debugger()` —
-see `libNineS` `inject_elf()`. That is Sony's SceTracer-style id;  
-`DEBUG_AUTHID` (`0x4800000000000006`) is **not** accepted by the kernel
-ptrace check (attach then fails with `waitpid`/`ECHILD`).
+Elevate **once** for the inject / attach window with:
 
-Per-call authid toggling races multi-threaded injectors and has been observed
-to SIGSEGV / hang ShellUI.
+```c
+set_ucred_to_ptrace();  // → PTRACE_AUTHID 0x4800000000010003
+```
 
-Util should elevate with the same ptrace authid before `pt_attach` / cave maps.
+That is Sony's SceTracer-style id. **`DEBUG_AUTHID` (`…0006`) is not accepted
+for PT_*** — using it causes attach/`waitpid` failures (e.g. errno ECHILD).
+
+Restore the previous authid after the inject window (see `inject_elf`).
 
 ## Consumers
 
@@ -24,7 +24,7 @@ Util should elevate with the same ptrace authid before `pt_attach` / cave maps.
 |--------|------|
 | libNineS | `pt_*`, `elfldr_load`, `elfldr_payload_args` |
 | bootstrapper | `elfldr_raise_privileges` (spawn via remote 9021) |
-| util | `pt_attach` / `pt_mmap` (via `pt_attach_proc` alias) |
+| util | `pt_attach` / `pt_mmap` after `set_ucred_to_ptrace()` |
 | daemon | links via NineS |
 
 Headers: `<orion/pt.h>`, `<orion/elfldr.h>`. Compatibility shims remain under

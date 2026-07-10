@@ -742,7 +742,7 @@ int main(int argc, char const* argv[]) {
     return 0;
 
   const pid_t pid = getpid();
-  AuthIdGuard auth(pid, set_ucred_to_debugger());
+  AuthIdGuard auth(pid, set_ucred_to_ptrace());
 
   void* read_fn = nullptr;
   void* appinst_fn = nullptr;

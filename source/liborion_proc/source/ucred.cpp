@@ -3,14 +3,8 @@ extern "C" {
 }
 #define UCRED_SIZE 0x200
 
-extern "C" uintptr_t set_ucred_to_debugger()
+extern "C" uintptr_t set_ucred_to_ptrace(void)
 {
-    /*
-     * Must be PTRACE_AUTHID (0x4800000000010003), not DEBUG_AUTHID (…0006).
-     * Sony's ptrace permission check only accepts the SceTracer-style authid;
-     * DEBUG_AUTHID allows other debug R/W paths but PT_ATTACH/waitpid fail
-     * (commonly errno=ECHILD=10). Matches kylin-core libNineS + elfldr.
-     */
     return set_proc_authid(getpid(), PTRACE_AUTHID);
 }
 

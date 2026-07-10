@@ -25,12 +25,17 @@ extern "C" {
 #include <unistd.h>
 #include <orion/proc.h>
 
+/** Sony debug-style authid (kernel R/W helpers). Not sufficient for PT_*. */
 #define DEBUG_AUTHID 0x4800000000000006
-#define PTRACE_AUTHID    0x4800000000010003
+/** SceTracer-style authid — only value the kernel accepts for ptrace PT_*. */
+#define PTRACE_AUTHID 0x4800000000010003
 #define UCRED_AUTHID_KERNEL_OFFSET
 
-// uintptr_t get_current_ucred();
-uintptr_t set_ucred_to_debugger();
+/**
+ * Set this process ucred authid to PTRACE_AUTHID for ptrace inject/attach.
+ * Returns previous authid (0 on failure). Caller restores with set_proc_authid.
+ */
+uintptr_t set_ucred_to_ptrace(void);
 uintptr_t set_proc_authid(pid_t pid, uintptr_t new_authid);
 uint8_t* jailbreak_process(pid_t pid);
 void jail_process(pid_t pid, uint8_t* ucred);

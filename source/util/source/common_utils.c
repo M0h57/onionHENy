@@ -49,7 +49,7 @@ atomic_bool not_connected = false;
 
 /* OrionHEN: no local spawn — plugins launch via external elfldr :9021.
  * ptrace attach/mmap: liborion_elfldr (pt_attach / pt_mmap). Authid is raised
- * once in util main (DEBUG_AUTHID), not flipped per ptrace call.
+ * once in util main via set_ucred_to_ptrace(), not flipped per ptrace call.
  */
 
 int get_ip_address(char *ip_address)
