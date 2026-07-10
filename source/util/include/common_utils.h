@@ -135,7 +135,6 @@ typedef struct
 	bool has_ftp_dev;
 	bool allow_data;
 	bool DPI;
-	bool lite;
 	bool toolbox_auto_start;
 	bool DPI_v2;
 	bool klog;

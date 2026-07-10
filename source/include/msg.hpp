@@ -31,7 +31,7 @@ enum DaemonCommands : int {
   BREW_UNUSED_1,// not used anymore but kept fopr backwards compatibility for now
   BREW_TEST_SB_FILE,
   BREW_DAEMON_PID,
-  BREW_INSTALL_THE_STORE,
+  BREW_UNUSED_STORE_INSTALLER,
   BREW_DECRYPT_DIR,
   BREW_LAST_RET,
   BREW_TESTKIT_CHECK,
@@ -55,9 +55,8 @@ enum DaemonCommands : int {
   BREW_UTIL_RELOAD_CHEATS,
   BREW_UTIL_DOWNLOAD_KSTUFF,
   BREW_UTIL_TOGGLE_LEGACY_CMD_SERVER,
-  // Util-daemon commands used by shellui webMAN games menu
-  BREW_UTIL_GET_GAMES_LIST,
-  BREW_UTIL_LAUNCH_GAME_BY_BUTTON_ID,
+  BREW_UTIL_UNUSED_2,
+  BREW_UTIL_UNUSED_3,
 
   // Legacy: 9021 elfldr auto-launch removed (command kept for IPC compatibility)
   BREW_UTIL_LAUNCH_ELFLDR = 0xE1F1D8,

@@ -250,7 +250,7 @@ void LoadSettings() {
     if (fd >= 0) {
       write(fd, ini_file.c_str(), ini_file.length());
       close(fd);
-      notify(true, "etaHEN config created! @ /data/etaHEN/config.ini");
+      notify(true, "OrionHEN config created! @ /data/etaHEN/config.ini");
       config_state.last_modified = 0;
     }
     return;
@@ -892,7 +892,7 @@ bool cmd_enable_toolbox(){
       sleep(1);
       if (++wait >= 45) {
         /* Keep ShellUI alive; user can retry from Debug Settings */
-        notify(true, "Failed to load the etaHEN toolbox (timeout, ShellUI left running)");
+        notify(true, "Failed to load the OrionHEN toolbox (timeout, ShellUI left running)");
         return false;
       }
     }
@@ -958,51 +958,6 @@ void handleIPC(struct clientArgs *client, std::string &inputStr,
     notify(false, "Attempting to decrypt %s -> %s", sandbox_dir.c_str(),
            dest_path.c_str());
     last_ipc_error = !decrypt_dir(sandbox_dir, dest_path);
-    break;
-  }
-  case BREW_INSTALL_THE_STORE: {
-
-    int rv = sceAppInstUtilInitialize();
-    if (rv != 0) {
-      etaHEN_log("Store 3: Failed to initialize libSceAppInstUtil.sprx");
-      notify(true, "Store 3: Failed to initialize libSceAppInstUtil.sprx");
-      reply(sender_app, true);
-      break;
-    }
-
-    PlayGoInfo arg3;
-    SceAppInstallPkgInfo pkg_info;
-    (void)memset(&arg3, 0, sizeof(arg3));
-
-    for (size_t i = 0; i < NUM_LANGUAGES; i++) {
-      strncpy(arg3.languages[i], "", sizeof(language_t) - 1);
-    }
-
-    for (size_t i = 0; i < NUM_IDS; i++) {
-      strncpy(arg3.playgo_scenario_ids[i], "",
-              sizeof(playgo_scenario_id_t) - 1);
-      strncpy(*arg3.content_ids, "", sizeof(content_id_t) - 1);
-    }
-
-    MetaInfo arg1 = {.uri = "https://pkg-zone.com/update/Store-R2-PS5.pkg",
-                      .ex_uri = "",
-                      .playgo_scenario_id = "",
-                      .content_id = "",
-                      .content_name = "The Homebrew Store",
-                      .icon_url = ""};
-
-    int num = sceAppInstUtilInstallByPackage(&arg1, &pkg_info, &arg3);
-    if (num == 0) {
-      notify(true, "the Store is now downloading");
-    } else {
-      notify(true,
-             "An error has occurred while trying to download the Store PKG "
-             "(error: 0x%X), Check your internet connection and try again",
-             num);
-      reply(sender_app, true);
-      break;
-    }
-    reply(sender_app, false);
     break;
   }
   case BREW_TESTKIT_CHECK: {

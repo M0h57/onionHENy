@@ -231,7 +231,7 @@ void sig_handler(int signo) {
         return;
     }
     notify(true,
-          "etaHEN has crashed ...\n\nPlease send /data/etaHEN/etaHEN_crash.log "
+          "OrionHEN has crashed ...\n\nPlease send /data/etaHEN/etaHEN_crash.log "
           "to the PKG-Zone discord: https://discord.gg/BduZHudWGj");
     etaHEN_log("main etaHEN has crashed ...");
     //printBacktraceForCrash();
@@ -327,10 +327,8 @@ int main() {
 
     etaHEN_log("=========== starting etaHEN (0x%X) ... ===========", fw_ver);
     (void)sceKernelMprotect(&buz[0], 100, 0x7); // probe mprotect / kstuff state
-    bool is_lite = if_exists("/system_tmp/lite_mode");
     bool toolbox_only = (fw_ver >= 0x10000);
     is_800 = (fw_ver >= 0x800);
-    (void)is_lite;
 
 
     LoadSettings();
@@ -356,7 +354,7 @@ int main() {
         cmd_enable_toolbox();
     }
     else if (!global_conf.toolbox_auto_start) {
-        notify(true, "the etaHEN Toolbox auto start is disabled in the config.ini\n\n"
+        notify(true, "the OrionHEN Toolbox auto start is disabled in the config.ini\n\n"
                     "Re-enable toolbox_auto_start in /data/etaHEN/config.ini or open Debug Settings");
     }
 
@@ -377,14 +375,14 @@ int main() {
      "        }\n"
      "      },\n"
      "      \"message\": {\n"
-     "        \"body\": \"etaHEN 2.5B AIO HEN By LM\"\n"
+     "        \"body\": \"OrionHEN\"\n"
      "      },\n"
      "      \"subMessage\": {\n"
-     "        \"body\": \"Welcome to etaHEN\"\n"
+     "        \"body\": \"Welcome to OrionHEN\"\n"
      "      },\n"
      "      \"actions\": [\n"
      "        {\n"
-     "          \"actionName\": \"Go to the etaHEN Toolbox\",\n"
+     "          \"actionName\": \"Go to the OrionHEN Toolbox\",\n"
      "          \"actionType\": \"DeepLink\",\n"
      "          \"defaultFocus\": true,\n"
      "          \"parameters\": {\n"
@@ -403,7 +401,7 @@ int main() {
      "            }\n"
      "          },\n"
      "          \"message\": {\n"
-     "            \"body\": \"etaHEN Running\"\n"
+     "            \"body\": \"OrionHEN Running\"\n"
      "          }\n"
      "        }\n"
      "      }\n"
@@ -440,14 +438,12 @@ int main() {
         break;
     }
 
-    if (URI && !is_lite)
+    if (URI)
         etaHEN_log("ret %d", ItemzLaunchByUri(URI));
 
     if(global_conf.auto_eject_disc){
         sceShellCoreUtilRequestEjectDevice("/dev/cd0");
     }
-
-    unlink("/system_tmp/lite_mode");
 
     // Main loop to keep the process running
     while (true) {

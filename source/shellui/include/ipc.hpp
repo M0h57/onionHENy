@@ -287,20 +287,6 @@ public:
     return IPC_Ret::NO_ERROR;
   }
 
-  IPC_Ret DownloadTheStore() {
-    if (util_daemon) {
-      shellui_log("This IPC command is ONLY in the main daemon");
-      return IPC_Ret::INVALID;
-    }
-    std::string ipc_msg;
-    if (!IPCSendCommand(BREW_INSTALL_THE_STORE, ipc_msg)) {
-      shellui_log("Failed to BREW_INSTALL_THE_STORE");
-      return IPC_Ret::OPERATION_FAILED;
-    }
-
-    return IPC_Ret::NO_ERROR;
-  }
-
   IPC_Ret DownloadKstuff() {
       std::string ipc_msg;
       if (!IPCSendCommand(BREW_UTIL_DOWNLOAD_KSTUFF, ipc_msg)) {
@@ -522,62 +508,6 @@ public:
 
     return true;
 }
-  static void generate_default_games_xml(std::string &xml_buffer,  bool game_shortcut_activated) {
-  std::string list_id = game_shortcut_activated ? "id_debug_settings" : "id_ps5_backups";
-
-  xml_buffer =  "<?xml version=\"1.0\" encoding=\"UTF-8\" ?>\n"
-      "<system_settings version=\"1.0\" plugin=\"debug_settings_plugin\">\n"
-      "\n";
-
-  xml_buffer += "<setting_list id=\"" + list_id + "\" title=\"(Beta) PS5 webMAN Games (ERROR)\">\n";
-  xml_buffer += "</setting_list>\n</system_settings> ";
-}
-
-bool GetGamesList(bool cheats_activated_shortcut, std::string &games_list) {
-    if (!util_daemon) {
-        shellui_log("This IPC command is in the util daemon");
-        generate_default_games_xml(games_list, cheats_activated_shortcut);
-        return false;
-    }
-
-    std::string json = "{\"shortcut\": " + std::to_string(cheats_activated_shortcut) + "}";
-    if (!IPCSendCommand(BREW_UTIL_GET_GAMES_LIST, games_list, json)) {
-        shellui_log("Failed to get games list");
-        generate_default_games_xml(games_list, cheats_activated_shortcut);
-        return false;
-    }
-
-
-        std::ifstream file("/user/data/etaHEN/games_list.xml");
-        if (file) {
-            std::string content((std::istreambuf_iterator<char>(file)),
-                                 std::istreambuf_iterator<char>());
-            games_list = content;
-            file.close();
-            return true;
-        } else {
-            shellui_log("Failed to open games list file: %s", games_list.c_str());
-            return false;
-        }
-    
-
-    shellui_log("Games list: %s", games_list.c_str());
-    return true;
-  }
-
-  bool Launch_Game_By_ID(const std::string& button_id) {
-      if (!util_daemon) {
-          shellui_log("This IPC command is in the util daemon");
-          return false;
-      }
-      std::string ipc_msg;
-      std::string json = "{\"button_id\": \"" + button_id + "\"}";
-      if (!IPCSendCommand(BREW_UTIL_LAUNCH_GAME_BY_BUTTON_ID, ipc_msg, json)) {
-          shellui_log("Failed to launch game by button id: %s", button_id.c_str());
-          return false;
-      }
-      return true;
-  }
 }; // namespace IPC
 
 #endif // IPC_HEADER_H

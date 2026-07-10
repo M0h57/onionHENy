@@ -100,7 +100,7 @@ bool if_exists(const char* path) {
 }
 
 static void cleanup(void) {
-    notify(true, "etaHEN utilities daemon has crashed...\n\nAttemping to recover...");
+    notify(true, "OrionHEN utilities daemon has crashed...\n\nAttemping to recover...");
 
     if (global_conf.FTP)
         ShutdownFTP();
@@ -130,7 +130,6 @@ void LoadSettings(void) {
             const char* DPI_str = ini_parser_get(&parser, "Settings.DPI", "0");
             const char* allow_data_n_sandbox = ini_parser_get(&parser, "Settings.Allow_data_in_sandbox", "1");
             const char* ftp_dev_access = ini_parser_get(&parser, "Settings.ALLOW_FTP_DEV_ACCESS", "0");
-            const char* lite_mode = ini_parser_get(&parser, "Settings.LiteMode", "0");
             const char* DPI_v2 = ini_parser_get(&parser, "Settings.DPI_v2", "0");
             const char* Klog_str = ini_parser_get(&parser, "Settings.Klog", "0");
             const char* toolbox_for_rest = ini_parser_get(&parser, "Settings.disable_toolbox_auto_start_for_rest_mode", "0");\
@@ -139,7 +138,6 @@ void LoadSettings(void) {
             global_conf.has_ftp_dev = ftp_dev_access ? atoi(ftp_dev_access) : 0;
             global_conf.FTP = FTP_str ? atoi(FTP_str) : 0;
             global_conf.DPI = DPI_str ? atoi(DPI_str) : 0;
-            global_conf.lite = lite_mode ? atoi(lite_mode) : 0;
             global_conf.DPI_v2 = DPI_v2 ? atoi(DPI_v2) : 0;
             global_conf.toolbox_auto_start = atoi(ini_parser_get(&parser, "Settings.toolbox_auto_start", "1"));
             global_conf.klog = Klog_str ? atoi(Klog_str) : 0;
@@ -219,7 +217,7 @@ int main(void) {
         notify(true, "Failed to initialize the HTTP lib, downloading cheats will not work");
     }
 
-    if (global_conf.toolbox_auto_start && if_exists("/system_tmp/util_first_boot") && !global_conf.lite) {
+    if (global_conf.toolbox_auto_start && if_exists("/system_tmp/util_first_boot")) {
         etaHEN_log("not First boot detected, activating toolbox");
         patch_checker();
     }

@@ -44,8 +44,6 @@ extern bool is_handler_enabled;
 
 extern pthread_t cmd_server;
 void* runCommandNControlServer(void*);
-void generate_games_xml(std::string &xml_buffer, bool game_shortcut_activated);
-bool Launch_Game_By_ID(const char* button_id);
 // pop -Winfinite-recursion error for this func for clang
 #define MB(x) ((size_t)(x) << 20)
 #define READ_SIZE 0x1024
@@ -542,7 +540,7 @@ void handleIPC(struct clientArgs *client, std::string &inputStr,
       reply(sender_app, false);
       break;
     }
-    notify(true, "Downloading the latest %s Cheats repo....", repo ? "GoldHEN PS4" : "etaHEN PS5");
+    notify(true, "Downloading the latest %s Cheats repo....", repo ? "GoldHEN PS4" : "OrionHEN PS5");
     if (!download_file(repo ? "https://api.github.com/repos/GoldHEN/GoldHEN_Cheat_Repository/zipball" : "https://api.github.com/repos/etaHEN/PS5_Cheats/zipball",
                        "/data/etaHEN/cheats.zip")) {
       etaHEN_log("Failed to download cheats");
@@ -558,7 +556,7 @@ void handleIPC(struct clientArgs *client, std::string &inputStr,
 
     unlink("/data/etaHEN/cheats.zip");
     MakeInitialCheatCache(NULL);
-    notify(true, "Successfully updated & refreshed the etaHEN Cheats with the latest cheats repo");
+    notify(true, "Successfully updated & refreshed the OrionHEN Cheats with the latest cheats repo");
     reply(sender_app, false);
     break;
   }
@@ -597,46 +595,6 @@ void handleIPC(struct clientArgs *client, std::string &inputStr,
     }
     reply(sender_app, false);
 	break;
-  }
-  case BREW_UTIL_GET_GAMES_LIST:{
-    bool cheats_activated_shortcut = json_getInteger(json_getProperty(my_json, "shortcut"));
-    std::string games_list;
-    generate_games_xml(games_list, cheats_activated_shortcut);
-
-    std::string shm_path = "/user/data/etaHEN/games_list.xml";
-    //make file 
-    int fd = open(shm_path.c_str(), O_WRONLY | O_CREAT | O_TRUNC, 0777);
-    if (fd >= 0) {
-        // Write the buffer to the file
-      if (write(fd, games_list.c_str(), games_list.length()) == -1) {
-          perror("write failed");
-          close(fd);
-          reply(sender_app, true);
-          break;
-      }
-        // Close the file descriptor
-      close(fd);
-      reply(sender_app, false, shm_path);
-      break;
-    } else {
-        notify(true, "Failed to create shared file for games list!");
-       // generate_default_games_xml(games_list, cheats_activated_shortcut);
-        reply(sender_app, true);
-        break;
-    }
-    
-    break;
-  }
-  case BREW_UTIL_LAUNCH_GAME_BY_BUTTON_ID:{
-    std::string button_id = std::string(json_getPropertyValue(my_json, "button_id"));
-    etaHEN_log("Launching game with button id: %s", button_id.c_str());
-    int res = Launch_Game_By_ID(button_id.c_str());
-    if (res < 0) {
-      reply(sender_app, true);
-      break;
-    }
-    reply(sender_app, false);
-    break;
   }
   case BREW_KILL_DAEMON:{
     is_handler_enabled = false;

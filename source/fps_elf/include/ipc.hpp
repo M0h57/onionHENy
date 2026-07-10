@@ -280,20 +280,6 @@ public:
     return IPC_Ret::NO_ERROR;
   }
 
-  IPC_Ret DownloadTheStore() {
-    if (util_daemon) {
-      game_log("This IPC command is ONLY in the main daemon");
-      return IPC_Ret::INVALID;
-    }
-    std::string ipc_msg;
-    if (!IPCSendCommand(BREW_INSTALL_THE_STORE, ipc_msg)) {
-      game_log("Failed to BREW_INSTALL_THE_STORE");
-      return IPC_Ret::OPERATION_FAILED;
-    }
-
-    return IPC_Ret::NO_ERROR;
-  }
-
   IPC_Ret DownloadKstuff() {
       std::string ipc_msg;
       if (!IPCSendCommand(BREW_UTIL_DOWNLOAD_KSTUFF, ipc_msg)) {
