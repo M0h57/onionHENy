@@ -19,6 +19,7 @@ along with this program; see the file COPYING. If not, see
 #include "ipc.hpp"
 #include "proc.h"
 #include "ps5/kernel.h"
+#include <ps5/klog.h>
 #include "ucred.h"
 #include <cstdint>
 #include <iostream>
