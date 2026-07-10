@@ -15,6 +15,7 @@
 #include <fcntl.h>
 #include <dirent.h>
 #include <limits.h>
+#include <signal.h>
 #include <sys/stat.h>
 #include <sys/mount.h>
 #include <sys/ioctl.h>
@@ -250,13 +251,19 @@ void ForceKillProc(int pid) {
     OrionHEN_log("Invalid PID: %d", pid);
     return;
   }
-  
+
   #define DECID_AUTH_ID 0x4800000000000022 // required for killing with sceKernelTerminateProcess / sys_proc_term  syscall
-  uintptr_t authid = set_proc_authid(getpid(), DECID_AUTH_ID );
+  uintptr_t authid = set_proc_authid(getpid(), DECID_AUTH_ID);
 
   int ret = 0;
   if (sceKernelTerminateProcess(pid, &ret) != 0) {
-    OrionHEN_log("Failed to terminate process with PID: %d, error: %d", pid, ret);
+    OrionHEN_log("sceKernelTerminateProcess(%d) failed ret=%d — SIGKILL fallback",
+                 pid, ret);
+    if (kill(pid, SIGKILL) != 0) {
+      OrionHEN_log("kill(%d, SIGKILL) failed: %s", pid, strerror(errno));
+    } else {
+      OrionHEN_log("SIGKILL sent to pid=%d", pid);
+    }
   } else {
     OrionHEN_log("Successfully terminated process with PID: %d", pid);
   }
@@ -264,24 +271,69 @@ void ForceKillProc(int pid) {
   set_proc_authid(getpid(), authid); // Restore original authid
 }
 
+/** Kill every live process whose ki_comm matches any of @names (substring). */
+static void kill_all_by_comm_substr(const char *const *names, size_t nnames) {
+  if (!names || nnames == 0)
+    return;
+  /* Loop: find+kill until none remain (bootstrapper kill_by_name pattern). */
+  for (int pass = 0; pass < 8; ++pass) {
+    bool any = false;
+    for (size_t i = 0; i < nnames; ++i) {
+      if (!names[i] || !names[i][0])
+        continue;
+      pid_t p = orion_find_pid(names[i]);
+      if (p <= 0)
+        p = orion_find_pid_substr(names[i]);
+      if (p <= 0 || p == getpid())
+        continue;
+      any = true;
+      OrionHEN_log("shutdown: killing pid=%d (match \"%s\")", (int)p, names[i]);
+      /* ELF daemons (util via 9021) often ignore TerminateProcess — SIGKILL first. */
+      if (kill(p, SIGKILL) != 0) {
+        OrionHEN_log("shutdown: SIGKILL pid=%d failed: %s", (int)p,
+                     strerror(errno));
+        ForceKillProc(static_cast<int>(p));
+      }
+      usleep(200 * 1000);
+    }
+    if (!any)
+      break;
+  }
+}
+
 [[noreturn]] void cmd_shutdown_orion_stack(void) {
   OrionHEN_log("cmd_shutdown_orion_stack: stopping util → ShellUI → self");
 
-  /* util.elf (ki_comm) — also try common display names. */
-  int util_pid = static_cast<int>(orion_find_pid("util.elf"));
-  if (util_pid < 0)
-    util_pid = static_cast<int>(orion_find_pid_substr("util.elf"));
-  if (util_pid > 0 && util_pid != getpid()) {
-    OrionHEN_log("shutdown: ForceKill util pid=%d", util_pid);
-    ForceKillProc(util_pid);
+  /*
+   * util is loaded via elfldr as util.elf; ki_comm is often "util.elf" but
+   * bootstrapper also matches "OrionHEN Utility". TerminateProcess alone is
+   * unreliable for these payloads — use SIGKILL (same as bootstrapper relaunch).
+   */
+  static const char *const kUtilNames[] = {
+      "util.elf",
+      "OrionHEN Utility",
+      "util",
+  };
+  kill_all_by_comm_substr(kUtilNames, sizeof(kUtilNames) / sizeof(kUtilNames[0]));
+
+  if (orion_find_pid("util.elf") > 0 ||
+      orion_find_pid_substr("util.elf") > 0 ||
+      orion_find_pid("OrionHEN Utility") > 0) {
+    OrionHEN_log("shutdown: util still alive after kill pass — retry");
+    kill_all_by_comm_substr(kUtilNames, sizeof(kUtilNames) / sizeof(kUtilNames[0]));
   } else {
-    OrionHEN_log("shutdown: util.elf not found");
+    OrionHEN_log("shutdown: util gone (or never present)");
   }
 
   int shellui_pid = get_shellui_pid();
   if (shellui_pid > 0 && shellui_pid != getpid()) {
     OrionHEN_log("shutdown: ForceKill SceShellUI pid=%d", shellui_pid);
     ForceKillProc(shellui_pid);
+    /* ShellUI is a normal SCE app; TerminateProcess usually works. Still SIGKILL. */
+    if (orion_proc_is_alive(shellui_pid)) {
+      (void)kill(shellui_pid, SIGKILL);
+      usleep(200 * 1000);
+    }
   } else {
     OrionHEN_log("shutdown: SceShellUI not found");
   }
