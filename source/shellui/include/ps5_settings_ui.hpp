@@ -84,7 +84,8 @@ public:
 
   Derived& list(std::string id, std::string title,
                 const std::function<void(ListBuilder&)>& body,
-                std::optional<std::string> second_title = std::nullopt);
+                std::optional<std::string> second_title = std::nullopt,
+                std::optional<std::string> value = std::nullopt);
 
   Derived& group(std::string id, std::string title,
                  const std::function<void(Group&)>& body,
@@ -188,12 +189,14 @@ Derived& GroupT<Derived>::link(std::string id, std::string title, std::string fi
 template <typename Derived>
 Derived& GroupT<Derived>::list(std::string id, std::string title,
                                const std::function<void(ListBuilder&)>& body,
-                               std::optional<std::string> second_title) {
+                               std::optional<std::string> second_title,
+                               std::optional<std::string> value) {
   Node n;
   n.kind = Node::Kind::List;
   n.attrs.id = std::move(id);
   n.attrs.title = std::move(title);
   n.attrs.second_title = std::move(second_title);
+  n.attrs.value = std::move(value);
   node_->children.push_back(std::move(n));
   ListBuilder lb(node_->children.back());
   if (body)

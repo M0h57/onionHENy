@@ -9,6 +9,7 @@
 #include "external_symbols.hpp"
 #include "ipc.hpp"
 #include "ps5_settings_ui.hpp"
+#include "toolbox_values.hpp"
 #include "../../extern/cJSON/orion_cjson.hpp"
 
 #define PIN_CODE_SIZE 30
@@ -147,10 +148,15 @@ std::string read_file_to_string(const char* path) {
 
 template <typename G>
 void append_download_cheats_block(G& page) {
-  page.list("id_selected_cheats_repo", "金手指仓库来源", [](ps5ui::ListBuilder& L) {
-        L.item("id_selected_cheats_repo_1", "OrionHEN PS5 金手指仓库", "0")
-            .item("id_selected_cheats_repo_2", "GoldHEN PS4 金手指仓库", "1");
-      })
+  std::string repo_value = resolve_toolbox_control_value("id_selected_cheats_repo");
+  if (repo_value.empty())
+    repo_value = "0";
+  page.list("id_selected_cheats_repo", "金手指仓库来源",
+            [](ps5ui::ListBuilder& L) {
+              L.item("id_selected_cheats_repo_1", "OrionHEN PS5 金手指仓库", "0")
+                  .item("id_selected_cheats_repo_2", "GoldHEN PS4 金手指仓库", "1");
+            },
+            /*second_title=*/std::nullopt, /*value=*/repo_value)
       .button("id_dl_cheats", "下载/更新金手指",
               "从所选 GitHub 仓库下载到 /data/OrionHEN/cheats/（TITLEID_VERSION.ext）");
 }

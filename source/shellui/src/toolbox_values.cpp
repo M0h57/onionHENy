@@ -1,0 +1,147 @@
+/* Copyright (C) 2025 OrionHEN / LightningMods
+ *
+ * Shared value providers for toolbox UI binding (XML path + optional hooks).
+ */
+#include "toolbox_values.hpp"
+
+#include "HookedFuncs.hpp"
+#include "external_symbols.hpp"
+#include "shellui_state.hpp"
+
+#include <orion/platform.h>
+
+#include <cstring>
+#include <string>
+
+namespace {
+
+std::string bool_str(bool v) { return v ? "1" : "0"; }
+std::string int_str(int v) { return std::to_string(v); }
+
+struct ExactValueEntry {
+  const char *id;
+  std::string (*get)();
+};
+
+const ExactValueEntry kExactValues[] = {
+    {"id_lm_test", +[]() -> std::string { return "0"; }},
+    {"id_overlay_gpu",
+     +[]() -> std::string { return bool_str(g_settings.overlay_gpu); }},
+    {"id_overlay_fps",
+     +[]() -> std::string { return bool_str(g_settings.overlay_fps); }},
+    {"id_overlay_ip",
+     +[]() -> std::string { return bool_str(g_settings.overlay_ip); }},
+    {"id_all_cpu_usage",
+     +[]() -> std::string { return bool_str(g_ui.all_cpu_usage); }},
+    {"id_overlay_cpu",
+     +[]() -> std::string { return bool_str(g_settings.overlay_cpu); }},
+    {"id_overlay_ram",
+     +[]() -> std::string { return bool_str(g_settings.overlay_ram); }},
+    {"id_kstuff_autoload",
+     +[]() -> std::string {
+       return bool_str(!if_exists("/user/data/OrionHEN/no_kstuff"));
+     }},
+    {"id_disp_titleids",
+     +[]() -> std::string { return bool_str(g_settings.display_tids); }},
+    {"id_enable_fan_speed",
+     +[]() -> std::string { return bool_str(g_settings.enable_fan_speed); }},
+    /* List uses value 0/1; keep historical non-zero → "1". */
+    {"id_selected_cheats_repo",
+     +[]() -> std::string {
+       return bool_str(g_settings.selected_cheats_repo != 0);
+     }},
+    {"id_start_opt",
+     +[]() -> std::string { return int_str(g_settings.start_option); }},
+    {"id_rest_1",
+     +[]() -> std::string {
+       return int_str(static_cast<int>(g_settings.rest_mode_delay_seconds));
+     }},
+    {"id_fan_speed",
+     +[]() -> std::string { return int_str(g_settings.fan_threshold); }},
+    {"id_rest_2",
+     +[]() -> std::string { return bool_str(g_settings.util_rest_kill); }},
+    {"id_rest_3",
+     +[]() -> std::string { return bool_str(g_settings.game_rest_kill); }},
+    {"id_rest_4",
+     +[]() -> std::string {
+       return bool_str(g_settings.disable_toolbox_auto_start_for_rest_mode);
+     }},
+    {"id_cheats_shortcut",
+     +[]() -> std::string { return int_str(g_settings.cheats_shortcut_opt); }},
+    {"id_toolbox_auto_start",
+     +[]() -> std::string { return bool_str(g_settings.toolbox_auto_start); }},
+    {"id_debug_jb",
+     +[]() -> std::string { return bool_str(g_settings.debug_app_jb_msg); }},
+    {"id_debug_legacy_cmd",
+     +[]() -> std::string { return bool_str(g_settings.legacy_cmd_server); }},
+    {"id_custom_game_opts",
+     +[]() -> std::string { return bool_str(g_settings.orionhen_game_opts); }},
+    {"id_auto_eject",
+     +[]() -> std::string { return bool_str(g_settings.auto_eject_disc); }},
+    {"id_overlay_change_pos",
+     +[]() -> std::string { return int_str(g_settings.overlay_pos); }},
+    /* Exact list id only — not id_toolbox_shortcut_N list_items. */
+    {"id_toolbox_shortcut",
+     +[]() -> std::string { return int_str(g_settings.toolbox_shortcut_opt); }},
+};
+
+bool try_exact_value(const std::string &id, std::string &out) {
+  for (const auto &e : kExactValues) {
+    if (id == e.id) {
+      out = e.get();
+      return true;
+    }
+  }
+  return false;
+}
+
+bool try_payload_list_value(const std::string &id, std::string &out) {
+  for (const auto &entry : g_ui.payloads_list) {
+    if (entry.id != id)
+      continue;
+    out = bool_str(sceSystemServiceGetAppId(entry.tid.c_str()) > 0);
+    return true;
+  }
+  return false;
+}
+
+bool try_auto_payload_value(const std::string &id, std::string &out) {
+  for (const auto &entry : g_ui.auto_payloads_list) {
+    if (entry.id != id)
+      continue;
+    const std::string auto_path = entry.shellui_path + ".auto_start";
+    out = bool_str(if_exists(auto_path.c_str()));
+    return true;
+  }
+  return false;
+}
+
+bool try_cheat_value(const std::string &id, std::string &out) {
+  if (id.find("id_cheat_") == std::string::npos)
+    return false;
+  if (!g_ui.is_current_game_open)
+    return false;
+
+  char tid[32] = {};
+  int cheat_id = 0;
+  ParseCheatID(id.c_str(), tid, &cheat_id);
+  out = bool_str(g_ui.get_cheat_enabled(cheat_id));
+  return true;
+}
+
+} // namespace
+
+std::string resolve_toolbox_control_value(const std::string &id) {
+  std::string value;
+
+  if (try_payload_list_value(id, value))
+    return value;
+  if (try_auto_payload_value(id, value))
+    return value;
+  if (try_exact_value(id, value))
+    return value;
+  if (try_cheat_value(id, value))
+    return value;
+
+  return {};
+}

@@ -73,12 +73,14 @@ static int test_list_and_items(void) {
                 [](ListBuilder& L) {
                   L.item("id_selected_cheats_repo_1", "OrionHEN PS5", "0")
                       .item("id_selected_cheats_repo_2", "GoldHEN PS4", "1");
-                })
+                },
+                std::nullopt, "1")
           .button("id_dl_cheats", "Download", "to /data/OrionHEN/cheats/")
           .build();
 
-  TEST_ASSERT_TRUE(xml.find("<list id=\"id_selected_cheats_repo\" title=\"Repo\">") !=
-                   std::string::npos);
+  TEST_ASSERT_TRUE(
+      xml.find("<list id=\"id_selected_cheats_repo\" title=\"Repo\" value=\"1\">") !=
+      std::string::npos);
   TEST_ASSERT_TRUE(
       xml.find("<list_item id=\"id_selected_cheats_repo_1\" title=\"OrionHEN PS5\" "
                "value=\"0\"/>") != std::string::npos);
