@@ -7,12 +7,16 @@ Single implementation of ptrace helpers (`pt_*`) and inject-path ELF loading
 
 **Do not** flip ucred authid around every `ptrace` syscall.
 
-Callers that need debugger privileges must elevate **once** for the inject
-window (see `libNineS` `inject_elf()`), then call into this library. Per-call
-authid toggling races multi-threaded injectors and has been observed to
-SIGSEGV / hang ShellUI.
+Callers that need ptrace must elevate **once** for the inject window with
+**`PTRACE_AUTHID` (`0x4800000000010003`)** via `set_ucred_to_debugger()` —
+see `libNineS` `inject_elf()`. That is Sony's SceTracer-style id;  
+`DEBUG_AUTHID` (`0x4800000000000006`) is **not** accepted by the kernel
+ptrace check (attach then fails with `waitpid`/`ECHILD`).
 
-Util is elevated once at `main` (`DEBUG_AUTHID`) before cheat code-cave maps.
+Per-call authid toggling races multi-threaded injectors and has been observed
+to SIGSEGV / hang ShellUI.
+
+Util should elevate with the same ptrace authid before `pt_attach` / cave maps.
 
 ## Consumers
 

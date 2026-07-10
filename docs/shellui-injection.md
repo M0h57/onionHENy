@@ -39,7 +39,9 @@ kylin-core uses the same `inject_elf()` path for ShellUI overlay injection (`ove
 
 Ported into `source/libNineS/src/pt.c` and `source/libNineS/src/injector.c` (without kylin-specific logger; uses `ps5/klog`).
 
-1. **Scoped debugger authid** at `inject_elf` entry/exit only  
+1. **Scoped ptrace authid** at `inject_elf` entry/exit only — must use  
+   `PTRACE_AUTHID` (`0x4800000000010003`), **not** `DEBUG_AUTHID` (`…0006`).  
+   Wrong id → `PT_ATTACH` then `waitpid` fails with **errno 10 (ECHILD)**.  
 2. **No per-ptrace authid flip** in `sys_ptrace`  
 3. **`waitpid` after stager `pt_continue`** in `pt_call2`  
 4. **Strict validation** of null args, entry/args, mmap, mprotect, copyin  

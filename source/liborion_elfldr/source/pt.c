@@ -31,6 +31,9 @@ along with this program; see the file COPYING. If not, see
 
 #include <orion/pt.h>
 
+/* usleep for attach wait retries */
+extern int usleep(useconds_t);
+
 
 static int
 sys_ptrace(int request, pid_t pid, caddr_t addr, int data) {
@@ -60,15 +63,32 @@ pt_resolve(pid_t pid, const char* nid) {
 
 int
 pt_attach(pid_t pid) {
-  if(sys_ptrace(PT_ATTACH, pid, 0, 0) == -1) {
+  int status = 0;
+
+  if (sys_ptrace(PT_ATTACH, pid, 0, 0) == -1) {
+    klog_printf("pt_attach: PT_ATTACH pid=%d errno=%d\n", (int)pid, errno);
     return -1;
   }
 
-  if(waitpid(pid, 0, 0) == -1) {
-    return -1;
+  /*
+   * Wait until the target stops. Some firmwares race with ECHILD/EINTR right
+   * after attach; retry briefly. Use WUNTRACED so stop notifications are seen.
+   */
+  for (int i = 0; i < 50; i++) {
+    const pid_t w = waitpid(pid, &status, WUNTRACED);
+    if (w == pid) {
+      return 0;
+    }
+    if (w < 0 && errno != ECHILD && errno != EINTR) {
+      klog_printf("pt_attach: waitpid pid=%d errno=%d\n", (int)pid, errno);
+      return -1;
+    }
+    usleep(10000);
   }
 
-  return 0;
+  klog_printf("pt_attach: waitpid timeout pid=%d last_errno=%d\n", (int)pid,
+              errno);
+  return -1;
 }
 
 

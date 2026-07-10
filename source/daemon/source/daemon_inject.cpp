@@ -294,14 +294,26 @@ bool cmd_enable_toolbox(){
       sleep(1);
     }
 
-    int pid = get_shellui_pid();
-    if (pid < 0) {
-      orion_notify(true, "Failed to get shellui pid");
-      return false;
+    /* A few attach retries — kstuff may still be touching ShellUI briefly. */
+    bool injected = false;
+    for (int attempt = 1; attempt <= 5; attempt++) {
+      int pid = get_shellui_pid();
+      if (pid < 0) {
+        OrionHEN_log("get_shellui_pid failed (attempt %d)", attempt);
+        sleep(1);
+        continue;
+      }
+      OrionHEN_log("Injecting toolbox into SceShellUI pid=%d (attempt %d)",
+                   pid, attempt);
+      if (Inject_Toolbox(pid, shellui_elf_start)) {
+        injected = true;
+        break;
+      }
+      OrionHEN_log("Inject_Toolbox failed (attempt %d)", attempt);
+      sleep(1);
     }
-    OrionHEN_log("Injecting toolbox into SceShellUI pid=%d", pid);
 
-    if (!Inject_Toolbox(pid, shellui_elf_start)) {
+    if (!injected) {
       /* Do NOT ForceKill ShellUI — that loops home menu / coredumps */
       orion_notify(true, "Failed to inject toolbox");
       return false;

@@ -113,7 +113,8 @@ int main(void) {
 
     payload_args_t* args = payload_get_args();
     kernel_base = args->kdata_base_addr;
-    set_proc_authid(getpid(), DEBUG_AUTHID);
+    /* PTRACE_AUTHID required for pt_* / code-cave (not DEBUG_AUTHID). */
+    set_proc_authid(getpid(), PTRACE_AUTHID);
 
 	g_legacy_cmd_server_exit = false;
 
