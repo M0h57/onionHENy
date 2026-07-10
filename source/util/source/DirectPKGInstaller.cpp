@@ -194,7 +194,7 @@ void *runDirectPKGInstaller(void *args) {
                        .ex_uri = ex_uri ? ex_uri : "",
                        .playgo_scenario_id = playgo_scenario_id ? playgo_scenario_id : "",
                        .content_id = content_id ? content_id : "",
-                       .content_name = content_name ? content_name : "etaHEN DPI",
+                       .content_name = content_name ? content_name : "OrionHEN DPI",
                        .icon_url = icon_url ? icon_url : ""};
 
       int num = sceAppInstUtilInstallByPackage(&arg1, &pkg_info, &arg3);
@@ -813,7 +813,7 @@ static enum MHD_Result dpiv2_on_request(void* cls, struct MHD_Connection* conn,
                 "<!DOCTYPE html>\n"
                 "<html>\n"
                 "<head>\n"
-                "  <title>etaHEN DPIv2</title>\n"
+                "  <title>OrionHEN DPIv2</title>\n"
                 "  <style>\n"
                 "    body { font-family: Arial, sans-serif; max-width: 600px; "
                 "margin: 0 auto; padding: 20px; }\n"
@@ -862,7 +862,7 @@ static enum MHD_Result dpiv2_on_request(void* cls, struct MHD_Connection* conn,
                 "</head>\n"
                 "<body>\n"
                 "  <div class='container'>\n"
-                "    <h2>etaHEN DPIv2 Web Interface</h2>\n"
+                "    <h2>OrionHEN DPIv2 Web Interface</h2>\n"
                 "    <form id='uploadForm' action='/upload' method='post' "
                 "enctype='multipart/form-data'>\n"
                 "      <div class='form-group'>\n"
@@ -1160,7 +1160,7 @@ static enum MHD_Result dpiv2_on_request(void* cls, struct MHD_Connection* conn,
                      .ex_uri = "",
                      .playgo_scenario_id = "",
                      .content_id = "",
-                     .content_name = "etaHEN DPIv2",
+                     .content_name = "OrionHEN DPIv2",
                      .icon_url = "" };
 
     if (req->data) {
@@ -1234,9 +1234,9 @@ static enum MHD_Result dpiv2_on_request(void* cls, struct MHD_Connection* conn,
 
                 arg1.uri = temp_path;
                 std::string tempstr =
-                    std::string("etaHEN DPIv2 | " + std::string(req->orig_filename));
+                    std::string("OrionHEN DPIv2 | " + std::string(req->orig_filename));
                 arg1.content_name =
-                    req->orig_filename ? tempstr.c_str() : "etaHEN DPIv2";
+                    req->orig_filename ? tempstr.c_str() : "OrionHEN DPIv2";
 
                 applyMetaInfo();
 

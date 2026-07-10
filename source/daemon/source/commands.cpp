@@ -321,7 +321,7 @@ void notify(bool show_watermark, const char *text, ...) {
   va_end(args);
 
   if (show_watermark)
-    snprintf(req.message, sizeof(req.message), "[etaHEN] %s", buff);
+    snprintf(req.message, sizeof(req.message), "[OrionHEN] %s", buff);
   else
     snprintf(req.message, sizeof(req.message), "[OrionHEN] %s", buff);
 
@@ -565,11 +565,11 @@ void *fifo_and_dumper_thread(void *args) noexcept {
       if (find_pid("util.elf") < 0 && find_pid("etaHEN Utility") < 0 &&
           retries < MAX_RETIRES) {
           if (retries == 0) {
-              notify(true, "etaHEN Utility is not running, restarting via 9021...");
+              notify(true, "OrionHEN Utility is not running, restarting via 9021...");
           }
 
           if (++retries >= MAX_RETIRES) {
-              notify(true, "etaHEN Utility services failed to restart — check elfldr :9021 and /data/etaHEN/daemons/util.elf");
+              notify(true, "OrionHEN Utility services failed to restart — check elfldr :9021 and /data/etaHEN/daemons/util.elf");
               continue;
           }
 
@@ -577,7 +577,7 @@ void *fifo_and_dumper_thread(void *args) noexcept {
           if (ok) {
               sleep(2);
               etaHEN_log("  Launched util via 9021!");
-              notify(true, "etaHEN Utility services successfully restarted");
+              notify(true, "OrionHEN Utility services successfully restarted");
               retries = 0;
           } else {
               etaHEN_log("failed to launch util via 9021 (need elfldr + util.elf), retry: %d", retries);

@@ -121,7 +121,7 @@ static void __attribute__((used)) cleanup_and_throw(void) {
 		g_cleanup_handler = NULL;
 	}
 	longjmp(g_catch_buf, 1);
-	notify(true, "etaHEN utilities daemon has crashed ...\n\nSome etaHEN features will be unavailable until you reboot");
+	notify(true, "OrionHEN utilities daemon has crashed ...\n\nSome OrionHEN features will be unavailable until you reboot");
 	// TODO longjump here
 }
 

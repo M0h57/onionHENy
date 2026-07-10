@@ -290,7 +290,7 @@ bool enable_toolbox() {
         sleep(1);
 
         if (wait > 20) {
-            notify(true, "Failed to load the etaHEN toolbox");
+            notify(true, "Failed to load the OrionHEN toolbox");
             return false;
         }
 
@@ -920,7 +920,7 @@ void patch_checker() {
     sleep(global_conf.seconds);
 
     notify(true, "(No Network) Coming out of Rest Mode detected\nre-activating "
-                "the etaHEN toolbox...");
+                "the OrionHEN toolbox...");
 
     etaHEN_log("************************************\n\nShellUI is not "
               "patched\n\n************************************");

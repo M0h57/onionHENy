@@ -166,7 +166,7 @@ void notify(bool show_watermark, const char *text, ...)
 	va_end(args);
 
 	if (show_watermark)
-		snprintf(req.message, sizeof(req.message), "[etaHEN] %s", buff);
+		snprintf(req.message, sizeof(req.message), "[OrionHEN] %s", buff);
 	else
 		snprintf(req.message, sizeof(req.message), "[OrionHEN] %s", buff);
 
@@ -258,7 +258,7 @@ bool make_plugin_app(const char *tid, const void *start,
                             "    \"localizedParameters\": {\n"
                             "        \"defaultLanguage\": \"en-US\",\n"
                             "        \"en-US\": {\n"
-                            "            \"titleName\": \"etaHEN Plugin\"\n"
+                            "            \"titleName\": \"OrionHEN Plugin\"\n"
                             "        }\n"
                             "    },\n"
                             "    \"titleId\": \"%s"

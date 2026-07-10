@@ -170,7 +170,7 @@ int main() {
   // etahen_compressed_size);
   uint8_t *decompressed = (uint8_t *)malloc(decompress_size);
   if (!decompressed) {
-    notify("Failed to allocate memory for decompressed etaHEN payload!");
+    notify("Failed to allocate memory for decompressed OrionHEN payload!");
     return -1;
   }
   size_t size = decompress_size;
@@ -185,7 +185,7 @@ int main() {
                            etahen_compressed + LZMA_CLI_HEADER_SIZE, &srcLen,
                            etahen_compressed, LZMA_PROPS_SIZE);
   if (res != 0) {
-    notify("Failed to decompress etaHEN payload! error: %d", res);
+    notify("Failed to decompress OrionHEN payload! error: %d", res);
     free(decompressed);
     return -1;
   }
@@ -193,7 +193,7 @@ int main() {
   puts("Bootstrapping etaHEN.elf...");
 
   mkdir("/data/etaHEN", 0777);
-  // create the payload for exiting lite mode via Johns elf loader
+  // cache decompressed payload for re-launch / recovery
   int fd = open("/data/etaHEN/etaHEN.bin", O_WRONLY | O_CREAT | O_TRUNC, 0666);
   if (fd >= 0) {
 
@@ -207,7 +207,7 @@ int main() {
   }
 
   if(!send_to_elfldr(decompressed, decompress_size)) {
-    notify("The elfldr on port 9021 is REQUIRED for etaHEN make sure its running and try again!");
+    notify("The elfldr on port 9021 is REQUIRED for OrionHEN make sure its running and try again!");
     free(decompressed);
     return -1;
   }
