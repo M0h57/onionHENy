@@ -7,7 +7,7 @@
 #   3) stage vendor blobs (elfldr, kstuff)
 #   4) build daemon + util
 #   5) build bootstrapper  (-> bin/bootstrapper.elf + .lzma)
-#   6) build unpacker / etaHEN.elf   (embeds bootstrapper.elf.lzma)
+#   6) build unpacker / OrionHEN.elf   (embeds bootstrapper.elf.lzma)
 #
 # Usage:
 #   export PS5_PAYLOAD_SDK=/path/to/ps5-payload-sdk
@@ -66,7 +66,7 @@ Options:
   --vendor <path>      Vendor blob directory (default: source/vendor)
   --stub-missing       Create tiny placeholder ELFs if vendor blobs missing
                        (links, but NOT for real hardware)
-  --skip-unpacker      Stop after bootstrapper (no etaHEN.elf unpacker)
+  --skip-unpacker      Stop after bootstrapper (no OrionHEN.elf unpacker)
   --skip-vendor-sync   Do not call scripts/sync_vendor.sh
   --init-submodules    git submodule update --init before sync
   -h, --help           This help
@@ -260,8 +260,8 @@ clean_build_artifacts() {
   rm -rf "${BUILD}"
 
   rm -f \
-    "${SOURCE}/shellui/assets/etaHEN_toolbox.sxml" \
-    "${SOURCE}/shellui/assets/etaHEN_Lite.sxml" \
+    "${SOURCE}/shellui/assets/OrionHEN_toolbox.sxml" \
+    "${SOURCE}/shellui/assets/OrionHEN_Lite.sxml" \
     "${SOURCE}/daemon/assets/shellui.elf" \
     "${SOURCE}/daemon/assets/fps_elf.elf" \
     "${BIN}/daemon.elf" \
@@ -270,7 +270,7 @@ clean_build_artifacts() {
     "${BIN}/bootstrapper.elf.lzma" \
     "${BIN}/bootstrapper.elf.lzma.size" \
     "${BIN}/test.elf" \
-    "${BIN}/etaHEN.elf"
+    "${BIN}/OrionHEN.elf"
 
   ok "old build outputs removed"
 }
@@ -406,18 +406,18 @@ main() {
   if [[ "${SKIP_UNPACKER}" -eq 1 ]]; then
     log "Skip unpacker (--skip-unpacker)"
   else
-    # Phase 5 — final payload (etaHEN.elf embeds lzma bootstrapper)
-    log "Phase 5/5: unpacker (etaHEN.elf)"
-    # Target project name is etaHEN (see unpacker/CMakeLists.txt)
-    if cmake --build "${BUILD}" -j"${JOBS}" --target etaHEN 2>/dev/null; then
-      ok "etaHEN target built"
+    # Phase 5 — final payload (OrionHEN.elf embeds lzma bootstrapper)
+    log "Phase 5/5: unpacker (OrionHEN.elf)"
+    # Target project name is OrionHEN (see unpacker/CMakeLists.txt)
+    if cmake --build "${BUILD}" -j"${JOBS}" --target OrionHEN 2>/dev/null; then
+      ok "OrionHEN target built"
     else
-      build_targets unpacker 2>/dev/null || build_targets etaHEN
+      build_targets unpacker 2>/dev/null || build_targets OrionHEN
     fi
-    if [[ -f "${BIN}/etaHEN.elf" ]]; then
-      ok "final payload: ${BIN}/etaHEN.elf"
+    if [[ -f "${BIN}/OrionHEN.elf" ]]; then
+      ok "final payload: ${BIN}/OrionHEN.elf"
     else
-      warn "etaHEN.elf not found under bin/ — check unpacker target name/output"
+      warn "OrionHEN.elf not found under bin/ — check unpacker target name/output"
       ls -la "${BIN}" || true
     fi
   fi

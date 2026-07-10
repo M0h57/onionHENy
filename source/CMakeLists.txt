@@ -1,6 +1,6 @@
 cmake_minimum_required (VERSION 3.20)
 
-project("etaHEN")
+project("OrionHEN")
 
 set(PROJECT_ROOT "${CMAKE_CURRENT_SOURCE_DIR}")
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_ROOT}/bin)

@@ -31,7 +31,7 @@ include_directories	(SYSTEM "${PS5_PAYLOAD_SDK}")
 include_directories	(SYSTEM "${PS5_PAYLOAD_SDK}/include")
 
 
-set(PROJECT_NAME etaHEN)
+set(PROJECT_NAME OrionHEN)
 add_executable(${PROJECT_NAME})
 set_target_properties(${PROJECT_NAME} PROPERTIES OUTPUT_NAME "${PROJECT_NAME}.elf")
 
