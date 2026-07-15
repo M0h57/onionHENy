@@ -25,28 +25,12 @@ static OnPressResult id_custom_game_opts(OnPressContext &ctx) {
   return OnPressResult::Handled;
 }
 
-static OnPressResult id_start_opt(OnPressContext &ctx) {
-  g_settings.start_option = atoi(ctx.value.c_str());
-  shellui_log("Start option: %d", g_settings.start_option);
-  return OnPressResult::Handled;
-}
-
 static OnPressResult id_selected_cheats_repo(OnPressContext &ctx) {
   g_settings.selected_cheats_repo = atoi(ctx.value.c_str());
   shellui_log("Selected cheats repo: %s",
               g_settings.selected_cheats_repo == CHEATS_REPO_ORIONHEN
                   ? "OrionHEN PS5"
                   : "GoldHEN PS4");
-  return OnPressResult::Handled;
-}
-
-static OnPressResult id_toolbox_auto_start(OnPressContext &ctx) {
-  if (atoi(ctx.value.c_str()) == g_settings.toolbox_auto_start) {
-    shellui_log("toolbox Access already %s",
-                g_settings.toolbox_auto_start ? "Enabled" : "Disabled");
-    return OnPressResult::EarlyReturn;
-  }
-  g_settings.toolbox_auto_start = !g_settings.toolbox_auto_start;
   return OnPressResult::Handled;
 }
 
@@ -74,18 +58,6 @@ static OnPressResult id_rest_3(OnPressContext &ctx) {
     return OnPressResult::EarlyReturn;
   }
   game_rest_kill = !game_rest_kill;
-  return OnPressResult::Handled;
-}
-
-static OnPressResult id_rest_4(OnPressContext &ctx) {
-  bool &disable_for_rest_mode =
-      g_settings.disable_toolbox_auto_start_for_rest_mode;
-  if (atoi(ctx.value.c_str()) == disable_for_rest_mode) {
-    shellui_log("game_rest_kill already %s",
-                disable_for_rest_mode ? "Enabled" : "Disabled");
-    return OnPressResult::EarlyReturn;
-  }
-  disable_for_rest_mode = !disable_for_rest_mode;
   return OnPressResult::Handled;
 }
 
@@ -169,13 +141,10 @@ static OnPressResult id_toolbox_shortcut(OnPressContext &ctx) {
 static const OnPressExactEntry kExact[] = {
     {"id_debug_jb", id_debug_jb},
     {"id_custom_game_opts", id_custom_game_opts},
-    {"id_start_opt", id_start_opt},
     {"id_selected_cheats_repo", id_selected_cheats_repo},
-    {"id_toolbox_auto_start", id_toolbox_auto_start},
     {"id_rest_1", id_rest_1},
     {"id_rest_2", id_rest_2},
     {"id_rest_3", id_rest_3},
-    {"id_rest_4", id_rest_4},
     {"id_enable_fan_speed", id_enable_fan_speed},
     {"id_fan_speed", id_fan_speed},
     {"id_auto_eject", id_auto_eject},

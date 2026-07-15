@@ -77,10 +77,6 @@ void patch_checker(bool rest_resume) {
 
     LoadSettings();
     const orion::Settings cfg = g_settings.snapshot();
-    if (rest_resume && cfg.disable_toolbox_auto_start_for_rest_mode) {
-        OrionHEN_log("Toolbox auto start for rest mode is disabled");
-        return;
-    }
 
     if (rest_resume &&
         orion_toolbox_should_apply_rest_delay(true, cfg.rest_mode_delay_seconds)) {

@@ -50,8 +50,6 @@ const ExactValueEntry kExactValues[] = {
      +[]() -> std::string {
        return bool_str(g_settings.selected_cheats_repo != 0);
      }},
-    {"id_start_opt",
-     +[]() -> std::string { return int_str(g_settings.start_option); }},
     {"id_rest_1",
      +[]() -> std::string {
        return int_str(static_cast<int>(g_settings.rest_mode_delay_seconds));
@@ -62,14 +60,8 @@ const ExactValueEntry kExactValues[] = {
      +[]() -> std::string { return bool_str(g_settings.util_rest_kill); }},
     {"id_rest_3",
      +[]() -> std::string { return bool_str(g_settings.game_rest_kill); }},
-    {"id_rest_4",
-     +[]() -> std::string {
-       return bool_str(g_settings.disable_toolbox_auto_start_for_rest_mode);
-     }},
     {"id_cheats_shortcut",
      +[]() -> std::string { return int_str(g_settings.cheats_shortcut_opt); }},
-    {"id_toolbox_auto_start",
-     +[]() -> std::string { return bool_str(g_settings.toolbox_auto_start); }},
     {"id_debug_jb",
      +[]() -> std::string { return bool_str(g_settings.debug_app_jb_msg); }},
     {"id_debug_legacy_cmd",

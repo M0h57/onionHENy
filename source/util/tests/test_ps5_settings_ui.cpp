@@ -189,11 +189,11 @@ static int test_text_field_and_confirm(void) {
                       "16", "/NP/env", "系统将重启以应用此设置。", "确定,取消")
           .toggle("id_auto_eject", "自动弹出", false, std::nullopt,
                   "desc", std::nullopt, "更改将在下次重启后生效")
-          .list("id_start_opt", "启动后打开",
+          .list("id_cheats_shortcut", "打开金手指菜单",
                 [](ListBuilder& L) {
-                  L.item("id_start_opt_1", "无", "0");
+                  L.item("id_cheats_shortcut_0", "关闭（无快捷键）", "0");
                 },
-                std::nullopt, "0", "更改将在下次重启后生效", "确定, 取消")
+                std::nullopt, "0")
           .label("id_left", "left text", Style::Left)
           .build();
 
@@ -207,8 +207,7 @@ static int test_text_field_and_confirm(void) {
   TEST_ASSERT_TRUE(xml.find("confirm_phrase=\"确定,取消\"") != std::string::npos);
   TEST_ASSERT_TRUE(xml.find("confirm=\"更改将在下次重启后生效\"") !=
                    std::string::npos);
-  TEST_ASSERT_TRUE(xml.find("confirm_phrase=\"确定, 取消\"") !=
-                   std::string::npos);
+  TEST_ASSERT_TRUE(xml.find("id=\"id_cheats_shortcut\"") != std::string::npos);
   TEST_ASSERT_TRUE(xml.find("style=\"left\"") != std::string::npos);
   return 0;
 }

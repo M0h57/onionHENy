@@ -60,9 +60,9 @@ main()
  │
  └─13. for(;;) 主循环 ─────────────────────────────┐
         │                                           │
-        │  无网 + toolbox_auto_start？               │
+        │  无网？                                   │
         │    → sleep / 探测 rest mode              │
-        │    → 可选 patch_checker()                │
+        │    → 可选 patch_checker()（工具箱 reinject） │
         │                                           │
         ├─ pthread_create(cmd_server)      # Legacy CMD :9028
         ├─ LoadSettings() 再刷一次
@@ -324,9 +324,9 @@ IPC `DOWNLOAD_CHEATS`：zip → staging → `orion_cheat_flatten_install_tree` �
 | `/user/data/OrionHEN/<tid>_cheats` | ShellUI 消费的列表 JSON |
 | `/data/OrionHEN/OrionHEN_util_daemon.log` | 运行日志 |
 | `/data/OrionHEN/kstuff.elf` | 下载的 kstuff |
-| `/system_tmp/util_first_boot` | 是否首启（影响 toolbox 自动） |
+| `ORION_FLAG_UTIL_BOOTED` | util 是否已完成过冷启动（typed ready flag） |
 
-`LoadSettings` 读取的主要键（节选）：`toolbox_auto_start`、`legacy_cmd_server`、`disable_toolbox_auto_start_for_rest_mode`。
+`LoadSettings` 读取的主要键（节选）：`legacy_cmd_server`、`Rest_Mode_Delay_Seconds`、`Util_rest_kill`。
 
 ---
 

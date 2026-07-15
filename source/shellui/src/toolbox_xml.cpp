@@ -531,10 +531,7 @@ void append_toolbox_system_group(ps5ui::Group& g) {
                     "从休息模式恢复后将重新启动守护进程")
                 .toggle("id_rest_3", "进入休息模式时自动关闭已打开的游戏",
                         toolbox_on("id_rest_3"),
-                        "进入休息模式时尝试关闭任何已打开的游戏")
-                .toggle("id_rest_4", "进入休息模式时禁用工具箱自动启动",
-                        toolbox_on("id_rest_4"),
-                        "此设置将在下次进入休息模式时禁用工具箱自动启动");
+                        "进入休息模式时尝试关闭任何已打开的游戏");
           },
           "提升休息模式稳定性", std::nullopt, "id_rest_1")
       .link("id_external_hdd", "外接硬盘",
@@ -543,48 +540,27 @@ void append_toolbox_system_group(ps5ui::Group& g) {
             "DebugSettings/data/debug_settings_licenseactivation.xml");
 }
 
-void append_toolbox_startup_group(ps5ui::Group& g) {
-  g.list("id_start_opt", "OrionHEN 加载后自动打开",
+void append_toolbox_shortcuts_group(ps5ui::Group& g) {
+  g.list("id_cheats_shortcut", "打开金手指菜单",
          [](ps5ui::ListBuilder& L) {
-           L.item("id_start_opt_1", "无", "0")
-               .item("id_start_opt_1", "主菜单", "1")
-               .item("id_start_opt_2", "设置", "2")
-               .item("id_start_opt_3", "OrionHEN 工具箱", "3");
+           L.item("id_cheats_shortcut_0", "关闭（无快捷键）", "0")
+               .item("id_cheats_shortcut_1", "按住 R3 + L3", "1")
+               .item("id_cheats_shortcut_2", "按住 L2 + △", "2")
+               .item("id_cheats_shortcut_3", "长按选项键", "3")
+               .item("id_cheats_shortcut_4", "长按分享键", "4")
+               .item("id_cheats_shortcut_5", "单击分享键", "5");
          },
-         std::nullopt, toolbox_val("id_start_opt"), "更改将在下次重启后生效",
-         "确定, 取消")
-      .toggle(
-          "id_toolbox_auto_start", "启动时打开 OrionHEN 工具箱",
-          toolbox_on("id_toolbox_auto_start"),
-          "是否在启动流程中注入/打开工具箱", std::nullopt, std::nullopt,
-          "若禁用，您需要重新添加工具箱或通过 config.ini "
-          "手动修改启动设置，这不会禁用任何自动启动插件")
-      .group(
-          "id_shortcuts", "手柄快捷键",
-          [](ps5ui::Group& s) {
-            s.list("id_cheats_shortcut", "打开金手指菜单",
-                   [](ps5ui::ListBuilder& L) {
-                     L.item("id_cheats_shortcut_0", "关闭（无快捷键）", "0")
-                         .item("id_cheats_shortcut_1", "按住 R3 + L3", "1")
-                         .item("id_cheats_shortcut_2", "按住 L2 + △", "2")
-                         .item("id_cheats_shortcut_3", "长按选项键", "3")
-                         .item("id_cheats_shortcut_4", "长按分享键", "4")
-                         .item("id_cheats_shortcut_5", "单击分享键", "5");
-                   },
-                   "从任意位置（含游戏内）打开金手指菜单",
-                   toolbox_val("id_cheats_shortcut"))
-                .list("id_toolbox_shortcut", "打开 OrionHEN 工具箱",
-                      [](ps5ui::ListBuilder& L) {
-                        L.item("id_toolbox_shortcut_0", "关闭（无快捷键）", "0")
-                            .item("id_toolbox_shortcut_1", "按住 L2 + R3", "1")
-                            .item("id_toolbox_shortcut_2", "长按分享键", "2")
-                            .item("id_toolbox_shortcut_3", "单击分享键", "3");
-                      },
-                      "从任意位置（含游戏内）打开工具箱",
-                      toolbox_val("id_toolbox_shortcut"));
-          },
-          "快捷键在重启后仍然有效（若工具箱处于激活状态），组合键不限于游戏内使用",
-          std::nullopt, "id_cheats_shortcut");
+         "从任意位置（含游戏内）打开金手指菜单",
+         toolbox_val("id_cheats_shortcut"))
+      .list("id_toolbox_shortcut", "打开 OrionHEN 工具箱",
+            [](ps5ui::ListBuilder& L) {
+              L.item("id_toolbox_shortcut_0", "关闭（无快捷键）", "0")
+                  .item("id_toolbox_shortcut_1", "按住 L2 + R3", "1")
+                  .item("id_toolbox_shortcut_2", "长按分享键", "2")
+                  .item("id_toolbox_shortcut_3", "单击分享键", "3");
+            },
+            "从任意位置（含游戏内）打开工具箱",
+            toolbox_val("id_toolbox_shortcut"));
 }
 
 void append_toolbox_debug_group(ps5ui::Group& g) {
@@ -738,11 +714,12 @@ void generate_toolbox_xml(std::string& new_xml) {
       .group(
           "id_group_system", "系统设置",
           [](ps5ui::Group& g) { append_toolbox_system_group(g); },
-          "权限、硬件、存储与休息模式", kIconSettings, "id_toolbox_auto_start")
+          "权限、硬件、存储与休息模式", kIconSettings, "id_disp_titleids")
       .group(
-          "id_utils", "启动与快捷键",
-          [](ps5ui::Group& g) { append_toolbox_startup_group(g); },
-          "启动行为与手柄快捷键", kIconShortcuts, "id_start_opt")
+          "id_utils", "手柄快捷键",
+          [](ps5ui::Group& g) { append_toolbox_shortcuts_group(g); },
+          "快捷键在重启后仍然有效，组合键不限于游戏内使用", kIconShortcuts,
+          "id_cheats_shortcut")
       .group(
           "id_group_debug", "调试选项",
           [](ps5ui::Group& g) { append_toolbox_debug_group(g); },

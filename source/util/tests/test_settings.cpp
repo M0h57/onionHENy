@@ -26,8 +26,8 @@ static int test_defaults_and_serialize_keys(void) {
 
   TEST_ASSERT_TRUE(text.find("[Settings]") != std::string::npos);
   TEST_ASSERT_TRUE(text.find("schema_version=1") != std::string::npos);
-  TEST_ASSERT_TRUE(text.find("toolbox_auto_start=1") != std::string::npos);
   TEST_ASSERT_TRUE(text.find("fan_threshold=77") != std::string::npos);
+  TEST_ASSERT_TRUE(text.find("Util_rest_kill=0") != std::string::npos);
   TEST_ASSERT_TRUE(text.find("legacy_cmd_server=0") != std::string::npos);
   TEST_ASSERT_TRUE(text.find("Overlay_pos=0") != std::string::npos);
   return 0;
@@ -44,7 +44,6 @@ static int test_roundtrip_file(void) {
   in.cheats_shortcut_opt = 2;
   in.selected_cheats_repo = 1;
   in.rest_mode_delay_seconds = 7;
-  in.start_option = 3;
 
   TEST_ASSERT_TRUE(orion::settings_save_file(path.c_str(), in));
 
@@ -57,7 +56,6 @@ static int test_roundtrip_file(void) {
   TEST_ASSERT_EQ_INT(2, out.cheats_shortcut_opt);
   TEST_ASSERT_EQ_INT(1, out.selected_cheats_repo);
   TEST_ASSERT_EQ_U64(7, out.rest_mode_delay_seconds);
-  TEST_ASSERT_EQ_INT(3, out.start_option);
   TEST_ASSERT_EQ_INT(orion::kSettingsSchemaVersion, out.schema_version);
 
   unlink(path.c_str());
@@ -100,11 +98,8 @@ static int test_full_schema_roundtrip(void) {
   TEST_ASSERT_TRUE(!path.empty());
 
   orion::Settings in{};
-  in.toolbox_auto_start = false;
-  in.disable_toolbox_auto_start_for_rest_mode = true;
   in.util_rest_kill = true;
   in.game_rest_kill = true;
-  in.start_option = 2;
   in.rest_mode_delay_seconds = 42;
   in.libhijacker_cheats = true;
   in.debug_app_jb_msg = true;
@@ -128,12 +123,8 @@ static int test_full_schema_roundtrip(void) {
   orion::Settings out{};
   TEST_ASSERT_TRUE(orion::settings_load_file(path.c_str(), &out));
 
-  TEST_ASSERT_TRUE(out.toolbox_auto_start == in.toolbox_auto_start);
-  TEST_ASSERT_TRUE(out.disable_toolbox_auto_start_for_rest_mode ==
-                   in.disable_toolbox_auto_start_for_rest_mode);
   TEST_ASSERT_TRUE(out.util_rest_kill == in.util_rest_kill);
   TEST_ASSERT_TRUE(out.game_rest_kill == in.game_rest_kill);
-  TEST_ASSERT_EQ_INT(in.start_option, out.start_option);
   TEST_ASSERT_EQ_U64(in.rest_mode_delay_seconds, out.rest_mode_delay_seconds);
   TEST_ASSERT_TRUE(out.libhijacker_cheats == in.libhijacker_cheats);
   TEST_ASSERT_TRUE(out.debug_app_jb_msg == in.debug_app_jb_msg);
@@ -162,13 +153,13 @@ static int test_partial_ini_keeps_defaults(void) {
   TEST_ASSERT_TRUE(!path.empty());
   FILE *f = fopen(path.c_str(), "w");
   TEST_ASSERT_TRUE(f != nullptr);
-  fputs("[Settings]\ntoolbox_auto_start=0\n", f);
+  fputs("[Settings]\nUtil_rest_kill=1\n", f);
   fclose(f);
 
   orion::Settings out{};
   TEST_ASSERT_TRUE(orion::settings_load_file(path.c_str(), &out));
   /* specified key applied; unspecified keys stay at defaults */
-  TEST_ASSERT_TRUE(out.toolbox_auto_start == false);
+  TEST_ASSERT_TRUE(out.util_rest_kill == true);
   TEST_ASSERT_EQ_INT(77, out.fan_threshold);
 
   unlink(path.c_str());

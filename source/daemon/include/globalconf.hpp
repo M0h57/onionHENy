@@ -22,13 +22,6 @@ along with this program; see the file COPYING. If not, see
 
 #include <orion/settings.hpp>
 
-enum StartOpts {
-  NONE = 0,
-  HOME_MENU,
-  SETTINGS,
-  TOOLBOX,
-};
-
 // Thread-safe process store (same schema as util / shellui).
 // Readers: g_settings.snapshot().  Writers: g_settings.store / update.
 extern orion::SettingsStore g_settings;

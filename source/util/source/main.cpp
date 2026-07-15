@@ -142,8 +142,7 @@ int main(void) {
         orion_notify(true, "Failed to initialize the HTTP lib, downloading cheats will not work");
     }
 
-    if (g_settings.snapshot().toolbox_auto_start &&
-        orion_ready_is_set(ORION_FLAG_UTIL_BOOTED)) {
+    if (orion_ready_is_set(ORION_FLAG_UTIL_BOOTED)) {
         /* util.elf restarted mid-session (crash recover / re-launch) — not rest. */
         OrionHEN_log("util already booted once — toolbox reinject (not rest)");
         patch_checker(/*rest_resume=*/false);
@@ -153,8 +152,7 @@ int main(void) {
 
     for (;;) {
         // for rest mode we wait til we can restart everything
-        if (g_settings.snapshot().toolbox_auto_start &&
-            get_ip_address(&tmp_buf[0]) < 0) {
+        if (get_ip_address(&tmp_buf[0]) < 0) {
             sleep(1);
 
             bool fail1 = get_ip_address(&tmp_buf[0]) < 0;

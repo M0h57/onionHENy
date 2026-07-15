@@ -50,12 +50,9 @@ inline constexpr const char *kConfigPathShellui = "/user/data/OrionHEN/config.in
 inline constexpr int kSettingsSchemaVersion = 1;
 
 struct Settings {
-  // --- Toolbox ---
-  bool toolbox_auto_start = true;
-  bool disable_toolbox_auto_start_for_rest_mode = false;
+  // --- Rest mode / services ---
   bool util_rest_kill = false;
   bool game_rest_kill = false;
-  int start_option = 0; // 0=NONE, 1=HOME_MENU, 2=SETTINGS, 3=TOOLBOX
   uint64_t rest_mode_delay_seconds = 0;
 
   // --- Cheats / debug ---
@@ -141,9 +138,6 @@ bool settings_ensure_default();
 
 // Path that was last successfully loaded (empty if defaults only).
 const char *settings_last_loaded_path();
-
-// USB override used historically by daemons.
-bool settings_usb_disables_toolbox_auto_start();
 
 /**
  * Max st_mtime across both twin config paths (0 if neither exists).

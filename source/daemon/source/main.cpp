@@ -54,11 +54,6 @@ pthread_t cheat_thr = nullptr;
 
 // Structure definitions
 typedef struct {
-  unsigned int size;
-  uint32_t userId;
-} SceShellUIUtilLaunchByUriParam;
-
-typedef struct {
     int32_t type;             // 0x00
     int32_t req_id;           // 0x04
     int32_t priority;         // 0x08
@@ -106,9 +101,7 @@ extern "C" {
     int sceKernelLoadStartModule(const char *name, size_t argc, const void *argv, 
                                 uint32_t flags, void *unknown, int *result);
     int sceKernelDlsym(uint32_t lib, const char *name, void **fun);
-    //int sceShellUIUtilInitialize(void);
     int scePadClose(int handle);
-    //int sceShellUIUtilLaunchByUri(const char *uri, SceShellUIUtilLaunchByUriParam *Param);
     int sceSystemStateMgrEnterStandby(void);
     int sceKernelMprotect(void *addr, size_t len, int prot);
     ssize_t _read(int, void *, size_t);
@@ -133,7 +126,6 @@ uintptr_t kernel_base = 0;
 
 // Function declarations
 int launchApp(const char *titleId);
-int ItemzLaunchByUri(const char *uri);
 bool enable_toolbox();
 void sig_handler(int signo);
 int elfldr_raise_privileges(pid_t pid);
@@ -206,23 +198,6 @@ void install_crash_handlers() {
     sigaction(i, &action, nullptr);
 }
 
-/** URI opened after daemon is up (home / toolbox / settings). */
-const char* startup_uri_for_option(int start_option, bool toolbox_auto_start) {
-  switch (start_option) {
-  case HOME_MENU:
-    return "pshomeui:navigateToHome?bootCondition=psButton";
-  case TOOLBOX:
-    return toolbox_auto_start
-               ? "pssettings:play?mode=settings&function=debug_settings_old"
-               : "pshomeui:navigateToHome?bootCondition=psButton";
-  case SETTINGS:
-    return "pssettings:play?mode=settings";
-  default:
-    OrionHEN_log("unknown opt %d", start_option);
-    return nullptr;
-  }
-}
-
 void start_worker_threads(pthread_t* fifo_thr, pthread_t* pt_thr, pthread_t* msg_thr) {
   pthread_create(fifo_thr, nullptr, fifo_and_dumper_thread, nullptr);
   pthread_create(pt_thr, nullptr, Play_time_thread, nullptr);
@@ -293,34 +268,6 @@ void sig_handler(int signo) {
     exit(1);
 }
 
-int (*sceShellUIUtilInitialize)(void) = nullptr;
-int (*sceShellUIUtilLaunchByUri)(const char* uri, SceShellUIUtilLaunchByUriParam* Param) = nullptr;
-#define KERNEL_DLSYM(handle, sym) \
-    (*(void**)&sym=(void*)kernel_dynlib_dlsym(-1, handle, #sym))
-int ItemzLaunchByUri(const char* uri) {
-    int libcmi = -1;
-
-    if (!uri)
-        return -1;
-
-    if ((libcmi = sceKernelLoadStartModule("/system_ex/common_ex/lib/libSceShellUIUtil.sprx", 0, 0, 0, 0, 0)) < 0 || libcmi < 0)
-        return -1;
-
-    KERNEL_DLSYM(libcmi, sceShellUIUtilInitialize);
-    KERNEL_DLSYM(libcmi, sceShellUIUtilLaunchByUri);
-    if (!sceShellUIUtilInitialize || !sceShellUIUtilLaunchByUri) {
-        OrionHEN_log("failed to load libSceShellUIUtil.sprx");
-        return -1;
-    }
-    //
-    SceShellUIUtilLaunchByUriParam Param;
-    Param.size = sizeof(SceShellUIUtilLaunchByUriParam);
-    sceShellUIUtilInitialize();
-    sceUserServiceGetForegroundUser((int*)&Param.userId); // DONT CARE
-
-    return sceShellUIUtilLaunchByUri(uri, &Param);
-}
-
 bool is_800 = false;
 
 int main() {
@@ -377,24 +324,13 @@ int main() {
   OrionHEN_log("is toolbox only: %s | ver: %x", toolbox_only ? "Yes" : "No",
                sys_ver.version);
 
-  const orion::Settings boot_cfg = g_settings.snapshot();
-  if (boot_cfg.toolbox_auto_start) {
-    cmd_enable_toolbox();
-  } else {
-    orion_notify(true,
-                 "the OrionHEN Toolbox auto start is disabled in the config.ini\n\n"
-                 "Re-enable toolbox_auto_start in /data/OrionHEN/config.ini or open "
-                 "Debug Settings");
-  }
+  /* Always inject toolbox into ShellUI; do not auto-open any settings page. */
+  cmd_enable_toolbox();
 
   sceNotificationSend(0xFE, true, kWelcomeToastJson);
   OrionHEN_log("StartUp thread created!! - welcome to OrionHEN");
 
-  if (const char* uri =
-          startup_uri_for_option(boot_cfg.start_option, boot_cfg.toolbox_auto_start)) {
-    OrionHEN_log("ret %d", ItemzLaunchByUri(uri));
-  }
-
+  const orion::Settings boot_cfg = g_settings.snapshot();
   if (boot_cfg.auto_eject_disc)
     sceShellCoreUtilRequestEjectDevice("/dev/cd0");
 

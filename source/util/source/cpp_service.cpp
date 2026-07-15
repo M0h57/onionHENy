@@ -295,10 +295,7 @@ void check_addr_change(void) {
             OrionHEN_log("Coming out rest mode, activating patches");
             
 
-            const orion::Settings cfg = g_settings.snapshot();
-            if (cfg.toolbox_auto_start &&
-                !cfg.disable_toolbox_auto_start_for_rest_mode &&
-                !enable_toolbox()) {
+            if (!enable_toolbox()) {
                 orion_notify(true, "Failed to inject toolbox");
             }
         }

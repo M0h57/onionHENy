@@ -326,7 +326,7 @@ bool cmd_enable_toolbox(){
     /*
      * A previous ShellUI crash or direct daemon restart can leave either the
      * modern or legacy toolbox-ready marker behind. Consume only a signal
-     * produced by this injection; otherwise StartOption=TOOLBOX may launch a
+     * produced by this injection; otherwise callers may race a not-ready
      * settings scene while the new module is still installing its hooks.
      */
     orion_ready_clear(ORION_READY_TOOLBOX);

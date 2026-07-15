@@ -203,12 +203,10 @@ Settings file: **`/data/OrionHEN/config.ini`** (created on first run).
 
 | INI key | Description | Default |
 |---------|-------------|---------|
-| `toolbox_auto_start` | 0 = off, 1 = on | 1 |
 | `Allow_data_in_sandbox` | **Ignored** (sandbox `/data` patch removed) | 0 |
-| `Rest_Mode_Delay_Seconds` | Delay before shellui patch after rest | 0 |
+| `Rest_Mode_Delay_Seconds` | Delay before shellui reinject after rest | 0 |
 | `Util_rest_kill` | Kill util daemon on rest | 0 |
 | `Game_rest_kill` | Kill open game on rest | 0 |
-| `disable_toolbox_auto_start_for_rest_mode` | Disable toolbox autostart after rest | 0 |
 | `Display_tids` | Show title IDs | 0 |
 | `APP_JB_Debug_Msg` | App jailbreak debug messages | 0 |
 | `OrionHEN_Game_Options` | Game options menu | 1 |

@@ -51,19 +51,10 @@ long atol_def(const char *s, long def) {
 }
 
 void apply_parser(IniParser *parser, Settings *out) {
-  out->toolbox_auto_start =
-      atoi_def(ini_parser_get(parser, "Settings.toolbox_auto_start", "1"), 1) != 0;
-  out->disable_toolbox_auto_start_for_rest_mode =
-      atoi_def(ini_parser_get(parser,
-                              "Settings.disable_toolbox_auto_start_for_rest_mode",
-                              "0"),
-               0) != 0;
   out->util_rest_kill =
       atoi_def(ini_parser_get(parser, "Settings.Util_rest_kill", "0"), 0) != 0;
   out->game_rest_kill =
       atoi_def(ini_parser_get(parser, "Settings.Game_rest_kill", "0"), 0) != 0;
-  out->start_option =
-      atoi_def(ini_parser_get(parser, "Settings.StartOption", "0"), 0);
   out->rest_mode_delay_seconds = static_cast<uint64_t>(
       atol_def(ini_parser_get(parser, "Settings.Rest_Mode_Delay_Seconds", "0"), 0));
   out->libhijacker_cheats =
@@ -143,13 +134,8 @@ std::string settings_serialize(const Settings &in) {
   b.reserve(1024);
   b += "[Settings]\n";
   b += "schema_version=" + std::to_string(kSettingsSchemaVersion) + "\n";
-  b += "toolbox_auto_start=" + std::to_string(in.toolbox_auto_start ? 1 : 0) +
-       "\n";
-  b += "disable_toolbox_auto_start_for_rest_mode=" +
-       std::to_string(in.disable_toolbox_auto_start_for_rest_mode ? 1 : 0) + "\n";
   b += "Util_rest_kill=" + std::to_string(in.util_rest_kill ? 1 : 0) + "\n";
   b += "Game_rest_kill=" + std::to_string(in.game_rest_kill ? 1 : 0) + "\n";
-  b += "StartOption=" + std::to_string(in.start_option) + "\n";
   b += "Rest_Mode_Delay_Seconds=" +
        std::to_string(static_cast<unsigned long long>(in.rest_mode_delay_seconds)) +
        "\n";
@@ -199,19 +185,10 @@ bool settings_load(Settings *out) {
 
   // Prefer elevated path, then shellui sandbox view.
   if (try_load_path(kConfigPathPrimary, out)) {
-    if (settings_usb_disables_toolbox_auto_start()) {
-      out->toolbox_auto_start = false;
-    }
     return true;
   }
   if (try_load_path(kConfigPathShellui, out)) {
-    if (settings_usb_disables_toolbox_auto_start()) {
-      out->toolbox_auto_start = false;
-    }
     return true;
-  }
-  if (settings_usb_disables_toolbox_auto_start()) {
-    out->toolbox_auto_start = false;
   }
   return false;
 }
@@ -237,11 +214,6 @@ bool settings_ensure_default() {
 }
 
 const char *settings_last_loaded_path() { return g_last_loaded; }
-
-bool settings_usb_disables_toolbox_auto_start() {
-  struct stat st {};
-  return stat("/mnt/usb0/toolbox_auto_start", &st) == 0;
-}
 
 static time_t path_mtime(const char *path) {
   if (!path) {
