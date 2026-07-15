@@ -34,6 +34,7 @@ along with this program; see the file COPYING. If not, see
 #include <sys/socket.h>
 #include <sys/un.h>
 #include <sys/sysctl.h>
+#include <sys/syscall.h>
 #include <sys/_pthreadtypes.h>
 #include <sys/signal.h>
 #include <netinet/in.h>
@@ -323,6 +324,9 @@ int ItemzLaunchByUri(const char* uri) {
 bool is_800 = false;
 
 int main() {
+  /* Raw 9021 uploads default to "payload.elf"; publish our stable name. */
+  (void)syscall(SYS_thr_set_name, -1, "daemon.elf");
+
   orion_log_configure("OrionHEN", "/data/OrionHEN/OrionHEN.log");
   /* Real linked kernel export (not a dlsym function-pointer variable). */
   orion_notify_set_send(reinterpret_cast<orion_notify_send_fn>(

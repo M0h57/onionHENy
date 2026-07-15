@@ -32,6 +32,11 @@
 
 extern bool is_800;
 
+extern "C" {
+extern uint8_t util_elf_start[];
+extern const unsigned int util_elf_size;
+}
+
 namespace {
 
 pthread_mutex_t jb_lock = PTHREAD_MUTEX_INITIALIZER;
@@ -72,19 +77,19 @@ void *fifo_and_dumper_thread(void *args) noexcept {
 
       if (++retries >= kMaxRetries) {
         orion_notify(true,
-                     "OrionHEN Utility services failed to restart — check elfldr "
-                     ":9021 and /data/OrionHEN/daemons/util.elf");
+                     "OrionHEN Utility services failed to restart — check "
+                     "elfldr :9021");
         continue;
       }
 
-      bool ok = elfldr_remote_send_file_uri("/data/OrionHEN/daemons/util.elf");
+      bool ok = elfldr_remote_send_bytes(util_elf_start, util_elf_size);
       if (ok) {
         sleep(2);
         OrionHEN_log("  Launched util via 9021!");
         orion_notify(true, "OrionHEN Utility services successfully restarted");
         retries = 0;
       } else {
-        OrionHEN_log("failed to launch util via 9021 (need elfldr + util.elf), retry: %d",
+        OrionHEN_log("failed to launch embedded util via 9021, retry: %d",
                      retries);
       }
     }

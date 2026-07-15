@@ -27,6 +27,7 @@ extern "C" {
 #include <cstdint>
 #include <hijacker/hijacker.hpp>
 #include <sys/_pthreadtypes.h>
+#include <sys/syscall.h>
 #include <unistd.h>
 
 typedef struct app_info {
@@ -94,6 +95,9 @@ bool LoadSettings() {
 }
 
 int main(void) {
+    /* Raw 9021 uploads default to "payload.elf"; publish our stable name. */
+    (void)syscall(SYS_thr_set_name, -1, "util.elf");
+
     pthread_t ipc_server = 0;
     char tmp_buf[200];
     

@@ -25,4 +25,17 @@
 	"fps_elf_size:\n"
     	".int    fps_elf_end - fps_elf_start\n"
 
+	/* Keep util in memory so the daemon watchdog can restart it without disk. */
+	".global util_elf_start\n"
+	".type   util_elf_start, @object\n"
+	".align  16\n"
+	"util_elf_start:\n"
+		".incbin \"../../bin/util.elf\"\n"
+	"util_elf_end:\n"
+		".global util_elf_size\n"
+		".type   util_elf_size, @object\n"
+		".align  4\n"
+	"util_elf_size:\n"
+		".int    util_elf_end - util_elf_start\n"
+
 );

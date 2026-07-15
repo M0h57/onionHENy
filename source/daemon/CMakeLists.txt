@@ -60,11 +60,11 @@ set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O0 ")
 
 target_sources(${PROJECT_NAME} PRIVATE ${SrcFiles} "${PROJECT_ROOT}/lib/elfldr_remote.c")
 # .incbin in embeddded_payloads.c is invisible to the compiler dependency scanner.
-# Without OBJECT_DEPENDS, shellui/fps_elf rebuilds do not re-embed into daemon.elf.
+# Without OBJECT_DEPENDS, embedded payload rebuilds do not re-embed into daemon.elf.
 set_source_files_properties(
 	${D_SRC}/embeddded_payloads.c
 	PROPERTIES OBJECT_DEPENDS
-		"${D_CWD}/assets/shellui.elf;${D_CWD}/assets/fps_elf.elf"
+		"${D_CWD}/assets/shellui.elf;${D_CWD}/assets/fps_elf.elf;${PROJECT_ROOT}/bin/util.elf"
 )
 target_include_directories(${PROJECT_NAME} PRIVATE
 	"${D_CWD}/include"
@@ -75,8 +75,8 @@ target_include_directories(${PROJECT_NAME} PRIVATE
 	"${PROJECT_ROOT}/include"
 )
 target_link_directories	(${PROJECT_NAME} PUBLIC "${PROJECT_ROOT}/lib")
-add_dependencies(${PROJECT_NAME} NineS shellui hijacker orion_settings orion_ipc orion_proc orion_platform orion_ready orion_playtime orion_elfldr)
-# Launches util via external 9021 elfldr (no local libelfldr spawn)
+add_dependencies(${PROJECT_NAME} util NineS shellui hijacker orion_settings orion_ipc orion_proc orion_platform orion_ready orion_playtime orion_elfldr)
+# Restarts the embedded util bytes via external 9021 elfldr.
 target_link_libraries	(${PROJECT_NAME} PUBLIC orion_ipc orion_settings orion_proc orion_platform orion_ready orion_playtime orion_elfldr hijacker ScePad SceSystemService SceNotification SceNet SceRegMgr SceSysmodule SceUserService SceNetCtl SceSysCore kernel_sys NineS)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 # Add post-build command
@@ -84,4 +84,3 @@ add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
     COMMAND ${CMAKE_OBJCOPY} --remove-section .debug_info --remove-section .debug_abbrev --remove-section .debug_line --remove-section .debug_str --remove-section .debug_loc --remove-section .debug_aranges --remove-section .debug_ranges --remove-section .debug_pubnames --remove-section .debug_pubtypes --remove-section .debug_frame --strip-unneeded $<TARGET_FILE:${PROJECT_NAME}>
     COMMENT "Stripping debugging information from ${PROJECT_NAME}.elf"
 )
-

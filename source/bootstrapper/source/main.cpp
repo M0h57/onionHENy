@@ -636,29 +636,9 @@ void free_payload_files(char **plugin_files) {
 /*=================== Launch pipeline (phased) =========================*/
 /*
  * Policy: NO local spawn.
- * 1) write_daemon_elfs  — util/daemon/kstuff to disk
- * 2) launch_chain       — elfldr :9021 file: URI, util → kstuff → daemon
- * 3) load_autostart_payloads — payloads .elf with .auto_start (skip *elfldr*)
+ * 1) launch_chain — send embedded util/kstuff/daemon bytes to elfldr :9021
+ * 2) load_autostart_payloads — payloads .elf with .auto_start (skip *elfldr*)
  */
-
-static bool write_elf_file(const char *path, const uint8_t *elf, size_t size) {
-  mkdir("/data/OrionHEN", 0777);
-  mkdir("/data/OrionHEN/daemons", 0777);
-  int fd = open(path, O_WRONLY | O_CREAT | O_TRUNC, 0777);
-  if (fd < 0)
-    return false;
-  size_t off = 0;
-  while (off < size) {
-    ssize_t n = write(fd, elf + off, size - off);
-    if (n <= 0) {
-      close(fd);
-      return false;
-    }
-    off += (size_t)n;
-  }
-  close(fd);
-  return true;
-}
 
 static void kill_by_name(const char *a, const char *b) {
   int p = -1;
@@ -669,10 +649,10 @@ static void kill_by_name(const char *a, const char *b) {
   }
 }
 
-static bool launch_path(const char *path, const char *label,
+static bool launch_blob(const uint8_t *elf, size_t size, const char *label,
                         const char *wait_name) {
-  klog_printf("9021 file: %s (%s)\n", path, label);
-  if (!elfldr_remote_send_file_uri(path)) {
+  klog_printf("9021 memory ELF: %s (%zu bytes)\n", label, size);
+  if (!elfldr_remote_send_bytes(elf, size)) {
     klog_printf("  send FAILED %s\n", label);
     return false;
   }
@@ -687,26 +667,6 @@ static bool launch_path(const char *path, const char *label,
   return true;
 }
 
-/** Write util/daemon/kstuff ELF blobs under /data/OrionHEN. Returns 0 or -2. */
-static int write_daemon_elfs(void) {
-  klog_puts("Writing daemon ELFs to /data/OrionHEN/daemons ...");
-  if (!write_elf_file("/data/OrionHEN/daemons/util.elf", util_start, util_size)) {
-    notify("failed to write util.elf");
-    return -2;
-  }
-  if (!write_elf_file("/data/OrionHEN/daemons/daemon.elf", daemon_start,
-                      daemon_size)) {
-    notify("failed to write daemon.elf");
-    return -2;
-  }
-  if (!if_exists("/data/OrionHEN/kstuff.elf")) {
-    (void)write_elf_file("/data/OrionHEN/daemons/kstuff.elf", kstuff_start,
-                         (size_t)kstuff_size);
-  }
-  klog_puts("   Daemon ELFs written");
-  return 0;
-}
-
 /**
  * Launch util → kstuff → daemon via elfldr :9021 (serialized).
  * Soft-fails kstuff; hard-fails missing elfldr / util / daemon.
@@ -717,11 +677,10 @@ static int launch_chain(const OrbisKernelSwVersion &sys_ver) {
 
   if (!elfldr_remote_available()) {
     klog_puts("FATAL: no elfldr on 127.0.0.1:9021");
-    notify("Start elfldr on 9021 first, then re-run. ELFs are on disk under "
-           "/data/OrionHEN/daemons/");
+    notify("Start elfldr on 9021 first, then re-run OrionHEN.");
     return -2;
   }
-  klog_puts("elfldr :9021 OK - launching via file URI (serialized)");
+  klog_puts("elfldr :9021 OK - launching embedded ELFs (serialized)");
   sleep(3); /* settle after remount/unmount */
 
   /*
@@ -738,7 +697,7 @@ static int launch_chain(const OrbisKernelSwVersion &sys_ver) {
   orion_ready_clear(ORION_FLAG_UTIL_BOOTED);
   orion_ready_clear(ORION_FLAG_FPS_OVERLAY);
 
-  if (!launch_path("/data/OrionHEN/daemons/util.elf", "util", "util.elf")) {
+  if (!launch_blob(util_start, util_size, "util", "util.elf")) {
     notify("failed to launch util via elfldr :9021");
     return -2;
   }
@@ -752,10 +711,16 @@ static int launch_chain(const OrbisKernelSwVersion &sys_ver) {
     orion_ready_signal(ORION_READY_KSTUFF);
   } else if (sys_ver.version >= 0x3000000) {
     klog_puts("Loading kstuff via 9021 (before daemon/toolbox) ...");
-    const char *kpath = if_exists("/data/OrionHEN/kstuff.elf")
-                            ? "/data/OrionHEN/kstuff.elf"
-                            : "/data/OrionHEN/daemons/kstuff.elf";
-    if (launch_path(kpath, "kstuff", "kstuff.elf")) {
+    uint8_t *override_elf = nullptr;
+    size_t override_size = 0;
+    if (if_exists("/data/OrionHEN/kstuff.elf"))
+      override_elf = orion_payload_read_file("/data/OrionHEN/kstuff.elf",
+                                             &override_size);
+    const uint8_t *kelf = override_elf ? override_elf : kstuff_start;
+    const size_t kelf_size = override_elf ? override_size : (size_t)kstuff_size;
+    const bool kstuff_sent = launch_blob(kelf, kelf_size, "kstuff", "kstuff.elf");
+    free(override_elf);
+    if (kstuff_sent) {
       int wait = 0;
       bool not_loaded = true;
       while ((not_loaded = (sceKernelMprotect(&buz[0], 100, 0x7) < 0))) {
@@ -780,8 +745,7 @@ static int launch_chain(const OrbisKernelSwVersion &sys_ver) {
   klog_puts("Starting daemon via 9021 (toolbox inject) ...");
   kill_by_name("daemon.elf", "OrionHEN Critical");
   orion_ready_clear(ORION_READY_DAEMON);
-  if (!launch_path("/data/OrionHEN/daemons/daemon.elf", "daemon",
-                   "daemon.elf")) {
+  if (!launch_blob(daemon_start, daemon_size, "daemon", "daemon.elf")) {
     notify("failed to launch daemon via elfldr :9021");
     return -2;
   }
@@ -854,7 +818,6 @@ int main(void) {
   // Directory layout
   mkdir("/data/OrionHEN", 0777);
   mkdir("/data/OrionHEN/payloads", 0777);
-  mkdir("/data/OrionHEN/daemons", 0777);
   mkdir("/data/OrionHEN/assets", 0777);
   mkdir("/data/OrionHEN/games", 0777);
 
@@ -886,11 +849,7 @@ int main(void) {
     unmount("/update", 0);
   klog_puts("   Success!");
 
-  int rc = write_daemon_elfs();
-  if (rc != 0)
-    return rc;
-
-  rc = launch_chain(sys_ver);
+  int rc = launch_chain(sys_ver);
   if (rc != 0)
     return rc;
 
