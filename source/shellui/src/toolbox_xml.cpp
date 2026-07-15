@@ -6,6 +6,7 @@
 
 #include "HookedFuncs.hpp"
 #include "RemotePlay.h"
+#include "defs.h"
 #include "external_symbols.hpp"
 #include "ipc.hpp"
 #include "ps5_settings_ui.hpp"
@@ -595,77 +596,43 @@ void append_toolbox_about_group(ps5ui::Group& g) {
                  ps5ui::Style::Center)
              .label("id_method_1",
                     "- GitHub Sponsors  | https://github.com/sponsors/LightningMods",
+                    ps5ui::Style::Center)
+             .label("id_method_2",
+                    "- GoldHEN / SiSTR0  | https://ko-fi.com/sistro",
                     ps5ui::Style::Center);
        },
        toolbox_i18n::tr("about.donate.sub"))
       .group(
           "id_onionhen_credits", toolbox_i18n::tr("about.credits"),
           [](ps5ui::Group& c) {
-            c.label("id_onionhen_creds_display", "★ OnionHEN Beta 2.5",
-                    ps5ui::Style::Center)
-                .label("id_lead_devs", toolbox_i18n::tr("about.lead"),
+            const std::string ver =
+                std::string("★ OnionHEN ") + OnionHEN_VERSION;
+            c.label("id_about_version", ver, ps5ui::Style::Center)
+                .label("id_about_lineage", toolbox_i18n::tr("about.lineage"),
                        ps5ui::Style::Center)
-                .label("id_lead_devs_2",
-                       "- LM (X @LightningMods_, GitHub @LightningMods, Discord "
-                       "@lm_dev)",
+                .label("id_about_lineage_1",
+                       toolbox_i18n::tr("about.lineage.etahen"),
                        ps5ui::Style::Center)
-                .label("id_ddkdkd", toolbox_i18n::tr("about.contributors"),
+                .label("id_about_lineage_2",
+                       toolbox_i18n::tr("about.lineage.goldhen"),
                        ps5ui::Style::Center)
-                .label("id_major_line",
-                       "Specter - Byepervisor          astrelsky          "
-                       "ChendoChap       sleirsgoevy - Kstuff",
+                .label("id_about_testers", toolbox_i18n::tr("about.testers"),
                        ps5ui::Style::Center)
-                .label("id_major_line_3", toolbox_i18n::tr("about.elfldr_etc"),
+                .label("id_about_testers_intro",
+                       toolbox_i18n::tr("about.testers.intro"),
                        ps5ui::Style::Center)
-                .label("id_99877777", toolbox_i18n::tr("about.more"),
+                /* Names from kylin-core-web non-OEM KcContributorModal avatars. */
+                .label("id_about_tester_1",
+                       "B站谢锡榆 · Misy · pj123rock · 风吹屁屁凉 · 风清扬",
                        ps5ui::Style::Center)
-                .label("id_99555557", toolbox_i18n::tr("about.repo"),
+                .label("id_about_tester_2",
+                       "狂爱龙卷风 · 萌面超人 · 石之心 · 西安萼片 · 萧河",
                        ps5ui::Style::Center)
-                .label("id_8585858", toolbox_i18n::tr("about.thanks"),
+                .label("id_about_tester_3",
+                       "心どいの小霖 · 夜太美 · 影TGlobal-sky",
                        ps5ui::Style::Center)
-                .label("id_60606066",
-                       "MODDED WARFARE, Bucanero, Echo Stretch, "
-                       "CurrentGenGamesWithNick, Reo Auin, illusion, "
-                       "nanospeedgamer, Nomadic, Michael Crump, Br0ken4life, "
-                       "Mouuu, Newhouse-Estates, Dr Angry ",
-                       ps5ui::Style::Left)
-                .label("id_60888880",
-                       "Richard Stoltz, Not So Typical Gamer, Doobie, MC, "
-                       "WWIII, dutchfavx, Pulsar, gorshco, illix, Ya Boi "
-                       "Michael, Nineof09, Lostferwords, Kevin, kUiTs, ram",
-                       ps5ui::Style::Left)
-                .label("id_606064330",
-                       "onstar, Mapleditch, pyksy, Puky70, TheBoySassy21, "
-                       "Arnooooo, Jacksun, William, MauricioRodriguez, "
-                       "Micaiah, Madmac, Grit, dIGIMAN/TRSI, xe, Priyesh Patel",
-                       ps5ui::Style::Left)
-                .label("id_60606770",
-                       "JUNGLIST, Mega, smoothcriminal, Aka3z, Btet, 星空尽头, "
-                       "Tunc, Pitouuuu, Moha, proton, teotl, Hector, Osensama, "
-                       "Trope, x, jack favvv, lbc, Jay, mstrdtchs",
-                       ps5ui::Style::Left)
-                .label("id_606069990",
-                       "rookie_mx, SvenGDK, jose Gonzalez, Lysy767, Alfr3d, "
-                       "Fey, Knight1701, Efrain, Hernie, Johns, Madz, CRUCHI, "
-                       "koldoborne, slang777, Puffinz, Tv, Ubaldo Navarro",
-                       ps5ui::Style::Left)
-                .label("id_606099960",
-                       "Escaflowne, SrBonet, Gauban, joao, El01unO, SrBonet, "
-                       "Rayyden, CZ, Efrain De Alba, aide199a, Acesmokemall, "
-                       "Mheepae3029, fresno, wiiiiiz, aln, Eli, marusa Bucicas",
-                       ps5ui::Style::Left)
-                .label("id_606055560",
-                       "Ion Florin Berusca, Bbuster, Dimitar, ROBERHUGO, "
-                       "PlayStationHaX, TecnoConsolas, "
-                       "mega_lelikUAPS4_5.55, An21V1rus, cyberrep, "
-                       "PlanetaryNoob, chiagre, Samwise, Fortderrick",
-                       ps5ui::Style::Left)
-                .label("id_6060ttttt0",
-                       "ChimeFix, PeenButt, Wr0zen, Shawncarnage, Kuny, "
-                       "Cruznik, Vicen, shagy #8543, pepitopajas, Jakob "
-                       "Trammell, Austin Meer, scrdcow, XDOSEX, Kleei, Pif, "
-                       "ajslayer",
-                       ps5ui::Style::Left);
+                .label("id_about_more", toolbox_i18n::tr("about.more"),
+                       ps5ui::Style::Center);
           },
           toolbox_i18n::tr("about.credits.sub"))
       .group(
@@ -674,38 +641,38 @@ void append_toolbox_about_group(ps5ui::Group& g) {
             p.label("id_project_info", toolbox_i18n::tr("about.projects.info"),
                     ps5ui::Style::Center)
                 .label("id_project_1",
-                       "PS5 Payload Dev SDK - "
-                       "https://github.com/ps5-payload-dev/sdk",
+                       "etaHEN — https://github.com/LightningMods/etaHEN",
                        ps5ui::Style::Center)
                 .label("id_project_2",
-                       "PS5 Payload Dev elfldr - "
-                       "https://github.com/ps5-payload-dev/elfldr",
+                       "PS5 Payload Dev SDK — "
+                       "https://github.com/ps5-payload-dev/sdk",
                        ps5ui::Style::Center)
                 .label("id_project_3",
-                       "PS5 Dev Byepervisor - "
-                       "https://github.com/PS5Dev/Byepervisor",
+                       "PS5 Payload Dev elfldr — "
+                       "https://github.com/ps5-payload-dev/elfldr",
                        ps5ui::Style::Center)
-                .label("id_project_4", "Kstuff by sleirsgoevy",
-                       ps5ui::Style::Center)
-                .label("id_project_5",
-                       "7-Zip LZMA - https://www.7-zip.org/sdk.html",
-                       ps5ui::Style::Center)
-                .label("id_project_6",
-                       "Libhijacker by astrelsky - "
+                .label("id_project_4",
+                       "libhijacker (astrelsky) — "
                        "https://github.com/astrelsky/libhijacker",
                        ps5ui::Style::Center)
+                .label("id_project_5",
+                       "NineS (buzzer-re) — "
+                       "https://github.com/buzzer-re/NineS",
+                       ps5ui::Style::Center)
+                .label("id_project_6",
+                       "kstuff (sleirsgoevy / EchoStretch)",
+                       ps5ui::Style::Center)
                 .label("id_project_7",
-                       "PS5-SELF-Decrypter by Specter - "
-                       "https://github.com/Cryptogenic/PS5-SELF-Decrypter",
+                       "cJSON — https://github.com/DaveGamble/cJSON",
                        ps5ui::Style::Center)
                 .label("id_project_8",
-                       "PS5Debug by CTN - https://github.com/GoldHEN/ps5debug",
+                       "pugixml — https://github.com/zeux/pugixml",
                        ps5ui::Style::Center)
                 .label("id_project_9",
-                       "LibNineS - https://github.com/buzzer-re/NineS",
+                       "7-Zip LZMA SDK — https://www.7-zip.org/sdk.html",
                        ps5ui::Style::Center)
                 .label("id_project_10",
-                       "cJSON - https://github.com/DaveGamble/cJSON",
+                       "miniz / Keystone (cheats engine)",
                        ps5ui::Style::Center);
           },
           toolbox_i18n::tr("about.projects.sub"));
