@@ -36,10 +36,10 @@ void ForceKillProc(int pid);
 bool set_fan_threshold(int temp);
 
 /**
- * Tear down OrionHEN stack (does not return). Caller should reply to IPC first.
+ * Tear down OrionHEN userland (does not return). Caller should reply to IPC first.
  *
- * Sequence: stop kstuff → stop daemon → stop util → restart SceShellUI.
- * Implemented via a short-lived fork so steps after daemon exit still run.
+ * Sequence: stop util → restart SceShellUI → exit this daemon.
+ * Does NOT kill kstuff — hard-unloading kernel patches panics the console.
  */
 [[noreturn]] void cmd_shutdown_orion_stack(void);
 

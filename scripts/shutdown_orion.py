@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
 """Shut down OrionHEN stack on a PS5 from a PC (LAN).
 
-Sequence (daemon side, forked orchestrator):
-  1. stop kstuff
-  2. stop daemon.elf
-  3. stop util.elf
-  4. restart SceShellUI (kill → system respawn)
+Sequence (daemon side):
+  1. stop util.elf
+  2. restart SceShellUI (kill → system respawn)
+  3. exit daemon.elf
+
+kstuff is intentionally left running — SIGKILL of kstuff panics the kernel.
 
 Wire (TCP port 9048, little-endian):
   request:  u32 magic=0x4F52494F ('ORIO') + u32 cmd=1 (SHUTDOWN)
@@ -46,7 +47,7 @@ def shutdown(host: str, port: int = ORION_CTRL_TCP_PORT, timeout: float = 5.0) -
         print("shutdown requested (no reply byte; daemon may have exited)")
         return 0
     if reply[0] == 0:
-        print("shutdown accepted: kstuff → daemon → util → restart ShellUI")
+        print("shutdown accepted: util → restart ShellUI → daemon (kstuff remains)")
         return 0
     print(f"daemon rejected frame (byte={reply[0]})", file=sys.stderr)
     return 1
