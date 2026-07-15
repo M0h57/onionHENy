@@ -21,9 +21,15 @@ endif()
 message("IS_SUBPROJECT: ${IS_SUBPROJECT}")
 
 set(D_CWD "${CMAKE_CURRENT_SOURCE_DIR}")
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${D_CWD}/../bin)
-set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${D_CWD}/bin)
-set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${D_CWD}/bin)	# static libs are archive
+if(DEFINED ORIONHEN_OUT_BIN)
+	set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${ORIONHEN_OUT_BIN})
+	set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${ORIONHEN_OUT_LIB})
+	set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${ORIONHEN_OUT_LIB})
+else()
+	set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${D_CWD}/../bin)
+	set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${D_CWD}/bin)
+	set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${D_CWD}/bin)
+endif()
 set(D_SRC ${D_CWD}/source)
 
 # Headers
@@ -63,10 +69,17 @@ set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O0")
 target_sources(${PROJECT_NAME} PRIVATE ${SrcFiles})
 # .incbin in daemon.c is invisible to the compiler dependency scanner.
 # Without OBJECT_DEPENDS, daemon/util/kstuff rebuilds do not re-embed into bootstrapper.
+if(DEFINED ORIONHEN_OUT_BIN)
+	set(_orion_daemon_elf "${ORIONHEN_OUT_BIN}/daemon.elf")
+	set(_orion_util_elf "${ORIONHEN_OUT_BIN}/util.elf")
+else()
+	set(_orion_daemon_elf "${PROJECT_ROOT}/bin/daemon.elf")
+	set(_orion_util_elf "${PROJECT_ROOT}/bin/util.elf")
+endif()
 set_source_files_properties(
 	${D_SRC}/daemon.c
 	PROPERTIES OBJECT_DEPENDS
-		"${PROJECT_ROOT}/bin/daemon.elf;${PROJECT_ROOT}/bin/util.elf;${D_CWD}/assets/kstuff.elf;${D_CWD}/assets/orionhen_sicon.png;${D_CWD}/assets/icon_xml_package.png;${D_CWD}/assets/icon_xml_plugins.png;${D_CWD}/assets/icon_xml_game.png;${D_CWD}/assets/icon_xml_network.png;${D_CWD}/assets/icon_xml_settings.png;${D_CWD}/assets/icon_xml_shortcuts.png;${D_CWD}/assets/icon_xml_debug.png;${D_CWD}/assets/icon_xml_about.png"
+		"${_orion_daemon_elf};${_orion_util_elf};${D_CWD}/assets/kstuff.elf;${D_CWD}/assets/orionhen_sicon.png;${D_CWD}/assets/icon_xml_package.png;${D_CWD}/assets/icon_xml_plugins.png;${D_CWD}/assets/icon_xml_game.png;${D_CWD}/assets/icon_xml_network.png;${D_CWD}/assets/icon_xml_settings.png;${D_CWD}/assets/icon_xml_shortcuts.png;${D_CWD}/assets/icon_xml_debug.png;${D_CWD}/assets/icon_xml_about.png"
 )
 # elfldr_raise_privileges from liborion_elfldr; launches go via 9021 (elfldr_remote.c).
 target_include_directories(${PROJECT_NAME} PRIVATE

@@ -21,9 +21,15 @@ endif()
 message("IS_SUBPROJECT: ${IS_SUBPROJECT}")
 
 set(D_CWD "${CMAKE_CURRENT_SOURCE_DIR}")
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${D_CWD}/../bin)
-set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${D_CWD}/bin)
-set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${D_CWD}/bin)	# static libs are archive
+if(DEFINED ORIONHEN_OUT_BIN)
+	set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${ORIONHEN_OUT_BIN})
+	set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${ORIONHEN_OUT_LIB})
+	set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${ORIONHEN_OUT_LIB})
+else()
+	set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${D_CWD}/../bin)
+	set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${D_CWD}/bin)
+	set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${D_CWD}/bin)
+endif()
 set(D_SRC ${D_CWD}/source)
 
 # Headers
@@ -61,10 +67,15 @@ set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O0 ")
 target_sources(${PROJECT_NAME} PRIVATE ${SrcFiles} "${PROJECT_ROOT}/lib/elfldr_remote.c")
 # .incbin in embeddded_payloads.c is invisible to the compiler dependency scanner.
 # Without OBJECT_DEPENDS, embedded payload rebuilds do not re-embed into daemon.elf.
+if(DEFINED ORIONHEN_OUT_BIN)
+	set(_orion_util_elf "${ORIONHEN_OUT_BIN}/util.elf")
+else()
+	set(_orion_util_elf "${PROJECT_ROOT}/bin/util.elf")
+endif()
 set_source_files_properties(
 	${D_SRC}/embeddded_payloads.c
 	PROPERTIES OBJECT_DEPENDS
-		"${D_CWD}/assets/shellui.elf;${D_CWD}/assets/fps_elf.elf;${PROJECT_ROOT}/bin/util.elf"
+		"${D_CWD}/assets/shellui.elf;${D_CWD}/assets/fps_elf.elf;${_orion_util_elf}"
 )
 target_include_directories(${PROJECT_NAME} PRIVATE
 	"${D_CWD}/include"

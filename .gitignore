@@ -5,8 +5,10 @@
 *.swp
 *~
 
-# Build trees
+# Build trees / final artifacts (default: repo-root build/)
+/build/
 source/build/
+source/bin
 source/util/build/
 source/**/CMakeFiles/
 source/**/bin/

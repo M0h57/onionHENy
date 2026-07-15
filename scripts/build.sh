@@ -20,9 +20,10 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 SOURCE="${ROOT}/source"
-BUILD="${BUILD_DIR:-${SOURCE}/build}"
+# CMake binary dir + final ELFs/libs: <repo>/build/{bin,lib}/
+BUILD="${BUILD_DIR:-${ROOT}/build}"
 VENDOR="${ORIONHEN_VENDOR:-${SOURCE}/vendor}"
-BIN="${SOURCE}/bin"
+BIN="${BUILD}/bin"
 
 PS5_PAYLOAD_SDK="${PS5_PAYLOAD_SDK:-${PS5SDK:-}}"
 V_FW="${V_FW:-0x3000000}"
@@ -63,7 +64,7 @@ Options:
   --fw <hex>           PS5_FW_VERSION / V_FW (default: ${V_FW})
   --jobs <n>           Parallel build jobs (default: ${JOBS})
   --build-type <t>     Debug|Release (default: ${BUILD_TYPE})
-  --build-dir <path>   CMake binary dir (default: source/build)
+  --build-dir <path>   CMake binary dir (default: <repo>/build)
   --vendor <path>      Vendor blob directory (default: source/vendor)
   --stub-missing       Create tiny placeholder ELFs if vendor blobs missing
                        (links, but NOT for real hardware)
@@ -87,10 +88,11 @@ Third-party (git submodules under third_party/ + release downloads):
 
   Removed: elfldr.elf (9021), ps5debug, app-dumper, Byepervisor/hen, Discord RPC
 
-Built-in outputs (no vendor needed):
-  shellui.elf, fps_elf.elf  -> written by CMake into daemon/assets/
-  util.elf                  -> embedded by daemon and bootstrapper
-  daemon.elf                -> embedded by bootstrapper
+Built-in outputs (under <repo>/build/):
+  build/bin/*.elf           final ELFs (util, daemon, bootstrapper, OrionHEN, …)
+  build/lib/*.a             first-party static libs
+  source/daemon/assets/     shellui.elf / fps_elf.elf (daemon embeds only)
+  source/bin                symlink → build/bin (for .incbin paths)
 EOF
 }
 
@@ -225,7 +227,7 @@ ensure_incbin_links() {
   if [[ ! -e "${SOURCE}/bootstrapper/source/assets" ]]; then
     ln -sfn ../assets "${SOURCE}/bootstrapper/source/assets"
   fi
-  # bootstrapper/source/../../bin already == source/bin (no link needed)
+  # source/bin → build/bin is created by CMake configure (for .incbin ../../bin/…).
   ok "incbin symlinks ready"
 }
 
@@ -264,17 +266,16 @@ clean_build_artifacts() {
 
   rm -rf "${BUILD}"
 
+  # Legacy in-tree bin (real dir or symlink); CMake will recreate the symlink.
+  rm -rf "${SOURCE}/bin"
+  # Legacy in-tree cmake tree
+  rm -rf "${SOURCE}/build"
+
   rm -f \
     "${SOURCE}/daemon/assets/shellui.elf" \
-    "${SOURCE}/daemon/assets/fps_elf.elf" \
-    "${BIN}/daemon.elf" \
-    "${BIN}/util.elf" \
-    "${BIN}/bootstrapper.elf" \
-    "${BIN}/bootstrapper.elf.lzma" \
-    "${BIN}/bootstrapper.elf.lzma.size" \
-    "${BIN}/test.elf" \
-    "${BIN}/OrionHEN.elf"
+    "${SOURCE}/daemon/assets/fps_elf.elf"
 
+  # First-party .a used to land in source/lib; strip leftovers so link uses build/lib.
   rm -f \
     "${SOURCE}/lib/libNidResolver.a" \
     "${SOURCE}/lib/libNineS.a" \

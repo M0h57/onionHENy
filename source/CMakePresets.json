@@ -22,8 +22,8 @@
 			"name": "ps5-base",
 			"hidden": true,
 			"generator": "Ninja",
-			"binaryDir": "${sourceDir}/build/${presetName}",
-			"installDir": "${sourceDir}/build/install/${presetName}",
+			"binaryDir": "${sourceDir}/../build/${presetName}",
+			"installDir": "${sourceDir}/../build/install/${presetName}",
 			"toolchainFile": "${env:PS5SDK}/cmake/toolchain-ps5.cmake",
 			"cacheVariables": {
 				"CMAKE_C_COMPILER": "clang.exe",
@@ -39,8 +39,8 @@
 			"name": "nix-base",
 			"hidden": true,
 			"generator": "Ninja",
-			"binaryDir": "${sourceDir}/build/${presetName}",
-			"installDir": "${sourceDir}/build/install/${presetName}",
+			"binaryDir": "${sourceDir}/../build/${presetName}",
+			"installDir": "${sourceDir}/../build/install/${presetName}",
 			"toolchainFile": "${env:PS5SDK}/cmake/toolchain-ps5.cmake",
 			"cacheVariables": {
 				"CMAKE_C_COMPILER": "clang",

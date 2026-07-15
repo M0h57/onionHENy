@@ -21,9 +21,15 @@ endif()
 message("IS_SUBPROJECT: ${IS_SUBPROJECT}")
 
 set(D_CWD "${CMAKE_CURRENT_SOURCE_DIR}")
+# Intermediate embed for daemon .incbin (source/daemon/assets/).
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${D_CWD}/../daemon/assets)
-set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${D_CWD}/bin)
-set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${D_CWD}/bin)	# static libs are archive
+if(DEFINED ORIONHEN_OUT_LIB)
+	set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${ORIONHEN_OUT_LIB})
+	set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${ORIONHEN_OUT_LIB})
+else()
+	set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${D_CWD}/bin)
+	set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${D_CWD}/bin)
+endif()
 set(D_SRC ${D_CWD}/src)
 
 # Headers

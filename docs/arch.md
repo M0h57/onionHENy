@@ -82,7 +82,7 @@ fps_elf.elf ──┼──► 嵌入 daemon.elf ──┐
 > **Payload only:** OrionHEN no longer supports `.plugin` packages. Place
 > bare `.elf` under `/data/OrionHEN/payloads/` (or USB `.../payloads/`).
 
-产物落在 `source/bin/`。
+产物落在仓库根目录 `build/bin/`（静态库 `build/lib/`；CMake 树 `build/`）。
 
 ### 1.3 仓库布局
 
@@ -266,7 +266,7 @@ OverlayLayout         仅 shellui：由 overlay_pos 派生的像素坐标
 | `sync_vendor.sh` | 同步 kstuff 等 vendor |
 | `send_elf.py` / `send_payload.ps1` | 网络发送 ELF |
 | `launch.py` | IPC 控制应用 |
-| `shutdown_orion.py` / `kill_daemon.py` | 从 PC 关栈：kstuff → daemon → util → 重启 ShellUI（TCP **9048**） |
+| `shutdown_orion.py` / `kill_daemon.py` | 从 PC 关栈：util → 重启 ShellUI → daemon 退出；**不杀 kstuff**（TCP **9048**） |
 | `daemon_log.py` | 守护进程日志 |
 | `ps5_cmake.sh` | Prospero CMake 封装 |
 | `pack_bootstrapper.sh` | bootstrapper 尺寸记录 + lzma 打包 |
@@ -499,6 +499,6 @@ export PS5_PAYLOAD_SDK=/path/to/ps5-payload-sdk
 手动 CMake：
 
 ```bash
-./scripts/ps5_cmake.sh -S source -B source/build -G Ninja -DV_FW=0x3000000
-cmake --build source/build
+./scripts/ps5_cmake.sh -S source -B build -G Ninja -DV_FW=0x3000000
+cmake --build build
 ```

@@ -37,11 +37,11 @@ See `vendor/README.md` and `./scripts/build.sh --help`.
 Manual CMake:
 
 ```bash
-./scripts/ps5_cmake.sh -S source -B source/build -G Ninja -DV_FW=0x3000000
-cmake --build source/build
+./scripts/ps5_cmake.sh -S source -B build -G Ninja -DV_FW=0x3000000
+cmake --build build
 ```
 
-Build products go under `bin/` (gitignored).
+Build products go under `build/bin/` and `build/lib/` (repo root; gitignored).
 
 ## Further reading
 

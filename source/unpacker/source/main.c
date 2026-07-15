@@ -87,7 +87,8 @@ __asm__(".intel_syntax noprefix\n"
         ".type   orionhen_compressed, @object\n"
         ".align  16\n"
         "orionhen_compressed:\n"
-        ".incbin \"../bin/bootstrapper.elf.lzma\"\n"
+        /* source/bin → build/bin (symlink); same layout as other embeds */
+        ".incbin \"../../bin/bootstrapper.elf.lzma\"\n"
         "orionhen_compressed_end:\n"
         ".global orionhen_compressed_size\n"
         ".type  orionhen_compressed_size, @object\n"
@@ -98,7 +99,7 @@ __asm__(".intel_syntax noprefix\n"
         ".type   orionhen_decompressed_size, @object\n"
         ".align  16\n"
         "orionhen_decompressed_size:\n"
-        ".incbin \"../bin/bootstrapper.elf.lzma.size\"\n");
+        ".incbin \"../../bin/bootstrapper.elf.lzma.size\"\n");
 
 extern uint32_t orionhen_compressed_size;
 extern uint8_t orionhen_compressed[];

@@ -85,11 +85,11 @@ export PS5_PAYLOAD_SDK=/path/to/ps5-payload-sdk
 Manual CMake (advanced):
 
 ```bash
-./scripts/ps5_cmake.sh -S source -B source/build -G Ninja -DV_FW=0x3000000
-cmake --build source/build
+./scripts/ps5_cmake.sh -S source -B build -G Ninja -DV_FW=0x3000000
+cmake --build build
 ```
 
-Artifacts land in `source/bin/`.
+Artifacts land in `build/bin/` (static libs in `build/lib/`).
 
 Technical notes and writeups: [`docs/`](docs/).
 

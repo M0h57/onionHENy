@@ -4,7 +4,7 @@
 
 | 项 | 值 |
 |----|-----|
-| 产物 | `source/bin/util.elf` |
+| 产物 | `build/bin/util.elf` |
 | 源码根 | `source/util/` |
 | Unix IPC | `/system_tmp/OrionHEN_util_service` |
 | IPC 命令前缀 | `0x8000000`（`BREW_UTIL_*`） |
