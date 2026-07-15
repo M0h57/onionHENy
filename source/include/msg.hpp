@@ -39,7 +39,6 @@ enum DaemonCommands : unsigned int {
   BREW_UNUSED_TESTKIT_CHECK, // was BREW_TESTKIT_CHECK (local probe used instead)
   BREW_ENABLE_TOOLBOX,
   BREW_CHMOD_DIR,
-  // BREW_LAUNCH_DUMPER removed (no embedded ps5-app-dumper)
   BREW_ADJUST_FAN_SPEED,
 
   BREW_UTIL_TEST_CONNECTION = 0x8000000u,

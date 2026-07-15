@@ -168,12 +168,6 @@ void createJson_hook(MonoObject* inst, MonoObject* array, MonoString* id, MonoSt
         shellui_log("Updated menu titleId: %s", g_ui.current_menu_tid.c_str());
 #endif
     }
-#if 1
-    if(id_str == "MENU_ID_SAVE_DATA_MANAGEMENT_PS4_MANUAL" || id_str == "MENU_ID_SAVE_DATA_MANAGEMENT_PS5_MANUAL" || (id_str == "MENU_ID_UPDATE_HISTORY" && 0)){
-       createJson(inst, array, mono_string_new(Root_Domain, "MENU_ID_CUST_UPDATES"), mono_string_new(Root_Domain, "★ (测试版) 转储游戏/应用"), mono_string_new(Root_Domain, "OnionHEN?Dump"), actionId, nullptr, subMenu, enable);
-       return;
-    }
-#endif
     if(id_str == "MENU_ID_CHECK_PATCH"){  
       //createJson_hook: 8815fec90 id: MENU_ID_CHECK_PATCH, label: , actionUrl: pspatchcheck:check-for-update?titleid=CUSA01127, actionId: , messageId: msgid_check_update
         createJson(inst, array, mono_string_new(Root_Domain, "MENU_ID_CHEATS"), mono_string_new(Root_Domain, "★ OnionHEN 金手指"), mono_string_new(Root_Domain, "OnionHEN?Cheats_not_open"), actionId, nullptr, subMenu, enable);

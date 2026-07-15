@@ -142,7 +142,6 @@ Bootstrapper 只 clear util/kstuff/daemon/toolbox，**不清** `util_booted` / `
 ### 低 / 气味
 
 - `OnionHEN_log("size %lu", size_buf)` 打的是指针不是字符串。
-- dumper `sprintf` 无 size 参数。
 - REMOUNT 路径校验逻辑怪异（短路径且不含 `/user` 才拒），不是可靠 allowlist。
 - 大量 UNUSED 命令仍进 default/失败回复——兼容有意，但无 capability 协商。
 

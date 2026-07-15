@@ -76,13 +76,6 @@ bool handle_uri_boot_common(MonoString* uri, int opt, MonoString* titleIdForBoot
       g_ui.cheats_shortcut_activated_not_open = true;
       return true;
     }
-    else if (uri_string == "OnionHEN?Dump") {
-#if SHELL_DEBUG==1
-        shellui_log("Dump URI detected");
-#endif
-        notify("Game dumper payload is not bundled in OnionHEN");
-        return true; // Signal to redirect
-    }
     else if (uri_string == "OnionHEN?DL_UPDATE") {
 #if SHELL_DEBUG==1
         shellui_log("DL_UPDATE URI detected");
@@ -96,10 +89,6 @@ bool handle_uri_boot_common(MonoString* uri, int opt, MonoString* titleIdForBoot
   
   bool uri_boot_hook(MonoString* uri, int opt, MonoString* titleIdForBootAction) {
     if(handle_uri_boot_common(uri, opt, titleIdForBootAction)) {
-        std::string uri_string = Mono_to_String(uri);
-        if(uri_string == "OnionHEN?Dump") {
-          return boot_orig(mono_string_new(Root_Domain, "pshomeui:navigateToHome?bootCondition=psButton"),  opt, titleIdForBootAction);
-        }
       // Toolbox / cheats shortcuts → direct legacy DebugSettingsOldScreen
       return boot_orig(mono_string_new(Root_Domain, kToolboxUri), opt, titleIdForBootAction);
     }
@@ -125,10 +114,6 @@ bool handle_uri_boot_common(MonoString* uri, int opt, MonoString* titleIdForBoot
   #endif
     if(handle_uri_boot_common(uri, opt, nullptr)) {
       // Redirect to debug settings (no titleId parameter for older fw)
-      if(original_uri == "OnionHEN?Dump") {
-        return boot_orig_2(mono_string_new(Root_Domain, "pshomeui:navigateToHome?bootCondition=psButton"),  opt);
-      }
-
       return boot_orig_2(mono_string_new(Root_Domain, kToolboxUriSimple), opt);
     }
 

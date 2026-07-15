@@ -23,7 +23,7 @@
 
 
 bool copyRecursive(const char *source, const char *destination);
-bool copyFile(const char *source, const char *destination, bool for_dumper);
+bool copyFile(const char *source, const char *destination);
 void calculateSize(uint64_t size, char *result);
 uint64_t calculateTotalSize(const char *path);
 extern "C" int unmount(const char *path, int flags);
@@ -171,7 +171,7 @@ void handleIPC(clientArgs *client, std::string &inputStr,
       reply(sender_app, true);
       break;
     }
-    if (copyFile(path, dest, false)) {
+    if (copyFile(path, dest)) {
       reply(sender_app, false);
     } else {
       OnionHEN_log("error for %s | %s", path, strerror(errno));
