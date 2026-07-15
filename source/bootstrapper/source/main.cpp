@@ -362,11 +362,16 @@ static void cleanup(void);
   //  }
 #endif
 
-    if (!if_exists("/data/OrionHEN/orionhen.png")) {
-      write_blob_file("/data/OrionHEN/orionhen.png", &sicon_start, sicon_size);
-    }
+    /*
+     * Always overwrite branding icons so asset updates take effect on re-HEN.
+     * (Previously gated on !if_exists — first deploy stuck forever.)
+     *
+     * NPXS40008 = RN Settings (debug settings list). ShellUI also rewrites
+     * texture ids to the short name orionh_sicon (CxmlUri / GetString path).
+     */
+    write_blob_file("/data/OrionHEN/orionhen.png", &sicon_start, sicon_size);
 
-    // Toolbox category icons (always overwrite so asset updates take effect)
+    // Toolbox category icons
     write_blob_file("/data/OrionHEN/assets/icon_xml_package.png", &icon_xml_package_start, icon_xml_package_size);
     write_blob_file("/data/OrionHEN/assets/icon_xml_plugins.png", &icon_xml_plugins_start, icon_xml_plugins_size);
     write_blob_file("/data/OrionHEN/assets/icon_xml_game.png", &icon_xml_game_start, icon_xml_game_size);
@@ -375,24 +380,19 @@ static void cleanup(void);
     write_blob_file("/data/OrionHEN/assets/icon_xml_shortcuts.png", &icon_xml_shortcuts_start, icon_xml_shortcuts_size);
     write_blob_file("/data/OrionHEN/assets/icon_xml_debug.png", &icon_xml_debug_start, icon_xml_debug_size);
     write_blob_file("/data/OrionHEN/assets/icon_xml_about.png", &icon_xml_about_start, icon_xml_about_size);
- 
-    if (!if_exists("/system_ex/rnps/apps/NPXS40008/assets/src/modules/categoriesList/assets/texture/orionhen_sicon.png")) {
-      write_blob_file("/system_ex/rnps/apps/NPXS40008/assets/src/modules/categoriesList/assets/texture/orionhen_sicon.png",
-                      &sicon_start, sicon_size);
-    }
-    if (!if_exists("/system_ex/rnps/apps/NPXS40008/assets/src/modules/categoriesList/assets/texture/orionh_sicon.png")) {
-      write_blob_file("/system_ex/rnps/apps/NPXS40008/assets/src/modules/categoriesList/assets/texture/orionh_sicon.png",
-                      &sicon_start, sicon_size);
-    }
- 
-    if (!if_exists("/mnt/rnps/apps/NPXS40008/assets/src/modules/categoriesList/assets/texture/orionhen_sicon.png")) {
-      write_blob_file("/mnt/rnps/apps/NPXS40008/assets/src/modules/categoriesList/assets/texture/orionhen_sicon.png",
-                      &sicon_start, sicon_size);
-    }
-    if (!if_exists("/mnt/rnps/apps/NPXS40008/assets/src/modules/categoriesList/assets/texture/orionh_sicon.png")) {
-      write_blob_file("/mnt/rnps/apps/NPXS40008/assets/src/modules/categoriesList/assets/texture/orionh_sicon.png",
-                      &sicon_start, sicon_size);
-    }
+
+    static const char *const kSettingsSiconPaths[] = {
+        "/system_ex/rnps/apps/NPXS40008/assets/src/modules/categoriesList/assets/"
+        "texture/orionhen_sicon.png",
+        "/system_ex/rnps/apps/NPXS40008/assets/src/modules/categoriesList/assets/"
+        "texture/orionh_sicon.png",
+        "/mnt/rnps/apps/NPXS40008/assets/src/modules/categoriesList/assets/"
+        "texture/orionhen_sicon.png",
+        "/mnt/rnps/apps/NPXS40008/assets/src/modules/categoriesList/assets/"
+        "texture/orionh_sicon.png",
+    };
+    for (const char *path : kSettingsSiconPaths)
+      write_blob_file(path, &sicon_start, sicon_size);
 }
 
   bool is_elf_header(uint8_t* data)
