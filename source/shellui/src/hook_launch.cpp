@@ -174,12 +174,6 @@ void createJson_hook(MonoObject* inst, MonoObject* array, MonoString* id, MonoSt
         return;
     }
 
-    if(id_str == "MENU_ID_INTELLECTUAL_PROPERTY_NOTICES"){
-        std::string uri = "psappinst:pat-uninstall?titleid=" + g_ui.current_menu_tid;
-        createJson(inst, array, mono_string_new(Root_Domain, "MENU_ID_REMOVE_UPDATE"), mono_string_new(Root_Domain, "★ 删除"), mono_string_new(Root_Domain, uri.c_str()), actionId, nullptr, subMenu, enable);
-        return;
-    }
-
     createJson(inst, array, id, label, actionUrl, actionId, messageId, subMenu, enable);
 }
 
