@@ -29,9 +29,8 @@ OrionHEN 是 PS5 的 All-in-One Homebrew Enabler，基于 **etaHEN**（Lightning
         │  1. 提权 (elfldr_raise_privileges)
         │  2. remount /system、/system_ex
         │  3. unmount /update（阻止系统更新）
-        │  4. 写出 util / daemon / kstuff 到 /data/OrionHEN/daemons/
-        │  5. 经 9021 顺序启动：util → kstuff → daemon
-        │  6. 加载 /data/OrionHEN/payloads/ 下 .elf
+        │  4. 将内嵌 ELF 字节经 9021 顺序启动：util → kstuff → daemon
+        │  5. 加载 /data/OrionHEN/payloads/ 下 .elf
         ▼
 ┌───────────────┬────────────────┬──────────────────┐
 │  util.elf     │  kstuff.elf    │  daemon.elf      │
@@ -122,22 +121,22 @@ OrionHEN/
 
 - 提权、分区 remount、阻止更新
 - 以 `.incbin` 嵌入 `daemon.elf`、`util.elf`、`kstuff.elf` 与图标资源
-- 写盘到 `/data/OrionHEN/`，经 9021 拉起子进程
+- 将内嵌 ELF 直接从内存发送给 9021，不释放 util / daemon / kstuff 到磁盘
 - 扫描并加载插件目录
 - 可选日志端口 **9088**
 
 关键启动策略：
 
-1. 先写 util / daemon / kstuff 到磁盘
-2. 检查 `127.0.0.1:9021` 上的 elfldr
-3. 顺序 `file:` URI 启动：util → kstuff → daemon
+1. 检查 `127.0.0.1:9021` 上的 elfldr
+2. 顺序发送原始 ELF 字节：util → kstuff → daemon
+3. 各子 ELF 启动后把主线程名设为稳定进程名（`util.elf` / `kstuff.elf` / `daemon.elf`）
 4. 加载 `/data/OrionHEN/payloads/` 下带 `.auto_start` 的 `.elf`
 
 可用 `/data/OrionHEN/no_kstuff` 或 `/mnt/usb0/no_kstuff` 跳过 kstuff。
 
 ### 2.3 `daemon` → `daemon.elf`（Critical 守护进程）
 
-- 内嵌 `shellui.elf`、`fps_elf.elf`
+- 内嵌 `shellui.elf`、`fps_elf.elf`，并保留一份 `util.elf` 供 watchdog 纯内存重启
 - 经 **libNineS** 将 Toolbox 注入 `SceShellUI`
 - 监视 util，崩溃可重启
 - Unix socket：`/system_tmp/OrionHEN_crit_service`
@@ -169,7 +168,7 @@ OrionHEN/
 
 - 注入 `SceShellUI` 的 Mono 层
 - 替换/扩展 Debug Settings 风格菜单
-- 菜单 XML 经 `encryptxml.py` 加密为 `.sxml` 后嵌入
+- 工具箱与子页菜单 XML 均由 `ps5ui::Page` 动态组装（`toolbox_xml.cpp`）
 
 主要菜单能力：
 
@@ -222,7 +221,7 @@ OrionHEN/
 | **shellui_types.hpp** | 枚举 / 插件 / overlay / settings 类型 |
 | **HookedFuncs.hpp** | Mono hooks + UI API（include types） |
 | **mono_runtime** | Mono 反射 / 属性读写 / 类查找 |
-| **toolbox_xml** | `generate_*_xml` 菜单 XML |
+| **toolbox_xml** | `generate_*_xml` / `generate_toolbox_xml` 菜单 XML（`ps5ui::Page`） |
 | **settings_ui** | `settings_commit` / SaveSettings 等 UI 侧设置 |
 | **shellui_notify / shellui_proc** | UI 用 `notify(const char*)` 与进程/USB 辅助 |
 | **hook_onpress + onpress_*** | 表驱动 OnPress：`{id → handler}`，按 network / cheats / overlay / system / packages / payloads / misc 拆域 |
@@ -267,7 +266,7 @@ OverlayLayout         仅 shellui：由 overlay_pos 派生的像素坐标
 | `sync_vendor.sh` | 同步 kstuff 等 vendor |
 | `send_elf.py` / `send_payload.ps1` | 网络发送 ELF |
 | `launch.py` | IPC 控制应用 |
-| `shutdown_orion.py` / `kill_daemon.py` | 从 PC 关栈：util → ShellUI → daemon（TCP **9048**） |
+| `shutdown_orion.py` / `kill_daemon.py` | 从 PC 关栈：kstuff → daemon → util → 重启 ShellUI（TCP **9048**） |
 | `daemon_log.py` | 守护进程日志 |
 | `ps5_cmake.sh` | Prospero CMake 封装 |
 | `pack_bootstrapper.sh` | bootstrapper 尺寸记录 + lzma 打包 |
@@ -333,7 +332,6 @@ struct IPCMessage {
 | `/data/OrionHEN/` | 数据根目录 |
 | `/data/OrionHEN/config.ini` | 配置 |
 | `/data/OrionHEN/OrionHEN.log` | 日志 |
-| `/data/OrionHEN/daemons/` | util / daemon / kstuff 写盘位置 |
 | `/data/OrionHEN/payloads/` | payload `.elf`（唯一扩展包格式；启动时 stage 到同目录） |
 | `/system_tmp/OrionHEN_*_service` | Unix IPC socket |
 | `/system_tmp/toolbox_online` | Toolbox 注入就绪信号 |
@@ -448,7 +446,7 @@ git submodule update --init --recursive
 | 工具 | 用途 |
 |------|------|
 | **Go stubber**（`source/stubber/`） | NID stub 生成 |
-| **Python3** | `encryptxml.py` / `encryptver.py` 处理 Toolbox 资源 |
+| **Python3** | 构建辅助脚本（如 `encryptver.py`） |
 | **lzma / xz** | bootstrapper 打包 |
 
 ---

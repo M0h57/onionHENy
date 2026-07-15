@@ -25,7 +25,7 @@ bootstrapper.elf ──9021──► util.elf ──► kstuff.elf ──► dae
 
 | 层 | 模块 | 职责 |
 |----|------|------|
-| 启动链 | unpacker → bootstrapper | 解压、写盘、顺序拉起 |
+| 启动链 | unpacker → bootstrapper | 解压、内存发送、顺序拉起 |
 | Critical | daemon | Toolbox/FPS 注入、FS IPC、util 看门狗 |
 | Utility | util | 金手指、下载、9028、重业务 |
 | UI | shellui / fps_elf | Mono 注入 / overlay |
