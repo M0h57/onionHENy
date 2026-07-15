@@ -15,8 +15,11 @@ PS5_PAYLOAD_SDK="${PS5_PAYLOAD_SDK:-}"
 FROM_SOURCE=0
 STUB_MISSING=0
 INIT_SUBMODULES=0
+FORCE_DOWNLOAD=0
 
 KSTUFF_URL="https://github.com/EchoStretch/kstuff-lite/releases/download/v1.09/kstuff.elf"
+# Real release blob is hundreds of KB+; stubs are tiny markers.
+KSTUFF_MIN_BYTES=65536
 
 log()  { printf '\n\033[1;34m==>\033[0m %s\n' "$*"; }
 ok()   { printf '\033[1;32m[ok]\033[0m %s\n' "$*"; }
@@ -38,6 +41,7 @@ Options:
   --init-submodules   git submodule update --init --recursive
   --from-source       Prefer building submodules with make (needs SDK)
   --stub-missing      Write tiny placeholders if download/build fails
+  --force             Re-download/rebuild even if kstuff.elf already present
   -h, --help
 EOF
 }
@@ -47,6 +51,7 @@ while [[ $# -gt 0 ]]; do
     --from-source) FROM_SOURCE=1; shift ;;
     --stub-missing) STUB_MISSING=1; shift ;;
     --init-submodules) INIT_SUBMODULES=1; shift ;;
+    --force) FORCE_DOWNLOAD=1; shift ;;
     -h|--help) usage; exit 0 ;;
     *) die "unknown option: $1" ;;
   esac
@@ -92,8 +97,30 @@ init_submodules() {
   ok "submodules ready"
 }
 
+kstuff_looks_cached() {
+  local path="$1"
+  [[ -f "${path}" ]] || return 1
+  local sz
+  sz="$(wc -c < "${path}" | tr -d ' ')"
+  # Reject empty / OrionHEN-STUB placeholders from --stub-missing.
+  if [[ "${sz}" -lt "${KSTUFF_MIN_BYTES}" ]]; then
+    return 1
+  fi
+  if head -c 16 "${path}" 2>/dev/null | grep -q 'OrionHEN-STUB'; then
+    return 1
+  fi
+  return 0
+}
+
 sync_kstuff() {
   local dest="${SOURCE}/bootstrapper/assets/kstuff.elf"
+
+  # Default path: reuse local blob so every build.sh does not re-hit GitHub.
+  if [[ "${FORCE_DOWNLOAD}" -eq 0 && "${FROM_SOURCE}" -eq 0 ]] &&
+      kstuff_looks_cached "${dest}"; then
+    ok "kstuff.elf already present ($(wc -c < "${dest}" | tr -d ' ') bytes) — skip download"
+    return 0
+  fi
 
   if [[ "${FROM_SOURCE}" -eq 0 ]]; then
     log "kstuff: download kstuff-lite release"

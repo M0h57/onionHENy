@@ -32,6 +32,7 @@ CONFIGURE_ONLY=0
 STUB_MISSING=0
 SKIP_UNPACKER=0
 SKIP_VENDOR_SYNC=0
+FORCE_VENDOR_SYNC=0
 INIT_SUBMODULES=0
 
 # Auto job count
@@ -68,6 +69,7 @@ Options:
                        (links, but NOT for real hardware)
   --skip-unpacker      Stop after bootstrapper (no OrionHEN.elf unpacker)
   --skip-vendor-sync   Do not call scripts/sync_vendor.sh
+  --force-vendor-sync  Re-download kstuff even if already cached
   --init-submodules    git submodule update --init before sync
   -h, --help           This help
 
@@ -87,7 +89,8 @@ Third-party (git submodules under third_party/ + release downloads):
 
 Built-in outputs (no vendor needed):
   shellui.elf, fps_elf.elf  -> written by CMake into daemon/assets/
-  daemon.elf, util.elf      -> source/bin/  (embedded by bootstrapper)
+  util.elf                  -> embedded by daemon and bootstrapper
+  daemon.elf                -> embedded by bootstrapper
 EOF
 }
 
@@ -103,6 +106,7 @@ while [[ $# -gt 0 ]]; do
     --stub-missing) STUB_MISSING=1; shift ;;
     --skip-unpacker) SKIP_UNPACKER=1; shift ;;
     --skip-vendor-sync) SKIP_VENDOR_SYNC=1; shift ;;
+    --force-vendor-sync) FORCE_VENDOR_SYNC=1; shift ;;
     --init-submodules) INIT_SUBMODULES=1; shift ;;
     -h|--help) usage; exit 0 ;;
     *) die "Unknown option: $1 (see --help)" ;;
@@ -237,6 +241,7 @@ stage_vendor() {
   log "Syncing third-party embeds (submodules / GitHub releases)"
   local args=()
   [[ "${STUB_MISSING}" -eq 1 ]] && args+=(--stub-missing)
+  [[ "${FORCE_VENDOR_SYNC}" -eq 1 ]] && args+=(--force)
   [[ "${INIT_SUBMODULES}" -eq 1 ]] && args+=(--init-submodules)
 
   if [[ ! -x "${ROOT}/scripts/sync_vendor.sh" ]]; then
@@ -260,8 +265,6 @@ clean_build_artifacts() {
   rm -rf "${BUILD}"
 
   rm -f \
-    "${SOURCE}/shellui/assets/OrionHEN_toolbox.sxml" \
-    "${SOURCE}/shellui/assets/OrionHEN_Lite.sxml" \
     "${SOURCE}/daemon/assets/shellui.elf" \
     "${SOURCE}/daemon/assets/fps_elf.elf" \
     "${BIN}/daemon.elf" \
@@ -361,8 +364,8 @@ main() {
   stage_vendor
 
   # Phase 3 — daemons
-  log "Phase 3/5: daemon + util"
-  build_targets daemon util
+  log "Phase 3/5: util + daemon"
+  build_targets util daemon
 
   for f in daemon.elf util.elf; do
     [[ -f "${BIN}/${f}" ]] || die "missing ${BIN}/${f} after phase 3"
