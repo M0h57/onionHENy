@@ -142,12 +142,15 @@ extern orion::Settings g_settings;
 /**
  * PHU flex banner layout: full-width edge strip + centered metric segments.
  * bar_x/bar_w are always 0 / screen width; bar_y is 0 or (H - bar_h).
+ * label_margin_top is relative to each metric cell and used with
+ * PositionType=1; labels do not use X/Y.
  */
 struct OverlayLayout {
     float bar_x = 0.0f;
     float bar_y = 0.0f;
     float bar_w = 1920.0f;
     float bar_h = 24.0f;
+    float label_margin_top = 5.0f;
     float overlay_fps_x = 24.0f;
     float overlay_fps_y = 12.0f;
     float overlay_cpu_x = 160.0f;
@@ -161,5 +164,3 @@ struct OverlayLayout {
 };
 extern OverlayLayout g_overlay_layout;
 // g_all_cpu_usage → shellui_state.hpp
-
-

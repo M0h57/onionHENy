@@ -323,19 +323,35 @@ void set_label_text(const char *widget_name, const char *text) {
     Set_Property(label_cls, label, "Text", mono_string_new(Root_Domain, text));
 }
 
-void set_label_xy(const char *widget_name, float x, float y) {
+void set_label_layout(const char *widget_name, float margin_left,
+                      float margin_top, float width) {
   MonoClass *label_cls =
       mono_class_from_name(pui_img, "Sce.PlayStation.PUI.UI2", "Label");
+  MonoClass *panel_cls =
+      mono_class_from_name(pui_img, "Sce.PlayStation.PUI.UI2", "Panel");
   MonoObject *label = find_label(widget_name);
   if (!label)
     return;
-  Set_Property(label_cls, label, "X", x);
-  /* Y tracks the bar band; height + VCenter keep glyphs middle of strip. */
-  Set_Property(label_cls, label, "Y", g_overlay_layout.bar_y);
-  Set_Property(label_cls, label, "Height", g_overlay_layout.bar_h);
-  Set_Property(label_cls, label, "VerticalAlignment", 1); /* Center */
-  Set_Property(label_cls, label, "FitHeightToText", false);
-  (void)y;
+
+  char cell_name[96];
+  std::snprintf(cell_name, sizeof(cell_name), "%s_cell", widget_name);
+  MonoObject *cell = find_label(cell_name);
+  if (cell) {
+    Set_Property(panel_cls, cell, "X", margin_left);
+    Set_Property(panel_cls, cell, "Y", g_overlay_layout.bar_y);
+    Set_Property(panel_cls, cell, "Width", width);
+    Set_Property(panel_cls, cell, "Height", g_overlay_layout.bar_h);
+  }
+
+  Set_Property(label_cls, label, "PositionType", 1);
+  Set_Property(label_cls, label, "MarginLeft", 0.0f);
+  Set_Property(label_cls, label, "MarginTop", margin_top);
+  Set_Property(label_cls, label, "Width", width);
+  Set_Property(label_cls, label, "HorizontalAlignment", 0);
+  Set_Property(label_cls, label, "VerticalAlignment", 0);
+  Set_Property(label_cls, label, "FitWidthToText", false);
+  Set_Property(label_cls, label, "FitHeightToText", true);
+  Set_Property(label_cls, label, "NumberOfLines", 1);
 }
 
 /** Read FPS sample written by fps_elf (file pre-created by daemon/shellui). */
@@ -366,10 +382,8 @@ bool read_fps_shm(float &out_fps, char *api_out, size_t api_sz,
 
 /**
  * Lay out metrics as comfortable PHU-style slots, centered as a group on the
- * full-width bar. Each label cell is vertically centered in the strip via
- * Height=bar_h + VerticalAlignment=Center (not top-stuck FitHeightToText).
- *
- * Horizontal: fixed min slot widths + stat_gap — not packed tight by glyph.
+ * full-width bar. Labels use PHU's PositionType + margins layout.
+ * Horizontal: label + value(s) + " | " between items (not after the last).
  */
 void layout_bar_labels(const char *fps_val, const char *cpu_temp,
                        const char *cpu_usage, const char *gpu_temp,
@@ -379,16 +393,19 @@ void layout_bar_labels(const char *fps_val, const char *cpu_temp,
   constexpr float kCharW = 10.0f;
   constexpr float kPairGap = 8.0f;   /* label → first value */
   constexpr float kValGap = 10.0f;   /* value → value (temp / usage) */
-  constexpr float kSegGap = 28.0f;   /* between metric groups (air, not squeeze) */
+  constexpr float kSepGap = 10.0f;   /* last value → "|" */
+  constexpr float kAfterSep = 16.0f; /* "|" → next group label */
   constexpr float kOff = -4096.0f;
 
   struct Piece {
     const char *id;
     const char *text;
     float width;
+    bool is_label; /* group title (FPS/CPU/…) */
+    bool is_sep;   /* trailing pipe after an item */
   };
   std::vector<Piece> pieces;
-  pieces.reserve(16);
+  pieces.reserve(24);
 
   auto text_w = [](const char *s) -> float {
     if (!s || !s[0])
@@ -398,77 +415,101 @@ void layout_bar_labels(const char *fps_val, const char *cpu_temp,
     return raw < 28.f ? 28.f : raw;
   };
 
-  auto add_group = [&](const char *id_l, const char *lab, const char *id_v0,
-                       const char *v0, const char *id_v1, const char *v1) {
-    if (!v0 || !v0[0])
-      return;
-    pieces.push_back({id_l, lab, text_w(lab)});
-    pieces.push_back({id_v0, v0, text_w(v0)});
-    if (id_v1 && v1 && v1[0])
-      pieces.push_back({id_v1, v1, text_w(v1)});
+  struct GroupSpec {
+    const char *id_l;
+    const char *lab;
+    const char *id_v0;
+    const char *v0;
+    const char *id_v1;
+    const char *v1;
+    const char *id_sep;
   };
+  GroupSpec groups[5];
+  int ng = 0;
 
   if (g_settings.overlay_fps && fps_val)
-    add_group("id_fps_label", "FPS", "id_fps_value", fps_val, nullptr, nullptr);
+    groups[ng++] = {"id_fps_label", "FPS", "id_fps_value", fps_val, nullptr,
+                    nullptr, "id_fps_sep"};
   if ((g_settings.overlay_cpu || g_ui.all_cpu_usage) && cpu_temp)
-    add_group("id_cpu_label", "CPU", "id_cpu_temp_value", cpu_temp,
-              "id_cpu_usage_value", cpu_usage);
+    groups[ng++] = {"id_cpu_label",
+                    "CPU",
+                    "id_cpu_temp_value",
+                    cpu_temp,
+                    "id_cpu_usage_value",
+                    cpu_usage,
+                    "id_cpu_sep"};
   if (g_settings.overlay_gpu && gpu_temp)
-    add_group("id_gpu_label", "GPU", "id_gpu_temp_value", gpu_temp,
-              "id_gpu_usage_value", gpu_usage);
+    groups[ng++] = {"id_gpu_label",
+                    "GPU",
+                    "id_gpu_temp_value",
+                    gpu_temp,
+                    "id_gpu_usage_value",
+                    gpu_usage,
+                    "id_gpu_sep"};
   if (g_settings.overlay_ram && ram_str)
-    add_group("id_ram_label", "RAM", "id_ram_value", ram_str, nullptr, nullptr);
+    groups[ng++] = {"id_ram_label", "RAM", "id_ram_value", ram_str, nullptr,
+                    nullptr, "id_ram_sep"};
   if (g_settings.overlay_ip && ip_str)
-    add_group("id_ip_label", "IP", "id_ip_value", ip_str, nullptr, nullptr);
+    groups[ng++] = {"id_ip_label", "IP", "id_ip_value", ip_str, nullptr,
+                    nullptr, "id_ip_sep"};
+
+  if (ng == 0)
+    return;
+
+  for (int g = 0; g < ng; ++g) {
+    const GroupSpec &gs = groups[g];
+    if (!gs.v0 || !gs.v0[0])
+      continue;
+    pieces.push_back({gs.id_l, gs.lab, text_w(gs.lab), true, false});
+    pieces.push_back({gs.id_v0, gs.v0, text_w(gs.v0), false, false});
+    if (gs.id_v1 && gs.v1 && gs.v1[0])
+      pieces.push_back({gs.id_v1, gs.v1, text_w(gs.v1), false, false});
+    /* Pipe after every item except the last. */
+    if (g + 1 < ng)
+      pieces.push_back({gs.id_sep, "|", text_w("|"), false, true});
+  }
 
   if (pieces.empty())
     return;
 
-  auto is_group_label = [](const char *id) {
-    return std::strcmp(id, "id_fps_label") == 0 ||
-           std::strcmp(id, "id_cpu_label") == 0 ||
-           std::strcmp(id, "id_gpu_label") == 0 ||
-           std::strcmp(id, "id_ram_label") == 0 ||
-           std::strcmp(id, "id_ip_label") == 0;
+  auto gap_after = [&](size_t i) -> float {
+    if (i + 1 >= pieces.size())
+      return 0.f;
+    if (pieces[i].is_label)
+      return kPairGap;
+    if (pieces[i].is_sep)
+      return kAfterSep;
+    if (pieces[i + 1].is_sep)
+      return kSepGap;
+    if (pieces[i + 1].is_label)
+      return kAfterSep;
+    return kValGap;
   };
 
   float total = 0.f;
   for (size_t i = 0; i < pieces.size(); ++i) {
     total += pieces[i].width;
-    if (i + 1 >= pieces.size())
-      break;
-    if (is_group_label(pieces[i].id))
-      total += kPairGap;
-    else if (is_group_label(pieces[i + 1].id))
-      total += kSegGap; /* next piece starts a new group */
-    else
-      total += kValGap;
+    total += gap_after(i);
   }
 
   float x = (kScreenW - total) * 0.5f;
-  const float y = g_overlay_layout.bar_y; /* cell top = bar top; VCenter does rest */
+  const float margin_top = g_overlay_layout.label_margin_top;
 
   static const char *kAll[] = {
-      "id_fps_label",        "id_fps_value",       "id_cpu_label",
-      "id_cpu_temp_value",   "id_cpu_usage_value", "id_gpu_label",
-      "id_gpu_temp_value",   "id_gpu_usage_value", "id_ram_label",
-      "id_ram_value",        "id_ip_label",        "id_ip_value",
+      "id_fps_label",        "id_fps_value",       "id_fps_sep",
+      "id_cpu_label",        "id_cpu_temp_value",   "id_cpu_usage_value",
+      "id_cpu_sep",          "id_gpu_label",       "id_gpu_temp_value",
+      "id_gpu_usage_value",  "id_gpu_sep",         "id_ram_label",
+      "id_ram_value",        "id_ram_sep",         "id_ip_label",
+      "id_ip_value",         "id_ip_sep",
   };
   for (const char *id : kAll)
-    set_label_xy(id, kOff, y);
+    set_label_layout(id, kOff, margin_top, 0.0f);
 
   for (size_t i = 0; i < pieces.size(); ++i) {
-    set_label_xy(pieces[i].id, x, y);
+    set_label_layout(pieces[i].id, x, margin_top, pieces[i].width);
     set_label_text(pieces[i].id, pieces[i].text);
-    x += pieces[i].width;
-    if (i + 1 >= pieces.size())
-      break;
-    if (is_group_label(pieces[i].id))
-      x += kPairGap;
-    else if (is_group_label(pieces[i + 1].id))
-      x += kSegGap;
-    else
-      x += kValGap;
+    x += pieces[i].width + gap_after(i);
   }
 }
 
@@ -669,4 +710,3 @@ void OnRender_Hook(MonoObject* instance) {
 
   OnRender_orig(instance);
 }
-

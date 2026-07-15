@@ -11,6 +11,7 @@
 #include "HookedFuncs.hpp"
 #include "external_symbols.hpp"
 #include "ipc.hpp"
+#include <cstdio>
 #include <cstring>
 #include <vector>
 
@@ -60,13 +61,16 @@ constexpr float kMemR = 1.0f, kMemG = 179.0f / 255.0f, kMemB = 77.0f / 255.0f;
 constexpr float kNetR = 128.0f / 255.0f, kNetG = 179.0f / 255.0f, kNetB = 1.0f;
 /* color_value = FFFFFFFF */
 constexpr float kValR = 1.0f, kValG = 1.0f, kValB = 1.0f;
+/* Separator pipe — soft white so it does not compete with values. */
+constexpr float kSepR = 0.75f, kSepG = 0.75f, kSepB = 0.75f;
 /* bg_color = 000000B4 → black @ ~70.6% */
 constexpr float kBgR = 0.0f, kBgG = 0.0f, kBgB = 0.0f, kBgA = 180.0f / 255.0f;
 constexpr float kA = 1.0f;
 
-/* PUI VerticalAlignment: 0=Top, 1=Center, 2=Bottom (match common UI2 usage). */
+/* PHU uses VerticalAlignment=0 with FitHeightToText=true for bar labels. */
 constexpr int kAlignLeft = 0;
-constexpr int kAlignVCenter = 1;
+constexpr int kAlignTop = 0;
+constexpr float kInitialLabelWidth = 500.0f;
 
 void push_label(std::vector<WidgetConfig> &out, const char *id, float x, float y,
                 const char *text, float r, float g, float b) {
@@ -74,11 +78,17 @@ void push_label(std::vector<WidgetConfig> &out, const char *id, float x, float y
   out.push_back({id, x, y, text, kAlignLeft, r, g, b, kA});
 }
 
+void append_sep(std::vector<WidgetConfig> &out, const char *id, float x,
+                float y) {
+  push_label(out, id, x, y, "|", kSepR, kSepG, kSepB);
+}
+
 void append_fps(std::vector<WidgetConfig> &out) {
   const float x = g_overlay_layout.overlay_fps_x;
   const float y = g_overlay_layout.overlay_fps_y;
   push_label(out, "id_fps_label", x + kLbl, y, "FPS", kPerfR, kPerfG, kPerfB);
   push_label(out, "id_fps_value", x + kVal0, y, "--.-", kValR, kValG, kValB);
+  append_sep(out, "id_fps_sep", x + kVal0 + 56.0f, y);
 }
 
 void append_cpu(std::vector<WidgetConfig> &out) {
@@ -87,6 +97,7 @@ void append_cpu(std::vector<WidgetConfig> &out) {
   push_label(out, "id_cpu_label", x + kLbl, y, "CPU", kCpuR, kCpuG, kCpuB);
   push_label(out, "id_cpu_temp_value", x + kVal0, y, "--C", kValR, kValG, kValB);
   push_label(out, "id_cpu_usage_value", x + kVal1, y, "--%", kValR, kValG, kValB);
+  append_sep(out, "id_cpu_sep", x + kVal1 + 56.0f, y);
 }
 
 void append_gpu(std::vector<WidgetConfig> &out) {
@@ -95,6 +106,7 @@ void append_gpu(std::vector<WidgetConfig> &out) {
   push_label(out, "id_gpu_label", x + kLbl, y, "GPU", kGpuR, kGpuG, kGpuB);
   push_label(out, "id_gpu_temp_value", x + kVal0, y, "--C", kValR, kValG, kValB);
   push_label(out, "id_gpu_usage_value", x + kVal1, y, "--%", kValR, kValG, kValB);
+  append_sep(out, "id_gpu_sep", x + kVal1 + 56.0f, y);
 }
 
 void append_ram(std::vector<WidgetConfig> &out) {
@@ -102,6 +114,7 @@ void append_ram(std::vector<WidgetConfig> &out) {
   const float y = g_overlay_layout.overlay_ram_y;
   push_label(out, "id_ram_label", x + kLbl, y, "RAM", kMemR, kMemG, kMemB);
   push_label(out, "id_ram_value", x + kVal0, y, "---- MB", kValR, kValG, kValB);
+  append_sep(out, "id_ram_sep", x + kVal0 + 80.0f, y);
 }
 
 void append_ip(std::vector<WidgetConfig> &out) {
@@ -110,14 +123,17 @@ void append_ip(std::vector<WidgetConfig> &out) {
   push_label(out, "id_ip_label", x + kLbl, y, "IP", kNetR, kNetG, kNetB);
   push_label(out, "id_ip_value", x + kIpVal, y, "---.---.---.---", kValR, kValG,
              kValB);
+  append_sep(out, "id_ip_sep", x + kIpVal + 160.0f, y);
 }
 
 const std::vector<const char *> kAllOverlayNames = {
     kBgPanelName,
-    "id_gpu_temp_value", "id_gpu_usage_value", "id_gpu_label",
+    "id_gpu_temp_value", "id_gpu_usage_value", "id_gpu_label", "id_gpu_sep",
     "id_cpu_label",      "id_cpu_temp_value",  "id_cpu_usage_value",
-    "id_ram_label",      "id_ram_value",       "id_fps_label",
-    "id_fps_value",      "id_ip_label",        "id_ip_value",
+    "id_cpu_sep",
+    "id_ram_label",      "id_ram_value",       "id_ram_sep",
+    "id_fps_label",      "id_fps_value",       "id_fps_sep",
+    "id_ip_label",       "id_ip_value",        "id_ip_sep",
 };
 
 MonoObject *find_root_widget() {
@@ -135,6 +151,45 @@ void remove_named(MonoObject *root, const char *name) {
                            mono_string_new(Root_Domain, name));
   if (child)
     Invoke<void>(pui_img, widgetClass, child, "RemoveFromParent");
+}
+
+void remove_metric_cell(MonoObject *root, const char *label_name) {
+  char cell_name[96];
+  std::snprintf(cell_name, sizeof(cell_name), "%s_cell", label_name);
+  MonoClass *widgetClass =
+      mono_class_from_name(pui_img, "Sce.PlayStation.PUI.UI2", "Widget");
+  MonoObject *cell =
+      Invoke<MonoObject *>(pui_img, widgetClass, root, "FindWidgetByName",
+                           mono_string_new(Root_Domain, cell_name));
+  if (cell)
+    Invoke<void>(pui_img, widgetClass, cell, "RemoveFromParent");
+  else
+    remove_named(root, label_name);
+}
+
+MonoObject *create_metric_cell(MonoObject *root, const char *label_name,
+                               float x) {
+  MonoClass *panelClass =
+      mono_class_from_name(pui_img, "Sce.PlayStation.PUI.UI2", "Panel");
+  if (!panelClass)
+    return nullptr;
+
+  MonoObject *cell = New_Object(panelClass);
+  if (!cell)
+    return nullptr;
+  mono_runtime_object_init(cell);
+
+  char cell_name[96];
+  std::snprintf(cell_name, sizeof(cell_name), "%s_cell", label_name);
+  Set_Property(panelClass, cell, "Name",
+               mono_string_new(Root_Domain, cell_name));
+  Set_Property(panelClass, cell, "X", x);
+  Set_Property(panelClass, cell, "Y", g_overlay_layout.bar_y);
+  Set_Property(panelClass, cell, "Width", kInitialLabelWidth);
+  Set_Property(panelClass, cell, "Height", g_overlay_layout.bar_h);
+  Set_Property(panelClass, cell, "BackgroundVisibility", false);
+  Widget_Append_Child(root, cell);
+  return cell;
 }
 
 /** Prefer live RootWidget.Width (PHU); fall back to layout bar_w (1920). */
@@ -214,25 +269,31 @@ void ensure_bg_panel(MonoObject *root) {
 void RemoveGameWidget(RemoveWidget widget) {
   auto removeWidgets = [](const std::vector<const char *> &widgetNames) {
     MonoObject *root = find_root_widget();
-    for (const char *name : widgetNames)
-      remove_named(root, name);
+    for (const char *name : widgetNames) {
+      if (std::strcmp(name, kBgPanelName) == 0)
+        remove_named(root, name);
+      else
+        remove_metric_cell(root, name);
+    }
   };
 
   switch (widget) {
   case REMOVE_GPU_OVERLAY:
-    removeWidgets({"id_gpu_temp_value", "id_gpu_usage_value", "id_gpu_label"});
+    removeWidgets(
+        {"id_gpu_temp_value", "id_gpu_usage_value", "id_gpu_label", "id_gpu_sep"});
     break;
   case REMOVE_CPU_OVERLAY:
-    removeWidgets({"id_cpu_label", "id_cpu_temp_value", "id_cpu_usage_value"});
+    removeWidgets({"id_cpu_label", "id_cpu_temp_value", "id_cpu_usage_value",
+                   "id_cpu_sep"});
     break;
   case REMOVE_RAM_OVERLAY:
-    removeWidgets({"id_ram_label", "id_ram_value"});
+    removeWidgets({"id_ram_label", "id_ram_value", "id_ram_sep"});
     break;
   case REMOVE_FPS_OVERLAY:
-    removeWidgets({"id_fps_label", "id_fps_value"});
+    removeWidgets({"id_fps_label", "id_fps_value", "id_fps_sep"});
     break;
   case REMOVE_IP_OVERLAY:
-    removeWidgets({"id_ip_label", "id_ip_value"});
+    removeWidgets({"id_ip_label", "id_ip_value", "id_ip_sep"});
     break;
   case REMOVE_ALL_OVERLAYS:
     removeWidgets(kAllOverlayNames);
@@ -279,18 +340,23 @@ void CreateGameWidget(CreateWidget widget) {
       mono_class_from_name(pui_img, "Sce.PlayStation.PUI.UI2", "Label");
 
   for (const auto &config : configs) {
-    /*
-     * Cell sits on the full bar band: Y = bar_y, Height = bar_h, VAlign center
-     * so glyphs are vertically centered in the strip (not stuck to the top).
-     */
+    MonoObject *cell = create_metric_cell(root, config.id, config.x);
     MonoObject *label = CreateLabel(
-        config.id, config.x, g_overlay_layout.bar_y, config.text, bar_font,
-        config.bold, kAlignVCenter, config.r, config.g, config.b, config.a);
+        config.id, 0.0f, g_overlay_layout.label_margin_top, config.text,
+        bar_font, config.bold, kAlignTop, config.r, config.g, config.b,
+        config.a);
     if (label && labelClass) {
-      Set_Property(labelClass, label, "Height", g_overlay_layout.bar_h);
-      Set_Property(labelClass, label, "VerticalAlignment", kAlignVCenter);
-      Set_Property(labelClass, label, "FitHeightToText", false);
+      Set_Property(labelClass, label, "PositionType", 1);
+      Set_Property(labelClass, label, "MarginLeft", 0.0f);
+      Set_Property(labelClass, label, "MarginTop",
+                   g_overlay_layout.label_margin_top);
+      Set_Property(labelClass, label, "Width", kInitialLabelWidth);
+      Set_Property(labelClass, label, "HorizontalAlignment", kAlignLeft);
+      Set_Property(labelClass, label, "VerticalAlignment", kAlignTop);
+      Set_Property(labelClass, label, "FitWidthToText", false);
+      Set_Property(labelClass, label, "FitHeightToText", true);
+      Set_Property(labelClass, label, "NumberOfLines", 1);
     }
-    Widget_Append_Child(root, label);
+    Widget_Append_Child(cell ? cell : root, label);
   }
 }

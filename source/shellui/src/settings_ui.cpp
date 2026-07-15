@@ -22,6 +22,8 @@ void apply_overlay_layout() {
   /* PHU: font_size=18, panel height = font + 6. */
   constexpr float kFontH = 18.0f;
   constexpr float kBarExtra = 6.0f;
+  /* PHU labels use PositionType=1 + MarginTop=5 + FitHeightToText=true. */
+  constexpr float kTextTopInset = 5.0f;
   constexpr float w_fps = 120.0f;
   constexpr float w_cpu_avg = 190.0f;
   constexpr float w_cpu_all = 420.0f;
@@ -62,16 +64,14 @@ void apply_overlay_layout() {
   const float bar_x = 0.0f;
   const float bar_w = kScreenW;
   const float bar_y = bottom ? (kScreenH - bar_h) : 0.0f;
-  /*
-   * Label cells use Y = bar_y and Height = bar_h with VerticalAlignment=Center
-   * so text is vertically middle of the strip (see CreateGameWidget / set_label_xy).
-   */
+  const float label_margin_top = kTextTopInset;
   float x = content_w > 0.0f ? ((kScreenW - content_w) * 0.5f) : kOffscreen;
 
   g_overlay_layout.bar_x = bar_x;
   g_overlay_layout.bar_y = bar_y;
   g_overlay_layout.bar_w = bar_w;
   g_overlay_layout.bar_h = bar_h;
+  g_overlay_layout.label_margin_top = label_margin_top;
 
   auto place = [&](float &ox, float &oy, bool on, float w) {
     oy = bar_y;
@@ -135,4 +135,3 @@ void settings_commit(bool reload_main, bool reload_util)
     IPC_Client::getInstance(true).Reload_Daemon_Settings();
   }
 }
-
