@@ -69,3 +69,5 @@ source/lib/liborion_platform.a
 source/lib/liborion_plugin.a
 source/lib/liborion_playtime.a
 source/lib/liborion_elfldr.a
+source/lib/liborion_payload.a
+/scripts/__pycache__
