@@ -14,10 +14,13 @@
 
 namespace ps5ui {
 
-enum class Style { None, Center };
+enum class Style { None, Center, Left };
 
 /** Escape attribute text: & < > " and path-style / → // (matches legacy escapeXML). */
 std::string escape(std::string_view text);
+
+/** XML specials only (& < > ") — no path slash doubling. Use for file/key attrs. */
+std::string escape_xml(std::string_view text);
 
 struct Attrs {
   std::string id;
@@ -28,6 +31,11 @@ struct Attrs {
   std::optional<std::string> file;
   std::optional<std::string> value;
   std::optional<std::string> confirm;
+  std::optional<std::string> confirm_phrase;
+  std::optional<std::string> keyboard_type;
+  std::optional<std::string> min_length;
+  std::optional<std::string> max_length;
+  std::optional<std::string> key;
   std::optional<std::string> initial_focus_to;
   Style style = Style::None;
 };
@@ -41,6 +49,7 @@ struct Node {
     Link,
     List,
     ListItem,
+    TextField,
   } kind = Kind::SettingList;
 
   Attrs attrs;
@@ -77,7 +86,8 @@ public:
   Derived& toggle(std::string id, std::string title, bool on,
                   std::optional<std::string> second_title = std::nullopt,
                   std::optional<std::string> description = std::nullopt,
-                  std::optional<std::string> icon = std::nullopt);
+                  std::optional<std::string> icon = std::nullopt,
+                  std::optional<std::string> confirm = std::nullopt);
 
   Derived& link(std::string id, std::string title, std::string file,
                 std::optional<std::string> second_title = std::nullopt);
@@ -85,7 +95,19 @@ public:
   Derived& list(std::string id, std::string title,
                 const std::function<void(ListBuilder&)>& body,
                 std::optional<std::string> second_title = std::nullopt,
-                std::optional<std::string> value = std::nullopt);
+                std::optional<std::string> value = std::nullopt,
+                std::optional<std::string> confirm = std::nullopt,
+                std::optional<std::string> confirm_phrase = std::nullopt);
+
+  Derived& text_field(std::string id, std::string title,
+                      std::optional<std::string> second_title = std::nullopt,
+                      std::optional<std::string> keyboard_type = std::nullopt,
+                      std::optional<std::string> min_length = std::nullopt,
+                      std::optional<std::string> max_length = std::nullopt,
+                      std::optional<std::string> key = std::nullopt,
+                      std::optional<std::string> confirm = std::nullopt,
+                      std::optional<std::string> confirm_phrase = std::nullopt,
+                      std::optional<std::string> value = std::nullopt);
 
   Derived& group(std::string id, std::string title,
                  const std::function<void(Group&)>& body,
@@ -162,7 +184,8 @@ template <typename Derived>
 Derived& GroupT<Derived>::toggle(std::string id, std::string title, bool on,
                                  std::optional<std::string> second_title,
                                  std::optional<std::string> description,
-                                 std::optional<std::string> icon) {
+                                 std::optional<std::string> icon,
+                                 std::optional<std::string> confirm) {
   Node n;
   n.kind = Node::Kind::Toggle;
   n.attrs.id = std::move(id);
@@ -170,6 +193,7 @@ Derived& GroupT<Derived>::toggle(std::string id, std::string title, bool on,
   n.attrs.second_title = std::move(second_title);
   n.attrs.description = std::move(description);
   n.attrs.icon = std::move(icon);
+  n.attrs.confirm = std::move(confirm);
   n.attrs.value = on ? "1" : "0";
   return add(std::move(n));
 }
@@ -190,18 +214,47 @@ template <typename Derived>
 Derived& GroupT<Derived>::list(std::string id, std::string title,
                                const std::function<void(ListBuilder&)>& body,
                                std::optional<std::string> second_title,
-                               std::optional<std::string> value) {
+                               std::optional<std::string> value,
+                               std::optional<std::string> confirm,
+                               std::optional<std::string> confirm_phrase) {
   Node n;
   n.kind = Node::Kind::List;
   n.attrs.id = std::move(id);
   n.attrs.title = std::move(title);
   n.attrs.second_title = std::move(second_title);
   n.attrs.value = std::move(value);
+  n.attrs.confirm = std::move(confirm);
+  n.attrs.confirm_phrase = std::move(confirm_phrase);
   node_->children.push_back(std::move(n));
   ListBuilder lb(node_->children.back());
   if (body)
     body(lb);
   return self();
+}
+
+template <typename Derived>
+Derived& GroupT<Derived>::text_field(std::string id, std::string title,
+                                     std::optional<std::string> second_title,
+                                     std::optional<std::string> keyboard_type,
+                                     std::optional<std::string> min_length,
+                                     std::optional<std::string> max_length,
+                                     std::optional<std::string> key,
+                                     std::optional<std::string> confirm,
+                                     std::optional<std::string> confirm_phrase,
+                                     std::optional<std::string> value) {
+  Node n;
+  n.kind = Node::Kind::TextField;
+  n.attrs.id = std::move(id);
+  n.attrs.title = std::move(title);
+  n.attrs.second_title = std::move(second_title);
+  n.attrs.keyboard_type = std::move(keyboard_type);
+  n.attrs.min_length = std::move(min_length);
+  n.attrs.max_length = std::move(max_length);
+  n.attrs.key = std::move(key);
+  n.attrs.confirm = std::move(confirm);
+  n.attrs.confirm_phrase = std::move(confirm_phrase);
+  n.attrs.value = std::move(value);
+  return add(std::move(n));
 }
 
 template <typename Derived>

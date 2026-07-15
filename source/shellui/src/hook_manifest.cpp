@@ -12,10 +12,11 @@
 extern MonoClass *MemoryStream_IO;
 extern MonoObject *MemoryStream_Instance;
 extern std::string payloads_xml, remote_play_xml, debug_settings_xml, cheats_xml;
-extern std::string dec_xml_str, UI3_dec, legacy_dec;
+extern std::string UI3_dec, legacy_dec;
 void generate_payload_xml(std::string &xml_buffer, bool list_page);
 void generate_remote_play_xml(std::string &xml_buffer);
 void generate_plapps_xml(std::string &new_xml);
+void generate_toolbox_xml(std::string &new_xml);
 void generate_cheats_xml(std::string &new_xml, std::string &not_open_tid,
                          bool running_as_debug_settings,
                          bool show_while_not_open);
@@ -102,7 +103,7 @@ uint64_t GetManifestResourceStream_Hook(uint64_t inst, MonoString *FileName) {
   switch (route.page) {
   case toolbox::Page::DebugSettings:
     LoadSettings();
-    new_xml_string = dec_xml_str;
+    generate_toolbox_xml(new_xml_string);
     break;
   case toolbox::Page::Payloads:
     g_ui.payloads_list.clear();

@@ -411,3 +411,347 @@ void generate_plapps_xml(std::string& new_xml) {
 
   new_xml = page.build();
 }
+
+namespace {
+
+constexpr const char* kIconPkg =
+    "/user/data/OrionHEN/assets/icon_xml_package.png";
+constexpr const char* kIconPlugins =
+    "/user/data/OrionHEN/assets/icon_xml_plugins.png";
+constexpr const char* kIconGame = "/user/data/OrionHEN/assets/icon_xml_game.png";
+constexpr const char* kIconSettings =
+    "/user/data/OrionHEN/assets/icon_xml_settings.png";
+constexpr const char* kIconShortcuts =
+    "/user/data/OrionHEN/assets/icon_xml_shortcuts.png";
+constexpr const char* kIconDebug =
+    "/user/data/OrionHEN/assets/icon_xml_debug.png";
+constexpr const char* kIconAbout =
+    "/user/data/OrionHEN/assets/icon_xml_about.png";
+
+bool toolbox_on(const char* id) {
+  return resolve_toolbox_control_value(id) == "1";
+}
+
+std::string toolbox_val(const char* id, const char* fallback = "0") {
+  std::string v = resolve_toolbox_control_value(id);
+  return v.empty() ? fallback : v;
+}
+
+void append_toolbox_pkg_group(ps5ui::Group& g) {
+  g.link("id_game_package_installer", "软件包安装器",
+         "PkgInstaller/data/pkginstaller.xml")
+      .link("id_game_add_content_manager", "附加内容管理器",
+            "Addcontent/data/addcontent.xml");
+}
+
+void append_toolbox_payloads_group(ps5ui::Group& g) {
+  g.link("id_payloads", "Payload", "payloads.xml")
+      .group(
+          "id_kstuff_opts", "Kstuff",
+          [](ps5ui::Group& k) {
+            k.toggle("id_kstuff_autoload", "OrionHEN 启动时自动加载 Kstuff",
+                     toolbox_on("id_kstuff_autoload"))
+                .button("id_download_kstuff", "通过 GitHub 替换为最新 Kstuff",
+                        std::nullopt,
+                        "从 EchoStretch 的 GitHub 仓库下载并安装最新 kstuff，"
+                        "替换 OrionHEN 启动时自动加载的版本")
+                .button("id_delete_kstuff", "删除通过 GitHub 安装的 Kstuff",
+                        std::nullopt, "将切换回 OrionHEN 内置的 kstuff");
+          },
+          "内核补丁组件管理", std::nullopt, "id_kstuff_autoload");
+}
+
+void append_toolbox_game_group(ps5ui::Group& g) {
+  g.link("id_cheats", "金手指（开发中）", "cheats.xml")
+      .link("remote_play", "远程游玩", "remote_play.xml")
+      .toggle("id_custom_game_opts", "OrionHEN 游戏选项",
+              toolbox_on("id_custom_game_opts"),
+              "在游戏选项菜单中显示 OrionHEN 相关选项（金手指、转储等）")
+      .group(
+          "id_overlay_opts", "游戏覆盖层",
+          [](ps5ui::Group& o) {
+            o.list("id_overlay_change_pos", "监控条位置",
+                   [](ps5ui::ListBuilder& L) {
+                     L.item("id_overlay_pos_1", "顶部贴边", "0")
+                         .item("id_overlay_pos_3", "底部贴边", "2");
+                   },
+                   "贴屏幕边缘、宽度 100%；指标居中：FPS · CPU · GPU · RAM · IP",
+                   toolbox_val("id_overlay_change_pos"))
+                .toggle("id_overlay_fps", "*实验性* FPS",
+                        toolbox_on("id_overlay_fps"), std::nullopt,
+                        "显示 FPS 段（依赖游戏内 FPS 字符串捕获，可能不稳定）")
+                .toggle("id_overlay_gpu", "GPU", toolbox_on("id_overlay_gpu"),
+                        std::nullopt, "显示 GPU 温度与显存占用")
+                .toggle("id_overlay_cpu", "CPU", toolbox_on("id_overlay_cpu"),
+                        std::nullopt, "显示 CPU 温度与平均使用率")
+                .toggle("id_all_cpu_usage", "显示全部 CPU 核心使用率",
+                        toolbox_on("id_all_cpu_usage"), std::nullopt,
+                        "CPU 段改为 8 核分别显示（监控条会加宽）")
+                .toggle("id_overlay_ram", "内存", toolbox_on("id_overlay_ram"),
+                        std::nullopt, "显示系统内存占用")
+                .toggle("id_overlay_ip", "IP 地址", toolbox_on("id_overlay_ip"),
+                        std::nullopt, "显示主机局域网 IP");
+          },
+          "贴边全宽横条 + 半透明黑底（PHU flex banner）", std::nullopt,
+          "id_overlay_change_pos");
+}
+
+void append_toolbox_system_group(ps5ui::Group& g) {
+  g.toggle("id_disp_titleids", "在主菜单显示 Title ID",
+           toolbox_on("id_disp_titleids"),
+           "零售机可用，但仅在工具箱激活时显示")
+      .toggle("id_auto_eject", "OrionHEN 启动时自动弹出光盘",
+              toolbox_on("id_auto_eject"), std::nullopt,
+              "OrionHEN 完全启动后自动弹出已插入的光盘，适用于 BD-J 或 LUA "
+              "漏洞利用",
+              std::nullopt, "更改将在下次重启后生效")
+      .group(
+          "id_group_fan", "风扇控制",
+          [](ps5ui::Group& f) {
+            f.toggle("id_enable_fan_speed", "启用手动风扇阈值",
+                     toolbox_on("id_enable_fan_speed"))
+                .text_field("id_fan_speed", "调整风扇阈值",
+                            "按摄氏度调整风扇阈值", "number", "2", "2",
+                            std::nullopt, std::nullopt, std::nullopt,
+                            toolbox_val("id_fan_speed", ""));
+          },
+          std::nullopt, std::nullopt, "id_enable_fan_speed")
+      .group(
+          "id_rest_mode", "休息模式",
+          [](ps5ui::Group& r) {
+            r.text_field(
+                 "id_rest_1", "延迟工具箱激活（秒）",
+                 "延迟工具箱内的补丁以防止卡死（在已有内置延迟之外额外增加）",
+                 "number", "1", "255", std::nullopt, std::nullopt, std::nullopt,
+                 toolbox_val("id_rest_1", ""))
+                .toggle(
+                    "id_rest_2",
+                    "进入休息模式时自动关闭 OrionHEN 服务守护进程",
+                    toolbox_on("id_rest_2"),
+                    "从休息模式恢复后将重新启动守护进程")
+                .toggle("id_rest_3", "进入休息模式时自动关闭已打开的游戏",
+                        toolbox_on("id_rest_3"),
+                        "进入休息模式时尝试关闭任何已打开的游戏")
+                .toggle("id_rest_4", "进入休息模式时禁用工具箱自动启动",
+                        toolbox_on("id_rest_4"),
+                        "此设置将在下次进入休息模式时禁用工具箱自动启动");
+          },
+          "提升休息模式稳定性", std::nullopt, "id_rest_1")
+      .link("id_external_hdd", "外接硬盘",
+            "DebugSettings/data/debug_settings_external_hdd.xml")
+      .link("id_licenseactivation", "蓝光（许可证）激活",
+            "DebugSettings/data/debug_settings_licenseactivation.xml");
+}
+
+void append_toolbox_startup_group(ps5ui::Group& g) {
+  g.list("id_start_opt", "OrionHEN 加载后自动打开",
+         [](ps5ui::ListBuilder& L) {
+           L.item("id_start_opt_1", "无", "0")
+               .item("id_start_opt_1", "主菜单", "1")
+               .item("id_start_opt_2", "设置", "2")
+               .item("id_start_opt_3", "OrionHEN 工具箱", "3");
+         },
+         std::nullopt, toolbox_val("id_start_opt"), "更改将在下次重启后生效",
+         "确定, 取消")
+      .toggle(
+          "id_toolbox_auto_start", "启动时打开 OrionHEN 工具箱",
+          toolbox_on("id_toolbox_auto_start"),
+          "是否在启动流程中注入/打开工具箱", std::nullopt, std::nullopt,
+          "若禁用，您需要重新添加工具箱或通过 config.ini "
+          "手动修改启动设置，这不会禁用任何自动启动插件")
+      .group(
+          "id_shortcuts", "手柄快捷键",
+          [](ps5ui::Group& s) {
+            s.list("id_cheats_shortcut", "打开金手指菜单",
+                   [](ps5ui::ListBuilder& L) {
+                     L.item("id_cheats_shortcut_0", "关闭（无快捷键）", "0")
+                         .item("id_cheats_shortcut_1", "按住 R3 + L3", "1")
+                         .item("id_cheats_shortcut_2", "按住 L2 + △", "2")
+                         .item("id_cheats_shortcut_3", "长按选项键", "3")
+                         .item("id_cheats_shortcut_4", "长按分享键", "4")
+                         .item("id_cheats_shortcut_5", "单击分享键", "5");
+                   },
+                   "从任意位置（含游戏内）打开金手指菜单",
+                   toolbox_val("id_cheats_shortcut"))
+                .list("id_toolbox_shortcut", "打开 OrionHEN 工具箱",
+                      [](ps5ui::ListBuilder& L) {
+                        L.item("id_toolbox_shortcut_0", "关闭（无快捷键）", "0")
+                            .item("id_toolbox_shortcut_1", "按住 L2 + R3", "1")
+                            .item("id_toolbox_shortcut_2", "长按分享键", "2")
+                            .item("id_toolbox_shortcut_3", "单击分享键", "3");
+                      },
+                      "从任意位置（含游戏内）打开工具箱",
+                      toolbox_val("id_toolbox_shortcut"));
+          },
+          "快捷键在重启后仍然有效（若工具箱处于激活状态），组合键不限于游戏内使用",
+          std::nullopt, "id_cheats_shortcut");
+}
+
+void append_toolbox_debug_group(ps5ui::Group& g) {
+  g.toggle("id_debug_jb", "应用越狱通知", toolbox_on("id_debug_jb"),
+           "在越狱应用时显示通知")
+      .toggle("id_debug_legacy_cmd", "旧版越狱命令服务器",
+              toolbox_on("id_debug_legacy_cmd"),
+              "需要网络；应用可通过 Socket 请求越狱")
+      .text_field("id_np_env", "NP 环境", std::nullopt, "basic_latin", "1", "16",
+                  "/NP/env", "系统将重启以应用此设置。", "确定,取消");
+}
+
+void append_toolbox_about_group(ps5ui::Group& g) {
+  g.group(
+       "id_donation_methods", "支持本项目",
+       [](ps5ui::Group& d) {
+         d.label("id_method_info", "★ 捐赠方式", ps5ui::Style::Center)
+             .label("id_method_1",
+                    "- GitHub Sponsors  | https://github.com/sponsors/LightningMods",
+                    ps5ui::Style::Center);
+       },
+       "喜欢这个项目吗？欢迎捐赠支持")
+      .group(
+          "id_orionhen_credits", "OrionHEN 致谢",
+          [](ps5ui::Group& c) {
+            c.label("id_orionhen_creds_display", "★ OrionHEN Beta 2.5",
+                    ps5ui::Style::Center)
+                .label("id_lead_devs", "★ 主要开发者 ★", ps5ui::Style::Center)
+                .label("id_lead_devs_2",
+                       "- LM (X @LightningMods_, GitHub @LightningMods, Discord "
+                       "@lm_dev)",
+                       ps5ui::Style::Center)
+                .label("id_ddkdkd", "★ OrionHEN 贡献者 ★", ps5ui::Style::Center)
+                .label("id_major_line",
+                       "Specter - Byepervisor          astrelsky          "
+                       "ChendoChap       sleirsgoevy - Kstuff",
+                       ps5ui::Style::Center)
+                .label("id_major_line_3", "John tornblom - elfldr 等",
+                       ps5ui::Style::Center)
+                .label("id_99877777", "更多信息、更新或问题请访问 GitHub 仓库",
+                       ps5ui::Style::Center)
+                .label("id_99555557", "OrionHEN 项目仓库", ps5ui::Style::Center)
+                .label("id_8585858", "特别感谢所有支持者，包括以下人员：",
+                       ps5ui::Style::Center)
+                .label("id_60606066",
+                       "MODDED WARFARE, Bucanero, Echo Stretch, "
+                       "CurrentGenGamesWithNick, Reo Auin, illusion, "
+                       "nanospeedgamer, Nomadic, Michael Crump, Br0ken4life, "
+                       "Mouuu, Newhouse-Estates, Dr Angry ",
+                       ps5ui::Style::Left)
+                .label("id_60888880",
+                       "Richard Stoltz, Not So Typical Gamer, Doobie, MC, "
+                       "WWIII, dutchfavx, Pulsar, gorshco, illix, Ya Boi "
+                       "Michael, Nineof09, Lostferwords, Kevin, kUiTs, ram",
+                       ps5ui::Style::Left)
+                .label("id_606064330",
+                       "onstar, Mapleditch, pyksy, Puky70, TheBoySassy21, "
+                       "Arnooooo, Jacksun, William, MauricioRodriguez, "
+                       "Micaiah, Madmac, Grit, dIGIMAN/TRSI, xe, Priyesh Patel",
+                       ps5ui::Style::Left)
+                .label("id_60606770",
+                       "JUNGLIST, Mega, smoothcriminal, Aka3z, Btet, 星空尽头, "
+                       "Tunc, Pitouuuu, Moha, proton, teotl, Hector, Osensama, "
+                       "Trope, x, jack favvv, lbc, Jay, mstrdtchs",
+                       ps5ui::Style::Left)
+                .label("id_606069990",
+                       "rookie_mx, SvenGDK, jose Gonzalez, Lysy767, Alfr3d, "
+                       "Fey, Knight1701, Efrain, Hernie, Johns, Madz, CRUCHI, "
+                       "koldoborne, slang777, Puffinz, Tv, Ubaldo Navarro",
+                       ps5ui::Style::Left)
+                .label("id_606099960",
+                       "Escaflowne, SrBonet, Gauban, joao, El01unO, SrBonet, "
+                       "Rayyden, CZ, Efrain De Alba, aide199a, Acesmokemall, "
+                       "Mheepae3029, fresno, wiiiiiz, aln, Eli, marusa Bucicas",
+                       ps5ui::Style::Left)
+                .label("id_606055560",
+                       "Ion Florin Berusca, Bbuster, Dimitar, ROBERHUGO, "
+                       "PlayStationHaX, TecnoConsolas, "
+                       "mega_lelikUAPS4_5.55, An21V1rus, cyberrep, "
+                       "PlanetaryNoob, chiagre, Samwise, Fortderrick",
+                       ps5ui::Style::Left)
+                .label("id_6060ttttt0",
+                       "ChimeFix, PeenButt, Wr0zen, Shawncarnage, Kuny, "
+                       "Cruznik, Vicen, shagy #8543, pepitopajas, Jakob "
+                       "Trammell, Austin Meer, scrdcow, XDOSEX, Kleei, Pif, "
+                       "ajslayer",
+                       ps5ui::Style::Left);
+          },
+          "致谢与支持者")
+      .group(
+          "id_inc_project", "OrionHEN 所包含的项目",
+          [](ps5ui::Group& p) {
+            p.label("id_project_info", "★ OrionHEN 中使用的开源与闭源项目",
+                    ps5ui::Style::Center)
+                .label("id_project_1",
+                       "PS5 Payload Dev SDK - "
+                       "https://github.com/ps5-payload-dev/sdk",
+                       ps5ui::Style::Center)
+                .label("id_project_2",
+                       "PS5 Payload Dev elfldr - "
+                       "https://github.com/ps5-payload-dev/elfldr",
+                       ps5ui::Style::Center)
+                .label("id_project_3",
+                       "PS5 Dev Byepervisor - "
+                       "https://github.com/PS5Dev/Byepervisor",
+                       ps5ui::Style::Center)
+                .label("id_project_4", "Kstuff by sleirsgoevy",
+                       ps5ui::Style::Center)
+                .label("id_project_5",
+                       "7-Zip LZMA - https://www.7-zip.org/sdk.html",
+                       ps5ui::Style::Center)
+                .label("id_project_6",
+                       "Libhijacker by astrelsky - "
+                       "https://github.com/astrelsky/libhijacker",
+                       ps5ui::Style::Center)
+                .label("id_project_7",
+                       "PS5-SELF-Decrypter by Specter - "
+                       "https://github.com/Cryptogenic/PS5-SELF-Decrypter",
+                       ps5ui::Style::Center)
+                .label("id_project_8",
+                       "PS5Debug by CTN - https://github.com/GoldHEN/ps5debug",
+                       ps5ui::Style::Center)
+                .label("id_project_9",
+                       "LibNineS - https://github.com/buzzer-re/NineS",
+                       ps5ui::Style::Center)
+                .label("id_project_10",
+                       "cJSON - https://github.com/DaveGamble/cJSON",
+                       ps5ui::Style::Center);
+          },
+          "OrionHEN 中使用的项目");
+}
+
+} // namespace
+
+void generate_toolbox_xml(std::string& new_xml) {
+  ps5ui::Page page("id_debug_settings", "★OrionHEN 工具箱");
+  page.root_focus("id_group_pkg");
+
+  page.group(
+          "id_group_pkg", "软件包安装",
+          [](ps5ui::Group& g) { append_toolbox_pkg_group(g); },
+          "安装 PKG 与附加内容", kIconPkg, "id_game_package_installer")
+      .group(
+          "id_group_payloads", "Payload 与内核",
+          [](ps5ui::Group& g) { append_toolbox_payloads_group(g); },
+          "Payload ELF 与 Kstuff", kIconPlugins, "id_payloads")
+      .group(
+          "id_group_game", "游戏功能",
+          [](ps5ui::Group& g) { append_toolbox_game_group(g); },
+          "金手指、远程游玩与游戏内覆盖层", kIconGame, "id_cheats")
+      .group(
+          "id_group_system", "系统设置",
+          [](ps5ui::Group& g) { append_toolbox_system_group(g); },
+          "权限、硬件、存储与休息模式", kIconSettings, "id_toolbox_auto_start")
+      .group(
+          "id_utils", "启动与快捷键",
+          [](ps5ui::Group& g) { append_toolbox_startup_group(g); },
+          "启动行为与手柄快捷键", kIconShortcuts, "id_start_opt")
+      .group(
+          "id_group_debug", "调试选项",
+          [](ps5ui::Group& g) { append_toolbox_debug_group(g); },
+          "越狱调试与环境", kIconDebug, "id_debug_jb")
+      .group(
+          "id_orionhen_credit_options", "关于",
+          [](ps5ui::Group& g) { append_toolbox_about_group(g); },
+          "致谢、捐赠与项目信息", kIconAbout, std::nullopt,
+          ps5ui::Style::Center);
+
+  new_xml = page.build();
+}

@@ -9,9 +9,6 @@
 #include "defs.h"
 #include <orion/settings.hpp>
 
-extern "C" uint8_t toolbox_start[];
-extern "C" int32_t toolbox_end;
-
 #define MAX_LINE 256
 #define MAX_PAIRS 100
 

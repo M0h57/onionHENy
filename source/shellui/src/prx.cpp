@@ -40,7 +40,6 @@ along with this program; see the file COPYING. If not, see
 // Globals (referenced by other shellui translation units)
 // ---------------------------------------------------------------------------
 
-std::string dec_xml_str;
 std::string UI3_dec;
 std::string legacy_dec;
 std::string appsystem_dll;
@@ -385,7 +384,7 @@ void init_resource_names() {
 }
 
 // ---------------------------------------------------------------------------
-// Phase 4: version banner + toolbox XML decrypt
+// Phase 4: version banner
 // ---------------------------------------------------------------------------
 
 bool init_version_string(const OrbisKernelSwVersion& sw) {
@@ -411,27 +410,6 @@ bool init_version_string(const OrbisKernelSwVersion& sw) {
   if (!SetVersionString(final_ver.c_str())) {
     shellui_log("Failed to set version string");
     return false;
-  }
-  return true;
-}
-
-bool decrypt_toolbox_xml() {
-  const int size =
-      static_cast<int>(reinterpret_cast<uint64_t>(&toolbox_end) -
-                       reinterpret_cast<uint64_t>(&toolbox_start));
-  shellui_log("[GMRS-INIT] decrypting toolbox XML embed: blob=%d", size);
-
-  const std::string key = base64_decode(kXorKeyB64);
-  auto decrypted = encrypt_decrypt(toolbox_start, size, key);
-  dec_xml_str.assign(decrypted.begin(), decrypted.end());
-
-  shellui_log("[GMRS-INIT] decrypted toolbox XML: full=%zu full_prefix=%.60s",
-              dec_xml_str.size(),
-              dec_xml_str.empty() ? "(empty)" : dec_xml_str.c_str());
-
-  if (dec_xml_str.empty() ||
-      dec_xml_str.find("system_settings") == std::string::npos) {
-    shellui_log("[GMRS-INIT] WARN: full toolbox XML missing/invalid after decrypt!");
   }
   return true;
 }
@@ -813,8 +791,6 @@ int main(int argc, char const* argv[]) {
   mono_thread_attach(Root_Domain);
 
   if (!init_version_string(sw))
-    return -1;
-  if (!decrypt_toolbox_xml())
     return -1;
 
   ShellImages images;

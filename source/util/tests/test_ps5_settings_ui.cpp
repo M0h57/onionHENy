@@ -179,6 +179,68 @@ static int test_fluent_returns_this(void) {
   return 0;
 }
 
+static int test_text_field_and_confirm(void) {
+  const std::string xml =
+      Page("id_page", "Page")
+          .text_field("id_fan_speed", "调整风扇阈值", "按摄氏度调整风扇阈值",
+                      "number", "2", "2", std::nullopt, std::nullopt,
+                      std::nullopt, "55")
+          .text_field("id_np_env", "NP 环境", std::nullopt, "basic_latin", "1",
+                      "16", "/NP/env", "系统将重启以应用此设置。", "确定,取消")
+          .toggle("id_auto_eject", "自动弹出", false, std::nullopt,
+                  "desc", std::nullopt, "更改将在下次重启后生效")
+          .list("id_start_opt", "启动后打开",
+                [](ListBuilder& L) {
+                  L.item("id_start_opt_1", "无", "0");
+                },
+                std::nullopt, "0", "更改将在下次重启后生效", "确定, 取消")
+          .label("id_left", "left text", Style::Left)
+          .build();
+
+  TEST_ASSERT_TRUE(xml.find("<text_field id=\"id_fan_speed\"") !=
+                   std::string::npos);
+  TEST_ASSERT_TRUE(xml.find("keyboard_type=\"number\"") != std::string::npos);
+  TEST_ASSERT_TRUE(xml.find("min_length=\"2\"") != std::string::npos);
+  TEST_ASSERT_TRUE(xml.find("max_length=\"2\"") != std::string::npos);
+  TEST_ASSERT_TRUE(xml.find("value=\"55\"") != std::string::npos);
+  TEST_ASSERT_TRUE(xml.find("key=\"/NP/env\"") != std::string::npos);
+  TEST_ASSERT_TRUE(xml.find("confirm_phrase=\"确定,取消\"") != std::string::npos);
+  TEST_ASSERT_TRUE(xml.find("confirm=\"更改将在下次重启后生效\"") !=
+                   std::string::npos);
+  TEST_ASSERT_TRUE(xml.find("confirm_phrase=\"确定, 取消\"") !=
+                   std::string::npos);
+  TEST_ASSERT_TRUE(xml.find("style=\"left\"") != std::string::npos);
+  return 0;
+}
+
+static int test_toolbox_like_skeleton(void) {
+  const std::string xml =
+      Page("id_debug_settings", "★OrionHEN 工具箱")
+          .root_focus("id_group_pkg")
+          .group(
+              "id_group_pkg", "软件包安装",
+              [](Group& g) {
+                g.link("id_game_package_installer", "软件包安装器",
+                       "PkgInstaller/data/pkginstaller.xml");
+              },
+              "安装 PKG 与附加内容",
+              "/user/data/OrionHEN/assets/icon_xml_package.png",
+              "id_game_package_installer")
+          .build();
+
+  TEST_ASSERT_TRUE(xml.find("id=\"id_debug_settings\"") != std::string::npos);
+  TEST_ASSERT_TRUE(xml.find("initial_focus_to=\"id_group_pkg\"") !=
+                   std::string::npos);
+  TEST_ASSERT_TRUE(xml.find("id=\"id_group_pkg\"") != std::string::npos);
+  /* icon uses path-style // ; file keeps single / for plugin resources */
+  TEST_ASSERT_TRUE(
+      xml.find("icon=\"//user//data//OrionHEN//assets//icon_xml_package.png\"") !=
+      std::string::npos);
+  TEST_ASSERT_TRUE(xml.find("file=\"PkgInstaller/data/pkginstaller.xml\"") !=
+                   std::string::npos);
+  return 0;
+}
+
 extern "C" int test_ps5_settings_ui_suite(void) {
   int fails = 0;
   fails += orion_test_run("ps5ui.escape", test_escape_special_chars);
@@ -191,5 +253,7 @@ extern "C" int test_ps5_settings_ui_suite(void) {
   fails += orion_test_run("ps5ui.attr_escape", test_attr_escaping_in_titles);
   fails += orion_test_run("ps5ui.remote_play_like", test_remote_play_like_page);
   fails += orion_test_run("ps5ui.fluent_chain", test_fluent_returns_this);
+  fails += orion_test_run("ps5ui.text_field_confirm", test_text_field_and_confirm);
+  fails += orion_test_run("ps5ui.toolbox_skeleton", test_toolbox_like_skeleton);
   return fails;
 }

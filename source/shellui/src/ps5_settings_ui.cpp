@@ -14,6 +14,8 @@ const char* style_attr(Style style) {
   switch (style) {
   case Style::Center:
     return "center";
+  case Style::Left:
+    return "left";
   case Style::None:
   default:
     return nullptr;
@@ -36,6 +38,8 @@ const char* kind_tag(Node::Kind kind) {
     return "list";
   case Node::Kind::ListItem:
     return "list_item";
+  case Node::Kind::TextField:
+    return "text_field";
   }
   return "unknown";
 }
@@ -44,29 +48,38 @@ bool is_container(Node::Kind kind) {
   return kind == Node::Kind::SettingList || kind == Node::Kind::List;
 }
 
-void write_attr(std::ostringstream& out, const char* key, std::string_view value) {
-  out << ' ' << key << "=\"" << escape(value) << '"';
+void write_attr(std::ostringstream& out, const char* key, std::string_view value,
+                bool path_escape) {
+  out << ' ' << key << "=\""
+      << (path_escape ? escape(value) : escape_xml(value)) << '"';
 }
 
 void write_optional(std::ostringstream& out, const char* key,
-                    const std::optional<std::string>& value) {
+                    const std::optional<std::string>& value, bool path_escape) {
   if (value)
-    write_attr(out, key, *value);
+    write_attr(out, key, *value, path_escape);
 }
 
 void write_open_tag(std::ostringstream& out, const Node& node, bool self_close) {
   out << '<' << kind_tag(node.kind);
-  write_attr(out, "id", node.attrs.id);
-  write_attr(out, "title", node.attrs.title);
-  write_optional(out, "second_title", node.attrs.second_title);
-  write_optional(out, "description", node.attrs.description);
-  write_optional(out, "icon", node.attrs.icon);
-  write_optional(out, "file", node.attrs.file);
-  write_optional(out, "value", node.attrs.value);
-  write_optional(out, "confirm", node.attrs.confirm);
-  write_optional(out, "initial_focus_to", node.attrs.initial_focus_to);
+  /* id/title/focus/style tokens: XML only (no path slash doubling). */
+  write_attr(out, "id", node.attrs.id, /*path_escape=*/false);
+  write_attr(out, "title", node.attrs.title, /*path_escape=*/true);
+  write_optional(out, "second_title", node.attrs.second_title, true);
+  write_optional(out, "description", node.attrs.description, true);
+  write_optional(out, "icon", node.attrs.icon, true);
+  /* Relative plugin resource paths and reg keys keep single '/'. */
+  write_optional(out, "file", node.attrs.file, false);
+  write_optional(out, "key", node.attrs.key, false);
+  write_optional(out, "keyboard_type", node.attrs.keyboard_type, false);
+  write_optional(out, "min_length", node.attrs.min_length, false);
+  write_optional(out, "max_length", node.attrs.max_length, false);
+  write_optional(out, "value", node.attrs.value, false);
+  write_optional(out, "confirm", node.attrs.confirm, true);
+  write_optional(out, "confirm_phrase", node.attrs.confirm_phrase, true);
+  write_optional(out, "initial_focus_to", node.attrs.initial_focus_to, false);
   if (const char* s = style_attr(node.attrs.style))
-    write_attr(out, "style", s);
+    write_attr(out, "style", s, false);
   out << (self_close ? "/>\n" : ">\n");
 }
 
@@ -82,6 +95,31 @@ void serialize_node(std::ostringstream& out, const Node& node) {
 }
 
 } // namespace
+
+std::string escape_xml(std::string_view text) {
+  std::string out;
+  out.reserve(text.size() + 8);
+  for (char c : text) {
+    switch (c) {
+    case '&':
+      out += "&amp;";
+      break;
+    case '<':
+      out += "&lt;";
+      break;
+    case '>':
+      out += "&gt;";
+      break;
+    case '"':
+      out += "&quot;";
+      break;
+    default:
+      out += c;
+      break;
+    }
+  }
+  return out;
+}
 
 std::string escape(std::string_view text) {
   std::string out;
@@ -142,7 +180,8 @@ Page& Page::root_focus(std::string id) {
 std::string Page::build() const {
   std::ostringstream out;
   out << "<?xml version=\"1.0\" encoding=\"UTF-8\" ?>\n"
-      << "<system_settings version=\"1.0\" plugin=\"" << escape(plugin_) << "\">\n";
+      << "<system_settings version=\"1.0\" plugin=\"" << escape_xml(plugin_)
+      << "\">\n";
   serialize_node(out, root_);
   out << "</system_settings>\n";
   return out.str();

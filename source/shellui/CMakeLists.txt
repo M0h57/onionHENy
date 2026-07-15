@@ -57,17 +57,8 @@ set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-nested-anon-types -Wno-gnu-anonymous-st
 set(CMAKE_CXX_FLAGS "${CMAKE_C_FLAGS} -DDEBUG -gfull -gdwarf-2 -O0 -pedantic -pedantic-errors")
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O0 ")
 
-# Add a custom target for running encryptxml.py
-find_package(Python3 REQUIRED)
-
-add_custom_target(run_encryptxml
-    COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/shellui/assets/encryptxml.py
-    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
-    COMMENT "Running encryptxml.py as a pre-build action"
-)
-
 target_sources(${PROJECT_NAME} PRIVATE ${SrcFiles})
-add_dependencies(${PROJECT_NAME} run_encryptxml orion_ipc orion_settings orion_detour orion_proc orion_platform orion_ready)
+add_dependencies(${PROJECT_NAME} orion_ipc orion_settings orion_detour orion_proc orion_platform orion_ready)
 target_include_directories(${PROJECT_NAME} PRIVATE
 	"${D_CWD}/include"
 	"${PROJECT_ROOT}/liborion_ipc/include"

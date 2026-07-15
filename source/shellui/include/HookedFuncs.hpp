@@ -136,6 +136,7 @@ void ReloadRNPSApp(const char* title_id);
 
 void generate_payload_xml(std::string& xml_buffer, bool list_page);
 void generate_remote_play_xml(std::string& xml_buffer);
+void generate_toolbox_xml(std::string& new_xml);
 void Patch_Main_thread_Check(MonoImage * image_core);
 uint64_t Get_Address_of_Method(MonoImage* Assembly_Image, const char* Name_Space, const char* Class_Name, const char* Method_Name, int Param_Count);
 uint64_t Get_Address_of_Method(MonoImage* Assembly_Image, MonoClass* klass, const char* Method_Name, int Param_Count);
@@ -320,7 +321,6 @@ extern int (*__sys_regmgr_call)(long, long, int*, int*, long);
 /* ================================= HOOKED MONO FUNCS ============================================= */
 #include "shellui_state.hpp"
 
-extern  std::string dec_xml_str;
 extern  std::string cheats_xml;
 extern  std::string UI3_dec;
 extern  std::string legacy_dec;
