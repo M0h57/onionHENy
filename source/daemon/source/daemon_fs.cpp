@@ -272,7 +272,8 @@ void ForceKillProc(int pid) {
 }
 
 /** Kill every live process whose ki_comm matches any of @names (substring). */
-static void kill_all_by_comm_substr(const char *const *names, size_t nnames) {
+static void kill_all_by_comm_substr(const char *const *names, size_t nnames,
+                                   pid_t skip_pid = -1) {
   if (!names || nnames == 0)
     return;
   /* Loop: find+kill until none remain (bootstrapper kill_by_name pattern). */
@@ -284,7 +285,7 @@ static void kill_all_by_comm_substr(const char *const *names, size_t nnames) {
       pid_t p = orion_find_pid(names[i]);
       if (p <= 0)
         p = orion_find_pid_substr(names[i]);
-      if (p <= 0 || p == getpid())
+      if (p <= 0 || p == getpid() || p == skip_pid)
         continue;
       any = true;
       OrionHEN_log("shutdown: killing pid=%d (match \"%s\")", (int)p, names[i]);
@@ -301,47 +302,140 @@ static void kill_all_by_comm_substr(const char *const *names, size_t nnames) {
   }
 }
 
-[[noreturn]] void cmd_shutdown_orion_stack(void) {
-  OrionHEN_log("cmd_shutdown_orion_stack: stopping util → ShellUI → self");
+static void shutdown_kill_pid(pid_t pid, const char *label) {
+  if (pid <= 0 || pid == getpid())
+    return;
+  if (!orion_proc_is_alive(pid)) {
+    OrionHEN_log("shutdown: %s pid=%d already gone", label, (int)pid);
+    return;
+  }
+  OrionHEN_log("shutdown: stopping %s pid=%d", label, (int)pid);
+  if (kill(pid, SIGKILL) != 0) {
+    OrionHEN_log("shutdown: SIGKILL %s failed: %s — ForceKill", label,
+                 strerror(errno));
+    ForceKillProc(static_cast<int>(pid));
+  }
+  for (int i = 0; i < 20 && orion_proc_is_alive(pid); ++i)
+    usleep(50 * 1000);
+}
 
-  /*
-   * util is loaded via elfldr as util.elf; ki_comm is often "util.elf" but
-   * bootstrapper also matches "OrionHEN Utility". TerminateProcess alone is
-   * unreliable for these payloads — use SIGKILL (same as bootstrapper relaunch).
-   */
+static void shutdown_restart_shellui(void) {
+  int shellui_pid = get_shellui_pid();
+  if (shellui_pid <= 0 || shellui_pid == getpid()) {
+    OrionHEN_log("shutdown: SceShellUI not found (cannot restart)");
+    return;
+  }
+  OrionHEN_log("shutdown: restarting SceShellUI pid=%d", shellui_pid);
+  ForceKillProc(shellui_pid);
+  /* Home menu is respawned by the system after process death. */
+  if (orion_proc_is_alive(shellui_pid)) {
+    (void)kill(shellui_pid, SIGKILL);
+    usleep(200 * 1000);
+  }
+}
+
+/**
+ * Desired order: kstuff → daemon → util → restart SceShellUI.
+ * Daemon cannot finish util/ShellUI after it exits, so a short-lived child
+ * orchestrates the full sequence and kills the parent after kstuff is down.
+ */
+static void shutdown_orchestrator(pid_t daemon_pid) {
+  static const char *const kKstuffNames[] = {
+      "kstuff.elf",
+      "kstuff",
+  };
   static const char *const kUtilNames[] = {
       "util.elf",
       "OrionHEN Utility",
       "util",
   };
-  kill_all_by_comm_substr(kUtilNames, sizeof(kUtilNames) / sizeof(kUtilNames[0]));
 
-  if (orion_find_pid("util.elf") > 0 ||
-      orion_find_pid_substr("util.elf") > 0 ||
+  /* 1) kstuff first — drop kernel patches before tearing userland. */
+  OrionHEN_log("shutdown[1/4]: stop kstuff");
+  kill_all_by_comm_substr(kKstuffNames,
+                          sizeof(kKstuffNames) / sizeof(kKstuffNames[0]),
+                          daemon_pid);
+  if (orion_find_pid("kstuff.elf") > 0 || orion_find_pid("kstuff") > 0 ||
+      orion_find_pid_substr("kstuff") > 0) {
+    OrionHEN_log("shutdown: kstuff still alive — retry");
+    kill_all_by_comm_substr(kKstuffNames,
+                            sizeof(kKstuffNames) / sizeof(kKstuffNames[0]),
+                            daemon_pid);
+  }
+
+  /* 2) daemon (parent or any leftover daemon.elf). */
+  OrionHEN_log("shutdown[2/4]: stop daemon");
+  shutdown_kill_pid(daemon_pid, "daemon");
+  static const char *const kDaemonNames[] = {
+      "daemon.elf",
+      "OrionHEN Critical",
+  };
+  kill_all_by_comm_substr(kDaemonNames,
+                          sizeof(kDaemonNames) / sizeof(kDaemonNames[0]));
+
+  /* 3) util. */
+  OrionHEN_log("shutdown[3/4]: stop util");
+  kill_all_by_comm_substr(kUtilNames,
+                          sizeof(kUtilNames) / sizeof(kUtilNames[0]));
+  if (orion_find_pid("util.elf") > 0 || orion_find_pid_substr("util.elf") > 0 ||
       orion_find_pid("OrionHEN Utility") > 0) {
-    OrionHEN_log("shutdown: util still alive after kill pass — retry");
-    kill_all_by_comm_substr(kUtilNames, sizeof(kUtilNames) / sizeof(kUtilNames[0]));
-  } else {
-    OrionHEN_log("shutdown: util gone (or never present)");
+    OrionHEN_log("shutdown: util still alive — retry");
+    kill_all_by_comm_substr(kUtilNames,
+                            sizeof(kUtilNames) / sizeof(kUtilNames[0]));
   }
 
-  int shellui_pid = get_shellui_pid();
-  if (shellui_pid > 0 && shellui_pid != getpid()) {
-    OrionHEN_log("shutdown: ForceKill SceShellUI pid=%d", shellui_pid);
-    ForceKillProc(shellui_pid);
-    /* ShellUI is a normal SCE app; TerminateProcess usually works. Still SIGKILL. */
-    if (orion_proc_is_alive(shellui_pid)) {
-      (void)kill(shellui_pid, SIGKILL);
-      usleep(200 * 1000);
-    }
-  } else {
-    OrionHEN_log("shutdown: SceShellUI not found");
-  }
+  /* 4) restart ShellUI (kill → system respawn = clean toolbox state). */
+  OrionHEN_log("shutdown[4/4]: restart SceShellUI");
+  shutdown_restart_shellui();
+}
+
+[[noreturn]] void cmd_shutdown_orion_stack(void) {
+  OrionHEN_log(
+      "cmd_shutdown_orion_stack: kstuff → daemon → util → restart ShellUI");
 
   is_handler_enabled = false;
-  orion_notify(true, "OrionHEN stack shutdown (util + ShellUI + daemon)");
-  usleep(200 * 1000);
-  exit(0);
+  const pid_t daemon_pid = getpid();
+
+  const pid_t child = fork();
+  if (child < 0) {
+    OrionHEN_log("shutdown: fork failed (%s) — in-process fallback",
+                 strerror(errno));
+    /*
+     * Cannot stop daemon before util without a survivor process. Best effort:
+     * kstuff → util → ShellUI → self-exit.
+     */
+    static const char *const kKstuffNames[] = {"kstuff.elf", "kstuff"};
+    static const char *const kUtilNames[] = {
+        "util.elf",
+        "OrionHEN Utility",
+        "util",
+    };
+    kill_all_by_comm_substr(kKstuffNames,
+                            sizeof(kKstuffNames) / sizeof(kKstuffNames[0]));
+    kill_all_by_comm_substr(kUtilNames,
+                            sizeof(kUtilNames) / sizeof(kUtilNames[0]));
+    shutdown_restart_shellui();
+    orion_notify(true,
+                 "OrionHEN stack shutdown (fallback: kstuff+util+ShellUI+self)");
+    usleep(200 * 1000);
+    exit(0);
+  }
+
+  if (child > 0) {
+    /* Parent waits for child to SIGKILL us after kstuff is stopped. */
+    orion_notify(true,
+                 "OrionHEN shutting down (kstuff → daemon → util → ShellUI)");
+    for (int i = 0; i < 150; ++i) /* ~15s safety */
+      usleep(100 * 1000);
+    OrionHEN_log("shutdown: parent still alive after wait — self-exit");
+    exit(0);
+  }
+
+  /* Child: detach so parent death does not take us down mid-sequence. */
+  (void)setsid();
+  shutdown_orchestrator(daemon_pid);
+  OrionHEN_log("shutdown: orchestrator done");
+  _exit(0);
 }
 
 bool set_fan_threshold(int THRESHOLDTEMP) {
