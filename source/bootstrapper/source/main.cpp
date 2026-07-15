@@ -67,6 +67,7 @@ along with this program; see the file COPYING. If not, see
  #include "elfldr.h"
  #include "faulthandler.h"
  #include "hbldr.h"
+ #include "kstuff_probe.h"
  #include "pt.h"
  #include <ps5/klog.h>
  #include <ps5/kernel.h>
@@ -710,33 +711,41 @@ static int launch_chain(const OrbisKernelSwVersion &sys_ver) {
     klog_puts("kstuff disabled via no_kstuff file");
     orion_ready_signal(ORION_READY_KSTUFF);
   } else if (sys_ver.version >= 0x3000000) {
-    klog_puts("Loading kstuff via 9021 (before daemon/toolbox) ...");
-    uint8_t *override_elf = nullptr;
-    size_t override_size = 0;
-    if (if_exists("/data/OrionHEN/kstuff.elf"))
-      override_elf = orion_payload_read_file("/data/OrionHEN/kstuff.elf",
-                                             &override_size);
-    const uint8_t *kelf = override_elf ? override_elf : kstuff_start;
-    const size_t kelf_size = override_elf ? override_size : (size_t)kstuff_size;
-    const bool kstuff_sent = launch_blob(kelf, kelf_size, "kstuff", "kstuff.elf");
-    free(override_elf);
-    if (kstuff_sent) {
-      int wait = 0;
-      bool not_loaded = true;
-      while ((not_loaded = (sceKernelMprotect(&buz[0], 100, 0x7) < 0))) {
-        if (wait++ > 15) {
-          notify("Failed to load kstuff, continuing without it");
-          break;
-        }
-        sleep(1);
-      }
-      if (!not_loaded) {
-        klog_puts("kstuff mprotect OK — signal ready");
-        orion_ready_signal(ORION_READY_KSTUFF);
-        sleep(1); /* brief settle for ShellUI trophy patches */
-      }
+    if (kstuff_already_running()) {
+      /* Re-HEN after stack shutdown leaves kstuff alive; do not double-load. */
+      klog_puts("kstuff already running / mprotect OK — skip launch");
+      orion_ready_signal(ORION_READY_KSTUFF);
     } else {
-      notify("Failed to load kstuff via 9021, continuing");
+      klog_puts("Loading kstuff via 9021 (before daemon/toolbox) ...");
+      uint8_t *override_elf = nullptr;
+      size_t override_size = 0;
+      if (if_exists("/data/OrionHEN/kstuff.elf"))
+        override_elf = orion_payload_read_file("/data/OrionHEN/kstuff.elf",
+                                               &override_size);
+      const uint8_t *kelf = override_elf ? override_elf : kstuff_start;
+      const size_t kelf_size =
+          override_elf ? override_size : (size_t)kstuff_size;
+      const bool kstuff_sent =
+          launch_blob(kelf, kelf_size, "kstuff", "kstuff.elf");
+      free(override_elf);
+      if (kstuff_sent) {
+        int wait = 0;
+        bool not_loaded = true;
+        while ((not_loaded = (sceKernelMprotect(&buz[0], 100, 0x7) < 0))) {
+          if (wait++ > 15) {
+            notify("Failed to load kstuff, continuing without it");
+            break;
+          }
+          sleep(1);
+        }
+        if (!not_loaded) {
+          klog_puts("kstuff mprotect OK — signal ready");
+          orion_ready_signal(ORION_READY_KSTUFF);
+          sleep(1); /* brief settle for ShellUI trophy patches */
+        }
+      } else {
+        notify("Failed to load kstuff via 9021, continuing");
+      }
     }
   } else {
     orion_ready_signal(ORION_READY_KSTUFF);
