@@ -338,15 +338,6 @@ IPC_Ret IPC_Client::ToggleSetting(DaemonCommands cmd, bool turn_on) {
   return IPC_Ret::NO_ERROR;
 }
 
-IPC_Ret IPC_Client::DownloadKstuff() {
-  std::string ipc_msg;
-  if (!IPCSendCommand(BREW_UTIL_DOWNLOAD_KSTUFF, ipc_msg)) {
-    shellui_log("Failed to BREW_UTIL_DOWNLOAD_KSTUFF");
-    return IPC_Ret::OPERATION_FAILED;
-  }
-  return IPC_Ret::NO_ERROR;
-}
-
 void IPC_Client::KillDaemon() {
   std::string ipc_msg;
   IPCSendCommand(BREW_KILL_DAEMON, ipc_msg);
@@ -479,24 +470,6 @@ void IPC_Client::Reload_Daemon_Settings() {
 bool IPC_Client::Launch_Elfldr() {
   shellui_log("Launch_Elfldr: unsupported (9021 service removed)");
   return false;
-}
-
-bool IPC_Client::Cheats_Action(Cheat_Actions act, int repo) {
-  if (!require_util("Cheats_Action")) {
-    return false;
-  }
-  if (act != DOWNLOAD_CHEATS) {
-    shellui_log("Invalid cheat action");
-    return false;
-  }
-  std::string ipc_msg;
-  cJSON *j = cJSON_CreateObject();
-  cJSON_AddNumberToObject(j, "repo", repo);
-  std::string json = json_object_str(j);
-  if (!IPCSendCommand(BREW_UTIL_DOWNLOAD_CHEATS, ipc_msg, json)) {
-    return false;
-  }
-  return true;
 }
 
 bool IPC_Client::Set_Fan_Threshold(int temp, bool enabled) {

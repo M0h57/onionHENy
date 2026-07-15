@@ -32,10 +32,6 @@ along with this program; see the file COPYING. If not, see
 //   - JSON string fields are built with cJSON (escape-safe).
 // ---------------------------------------------------------------------------
 
-enum Cheat_Actions {
-  DOWNLOAD_CHEATS = 0,
-};
-
 // Legacy free loggers used by shellui / fps_elf (Detour, Mono, hooks).
 // Both forward to the same klog sink.
 // Note: no printf format attribute — existing call sites pass typed pointers
@@ -75,7 +71,6 @@ public:
   // High-level commands
   int GetDaemonPid();
   IPC_Ret ToggleSetting(DaemonCommands cmd, bool turn_on);
-  IPC_Ret DownloadKstuff();
   void KillDaemon();
   /** Crit Unix IPC: util → restart ShellUI → daemon exit (BREW_SHUTDOWN_STACK). */
   void ShutdownStack();
@@ -92,7 +87,6 @@ public:
   void SendRestModeAction();
   void Reload_Daemon_Settings();
   bool Launch_Elfldr();
-  bool Cheats_Action(Cheat_Actions act, int repo = 0);
   bool Set_Fan_Threshold(int temp, bool enabled);
   /** Crit: inject ShellUI toolbox (BREW_ENABLE_TOOLBOX). */
   bool EnableToolbox();

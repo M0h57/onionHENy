@@ -42,9 +42,6 @@ void reply(int sender_socket, bool error, std::string out_var = "Nothing");
 extern "C" {
 bool load_payload(const char *path);
 int launchApp(const char *titleId);
-bool download_file(const char *url, const char *dst);
-bool extract_zip(const char *zip_path, const char *out_dir);
-bool check_for_new_commit(int repo);
 extern char ip_address[];
 }
 std::string GetPS5Version(const std::string &jsonpath);
@@ -241,58 +238,14 @@ void handleIPC(clientArgs *client, std::string &inputStr,
     OnionHEN_log("BREW_UTIL_LAUNCH_ELFLDR: unsupported (no 9021 service)");
     reply(sender_app, true);
     break;
-  case BREW_UTIL_DOWNLOAD_CHEATS: {
-    int repo = onion_cjson::int_item(my_json.get(), "repo");
-    const char *staging = "/data/OnionHEN/cheats_staging";
-
-    if(!check_for_new_commit(repo)){
-      OnionHEN_log("Failed to check for new commit or is up to date");
-      reply(sender_app, false);
-      break;
-    }
-    onion_notify(true, "Downloading the latest %s Cheats repo....", repo ? "GoldHEN PS4" : "OnionHEN PS5");
-    if (!download_file(repo ? "https://api.github.com/repos/GoldHEN/GoldHEN_Cheat_Repository/zipball" : "https://api.github.com/repos/OnionHEN/PS5_Cheats/zipball",
-                       "/data/OnionHEN/cheats.zip")) {
-      OnionHEN_log("Failed to download cheats");
-      reply(sender_app, true);
-      break;
-    }
-    mkdir(ONION_DATA_ROOT, 0777);
-    mkdir(staging, 0777);
-    OnionHEN_log("Extracting Zip to staging folder");
-    if (!extract_zip("/data/OnionHEN/cheats.zip", staging)) {
-      OnionHEN_log("Failed to extract zip");
-      reply(sender_app, true);
-      break;
-    }
-
-    unlink("/data/OnionHEN/cheats.zip");
-    auto &cheats = onion::cheats::CheatService::instance();
-    cheats.ensureDir();
-    if (cheats.flattenInstallTree(staging) < 0) {
-      onion_notify(true, "Downloaded repo but no flat cheat files were installed");
-      reply(sender_app, true);
-      break;
-    }
-    onion_notify(true, "Successfully installed cheats to %s (flat TITLE_VERSION.ext)",
-           ONION_CHEATS_DIR);
-    reply(sender_app, false);
+  case BREW_UTIL_UNUSED_DOWNLOAD_CHEATS:
+    OnionHEN_log("DOWNLOAD_CHEATS: unsupported (online download removed)");
+    reply(sender_app, true);
     break;
-  }
-  case BREW_UTIL_DOWNLOAD_KSTUFF: {
-      onion_notify(true, "Attempting to Download kstuff ...");
-      if (!download_file("https://github.com/EchoStretch/kstuff/releases/latest/download/kstuff.elf",
-          "/data/OnionHEN/kstuff.elf")) {
-		  unlink("/data/OnionHEN/kstuff.elf");
-          OnionHEN_log("Failed to download kstuff");
-          reply(sender_app, true);
-          break;
-      }
-
-      onion_notify(true, "Successfully downloaded latest kstuff");
-      reply(sender_app, false);
-      break;
-  }
+  case BREW_UTIL_UNUSED_DOWNLOAD_KSTUFF:
+    OnionHEN_log("DOWNLOAD_KSTUFF: unsupported (online download removed)");
+    reply(sender_app, true);
+    break;
   case BREW_UTIL_UNUSED_RELOAD_CHEATS:
     /* Old full-tree index rebuild removed; load uses file signature hot-reload. */
     OnionHEN_log("RELOAD_CHEATS: unsupported (hot-reload only)");

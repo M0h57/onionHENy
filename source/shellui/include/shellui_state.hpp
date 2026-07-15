@@ -7,7 +7,6 @@
 #include "shellui_types.hpp"
 #include "toolbox_route.hpp"
 
-#include <atomic>
 #include <cstring>
 #include <string>
 #include <string_view>
@@ -41,9 +40,6 @@ struct ToolboxUiState {
   std::string remote_play_info;
 
   bool all_cpu_usage = false;
-
-  std::atomic_bool cheat_action_in_progress{false};
-  std::atomic_bool download_kstuff_thread_in_progress{false};
 
   void apply_route_flags(const toolbox::RouteFlags &f) {
     is_payloads = f.is_payloads;

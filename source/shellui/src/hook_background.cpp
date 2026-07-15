@@ -3,7 +3,6 @@
 
 #include "HookedFuncs.hpp"
 #include "ipc.hpp"
-#include <atomic>
 #include <string>
 
 #include "shellui_state.hpp"
@@ -20,40 +19,6 @@ void *load_payload_thread(void *args) {
   }
 
   delete entry;
-  pthread_exit(nullptr);
-  return nullptr;
-}
-
-void *download_cheats_thr(void *) {
-  if (g_ui.cheat_action_in_progress) {
-    notify("Cheat action already in progress, please wait for it to complete...");
-    pthread_exit(nullptr);
-    return nullptr;
-  }
-  g_ui.cheat_action_in_progress = true;
-  notify("Preparing to download the %s cheats repo...",
-         g_settings.selected_cheats_repo == CHEATS_REPO_ONIONHEN
-             ? "OnionHEN PS5"
-             : "GoldHEN PS4");
-  IPC_Client &util_ipc = IPC_Client::getInstance(true);
-  util_ipc.Cheats_Action(DOWNLOAD_CHEATS, g_settings.selected_cheats_repo);
-
-  g_ui.cheat_action_in_progress = false;
-  pthread_exit(nullptr);
-  return nullptr;
-}
-
-void *kstuff_download_thread(void *args) {
-  (void)args;
-  if (g_ui.download_kstuff_thread_in_progress) {
-    notify("Download action already in progress, please wait for it to complete...");
-    pthread_exit(nullptr);
-    return nullptr;
-  }
-  g_ui.download_kstuff_thread_in_progress = true;
-  IPC_Client &util_ipc = IPC_Client::getInstance(true);
-  shellui_log("Ret: 0x%X", util_ipc.DownloadKstuff());
-  g_ui.download_kstuff_thread_in_progress = false;
   pthread_exit(nullptr);
   return nullptr;
 }

@@ -1,19 +1,7 @@
 /* Copyright (C) 2025 OnionHEN / LightningMods — OnPress misc (kstuff, RP, credits) */
 #include "onpress.hpp"
 #include <fstream>
-#include <pthread.h>
 #include <unistd.h>
-
-void *kstuff_download_thread(void *args);
-void *download_cheats_thr(void *);
-
-static OnPressResult id_download_kstuff(OnPressContext &ctx) {
-  (void)ctx;
-  pthread_t thr;
-  pthread_create(&thr, nullptr, kstuff_download_thread, nullptr);
-  pthread_detach(thr);
-  return OnPressResult::Handled;
-}
 
 static OnPressResult id_kstuff_autoload(OnPressContext &ctx) {
   if (atol(ctx.value.c_str())) {
@@ -29,7 +17,7 @@ static OnPressResult id_kstuff_autoload(OnPressContext &ctx) {
 static OnPressResult id_delete_kstuff(OnPressContext &ctx) {
   (void)ctx;
   unlink("/user/data/OnionHEN/kstuff.elf");
-  notify("The external kstuff download has been deleted");
+  notify("The external kstuff has been deleted");
   return OnPressResult::Handled;
 }
 
@@ -64,24 +52,12 @@ static OnPressResult id_onionhen_credits(OnPressContext &ctx) {
   return OnPressResult::EarlyReturn;
 }
 
-static OnPressResult id_dl_cheats(OnPressContext &ctx) {
-  (void)ctx;
-  pthread_t thr;
-  pthread_create(&thr, nullptr, download_cheats_thr, nullptr);
-  pthread_detach(thr);
-  // Original returned oOnPress early without SaveSettings — preserve.
-  ctx.dirty = false;
-  return OnPressResult::EarlyReturn;
-}
-
 static const OnPressExactEntry kExact[] = {
-    {"id_download_kstuff", id_download_kstuff},
     {"id_kstuff_autoload", id_kstuff_autoload},
     {"id_delete_kstuff", id_delete_kstuff},
     {"id_save_rp_info", id_save_rp_info},
     {"id_lm_test", id_lm_test},
     {"id_onionhen_credits", id_onionhen_credits},
-    {"id_dl_cheats", id_dl_cheats},
 };
 
 const OnPressExactEntry *onpress_misc_exact(size_t *count) {

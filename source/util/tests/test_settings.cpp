@@ -43,7 +43,6 @@ static int test_roundtrip_file(void) {
   in.overlay_fps = true;
   in.legacy_cmd_server = true;
   in.cheats_shortcut_opt = 2;
-  in.selected_cheats_repo = 1;
   in.rest_mode_delay_seconds = 7;
   in.ui_lang = 1;
 
@@ -56,7 +55,6 @@ static int test_roundtrip_file(void) {
   TEST_ASSERT_TRUE(out.overlay_fps == true);
   TEST_ASSERT_TRUE(out.legacy_cmd_server == true);
   TEST_ASSERT_EQ_INT(2, out.cheats_shortcut_opt);
-  TEST_ASSERT_EQ_INT(1, out.selected_cheats_repo);
   TEST_ASSERT_EQ_U64(7, out.rest_mode_delay_seconds);
   TEST_ASSERT_EQ_INT(1, out.ui_lang);
   TEST_ASSERT_EQ_INT(onion::kSettingsSchemaVersion, out.schema_version);
@@ -107,7 +105,6 @@ static int test_full_schema_roundtrip(void) {
   in.libhijacker_cheats = true;
   in.debug_app_jb_msg = true;
   in.legacy_cmd_server = true;
-  in.selected_cheats_repo = 1;
   in.display_tids = true;
   in.onionhen_game_opts = false;
   in.enable_fan_speed = true;
@@ -131,7 +128,6 @@ static int test_full_schema_roundtrip(void) {
   TEST_ASSERT_TRUE(out.libhijacker_cheats == in.libhijacker_cheats);
   TEST_ASSERT_TRUE(out.debug_app_jb_msg == in.debug_app_jb_msg);
   TEST_ASSERT_TRUE(out.legacy_cmd_server == in.legacy_cmd_server);
-  TEST_ASSERT_EQ_INT(in.selected_cheats_repo, out.selected_cheats_repo);
   TEST_ASSERT_TRUE(out.display_tids == in.display_tids);
   TEST_ASSERT_TRUE(out.onionhen_game_opts == in.onionhen_game_opts);
   TEST_ASSERT_TRUE(out.enable_fan_speed == in.enable_fan_speed);

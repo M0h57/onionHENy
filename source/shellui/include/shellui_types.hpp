@@ -132,11 +132,6 @@ enum Cheats_Shortcut{
     OVERLAY_POS_BOTTOM_RIGHT      /* bottom-center (legacy alias) */
  };
 
- enum cheats_repo_source{
-    CHEATS_REPO_ONIONHEN = 0,
-    CHEATS_REPO_GOLDHEN
- };
-
 extern onion::Settings g_settings;
 
 /**

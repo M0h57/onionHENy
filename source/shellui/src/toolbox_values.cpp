@@ -45,11 +45,6 @@ const ExactValueEntry kExactValues[] = {
      +[]() -> std::string { return bool_str(g_settings.display_tids); }},
     {"id_enable_fan_speed",
      +[]() -> std::string { return bool_str(g_settings.enable_fan_speed); }},
-    /* List uses value 0/1; keep historical non-zero → "1". */
-    {"id_selected_cheats_repo",
-     +[]() -> std::string {
-       return bool_str(g_settings.selected_cheats_repo != 0);
-     }},
     {"id_rest_1",
      +[]() -> std::string {
        return int_str(static_cast<int>(g_settings.rest_mode_delay_seconds));

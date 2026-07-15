@@ -115,17 +115,7 @@ target_link_libraries(${PROJECT_NAME} PUBLIC
     SceVideoOut
     kernel_sys
     NineS
-    SceHttp2
-    SceSsl
     z
-    curl
-    minizip
-    psl
-    zstd
-    mbedtls
-    mbedx509
-    mbedcrypto
-    wolfssl
 )
 
 set_source_files_properties(

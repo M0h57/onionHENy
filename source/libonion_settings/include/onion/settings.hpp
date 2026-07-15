@@ -59,7 +59,6 @@ struct Settings {
   bool libhijacker_cheats = false;
   bool debug_app_jb_msg = false;
   bool legacy_cmd_server = false; // util 9028
-  int selected_cheats_repo = 0;   // 0=OnionHEN, 1=GoldHEN
 
   // --- Disc / UI ---
   bool display_tids = false;

@@ -154,9 +154,6 @@ bool copyFile(const char *source, const char *destination);
 
 int32_t sceKernelSendNotificationRequest(int32_t device, OrbisNotificationRequest *req, size_t size, int32_t blocking);
 
-bool IniliatizeHTTP(void);
-/* download/extract/shutdown: see extern "C" block below */
-
 /*============ Back up JB server ==============*/
 /* Always C linkage (impl in common_utils.c) regardless of include context. */
 #ifdef __cplusplus
@@ -168,9 +165,6 @@ int get_ip_address(char *ip_address);
 int sceNetCtlInit(void);
 int sceUserServiceInitialize(void *ptr);
 bool load_payload(const char *path);
-bool download_file(const char *url, const char *dst);
-bool check_for_new_commit(int repo);
-bool extract_zip(const char *zip_path, const char *extract_dir);
 #ifdef __cplusplus
 }
 #endif

@@ -34,9 +34,7 @@ static OnPressResult try_prefix(const OnPressPrefixEntry *table, size_t n,
 
 int OnPress_Hook(MonoObject *Instance, MonoObject *element, MonoObject *e) {
   static const std::vector<std::string> excludedIds = {
-      "id_dl_cheats",
       "id_save_rp_info",
-      "id_download_kstuff",
       "id_delete_kstuff",
   };
 

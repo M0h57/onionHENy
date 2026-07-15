@@ -25,15 +25,6 @@ static OnPressResult id_custom_game_opts(OnPressContext &ctx) {
   return OnPressResult::Handled;
 }
 
-static OnPressResult id_selected_cheats_repo(OnPressContext &ctx) {
-  g_settings.selected_cheats_repo = atoi(ctx.value.c_str());
-  shellui_log("Selected cheats repo: %s",
-              g_settings.selected_cheats_repo == CHEATS_REPO_ONIONHEN
-                  ? "OnionHEN PS5"
-                  : "GoldHEN PS4");
-  return OnPressResult::Handled;
-}
-
 static OnPressResult id_ui_lang(OnPressContext &ctx) {
   int v = atoi(ctx.value.c_str());
   if (v != 0 && v != 1)
@@ -153,7 +144,6 @@ static OnPressResult id_toolbox_shortcut(OnPressContext &ctx) {
 static const OnPressExactEntry kExact[] = {
     {"id_debug_jb", id_debug_jb},
     {"id_custom_game_opts", id_custom_game_opts},
-    {"id_selected_cheats_repo", id_selected_cheats_repo},
     {"id_ui_lang", id_ui_lang},
     {"id_rest_1", id_rest_1},
     {"id_rest_2", id_rest_2},

@@ -68,30 +68,31 @@ static int test_toggle_off_value(void) {
 
 static int test_list_and_items(void) {
   const std::string xml =
-      Page("id_cheats", "Cheats")
-          .list("id_selected_cheats_repo", "Repo",
+      Page("id_example", "Example")
+          .list("id_example_list", "Choice",
                 [](ListBuilder& L) {
-                  L.item("id_selected_cheats_repo_1", "OnionHEN PS5", "0")
-                      .item("id_selected_cheats_repo_2", "GoldHEN PS4", "1");
+                  L.item("id_example_list_1", "Option A", "0")
+                      .item("id_example_list_2", "Option B", "1");
                 },
                 std::nullopt, "1")
-          .button("id_dl_cheats", "Download", "to /data/OnionHEN/cheats/")
+          .button("id_example_btn", "Action", "to /data/OnionHEN/example/")
           .build();
 
   TEST_ASSERT_TRUE(
-      xml.find("<list id=\"id_selected_cheats_repo\" title=\"Repo\" value=\"1\">") !=
+      xml.find("<list id=\"id_example_list\" title=\"Choice\" value=\"1\">") !=
       std::string::npos);
   TEST_ASSERT_TRUE(
-      xml.find("<list_item id=\"id_selected_cheats_repo_1\" title=\"OnionHEN PS5\" "
+      xml.find("<list_item id=\"id_example_list_1\" title=\"Option A\" "
                "value=\"0\"/>") != std::string::npos);
   TEST_ASSERT_TRUE(
-      xml.find("<list_item id=\"id_selected_cheats_repo_2\" title=\"GoldHEN PS4\" "
+      xml.find("<list_item id=\"id_example_list_2\" title=\"Option B\" "
                "value=\"1\"/>") != std::string::npos);
   TEST_ASSERT_TRUE(xml.find("</list>") != std::string::npos);
-  TEST_ASSERT_TRUE(xml.find("id=\"id_dl_cheats\"") != std::string::npos);
+  TEST_ASSERT_TRUE(xml.find("id=\"id_example_btn\"") != std::string::npos);
   /* path second_title must escape slashes */
-  TEST_ASSERT_TRUE(xml.find("second_title=\"to //data//OnionHEN//cheats//\"") !=
-                   std::string::npos);
+  TEST_ASSERT_TRUE(
+      xml.find("second_title=\"to //data//OnionHEN//example//\"") !=
+      std::string::npos);
   return 0;
 }
 

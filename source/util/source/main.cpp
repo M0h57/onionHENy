@@ -137,11 +137,6 @@ int main(void) {
     /* IPC thread is up — publish ready for bootstrapper/daemon consumers */
     onion_ready_signal(ONION_READY_UTIL);
 
-    if (!IniliatizeHTTP()) {
-        OnionHEN_log("Failed to initialize HTTP lib");
-        onion_notify(true, "Failed to initialize the HTTP lib, downloading cheats will not work");
-    }
-
     if (onion_ready_is_set(ONION_FLAG_UTIL_BOOTED)) {
         /* util.elf restarted mid-session (crash recover / re-launch) — not rest. */
         OnionHEN_log("util already booted once — toolbox reinject (not rest)");

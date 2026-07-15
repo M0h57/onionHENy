@@ -150,23 +150,6 @@ std::string read_file_to_string(const char* path) {
   return buf;
 }
 
-template <typename G>
-void append_download_cheats_block(G& page) {
-  std::string repo_value = resolve_toolbox_control_value("id_selected_cheats_repo");
-  if (repo_value.empty())
-    repo_value = "0";
-  page.list("id_selected_cheats_repo", toolbox_i18n::tr("cheats.repo"),
-            [](ps5ui::ListBuilder& L) {
-              L.item("id_selected_cheats_repo_1",
-                     toolbox_i18n::tr("cheats.repo.onion"), "0")
-                  .item("id_selected_cheats_repo_2",
-                        toolbox_i18n::tr("cheats.repo.gold"), "1");
-            },
-            /*second_title=*/std::nullopt, /*value=*/repo_value)
-      .button("id_dl_cheats", toolbox_i18n::tr("cheats.dl"),
-              toolbox_i18n::tr("cheats.dl.desc"));
-}
-
 std::string join_authors(cJSON* root) {
   std::unordered_set<std::string> seen;
   std::string joined;
@@ -329,7 +312,8 @@ void generate_cheats_xml(std::string& new_xml, std::string& not_open_tid,
 
   if (!g_ui.is_game_open && !show_while_not_open) {
     ps5ui::Page page(list_id, toolbox_i18n::tr("cheats.none"));
-    append_download_cheats_block(page);
+    page.label("id_cheat_no_game", toolbox_i18n::tr("cheats.none.hint"),
+               ps5ui::Style::Center);
     new_xml = page.build();
     return;
   }
@@ -352,7 +336,8 @@ void generate_cheats_xml(std::string& new_xml, std::string& not_open_tid,
 
   std::string cheat_path;
   if (!client.GetGameCheats(g_ui.running_tid, game_ver, cheat_path)) {
-    append_download_cheats_block(page);
+    page.label("id_cheat_missing", toolbox_i18n::tr("cheats.missing"),
+               ps5ui::Style::Center);
     new_xml = page.build();
     return;
   }
@@ -473,9 +458,6 @@ void append_toolbox_payloads_group(ps5ui::Group& g) {
           [](ps5ui::Group& k) {
             k.toggle("id_kstuff_autoload", toolbox_i18n::tr("kstuff.autoload"),
                      toolbox_on("id_kstuff_autoload"))
-                .button("id_download_kstuff",
-                        toolbox_i18n::tr("kstuff.download"), std::nullopt,
-                        toolbox_i18n::tr("kstuff.download.desc"))
                 .button("id_delete_kstuff", toolbox_i18n::tr("kstuff.delete"),
                         std::nullopt, toolbox_i18n::tr("kstuff.delete.desc"));
           },
