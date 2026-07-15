@@ -103,11 +103,6 @@ static OnPressResult id_fan_speed(OnPressContext &ctx) {
   return OnPressResult::Handled;
 }
 
-static OnPressResult id_auto_eject(OnPressContext &ctx) {
-  g_settings.auto_eject_disc = atol(ctx.value.c_str());
-  return OnPressResult::Handled;
-}
-
 static OnPressResult id_cheats_shortcut(OnPressContext &ctx) {
   if (atoi(ctx.value.c_str()) == g_settings.cheats_shortcut_opt) {
     shellui_log("Cheats_shortcut already %i", g_settings.cheats_shortcut_opt);
@@ -165,7 +160,6 @@ static const OnPressExactEntry kExact[] = {
     {"id_rest_3", id_rest_3},
     {"id_enable_fan_speed", id_enable_fan_speed},
     {"id_fan_speed", id_fan_speed},
-    {"id_auto_eject", id_auto_eject},
     {"id_cheats_shortcut", id_cheats_shortcut},
     {"id_toolbox_shortcut", id_toolbox_shortcut},
 };

@@ -108,7 +108,6 @@ static int test_full_schema_roundtrip(void) {
   in.debug_app_jb_msg = true;
   in.legacy_cmd_server = true;
   in.selected_cheats_repo = 1;
-  in.auto_eject_disc = true;
   in.display_tids = true;
   in.onionhen_game_opts = false;
   in.enable_fan_speed = true;
@@ -133,7 +132,6 @@ static int test_full_schema_roundtrip(void) {
   TEST_ASSERT_TRUE(out.debug_app_jb_msg == in.debug_app_jb_msg);
   TEST_ASSERT_TRUE(out.legacy_cmd_server == in.legacy_cmd_server);
   TEST_ASSERT_EQ_INT(in.selected_cheats_repo, out.selected_cheats_repo);
-  TEST_ASSERT_TRUE(out.auto_eject_disc == in.auto_eject_disc);
   TEST_ASSERT_TRUE(out.display_tids == in.display_tids);
   TEST_ASSERT_TRUE(out.onionhen_game_opts == in.onionhen_game_opts);
   TEST_ASSERT_TRUE(out.enable_fan_speed == in.enable_fan_speed);

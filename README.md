@@ -210,7 +210,6 @@ Settings file: **`/data/OnionHEN/config.ini`** (created on first run).
 | `Display_tids` | Show title IDs | 0 |
 | `APP_JB_Debug_Msg` | App jailbreak debug messages | 0 |
 | `OnionHEN_Game_Options` | Game options menu | 1 |
-| `auto_eject_disc` | Auto eject disc | 0 |
 | `Cheats_shortcut_opt` | Cheats shortcut | 0 (`CHEATS_SC_OFF`) |
 | `Toolbox_shortcut_opt` | Toolbox shortcut | 0 (`TOOLBOX_SC_OFF`) |
 | `Kstuff_shortcut_opt` | Kstuff shortcut | 0 (`KSTUFF_SC_OFF`) |

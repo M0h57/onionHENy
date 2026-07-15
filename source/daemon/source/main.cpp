@@ -108,7 +108,7 @@ extern "C" {
     int sceKernelGetProcessName(int pid, char *name);
     int sceKernelGetAppInfo(int pid, app_info_t *info);
     void free(void *);
-    int sceShellCoreUtilRequestEjectDevice(const char *path);
+
 
     // PayloadAPI definitions
     #include <ps5/payload.h>
@@ -329,10 +329,6 @@ int main() {
 
   sceNotificationSend(0xFE, true, kWelcomeToastJson);
   OnionHEN_log("StartUp thread created!! - welcome to OnionHEN");
-
-  const onion::Settings boot_cfg = g_settings.snapshot();
-  if (boot_cfg.auto_eject_disc)
-    sceShellCoreUtilRequestEjectDevice("/dev/cd0");
 
   ipc_supervisor_loop(&msg_thr);
   // unreachable

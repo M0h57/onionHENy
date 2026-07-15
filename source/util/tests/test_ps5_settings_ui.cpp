@@ -187,8 +187,7 @@ static int test_text_field_and_confirm(void) {
                       std::nullopt, "55")
           .text_field("id_np_env", "NP 环境", std::nullopt, "basic_latin", "1",
                       "16", "/NP/env", "系统将重启以应用此设置。", "确定,取消")
-          .toggle("id_auto_eject", "自动弹出", false, std::nullopt,
-                  "desc", std::nullopt, "更改将在下次重启后生效")
+          .toggle("id_disp_titleids", "显示 Title ID", false, "second")
           .list("id_cheats_shortcut", "打开金手指菜单",
                 [](ListBuilder& L) {
                   L.item("id_cheats_shortcut_0", "关闭（无快捷键）", "0");
@@ -205,7 +204,7 @@ static int test_text_field_and_confirm(void) {
   TEST_ASSERT_TRUE(xml.find("value=\"55\"") != std::string::npos);
   TEST_ASSERT_TRUE(xml.find("key=\"/NP/env\"") != std::string::npos);
   TEST_ASSERT_TRUE(xml.find("confirm_phrase=\"确定,取消\"") != std::string::npos);
-  TEST_ASSERT_TRUE(xml.find("confirm=\"更改将在下次重启后生效\"") !=
+  TEST_ASSERT_TRUE(xml.find("confirm=\"系统将重启以应用此设置。\"") !=
                    std::string::npos);
   TEST_ASSERT_TRUE(xml.find("id=\"id_cheats_shortcut\"") != std::string::npos);
   TEST_ASSERT_TRUE(xml.find("style=\"left\"") != std::string::npos);

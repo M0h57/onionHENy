@@ -528,10 +528,6 @@ void append_toolbox_game_group(ps5ui::Group& g) {
 void append_toolbox_system_group(ps5ui::Group& g) {
   g.toggle("id_disp_titleids", toolbox_i18n::tr("disp_tids"),
            toolbox_on("id_disp_titleids"), toolbox_i18n::tr("disp_tids.sub"))
-      .toggle("id_auto_eject", toolbox_i18n::tr("auto_eject"),
-              toolbox_on("id_auto_eject"), std::nullopt,
-              toolbox_i18n::tr("auto_eject.desc"), std::nullopt,
-              toolbox_i18n::tr("confirm.reboot_next"))
       .group(
           "id_group_fan", toolbox_i18n::tr("fan.group"),
           [](ps5ui::Group& f) {

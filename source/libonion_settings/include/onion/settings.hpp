@@ -62,7 +62,6 @@ struct Settings {
   int selected_cheats_repo = 0;   // 0=OnionHEN, 1=GoldHEN
 
   // --- Disc / UI ---
-  bool auto_eject_disc = false;
   bool display_tids = false;
   bool onionhen_game_opts = true;
 

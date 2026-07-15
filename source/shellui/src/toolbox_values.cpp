@@ -70,8 +70,6 @@ const ExactValueEntry kExactValues[] = {
      +[]() -> std::string { return bool_str(g_settings.legacy_cmd_server); }},
     {"id_custom_game_opts",
      +[]() -> std::string { return bool_str(g_settings.onionhen_game_opts); }},
-    {"id_auto_eject",
-     +[]() -> std::string { return bool_str(g_settings.auto_eject_disc); }},
     {"id_overlay_change_pos",
      +[]() -> std::string { return int_str(g_settings.overlay_pos); }},
     /* Exact list id only — not id_toolbox_shortcut_N list_items. */

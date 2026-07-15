@@ -70,8 +70,6 @@ void apply_parser(IniParser *parser, Settings *out) {
   out->legacy_cmd_server = atoi_def(legacy, 0) != 0;
   out->selected_cheats_repo =
       atoi_def(ini_parser_get(parser, "Settings.selected_cheats_repo", "0"), 0);
-  out->auto_eject_disc =
-      atoi_def(ini_parser_get(parser, "Settings.auto_eject_disc", "0"), 0) != 0;
   out->display_tids =
       atoi_def(ini_parser_get(parser, "Settings.Display_tids", "0"), 0) != 0;
   out->onionhen_game_opts =
@@ -147,7 +145,6 @@ std::string settings_serialize(const Settings &in) {
   b += "APP_JB_Debug_Msg=" + std::to_string(in.debug_app_jb_msg ? 1 : 0) + "\n";
   b += "legacy_cmd_server=" + std::to_string(in.legacy_cmd_server ? 1 : 0) + "\n";
   b += "selected_cheats_repo=" + std::to_string(in.selected_cheats_repo) + "\n";
-  b += "auto_eject_disc=" + std::to_string(in.auto_eject_disc ? 1 : 0) + "\n";
   b += "Display_tids=" + std::to_string(in.display_tids ? 1 : 0) + "\n";
   b += "OnionHEN_Game_Options=" +
        std::to_string(in.onionhen_game_opts ? 1 : 0) + "\n";
