@@ -9,6 +9,7 @@
 #include "external_symbols.hpp"
 #include "ipc.hpp"
 #include "ps5_settings_ui.hpp"
+#include "toolbox_i18n.hpp"
 #include "toolbox_values.hpp"
 #include "../../extern/cJSON/onion_cjson.hpp"
 
@@ -71,11 +72,13 @@ void append_payload_entry(G& page, const std::string& directory, const char* fil
 
   std::string second;
   if (list_page) {
-    second = "启动/停止 " + std::string(filename) + " (路径: " + shown_path +
-             ") (" + elf_key + ")";
-  } else {
-    second = "启用/禁用 " + std::string(filename) + " 的自动启动  (" + shown_path +
+    second = std::string(toolbox_i18n::tr("payload.start_stop")) + filename +
+             toolbox_i18n::tr("payload.path") + shown_path + ") (" + elf_key +
              ")";
+  } else {
+    second = std::string(toolbox_i18n::tr("payload.autostart_enable")) +
+             filename + toolbox_i18n::tr("payload.autostart_suffix") +
+             shown_path + ")";
   }
 
   page.toggle(id, filename, /*on=*/false, second);
@@ -119,7 +122,8 @@ void append_homebrew_game(G& page, const std::string& game_dir, const char* dir_
   g_ui.games_list.push_back(game);
 
   page.button(game.id, "(" + title_id + ") " + title,
-              shown_path + " | 版本: " + ver, std::nullopt, icon_path);
+              shown_path + toolbox_i18n::tr("plapps.version") + ver,
+              std::nullopt, icon_path);
 }
 
 std::string read_file_to_string(const char* path) {
@@ -151,14 +155,16 @@ void append_download_cheats_block(G& page) {
   std::string repo_value = resolve_toolbox_control_value("id_selected_cheats_repo");
   if (repo_value.empty())
     repo_value = "0";
-  page.list("id_selected_cheats_repo", "金手指仓库来源",
+  page.list("id_selected_cheats_repo", toolbox_i18n::tr("cheats.repo"),
             [](ps5ui::ListBuilder& L) {
-              L.item("id_selected_cheats_repo_1", "OnionHEN PS5 金手指仓库", "0")
-                  .item("id_selected_cheats_repo_2", "GoldHEN PS4 金手指仓库", "1");
+              L.item("id_selected_cheats_repo_1",
+                     toolbox_i18n::tr("cheats.repo.onion"), "0")
+                  .item("id_selected_cheats_repo_2",
+                        toolbox_i18n::tr("cheats.repo.gold"), "1");
             },
             /*second_title=*/std::nullopt, /*value=*/repo_value)
-      .button("id_dl_cheats", "下载/更新金手指",
-              "从所选 GitHub 仓库下载到 /data/OnionHEN/cheats/（TITLEID_VERSION.ext）");
+      .button("id_dl_cheats", toolbox_i18n::tr("cheats.dl"),
+              toolbox_i18n::tr("cheats.dl.desc"));
 }
 
 std::string join_authors(cJSON* root) {
@@ -192,7 +198,10 @@ void append_cheat_entries(G& page, cJSON* root, const std::string& tid,
   cJSON* entry = nullptr;
   cJSON_ArrayForEach(entry, cheats) {
     const std::string name = onion_cjson::string_item(entry, "name", "");
-    const std::string desc = onion_cjson::string_item(entry, "description", "开/关");
+    std::string desc =
+        onion_cjson::string_item(entry, "description", "");
+    if (desc.empty())
+      desc = toolbox_i18n::tr("cheats.on_off");
     const int id = onion_cjson::int_item(entry, "id");
     const bool enabled = onion_cjson::bool_item(entry, "enabled");
     const std::string id_attr = "id_cheat_" + tid + "_" + std::to_string(id);
@@ -200,8 +209,10 @@ void append_cheat_entries(G& page, cJSON* root, const std::string& tid,
     if (can_toggle) {
       page.toggle(id_attr, name, enabled, std::nullopt, desc, "tex_game_icon");
     } else {
-      page.button(id_attr, name, "为 " + game_name + " 启用/禁用 " + name, desc,
-                  "tex_game_icon");
+      page.button(id_attr, name,
+                  std::string(toolbox_i18n::tr("cheats.enable_for")) +
+                      game_name + toolbox_i18n::tr("cheats.enable_mid") + name,
+                  desc, "tex_game_icon");
     }
     g_ui.set_cheat_enabled(id, enabled);
   }
@@ -222,13 +233,13 @@ void generate_remote_play_xml(std::string& xml_buffer) {
     remote_play_initialized = true;
   }
 
-  ps5ui::Page page("remote_play_pin_display", "远程游玩连接详情");
+  toolbox_i18n::apply_ui_lang(g_settings.ui_lang);
+  ps5ui::Page page("remote_play_pin_display", toolbox_i18n::tr("rp.title"));
   page.root_style(ps5ui::Style::Center);
 
   if (IsNotActivated()) {
     GetEncodedAccountID(AccountID, dec_account_id);
-    page.label("id_pin_2",
-               "账号已由 OnionHEN 激活，请重启主机后再使用远程游玩！",
+    page.label("id_pin_2", toolbox_i18n::tr("rp.need_reboot"),
                ps5ui::Style::Center);
     xml_buffer = page.build();
     return;
@@ -238,25 +249,29 @@ void generate_remote_play_xml(std::string& xml_buffer) {
   GetEncodedAccountID(AccountID, dec_account_id);
   shellui_log("Get encoded account id ==> %s", AccountID);
 
-  g_ui.remote_play_info = "账号 ID: " + std::string(AccountID);
+  g_ui.remote_play_info =
+      std::string(toolbox_i18n::tr("rp.account_id")) + AccountID;
   {
     std::stringstream ss;
     ss << std::hex << std::uppercase << dec_account_id;
-    g_ui.remote_play_info += "\n解码后账号 ID: " + ss.str();
+    g_ui.remote_play_info +=
+        std::string("\n") + toolbox_i18n::tr("rp.account_id_decoded") + ss.str();
   }
 
   const uint32_t pinCode = GeneratePINCode();
   shellui_log("Pin code => %d", pinCode);
-  sprintf(pin_code, "PIN 码  : %04d %04d    ", pinCode / 10000, pinCode % 10000);
+  sprintf(pin_code, "%s%04d %04d    ", toolbox_i18n::tr("rp.pin"),
+          pinCode / 10000, pinCode % 10000);
   g_ui.remote_play_info += "\n" + std::string(pin_code);
   shellui_log("Pin code str => %s", pin_code);
 
   page.label("id_pin", pin_code, ps5ui::Style::Center)
-      .label("base64_account_id", std::string("账号 ID: ") + AccountID,
+      .label("base64_account_id",
+             std::string(toolbox_i18n::tr("rp.account_id")) + AccountID,
              ps5ui::Style::Center);
 
   if (usbpath() != -1)
-    page.button("id_save_rp_info", "将远程游玩详情保存到 USB", std::nullopt,
+    page.button("id_save_rp_info", toolbox_i18n::tr("rp.save_usb"), std::nullopt,
                 std::nullopt, std::nullopt, ps5ui::Style::Center);
 
   xml_buffer = page.build();
@@ -272,8 +287,11 @@ void generate_payload_xml(std::string& xml_buffer, bool list_page) {
       "/usb3/OnionHEN/payloads",
   };
 
+  toolbox_i18n::apply_ui_lang(g_settings.ui_lang);
   const char* root_id = list_page ? "id_payload" : "id_auto_payloads";
-  const char* root_title = list_page ? "Payload" : "★ Payload 自动启动";
+  const char* root_title =
+      list_page ? toolbox_i18n::tr("payload.title")
+                : toolbox_i18n::tr("payload.auto_title");
   ps5ui::Page page(root_id, root_title);
 
   int toggle_switch_id = 1;
@@ -290,8 +308,8 @@ void generate_payload_xml(std::string& xml_buffer, bool list_page) {
   }
 
   if (list_page) {
-    page.link("id_auto_payloads", "★ Payload 自动启动", "auto_payloads.xml",
-              "配置在加载 OnionHEN 时自动启动的 .elf（放在 payloads/）");
+    page.link("id_auto_payloads", toolbox_i18n::tr("payload.auto.link"),
+              "auto_payloads.xml", toolbox_i18n::tr("payload.auto.sub"));
   }
 
   xml_buffer = page.build();
@@ -299,6 +317,7 @@ void generate_payload_xml(std::string& xml_buffer, bool list_page) {
 
 void generate_cheats_xml(std::string& new_xml, std::string& not_open_tid,
                          bool running_as_debug_settings, bool show_while_not_open) {
+  toolbox_i18n::apply_ui_lang(g_settings.ui_lang);
   const std::string list_id =
       running_as_debug_settings ? "id_debug_settings" : "id_cheat_title";
 
@@ -309,7 +328,7 @@ void generate_cheats_xml(std::string& new_xml, std::string& not_open_tid,
       g_ui.running_tid == (show_while_not_open ? not_open_tid : g_ui.running_tid);
 
   if (!g_ui.is_game_open && !show_while_not_open) {
-    ps5ui::Page page(list_id, "OnionHEN 金手指 - 当前没有打开的游戏");
+    ps5ui::Page page(list_id, toolbox_i18n::tr("cheats.none"));
     append_download_cheats_block(page);
     new_xml = page.build();
     return;
@@ -320,14 +339,14 @@ void generate_cheats_xml(std::string& new_xml, std::string& not_open_tid,
 
   std::string game_ver;
   if (!client.GameVerFromTid(g_ui.running_tid, game_ver))
-    game_ver = "无法检测补丁版本";
+    game_ver = toolbox_i18n::tr("cheats.ver_unknown");
 
-  ps5ui::Page page(list_id,
-                   "OnionHEN 金手指 - " + g_ui.running_tid + " - " + game_ver);
+  ps5ui::Page page(list_id, std::string(toolbox_i18n::tr("cheats.title_prefix")) +
+                                g_ui.running_tid + " - " + game_ver);
 
   if (!g_ui.is_game_open && show_while_not_open) {
     page.label("id_cheat_disclaimer",
-               g_ui.running_tid + " 当前未运行，除非打开游戏否则无法激活任何金手指",
+               g_ui.running_tid + toolbox_i18n::tr("cheats.not_running"),
                ps5ui::Style::Center);
   }
 
@@ -357,7 +376,9 @@ void generate_cheats_xml(std::string& new_xml, std::string& not_open_tid,
   page.label("id_cheat_title", "★ " + game_name + " ★", ps5ui::Style::Center);
 
   const std::string authors = join_authors(res_json.get());
-  page.label("credits", "金手指作者: " + authors, ps5ui::Style::Center);
+  page.label("credits",
+             std::string(toolbox_i18n::tr("cheats.authors")) + authors,
+             ps5ui::Style::Center);
 
   append_cheat_entries(page, res_json.get(), g_ui.running_tid, game_name,
                        g_ui.is_game_open && g_ui.is_current_game_open);
@@ -376,7 +397,8 @@ void generate_plapps_xml(std::string& new_xml) {
       "/mnt/ext0/homebrew/games",
   };
 
-  ps5ui::Page page("id_plapps", "OnionHEN Payload 自制软件 - 应用程序");
+  toolbox_i18n::apply_ui_lang(g_settings.ui_lang);
+  ps5ui::Page page("id_plapps", toolbox_i18n::tr("plapps.title"));
 
   std::random_device rd;
   std::mt19937 gen(rd());
@@ -438,172 +460,193 @@ std::string toolbox_val(const char* id, const char* fallback = "0") {
 }
 
 void append_toolbox_pkg_group(ps5ui::Group& g) {
-  g.link("id_game_package_installer", "软件包安装器",
+  g.link("id_game_package_installer", toolbox_i18n::tr("pkg.installer"),
          "PkgInstaller/data/pkginstaller.xml")
-      .link("id_game_add_content_manager", "附加内容管理器",
+      .link("id_game_add_content_manager", toolbox_i18n::tr("pkg.add_content"),
             "Addcontent/data/addcontent.xml");
 }
 
 void append_toolbox_payloads_group(ps5ui::Group& g) {
-  g.link("id_payloads", "Payload", "payloads.xml")
+  g.link("id_payloads", toolbox_i18n::tr("payloads.link"), "payloads.xml")
       .group(
-          "id_kstuff_opts", "Kstuff",
+          "id_kstuff_opts", toolbox_i18n::tr("kstuff.group"),
           [](ps5ui::Group& k) {
-            k.toggle("id_kstuff_autoload", "OnionHEN 启动时自动加载 Kstuff",
+            k.toggle("id_kstuff_autoload", toolbox_i18n::tr("kstuff.autoload"),
                      toolbox_on("id_kstuff_autoload"))
-                .button("id_download_kstuff", "通过 GitHub 替换为最新 Kstuff",
-                        std::nullopt,
-                        "从 EchoStretch 的 GitHub 仓库下载并安装最新 kstuff，"
-                        "替换 OnionHEN 启动时自动加载的版本")
-                .button("id_delete_kstuff", "删除通过 GitHub 安装的 Kstuff",
-                        std::nullopt, "将切换回 OnionHEN 内置的 kstuff");
+                .button("id_download_kstuff",
+                        toolbox_i18n::tr("kstuff.download"), std::nullopt,
+                        toolbox_i18n::tr("kstuff.download.desc"))
+                .button("id_delete_kstuff", toolbox_i18n::tr("kstuff.delete"),
+                        std::nullopt, toolbox_i18n::tr("kstuff.delete.desc"));
           },
-          "内核补丁组件管理", std::nullopt, "id_kstuff_autoload");
+          toolbox_i18n::tr("kstuff.group.sub"), std::nullopt,
+          "id_kstuff_autoload");
 }
 
 void append_toolbox_game_group(ps5ui::Group& g) {
-  g.link("id_cheats", "金手指（开发中）", "cheats.xml")
-      .link("remote_play", "远程游玩", "remote_play.xml")
-      .toggle("id_custom_game_opts", "OnionHEN 游戏选项",
+  g.link("id_cheats", toolbox_i18n::tr("cheats.link"), "cheats.xml")
+      .link("remote_play", toolbox_i18n::tr("remote_play.link"),
+            "remote_play.xml")
+      .toggle("id_custom_game_opts", toolbox_i18n::tr("game_opts.toggle"),
               toolbox_on("id_custom_game_opts"),
-              "在游戏选项菜单中显示 OnionHEN 相关选项（金手指、转储等）")
+              toolbox_i18n::tr("game_opts.toggle.sub"))
       .group(
-          "id_overlay_opts", "游戏覆盖层",
+          "id_overlay_opts", toolbox_i18n::tr("overlay.group"),
           [](ps5ui::Group& o) {
-            o.list("id_overlay_change_pos", "监控条位置",
+            o.list("id_overlay_change_pos", toolbox_i18n::tr("overlay.pos"),
                    [](ps5ui::ListBuilder& L) {
-                     L.item("id_overlay_pos_1", "顶部贴边", "0")
-                         .item("id_overlay_pos_3", "底部贴边", "2");
+                     L.item("id_overlay_pos_1",
+                            toolbox_i18n::tr("overlay.pos.top"), "0")
+                         .item("id_overlay_pos_3",
+                               toolbox_i18n::tr("overlay.pos.bottom"), "2");
                    },
-                   "贴屏幕边缘、宽度 100%；指标居中：FPS · CPU · GPU · RAM · IP",
+                   toolbox_i18n::tr("overlay.pos.sub"),
                    toolbox_val("id_overlay_change_pos"))
-                .toggle("id_overlay_fps", "*实验性* FPS",
+                .toggle("id_overlay_fps", toolbox_i18n::tr("overlay.fps"),
                         toolbox_on("id_overlay_fps"), std::nullopt,
-                        "显示 FPS 段（依赖游戏内 FPS 字符串捕获，可能不稳定）")
-                .toggle("id_overlay_gpu", "GPU", toolbox_on("id_overlay_gpu"),
-                        std::nullopt, "显示 GPU 温度与显存占用")
-                .toggle("id_overlay_cpu", "CPU", toolbox_on("id_overlay_cpu"),
-                        std::nullopt, "显示 CPU 温度与平均使用率")
-                .toggle("id_all_cpu_usage", "显示全部 CPU 核心使用率",
+                        toolbox_i18n::tr("overlay.fps.desc"))
+                .toggle("id_overlay_gpu", toolbox_i18n::tr("overlay.gpu"),
+                        toolbox_on("id_overlay_gpu"), std::nullopt,
+                        toolbox_i18n::tr("overlay.gpu.desc"))
+                .toggle("id_overlay_cpu", toolbox_i18n::tr("overlay.cpu"),
+                        toolbox_on("id_overlay_cpu"), std::nullopt,
+                        toolbox_i18n::tr("overlay.cpu.desc"))
+                .toggle("id_all_cpu_usage", toolbox_i18n::tr("overlay.cpu_all"),
                         toolbox_on("id_all_cpu_usage"), std::nullopt,
-                        "CPU 段改为 8 核分别显示（监控条会加宽）")
-                .toggle("id_overlay_ram", "内存", toolbox_on("id_overlay_ram"),
-                        std::nullopt, "显示系统内存占用")
-                .toggle("id_overlay_ip", "IP 地址", toolbox_on("id_overlay_ip"),
-                        std::nullopt, "显示主机局域网 IP");
+                        toolbox_i18n::tr("overlay.cpu_all.desc"))
+                .toggle("id_overlay_ram", toolbox_i18n::tr("overlay.ram"),
+                        toolbox_on("id_overlay_ram"), std::nullopt,
+                        toolbox_i18n::tr("overlay.ram.desc"))
+                .toggle("id_overlay_ip", toolbox_i18n::tr("overlay.ip"),
+                        toolbox_on("id_overlay_ip"), std::nullopt,
+                        toolbox_i18n::tr("overlay.ip.desc"));
           },
-          "贴边全宽横条 + 半透明黑底（PHU flex banner）", std::nullopt,
+          toolbox_i18n::tr("overlay.group.sub"), std::nullopt,
           "id_overlay_change_pos");
 }
 
 void append_toolbox_system_group(ps5ui::Group& g) {
-  g.toggle("id_disp_titleids", "在主菜单显示 Title ID",
-           toolbox_on("id_disp_titleids"),
-           "零售机可用，但仅在工具箱激活时显示")
-      .toggle("id_auto_eject", "OnionHEN 启动时自动弹出光盘",
+  g.toggle("id_disp_titleids", toolbox_i18n::tr("disp_tids"),
+           toolbox_on("id_disp_titleids"), toolbox_i18n::tr("disp_tids.sub"))
+      .toggle("id_auto_eject", toolbox_i18n::tr("auto_eject"),
               toolbox_on("id_auto_eject"), std::nullopt,
-              "OnionHEN 完全启动后自动弹出已插入的光盘，适用于 BD-J 或 LUA "
-              "漏洞利用",
-              std::nullopt, "更改将在下次重启后生效")
+              toolbox_i18n::tr("auto_eject.desc"), std::nullopt,
+              toolbox_i18n::tr("confirm.reboot_next"))
       .group(
-          "id_group_fan", "风扇控制",
+          "id_group_fan", toolbox_i18n::tr("fan.group"),
           [](ps5ui::Group& f) {
-            f.toggle("id_enable_fan_speed", "启用手动风扇阈值",
+            f.toggle("id_enable_fan_speed", toolbox_i18n::tr("fan.enable"),
                      toolbox_on("id_enable_fan_speed"))
-                .text_field("id_fan_speed", "调整风扇阈值",
-                            "按摄氏度调整风扇阈值", "number", "2", "2",
-                            std::nullopt, std::nullopt, std::nullopt,
+                .text_field("id_fan_speed", toolbox_i18n::tr("fan.threshold"),
+                            toolbox_i18n::tr("fan.threshold.sub"), "number", "2",
+                            "2", std::nullopt, std::nullopt, std::nullopt,
                             toolbox_val("id_fan_speed", ""));
           },
           std::nullopt, std::nullopt, "id_enable_fan_speed")
       .group(
-          "id_rest_mode", "休息模式",
+          "id_rest_mode", toolbox_i18n::tr("rest.group"),
           [](ps5ui::Group& r) {
-            r.text_field(
-                 "id_rest_1", "延迟工具箱激活（秒）",
-                 "延迟工具箱内的补丁以防止卡死（在已有内置延迟之外额外增加）",
-                 "number", "1", "255", std::nullopt, std::nullopt, std::nullopt,
-                 toolbox_val("id_rest_1", ""))
-                .toggle(
-                    "id_rest_2",
-                    "进入休息模式时自动关闭 OnionHEN 服务守护进程",
-                    toolbox_on("id_rest_2"),
-                    "从休息模式恢复后将重新启动守护进程")
-                .toggle("id_rest_3", "进入休息模式时自动关闭已打开的游戏",
+            r.text_field("id_rest_1", toolbox_i18n::tr("rest.delay"),
+                         toolbox_i18n::tr("rest.delay.sub"), "number", "1",
+                         "255", std::nullopt, std::nullopt, std::nullopt,
+                         toolbox_val("id_rest_1", ""))
+                .toggle("id_rest_2", toolbox_i18n::tr("rest.kill_util"),
+                        toolbox_on("id_rest_2"),
+                        toolbox_i18n::tr("rest.kill_util.sub"))
+                .toggle("id_rest_3", toolbox_i18n::tr("rest.kill_game"),
                         toolbox_on("id_rest_3"),
-                        "进入休息模式时尝试关闭任何已打开的游戏");
+                        toolbox_i18n::tr("rest.kill_game.sub"));
           },
-          "提升休息模式稳定性", std::nullopt, "id_rest_1")
-      .link("id_external_hdd", "外接硬盘",
+          toolbox_i18n::tr("rest.group.sub"), std::nullopt, "id_rest_1")
+      .link("id_external_hdd", toolbox_i18n::tr("hdd.external"),
             "DebugSettings/data/debug_settings_external_hdd.xml")
-      .link("id_licenseactivation", "蓝光（许可证）激活",
+      .link("id_licenseactivation", toolbox_i18n::tr("license.bd"),
             "DebugSettings/data/debug_settings_licenseactivation.xml");
 }
 
 void append_toolbox_shortcuts_group(ps5ui::Group& g) {
-  g.list("id_cheats_shortcut", "打开金手指菜单",
+  g.list("id_ui_lang", toolbox_i18n::tr("lang.list"),
          [](ps5ui::ListBuilder& L) {
-           L.item("id_cheats_shortcut_0", "关闭（无快捷键）", "0")
-               .item("id_cheats_shortcut_1", "按住 R3 + L3", "1")
-               .item("id_cheats_shortcut_2", "按住 L2 + △", "2")
-               .item("id_cheats_shortcut_3", "长按选项键", "3")
-               .item("id_cheats_shortcut_4", "长按分享键", "4")
-               .item("id_cheats_shortcut_5", "单击分享键", "5");
+           L.item("id_ui_lang_zh", toolbox_i18n::tr("lang.zh"), "0")
+               .item("id_ui_lang_en", toolbox_i18n::tr("lang.en"), "1");
          },
-         "从任意位置（含游戏内）打开金手指菜单",
-         toolbox_val("id_cheats_shortcut"))
-      .list("id_toolbox_shortcut", "打开 OnionHEN 工具箱",
+         toolbox_i18n::tr("lang.list.sub"), toolbox_val("id_ui_lang", "0"))
+      .list("id_cheats_shortcut", toolbox_i18n::tr("sc.cheats"),
             [](ps5ui::ListBuilder& L) {
-              L.item("id_toolbox_shortcut_0", "关闭（无快捷键）", "0")
-                  .item("id_toolbox_shortcut_1", "按住 L2 + R3", "1")
-                  .item("id_toolbox_shortcut_2", "长按分享键", "2")
-                  .item("id_toolbox_shortcut_3", "单击分享键", "3");
+              L.item("id_cheats_shortcut_0", toolbox_i18n::tr("sc.off"), "0")
+                  .item("id_cheats_shortcut_1", toolbox_i18n::tr("sc.r3_l3"), "1")
+                  .item("id_cheats_shortcut_2", toolbox_i18n::tr("sc.l2_tri"),
+                        "2")
+                  .item("id_cheats_shortcut_3",
+                        toolbox_i18n::tr("sc.long_options"), "3")
+                  .item("id_cheats_shortcut_4", toolbox_i18n::tr("sc.long_share"),
+                        "4")
+                  .item("id_cheats_shortcut_5", toolbox_i18n::tr("sc.share"),
+                        "5");
             },
-            "从任意位置（含游戏内）打开工具箱",
+            toolbox_i18n::tr("sc.cheats.sub"),
+            toolbox_val("id_cheats_shortcut"))
+      .list("id_toolbox_shortcut", toolbox_i18n::tr("sc.toolbox"),
+            [](ps5ui::ListBuilder& L) {
+              L.item("id_toolbox_shortcut_0", toolbox_i18n::tr("sc.off"), "0")
+                  .item("id_toolbox_shortcut_1", toolbox_i18n::tr("sc.l2_r3"),
+                        "1")
+                  .item("id_toolbox_shortcut_2",
+                        toolbox_i18n::tr("sc.long_share"), "2")
+                  .item("id_toolbox_shortcut_3", toolbox_i18n::tr("sc.share"),
+                        "3");
+            },
+            toolbox_i18n::tr("sc.toolbox.sub"),
             toolbox_val("id_toolbox_shortcut"));
 }
 
 void append_toolbox_debug_group(ps5ui::Group& g) {
-  g.toggle("id_debug_jb", "应用越狱通知", toolbox_on("id_debug_jb"),
-           "在越狱应用时显示通知")
-      .toggle("id_debug_legacy_cmd", "旧版越狱命令服务器",
+  g.toggle("id_debug_jb", toolbox_i18n::tr("debug.jb"),
+           toolbox_on("id_debug_jb"), toolbox_i18n::tr("debug.jb.sub"))
+      .toggle("id_debug_legacy_cmd", toolbox_i18n::tr("debug.legacy_cmd"),
               toolbox_on("id_debug_legacy_cmd"),
-              "需要网络；应用可通过 Socket 请求越狱")
-      .text_field("id_np_env", "NP 环境", std::nullopt, "basic_latin", "1", "16",
-                  "/NP/env", "系统将重启以应用此设置。", "确定,取消");
+              toolbox_i18n::tr("debug.legacy_cmd.sub"))
+      .text_field("id_np_env", toolbox_i18n::tr("debug.np_env"), std::nullopt,
+                  "basic_latin", "1", "16", "/NP/env",
+                  toolbox_i18n::tr("debug.np_env.confirm"),
+                  toolbox_i18n::tr("debug.np_env.confirm_phrase"));
 }
 
 void append_toolbox_about_group(ps5ui::Group& g) {
   g.group(
-       "id_donation_methods", "支持本项目",
+       "id_donation_methods", toolbox_i18n::tr("about.donate"),
        [](ps5ui::Group& d) {
-         d.label("id_method_info", "★ 捐赠方式", ps5ui::Style::Center)
+         d.label("id_method_info", toolbox_i18n::tr("about.donate.methods"),
+                 ps5ui::Style::Center)
              .label("id_method_1",
                     "- GitHub Sponsors  | https://github.com/sponsors/LightningMods",
                     ps5ui::Style::Center);
        },
-       "喜欢这个项目吗？欢迎捐赠支持")
+       toolbox_i18n::tr("about.donate.sub"))
       .group(
-          "id_onionhen_credits", "OnionHEN 致谢",
+          "id_onionhen_credits", toolbox_i18n::tr("about.credits"),
           [](ps5ui::Group& c) {
             c.label("id_onionhen_creds_display", "★ OnionHEN Beta 2.5",
                     ps5ui::Style::Center)
-                .label("id_lead_devs", "★ 主要开发者 ★", ps5ui::Style::Center)
+                .label("id_lead_devs", toolbox_i18n::tr("about.lead"),
+                       ps5ui::Style::Center)
                 .label("id_lead_devs_2",
                        "- LM (X @LightningMods_, GitHub @LightningMods, Discord "
                        "@lm_dev)",
                        ps5ui::Style::Center)
-                .label("id_ddkdkd", "★ OnionHEN 贡献者 ★", ps5ui::Style::Center)
+                .label("id_ddkdkd", toolbox_i18n::tr("about.contributors"),
+                       ps5ui::Style::Center)
                 .label("id_major_line",
                        "Specter - Byepervisor          astrelsky          "
                        "ChendoChap       sleirsgoevy - Kstuff",
                        ps5ui::Style::Center)
-                .label("id_major_line_3", "John tornblom - elfldr 等",
+                .label("id_major_line_3", toolbox_i18n::tr("about.elfldr_etc"),
                        ps5ui::Style::Center)
-                .label("id_99877777", "更多信息、更新或问题请访问 GitHub 仓库",
+                .label("id_99877777", toolbox_i18n::tr("about.more"),
                        ps5ui::Style::Center)
-                .label("id_99555557", "OnionHEN 项目仓库", ps5ui::Style::Center)
-                .label("id_8585858", "特别感谢所有支持者，包括以下人员：",
+                .label("id_99555557", toolbox_i18n::tr("about.repo"),
+                       ps5ui::Style::Center)
+                .label("id_8585858", toolbox_i18n::tr("about.thanks"),
                        ps5ui::Style::Center)
                 .label("id_60606066",
                        "MODDED WARFARE, Bucanero, Echo Stretch, "
@@ -649,11 +692,11 @@ void append_toolbox_about_group(ps5ui::Group& g) {
                        "ajslayer",
                        ps5ui::Style::Left);
           },
-          "致谢与支持者")
+          toolbox_i18n::tr("about.credits.sub"))
       .group(
-          "id_inc_project", "OnionHEN 所包含的项目",
+          "id_inc_project", toolbox_i18n::tr("about.projects"),
           [](ps5ui::Group& p) {
-            p.label("id_project_info", "★ OnionHEN 中使用的开源与闭源项目",
+            p.label("id_project_info", toolbox_i18n::tr("about.projects.info"),
                     ps5ui::Style::Center)
                 .label("id_project_1",
                        "PS5 Payload Dev SDK - "
@@ -690,44 +733,47 @@ void append_toolbox_about_group(ps5ui::Group& g) {
                        "cJSON - https://github.com/DaveGamble/cJSON",
                        ps5ui::Style::Center);
           },
-          "OnionHEN 中使用的项目");
+          toolbox_i18n::tr("about.projects.sub"));
 }
 
 } // namespace
 
 void generate_toolbox_xml(std::string& new_xml) {
-  ps5ui::Page page("id_debug_settings", "★OnionHEN 工具箱");
+  toolbox_i18n::apply_ui_lang(g_settings.ui_lang);
+  ps5ui::Page page("id_debug_settings", toolbox_i18n::tr("root.title"));
   page.root_focus("id_group_pkg");
 
   page.group(
-          "id_group_pkg", "软件包安装",
+          "id_group_pkg", toolbox_i18n::tr("group.pkg"),
           [](ps5ui::Group& g) { append_toolbox_pkg_group(g); },
-          "安装 PKG 与附加内容", kIconPkg, "id_game_package_installer")
+          toolbox_i18n::tr("group.pkg.sub"), kIconPkg,
+          "id_game_package_installer")
       .group(
-          "id_group_payloads", "Payload 与内核",
+          "id_group_payloads", toolbox_i18n::tr("group.payloads"),
           [](ps5ui::Group& g) { append_toolbox_payloads_group(g); },
-          "Payload ELF 与 Kstuff", kIconPlugins, "id_payloads")
+          toolbox_i18n::tr("group.payloads.sub"), kIconPlugins, "id_payloads")
       .group(
-          "id_group_game", "游戏功能",
+          "id_group_game", toolbox_i18n::tr("group.game"),
           [](ps5ui::Group& g) { append_toolbox_game_group(g); },
-          "金手指、远程游玩与游戏内覆盖层", kIconGame, "id_cheats")
+          toolbox_i18n::tr("group.game.sub"), kIconGame, "id_cheats")
       .group(
-          "id_group_system", "系统设置",
+          "id_group_system", toolbox_i18n::tr("group.system"),
           [](ps5ui::Group& g) { append_toolbox_system_group(g); },
-          "权限、硬件、存储与休息模式", kIconSettings, "id_disp_titleids")
+          toolbox_i18n::tr("group.system.sub"), kIconSettings,
+          "id_disp_titleids")
       .group(
-          "id_utils", "手柄快捷键",
+          "id_utils", toolbox_i18n::tr("group.shortcuts"),
           [](ps5ui::Group& g) { append_toolbox_shortcuts_group(g); },
-          "快捷键在重启后仍然有效，组合键不限于游戏内使用", kIconShortcuts,
-          "id_cheats_shortcut")
+          toolbox_i18n::tr("group.shortcuts.sub"), kIconShortcuts,
+          "id_ui_lang")
       .group(
-          "id_group_debug", "调试选项",
+          "id_group_debug", toolbox_i18n::tr("group.debug"),
           [](ps5ui::Group& g) { append_toolbox_debug_group(g); },
-          "越狱调试与环境", kIconDebug, "id_debug_jb")
+          toolbox_i18n::tr("group.debug.sub"), kIconDebug, "id_debug_jb")
       .group(
-          "id_onionhen_credit_options", "关于",
+          "id_onionhen_credit_options", toolbox_i18n::tr("group.about"),
           [](ps5ui::Group& g) { append_toolbox_about_group(g); },
-          "致谢、捐赠与项目信息", kIconAbout, std::nullopt,
+          toolbox_i18n::tr("group.about.sub"), kIconAbout, std::nullopt,
           ps5ui::Style::Center);
 
   new_xml = page.build();

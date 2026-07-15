@@ -34,6 +34,23 @@ static OnPressResult id_selected_cheats_repo(OnPressContext &ctx) {
   return OnPressResult::Handled;
 }
 
+static OnPressResult id_ui_lang(OnPressContext &ctx) {
+  int v = atoi(ctx.value.c_str());
+  if (v != 0 && v != 1)
+    v = 0;
+  if (v == g_settings.ui_lang)
+    return OnPressResult::EarlyReturn;
+  g_settings.ui_lang = v;
+  shellui_log("UI language: %s", v == 1 ? "en" : "zh-Hans");
+  /* XML is built when the page opens; current tree stays in the old language. */
+  if (v == 1) {
+    notify("Language saved. Leave and re-open the toolbox for it to take effect.");
+  } else {
+    notify("语言已保存。退出并重新打开工具箱后生效。");
+  }
+  return OnPressResult::Handled;
+}
+
 static OnPressResult id_rest_1(OnPressContext &ctx) {
   g_settings.rest_mode_delay_seconds = atol(ctx.value.c_str());
   return OnPressResult::Handled;
@@ -142,6 +159,7 @@ static const OnPressExactEntry kExact[] = {
     {"id_debug_jb", id_debug_jb},
     {"id_custom_game_opts", id_custom_game_opts},
     {"id_selected_cheats_repo", id_selected_cheats_repo},
+    {"id_ui_lang", id_ui_lang},
     {"id_rest_1", id_rest_1},
     {"id_rest_2", id_rest_2},
     {"id_rest_3", id_rest_3},

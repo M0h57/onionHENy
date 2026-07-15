@@ -65,7 +65,8 @@ PROD_CXX_SRCS := \
 	$(REPO_ROOT)/source/libonion_settings/source/settings.cpp \
 	$(REPO_ROOT)/source/libonion_ipc/source/ipc_server.cpp \
 	$(REPO_ROOT)/source/shellui/src/ps5_settings_ui.cpp \
-	$(REPO_ROOT)/source/shellui/src/toolbox_route.cpp
+	$(REPO_ROOT)/source/shellui/src/toolbox_route.cpp \
+	$(REPO_ROOT)/source/shellui/src/toolbox_i18n.cpp
 
 TEST_C_SRCS := \
 	test_harness.c \
@@ -95,6 +96,7 @@ TEST_CXX_SRCS := \
 	test_ps5_settings_ui.cpp \
 	test_toolbox_route.cpp \
 	test_toolbox_helpers.cpp \
+	test_toolbox_i18n.cpp \
 	test_http_github.cpp \
 	test_x64_relocator.cpp \
 	test_main.cpp
@@ -115,6 +117,7 @@ PROD_CXX_OBJS += $(BUILD_DIR)/prod/libonion_ipc/ipc_server.o
 PROD_CXX_OBJS += $(BUILD_DIR)/prod/libonion_detour/x64_relocator.o
 PROD_CXX_OBJS += $(BUILD_DIR)/prod/shellui/ps5_settings_ui.o
 PROD_CXX_OBJS += $(BUILD_DIR)/prod/shellui/toolbox_route.o
+PROD_CXX_OBJS += $(BUILD_DIR)/prod/shellui/toolbox_i18n.o
 
 TEST_C_OBJS := $(patsubst %.c,$(BUILD_DIR)/tests/%.o,$(TEST_C_SRCS))
 TEST_CXX_OBJS := $(patsubst %.cpp,$(BUILD_DIR)/tests/%.o,$(TEST_CXX_SRCS))
@@ -172,6 +175,10 @@ $(BUILD_DIR)/prod/shellui/ps5_settings_ui.o: $(REPO_ROOT)/source/shellui/src/ps5
 	$(HOST_CXX) $(CXXFLAGS) -c -o $@ $<
 
 $(BUILD_DIR)/prod/shellui/toolbox_route.o: $(REPO_ROOT)/source/shellui/src/toolbox_route.cpp | $(BUILD_DIR)
+	@mkdir -p $(dir $@)
+	$(HOST_CXX) $(CXXFLAGS) -c -o $@ $<
+
+$(BUILD_DIR)/prod/shellui/toolbox_i18n.o: $(REPO_ROOT)/source/shellui/src/toolbox_i18n.cpp | $(BUILD_DIR)
 	@mkdir -p $(dir $@)
 	$(HOST_CXX) $(CXXFLAGS) -c -o $@ $<
 

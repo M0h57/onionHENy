@@ -82,6 +82,10 @@ struct Settings {
   int cheats_shortcut_opt = 0;
   int toolbox_shortcut_opt = 0;
 
+  // --- UI language (shellui toolbox XML) ---
+  // 0 = zh-Hans (default), 1 = English
+  int ui_lang = 0;
+
   // Meta
   int schema_version = kSettingsSchemaVersion;
 };

@@ -97,6 +97,9 @@ void apply_parser(IniParser *parser, Settings *out) {
       atoi_def(ini_parser_get(parser, "Settings.Cheats_shortcut_opt", "0"), 0);
   out->toolbox_shortcut_opt =
       atoi_def(ini_parser_get(parser, "Settings.Toolbox_shortcut_opt", "0"), 0);
+  out->ui_lang = atoi_def(ini_parser_get(parser, "Settings.ui_lang", "0"), 0);
+  if (out->ui_lang != 0 && out->ui_lang != 1)
+    out->ui_lang = 0;
   out->schema_version =
       atoi_def(ini_parser_get(parser, "Settings.schema_version", "1"), 1);
 }
@@ -158,6 +161,7 @@ std::string settings_serialize(const Settings &in) {
   b += "Overlay_pos=" + std::to_string(in.overlay_pos) + "\n";
   b += "Cheats_shortcut_opt=" + std::to_string(in.cheats_shortcut_opt) + "\n";
   b += "Toolbox_shortcut_opt=" + std::to_string(in.toolbox_shortcut_opt) + "\n";
+  b += "ui_lang=" + std::to_string(in.ui_lang) + "\n";
   return b;
 }
 
