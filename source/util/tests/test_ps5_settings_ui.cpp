@@ -16,8 +16,10 @@ static int test_escape_special_chars(void) {
   TEST_ASSERT_STREQ("a&amp;b", a.c_str());
   TEST_ASSERT_STREQ("&lt;tag&gt;", b.c_str());
   TEST_ASSERT_STREQ("&quot;q&quot;", c.c_str());
-  /* Legacy path convention: / → // */
+  /* escape() is for icon paths: / → // ; escape_xml keeps single / for display */
   TEST_ASSERT_STREQ("//user//data//OnionHEN", d.c_str());
+  const std::string d_xml = escape_xml("/user/data/OnionHEN");
+  TEST_ASSERT_STREQ("/user/data/OnionHEN", d_xml.c_str());
   /* CJK unchanged */
   TEST_ASSERT_STREQ("金手指", e.c_str());
   return 0;
@@ -89,9 +91,9 @@ static int test_list_and_items(void) {
                "value=\"1\"/>") != std::string::npos);
   TEST_ASSERT_TRUE(xml.find("</list>") != std::string::npos);
   TEST_ASSERT_TRUE(xml.find("id=\"id_example_btn\"") != std::string::npos);
-  /* path second_title must escape slashes */
+  /* path second_title keeps single slashes */
   TEST_ASSERT_TRUE(
-      xml.find("second_title=\"to //data//OnionHEN//example//\"") !=
+      xml.find("second_title=\"to /data/OnionHEN/example/\"") !=
       std::string::npos);
   return 0;
 }
@@ -231,7 +233,7 @@ static int test_toolbox_like_skeleton(void) {
   TEST_ASSERT_TRUE(xml.find("initial_focus_to=\"id_group_pkg\"") !=
                    std::string::npos);
   TEST_ASSERT_TRUE(xml.find("id=\"id_group_pkg\"") != std::string::npos);
-  /* icon uses path-style // ; file keeps single / for plugin resources */
+  /* icon doubles slashes; file (plugin resource) keeps single / */
   TEST_ASSERT_TRUE(
       xml.find("icon=\"//user//data//OnionHEN//assets//icon_xml_package.png\"") !=
       std::string::npos);

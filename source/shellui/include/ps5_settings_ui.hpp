@@ -16,10 +16,16 @@ namespace ps5ui {
 
 enum class Style { None, Center, Left };
 
-/** Escape attribute text: & < > " and path-style / → // (matches legacy escapeXML). */
+/**
+ * Escape for filesystem path attrs (icon): & < > " and / → //.
+ * ShellUI resolves icon paths only when slashes are doubled.
+ */
 std::string escape(std::string_view text);
 
-/** XML specials only (& < > ") — no path slash doubling. Use for file/key attrs. */
+/**
+ * Escape for display attrs (title/second_title/description): & < > " only.
+ * Do not double '/' — UI shows // literally in path text.
+ */
 std::string escape_xml(std::string_view text);
 
 struct Attrs {

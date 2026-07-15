@@ -62,12 +62,12 @@ void write_optional(std::ostringstream& out, const char* key,
 
 void write_open_tag(std::ostringstream& out, const Node& node, bool self_close) {
   out << '<' << kind_tag(node.kind);
-  /* id/title/focus/style tokens: XML only (no path slash doubling). */
+  /* Display text: single '/'. Icon filesystem paths: / → // for ShellUI. */
   write_attr(out, "id", node.attrs.id, /*path_escape=*/false);
-  write_attr(out, "title", node.attrs.title, /*path_escape=*/true);
-  write_optional(out, "second_title", node.attrs.second_title, true);
-  write_optional(out, "description", node.attrs.description, true);
-  write_optional(out, "icon", node.attrs.icon, true);
+  write_attr(out, "title", node.attrs.title, /*path_escape=*/false);
+  write_optional(out, "second_title", node.attrs.second_title, false);
+  write_optional(out, "description", node.attrs.description, false);
+  write_optional(out, "icon", node.attrs.icon, /*path_escape=*/true);
   /* Relative plugin resource paths and reg keys keep single '/'. */
   write_optional(out, "file", node.attrs.file, false);
   write_optional(out, "key", node.attrs.key, false);
@@ -75,8 +75,8 @@ void write_open_tag(std::ostringstream& out, const Node& node, bool self_close) 
   write_optional(out, "min_length", node.attrs.min_length, false);
   write_optional(out, "max_length", node.attrs.max_length, false);
   write_optional(out, "value", node.attrs.value, false);
-  write_optional(out, "confirm", node.attrs.confirm, true);
-  write_optional(out, "confirm_phrase", node.attrs.confirm_phrase, true);
+  write_optional(out, "confirm", node.attrs.confirm, false);
+  write_optional(out, "confirm_phrase", node.attrs.confirm_phrase, false);
   write_optional(out, "initial_focus_to", node.attrs.initial_focus_to, false);
   if (const char* s = style_attr(node.attrs.style))
     write_attr(out, "style", s, false);
