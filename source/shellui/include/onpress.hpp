@@ -66,6 +66,9 @@ const OnPressPrefixEntry *onpress_payloads_prefix(size_t *count);
 const OnPressPrefixEntry *onpress_cheats_prefix(size_t *count);
 const OnPressPrefixEntry *onpress_packages_prefix(size_t *count);
 
+/** Stock PkgInstaller path-id rows (empty Value). Direct AppInst install. */
+OnPressResult onpress_try_pkg_path(OnPressContext &ctx);
+
 /** Shared toggle helpers. */
 inline bool value_as_int(const OnPressContext &ctx) {
   return atoi(ctx.value.c_str());

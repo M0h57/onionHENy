@@ -68,6 +68,10 @@ int OnPress_Hook(MonoObject *Instance, MonoObject *element, MonoObject *e) {
       std::find(excludedIds.begin(), excludedIds.end(), ctx.id) !=
       excludedIds.end();
   if (ctx.value.empty() && !isExcludedId && !is_onionhen_pl) {
+    /* Stock PkgInstaller: Id = /mnt/usb0/foo.pkg, Value empty. */
+    OnPressResult pkg = onpress_try_pkg_path(ctx);
+    if (pkg == OnPressResult::Consumed)
+      return 0;
 #if SHELL_DEBUG == 1
     shellui_log("[LM HOOK] OnPress_Hook: Id: %s has no value set",
                 ctx.id.c_str());
