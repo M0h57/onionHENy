@@ -526,8 +526,14 @@ void append_toolbox_game_group(ps5ui::Group& g) {
 }
 
 void append_toolbox_system_group(ps5ui::Group& g) {
-  g.toggle("id_disp_titleids", toolbox_i18n::tr("disp_tids"),
-           toolbox_on("id_disp_titleids"), toolbox_i18n::tr("disp_tids.sub"))
+  g.list("id_ui_lang", toolbox_i18n::tr("lang.list"),
+         [](ps5ui::ListBuilder& L) {
+           L.item("id_ui_lang_zh", toolbox_i18n::tr("lang.zh"), "0")
+               .item("id_ui_lang_en", toolbox_i18n::tr("lang.en"), "1");
+         },
+         toolbox_i18n::tr("lang.list.sub"), toolbox_val("id_ui_lang", "0"))
+      .toggle("id_disp_titleids", toolbox_i18n::tr("disp_tids"),
+              toolbox_on("id_disp_titleids"), toolbox_i18n::tr("disp_tids.sub"))
       .group(
           "id_group_fan", toolbox_i18n::tr("fan.group"),
           [](ps5ui::Group& f) {
@@ -561,27 +567,18 @@ void append_toolbox_system_group(ps5ui::Group& g) {
 }
 
 void append_toolbox_shortcuts_group(ps5ui::Group& g) {
-  g.list("id_ui_lang", toolbox_i18n::tr("lang.list"),
+  g.list("id_cheats_shortcut", toolbox_i18n::tr("sc.cheats"),
          [](ps5ui::ListBuilder& L) {
-           L.item("id_ui_lang_zh", toolbox_i18n::tr("lang.zh"), "0")
-               .item("id_ui_lang_en", toolbox_i18n::tr("lang.en"), "1");
+           L.item("id_cheats_shortcut_0", toolbox_i18n::tr("sc.off"), "0")
+               .item("id_cheats_shortcut_1", toolbox_i18n::tr("sc.r3_l3"), "1")
+               .item("id_cheats_shortcut_2", toolbox_i18n::tr("sc.l2_tri"), "2")
+               .item("id_cheats_shortcut_3",
+                     toolbox_i18n::tr("sc.long_options"), "3")
+               .item("id_cheats_shortcut_4", toolbox_i18n::tr("sc.long_share"),
+                     "4")
+               .item("id_cheats_shortcut_5", toolbox_i18n::tr("sc.share"), "5");
          },
-         toolbox_i18n::tr("lang.list.sub"), toolbox_val("id_ui_lang", "0"))
-      .list("id_cheats_shortcut", toolbox_i18n::tr("sc.cheats"),
-            [](ps5ui::ListBuilder& L) {
-              L.item("id_cheats_shortcut_0", toolbox_i18n::tr("sc.off"), "0")
-                  .item("id_cheats_shortcut_1", toolbox_i18n::tr("sc.r3_l3"), "1")
-                  .item("id_cheats_shortcut_2", toolbox_i18n::tr("sc.l2_tri"),
-                        "2")
-                  .item("id_cheats_shortcut_3",
-                        toolbox_i18n::tr("sc.long_options"), "3")
-                  .item("id_cheats_shortcut_4", toolbox_i18n::tr("sc.long_share"),
-                        "4")
-                  .item("id_cheats_shortcut_5", toolbox_i18n::tr("sc.share"),
-                        "5");
-            },
-            toolbox_i18n::tr("sc.cheats.sub"),
-            toolbox_val("id_cheats_shortcut"))
+         toolbox_i18n::tr("sc.cheats.sub"), toolbox_val("id_cheats_shortcut"))
       .list("id_toolbox_shortcut", toolbox_i18n::tr("sc.toolbox"),
             [](ps5ui::ListBuilder& L) {
               L.item("id_toolbox_shortcut_0", toolbox_i18n::tr("sc.off"), "0")
@@ -755,13 +752,12 @@ void generate_toolbox_xml(std::string& new_xml) {
       .group(
           "id_group_system", toolbox_i18n::tr("group.system"),
           [](ps5ui::Group& g) { append_toolbox_system_group(g); },
-          toolbox_i18n::tr("group.system.sub"), kIconSettings,
-          "id_disp_titleids")
+          toolbox_i18n::tr("group.system.sub"), kIconSettings, "id_ui_lang")
       .group(
           "id_utils", toolbox_i18n::tr("group.shortcuts"),
           [](ps5ui::Group& g) { append_toolbox_shortcuts_group(g); },
           toolbox_i18n::tr("group.shortcuts.sub"), kIconShortcuts,
-          "id_ui_lang")
+          "id_cheats_shortcut")
       .group(
           "id_group_debug", toolbox_i18n::tr("group.debug"),
           [](ps5ui::Group& g) { append_toolbox_debug_group(g); },
