@@ -14,6 +14,7 @@
 #include <errno.h>
 
 bool is_handler_enabled = true;
+std::atomic_bool g_stack_shutting_down{false};
 
 static void handleIPC_adapt(orion::IpcClientArgs *client, std::string &msg,
                             DaemonCommands cmd) {

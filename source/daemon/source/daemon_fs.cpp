@@ -329,7 +329,14 @@ static void shutdown_restart_shellui(void) {
   OrionHEN_log(
       "cmd_shutdown_orion_stack: util → restart ShellUI → self (leave kstuff)");
 
+  /*
+   * Order matters: arm stack-shutdown first so the util watchdog will not
+   * 9021-relaunch util after we kill it. Then stop IPC, then kill util.
+   */
+  g_stack_shutting_down.store(true, std::memory_order_release);
   is_handler_enabled = false;
+  /* Let fifo_and_dumper_thread observe the flag before util vanishes. */
+  usleep(100 * 1000);
 
   static const char *const kUtilNames[] = {
       "util.elf",

@@ -4,6 +4,7 @@
  */
 #pragma once
 
+#include <atomic>
 #include <string>
 #include <sys/types.h>
 #include <msg.hpp>
@@ -12,7 +13,15 @@
 // clientArgs alias
 using clientArgs = orion::IpcClientArgs;
 
+/** IPC accept/handle loops only — not util lifecycle. */
 extern bool is_handler_enabled;
+
+/**
+ * Full stack teardown in progress (BREW_SHUTDOWN_STACK / TCP SHUTDOWN).
+ * Util watchdog must not 9021-relaunch util once this is true.
+ * One-way: set true, never cleared (process exits).
+ */
+extern std::atomic_bool g_stack_shutting_down;
 
 /**
  * Refresh g_settings from twin config paths when either is newer.
@@ -38,7 +47,7 @@ bool set_fan_threshold(int temp);
 /**
  * Tear down OrionHEN userland (does not return). Caller should reply to IPC first.
  *
- * Sequence: stop util → restart SceShellUI → exit this daemon.
+ * Sets g_stack_shutting_down, then: stop util → restart SceShellUI → exit.
  * Does NOT kill kstuff — hard-unloading kernel patches panics the console.
  */
 [[noreturn]] void cmd_shutdown_orion_stack(void);

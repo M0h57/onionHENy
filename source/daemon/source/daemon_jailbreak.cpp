@@ -69,7 +69,13 @@ void *fifo_and_dumper_thread(void *args) noexcept {
   while (true) {
     std::string sandbox_dir;
 
-    // Restart util if it crashes or exits
+    /* Stack teardown: do not relaunch util or keep JB/FPS work. */
+    if (g_stack_shutting_down.load(std::memory_order_acquire)) {
+      sleep(1);
+      continue;
+    }
+
+    // Restart util if it crashes or exits (normal operation only).
     if (find_pid("util.elf") < 0 && find_pid("OrionHEN Utility") < 0 &&
         retries < kMaxRetries) {
       if (retries == 0)
