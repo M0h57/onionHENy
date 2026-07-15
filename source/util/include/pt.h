@@ -1,13 +1,13 @@
-/* Copyright (C) 2024–2025 John Törnblom / OrionHEN
+/* Copyright (C) 2024–2025 John Törnblom / OnionHEN
  *
- * Util-facing ptrace API. Implementation: liborion_elfldr (no per-call authid).
+ * Util-facing ptrace API. Implementation: libonion_elfldr (no per-call authid).
  * Process is elevated once with set_ucred_to_ptrace() (PTRACE_AUTHID) at util
  * main; cave map uses shared pt_*.
  */
 
 #pragma once
 
-#include <orion/pt.h>
+#include <onion/pt.h>
 
 #ifdef __cplusplus
 extern "C" {

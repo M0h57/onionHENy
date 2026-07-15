@@ -6,7 +6,7 @@
 #include "cheats/cheat_engine.h"
 #include "util_platform.h"
 
-namespace orion::cheats {
+namespace onion::cheats {
 
 struct FileSignature {
   std::string path;
@@ -35,11 +35,11 @@ public:
   static bool statSignature(const std::string &path, FileSignature &out);
 
   /** Load path into out (clears out first). 0 = ok. */
-  static int loadFile(const std::string &path, orion_cheat_file_t &out);
+  static int loadFile(const std::string &path, onion_cheat_file_t &out);
 
   static void ensureCheatsDir();
-  /** Flatten nested repo tree into ORION_CHEATS_DIR. */
+  /** Flatten nested repo tree into ONION_CHEATS_DIR. */
   static int flattenInstallTree(const std::string &root);
 };
 
-} // namespace orion::cheats
+} // namespace onion::cheats

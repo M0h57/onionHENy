@@ -1,4 +1,4 @@
-/* Copyright (C) 2025 OrionHEN / LightningMods
+/* Copyright (C) 2025 OnionHEN / LightningMods
 
 This program is free software; you can redistribute it and/or modify it
 under the terms of the GNU General Public License as published by the
@@ -48,12 +48,12 @@ along with this program; see the file COPYING. If not, see
 #include <unistd.h>
 #include <string.h>
 #include <stdio.h>
-#include <orion/ready.h>
-#include <orion/platform.h>
-#include <orion/notify.h>
-#include <orion/platform.h>
-#include <orion/proc_query.h>
-#include <orion/payload.h>
+#include <onion/ready.h>
+#include <onion/platform.h>
+#include <onion/notify.h>
+#include <onion/platform.h>
+#include <onion/proc_query.h>
+#include <onion/payload.h>
 #include <errno.h>
  
  /******************************************************************************
@@ -97,11 +97,11 @@ const char json_payload[] =
      "      \"icon\": {\n"
      "        \"type\": \"Url\",\n"
      "        \"parameters\": {\n"
-     "          \"url\": \"/user/data/OrionHEN/orionhen.png\"\n"
+     "          \"url\": \"/user/data/OnionHEN/onionhen.png\"\n"
      "        }\n"
      "      },\n"
      "      \"message\": {\n"
-     "        \"body\": \"OrionHEN is starting...\"\n"
+     "        \"body\": \"OnionHEN is starting...\"\n"
      "      },\n"
      "      \"subMessage\": {\n"
      "        \"body\": \"Please Wait For The Welcome Message\"\n"
@@ -127,7 +127,7 @@ const char json_payload[] =
      "            }\n"
      "          },\n"
      "          \"message\": {\n"
-     "            \"body\": \"OrionHEN is starting...\"\n"
+     "            \"body\": \"OnionHEN is starting...\"\n"
      "          }\n"
      "        }\n"
      "      }\n"
@@ -254,7 +254,7 @@ const char json_payload[] =
      void notify(const char *text, ...) {
      va_list args;
      va_start(args, text);
-     orion_notify_v(/*show_watermark=*/0, text, args);
+     onion_notify_v(/*show_watermark=*/0, text, args);
      va_end(args);
  }
 
@@ -334,8 +334,8 @@ static void cleanup(void);
   }
 
   void write_embedded_assets() {
-    mkdir("/data/OrionHEN/", 0777);
-    mkdir("/data/OrionHEN/assets/", 0777);
+    mkdir("/data/OnionHEN/", 0777);
+    mkdir("/data/OnionHEN/assets/", 0777);
 #if 0
     int fd = open("/system_ex/common_ex/lib/shell.prx", O_WRONLY | O_CREAT | O_TRUNC, 0666);
     if (fd == -1) {
@@ -349,8 +349,8 @@ static void cleanup(void);
     close(fd);
 #endif
 #if 0
-   /// if (!if_exists("/data/OrionHEN/fps.prx")) {
-        int fd = open("/data/OrionHEN/fps.prx", O_WRONLY | O_CREAT | O_TRUNC, 0777);
+   /// if (!if_exists("/data/OnionHEN/fps.prx")) {
+        int fd = open("/data/OnionHEN/fps.prx", O_WRONLY | O_CREAT | O_TRUNC, 0777);
         if (fd == -1) {
             perror("open failed");
             return;
@@ -367,29 +367,29 @@ static void cleanup(void);
      * (Previously gated on !if_exists — first deploy stuck forever.)
      *
      * NPXS40008 = RN Settings (debug settings list). ShellUI also rewrites
-     * texture ids to the short name orionh_sicon (CxmlUri / GetString path).
+     * texture ids to the short name onionh_sicon (CxmlUri / GetString path).
      */
-    write_blob_file("/data/OrionHEN/orionhen.png", &sicon_start, sicon_size);
+    write_blob_file("/data/OnionHEN/onionhen.png", &sicon_start, sicon_size);
 
     // Toolbox category icons
-    write_blob_file("/data/OrionHEN/assets/icon_xml_package.png", &icon_xml_package_start, icon_xml_package_size);
-    write_blob_file("/data/OrionHEN/assets/icon_xml_plugins.png", &icon_xml_plugins_start, icon_xml_plugins_size);
-    write_blob_file("/data/OrionHEN/assets/icon_xml_game.png", &icon_xml_game_start, icon_xml_game_size);
-    write_blob_file("/data/OrionHEN/assets/icon_xml_network.png", &icon_xml_network_start, icon_xml_network_size);
-    write_blob_file("/data/OrionHEN/assets/icon_xml_settings.png", &icon_xml_settings_start, icon_xml_settings_size);
-    write_blob_file("/data/OrionHEN/assets/icon_xml_shortcuts.png", &icon_xml_shortcuts_start, icon_xml_shortcuts_size);
-    write_blob_file("/data/OrionHEN/assets/icon_xml_debug.png", &icon_xml_debug_start, icon_xml_debug_size);
-    write_blob_file("/data/OrionHEN/assets/icon_xml_about.png", &icon_xml_about_start, icon_xml_about_size);
+    write_blob_file("/data/OnionHEN/assets/icon_xml_package.png", &icon_xml_package_start, icon_xml_package_size);
+    write_blob_file("/data/OnionHEN/assets/icon_xml_plugins.png", &icon_xml_plugins_start, icon_xml_plugins_size);
+    write_blob_file("/data/OnionHEN/assets/icon_xml_game.png", &icon_xml_game_start, icon_xml_game_size);
+    write_blob_file("/data/OnionHEN/assets/icon_xml_network.png", &icon_xml_network_start, icon_xml_network_size);
+    write_blob_file("/data/OnionHEN/assets/icon_xml_settings.png", &icon_xml_settings_start, icon_xml_settings_size);
+    write_blob_file("/data/OnionHEN/assets/icon_xml_shortcuts.png", &icon_xml_shortcuts_start, icon_xml_shortcuts_size);
+    write_blob_file("/data/OnionHEN/assets/icon_xml_debug.png", &icon_xml_debug_start, icon_xml_debug_size);
+    write_blob_file("/data/OnionHEN/assets/icon_xml_about.png", &icon_xml_about_start, icon_xml_about_size);
 
     static const char *const kSettingsSiconPaths[] = {
         "/system_ex/rnps/apps/NPXS40008/assets/src/modules/categoriesList/assets/"
-        "texture/orionhen_sicon.png",
+        "texture/onionhen_sicon.png",
         "/system_ex/rnps/apps/NPXS40008/assets/src/modules/categoriesList/assets/"
-        "texture/orionh_sicon.png",
+        "texture/onionh_sicon.png",
         "/mnt/rnps/apps/NPXS40008/assets/src/modules/categoriesList/assets/"
-        "texture/orionhen_sicon.png",
+        "texture/onionhen_sicon.png",
         "/mnt/rnps/apps/NPXS40008/assets/src/modules/categoriesList/assets/"
-        "texture/orionh_sicon.png",
+        "texture/onionh_sicon.png",
     };
     for (const char *path : kSettingsSiconPaths)
       write_blob_file(path, &sicon_start, sicon_size);
@@ -404,7 +404,7 @@ static void cleanup(void);
 
 
   uint8_t* get_kstuff_address(bool& require_cleanup) {
-      const char* path = "/data/OrionHEN/kstuff.elf";
+      const char* path = "/data/OnionHEN/kstuff.elf";
       long offset = 0;
       off_t size;
       uint8_t* address;
@@ -475,7 +475,7 @@ static void cleanup(void);
     }
   
     // Notify user about cleanup
-    notify("OrionHEN has been cleaned up.");
+    notify("OnionHEN has been cleaned up.");
   
     // Exit the program
     exit(0);
@@ -553,18 +553,18 @@ static void cleanup(void);
  
  // Load a payload .elf
 bool load_payload(const char *path, const char *filename) {
-  orion_payload_load_opts opts = {};
+  onion_payload_load_opts opts = {};
   opts.always_succeed_after_launch = 1;
-  return orion_payload_load(path, filename, &opts);
+  return onion_payload_load(path, filename, &opts);
 }
 
 /*=================== LOAD PAYLOADS (autostart .elf) =========================*/
 char **find_payload_files() {
   const char *base_dirs[] = {
-      "/mnt/usb0/orionhen/payloads", "/mnt/usb0/OrionHEN/payloads",
-      "/mnt/usb1/orionhen/payloads", "/mnt/usb2/orionhen/payloads",
-      "/mnt/usb3/orionhen/payloads", "/user/data/OrionHEN/payloads",
-      "/user/data/orionhen/payloads", "/data/OrionHEN/payloads",
+      "/mnt/usb0/onionhen/payloads", "/mnt/usb0/OnionHEN/payloads",
+      "/mnt/usb1/onionhen/payloads", "/mnt/usb2/onionhen/payloads",
+      "/mnt/usb3/onionhen/payloads", "/user/data/OnionHEN/payloads",
+      "/user/data/onionhen/payloads", "/data/OnionHEN/payloads",
   };
 
   int base_dirs_count = sizeof(base_dirs) / sizeof(base_dirs[0]);
@@ -643,8 +643,8 @@ void free_payload_files(char **plugin_files) {
 
 static void kill_by_name(const char *a, const char *b) {
   int p = -1;
-  while ((p = orion_find_pid_substr(a)) > 0 ||
-         (p = orion_find_pid_substr(b)) > 0) {
+  while ((p = onion_find_pid_substr(a)) > 0 ||
+         (p = onion_find_pid_substr(b)) > 0) {
     kill(p, SIGKILL);
     sleep(1);
   }
@@ -658,7 +658,7 @@ static bool launch_blob(const uint8_t *elf, size_t size, const char *label,
     return false;
   }
   for (int i = 0; i < 30; i++) {
-    if (wait_name && orion_find_pid_substr(wait_name) > 0) {
+    if (wait_name && onion_find_pid_substr(wait_name) > 0) {
       klog_printf("  running: %s\n", wait_name);
       return true;
     }
@@ -678,7 +678,7 @@ static int launch_chain(const OrbisKernelSwVersion &sys_ver) {
 
   if (!elfldr_remote_available()) {
     klog_puts("FATAL: no elfldr on 127.0.0.1:9021");
-    notify("Start elfldr on 9021 first, then re-run OrionHEN.");
+    notify("Start elfldr on 9021 first, then re-run OnionHEN.");
     return -2;
   }
   klog_puts("elfldr :9021 OK - launching embedded ELFs (serialized)");
@@ -689,38 +689,38 @@ static int launch_chain(const OrbisKernelSwVersion &sys_ver) {
    * (daemon injects toolbox; kstuff must patch ShellUI first)
    */
   klog_puts("Starting util via 9021 ...");
-  kill_by_name("util.elf", "OrionHEN Utility");
-  orion_ready_clear(ORION_READY_UTIL);
-  orion_ready_clear(ORION_READY_KSTUFF);
-  orion_ready_clear(ORION_READY_DAEMON);
-  orion_ready_clear(ORION_READY_TOOLBOX);
+  kill_by_name("util.elf", "OnionHEN Utility");
+  onion_ready_clear(ONION_READY_UTIL);
+  onion_ready_clear(ONION_READY_KSTUFF);
+  onion_ready_clear(ONION_READY_DAEMON);
+  onion_ready_clear(ONION_READY_TOOLBOX);
   /* Runtime flags that must not stick across re-HEN without reboot. */
-  orion_ready_clear(ORION_FLAG_UTIL_BOOTED);
-  orion_ready_clear(ORION_FLAG_FPS_OVERLAY);
+  onion_ready_clear(ONION_FLAG_UTIL_BOOTED);
+  onion_ready_clear(ONION_FLAG_FPS_OVERLAY);
 
   if (!launch_blob(util_start, util_size, "util", "util.elf")) {
     notify("failed to launch util via elfldr :9021");
     return -2;
   }
-  if (!orion_ready_wait(ORION_READY_UTIL, /*timeout_ms=*/15000, /*poll_ms=*/200))
+  if (!onion_ready_wait(ONION_READY_UTIL, /*timeout_ms=*/15000, /*poll_ms=*/200))
     klog_puts("util ready timeout — continuing (process may still be starting)");
 
   const bool skip_kstuff =
-      if_exists("/mnt/usb0/no_kstuff") || if_exists("/data/OrionHEN/no_kstuff");
+      if_exists("/mnt/usb0/no_kstuff") || if_exists("/data/OnionHEN/no_kstuff");
   if (skip_kstuff) {
     klog_puts("kstuff disabled via no_kstuff file");
-    orion_ready_signal(ORION_READY_KSTUFF);
+    onion_ready_signal(ONION_READY_KSTUFF);
   } else if (sys_ver.version >= 0x3000000) {
     if (kstuff_already_running()) {
       /* Re-HEN after stack shutdown leaves kstuff alive; do not double-load. */
       klog_puts("kstuff already running / mprotect OK — skip launch");
-      orion_ready_signal(ORION_READY_KSTUFF);
+      onion_ready_signal(ONION_READY_KSTUFF);
     } else {
       klog_puts("Loading kstuff via 9021 (before daemon/toolbox) ...");
       uint8_t *override_elf = nullptr;
       size_t override_size = 0;
-      if (if_exists("/data/OrionHEN/kstuff.elf"))
-        override_elf = orion_payload_read_file("/data/OrionHEN/kstuff.elf",
+      if (if_exists("/data/OnionHEN/kstuff.elf"))
+        override_elf = onion_payload_read_file("/data/OnionHEN/kstuff.elf",
                                                &override_size);
       const uint8_t *kelf = override_elf ? override_elf : kstuff_start;
       const size_t kelf_size =
@@ -740,7 +740,7 @@ static int launch_chain(const OrbisKernelSwVersion &sys_ver) {
         }
         if (!not_loaded) {
           klog_puts("kstuff mprotect OK — signal ready");
-          orion_ready_signal(ORION_READY_KSTUFF);
+          onion_ready_signal(ONION_READY_KSTUFF);
           sleep(1); /* brief settle for ShellUI trophy patches */
         }
       } else {
@@ -748,17 +748,17 @@ static int launch_chain(const OrbisKernelSwVersion &sys_ver) {
       }
     }
   } else {
-    orion_ready_signal(ORION_READY_KSTUFF);
+    onion_ready_signal(ONION_READY_KSTUFF);
   }
 
   klog_puts("Starting daemon via 9021 (toolbox inject) ...");
-  kill_by_name("daemon.elf", "OrionHEN Critical");
-  orion_ready_clear(ORION_READY_DAEMON);
+  kill_by_name("daemon.elf", "OnionHEN Critical");
+  onion_ready_clear(ONION_READY_DAEMON);
   if (!launch_blob(daemon_start, daemon_size, "daemon", "daemon.elf")) {
     notify("failed to launch daemon via elfldr :9021");
     return -2;
   }
-  if (!orion_ready_wait(ORION_READY_DAEMON, /*timeout_ms=*/20000,
+  if (!onion_ready_wait(ONION_READY_DAEMON, /*timeout_ms=*/20000,
                         /*poll_ms=*/200))
     klog_puts("daemon ready timeout — continuing");
 
@@ -779,7 +779,7 @@ static void load_autostart_payloads(void) {
     klog_printf("Loading payload: %s\n", payload_paths[i]);
     if (!load_payload(payload_paths[i], loaded_filenames[i])) {
       snprintf(buff, sizeof(buff),
-               "[OrionHEN] Failed to load payload!\nPath: %s", payload_paths[i]);
+               "[OnionHEN] Failed to load payload!\nPath: %s", payload_paths[i]);
       notify(buff);
       klog_puts("FAILED!");
       continue;
@@ -793,7 +793,7 @@ static void load_autostart_payloads(void) {
 
 int main(void) {
   /* Real linked kernel export — must bind before any notify(). */
-  orion_notify_set_send(reinterpret_cast<orion_notify_send_fn>(
+  onion_notify_set_send(reinterpret_cast<onion_notify_send_fn>(
       sceKernelSendNotificationRequest));
 
   signal(SIGCHLD, SIG_IGN);
@@ -805,7 +805,7 @@ int main(void) {
   }
   klog_printf("   Success!\n");
 
-  if (if_exists("/data/I_want_logging_for_orionhen")) {
+  if (if_exists("/data/I_want_logging_for_onionhen")) {
     klog_printf("Redirecting stdout and stderr to logger ...");
     if (initStdout() >= 0)
       klog_puts("   Success!");
@@ -816,7 +816,7 @@ int main(void) {
   OrbisKernelSwVersion sys_ver;
   sceKernelGetProsperoSystemSwVersion(&sys_ver);
 
-  // Byepervisor (1.xx–2.xx HV path) removed from OrionHEN.
+  // Byepervisor (1.xx–2.xx HV path) removed from OnionHEN.
   if (sys_ver.version < 0x3000000 && !sceKernelIsGenuineDevKit()) {
     klog_printf("FW %s is < 3.00 and Byepervisor is not bundled; continuing without HV path\n",
                 sys_ver.version_str);
@@ -825,10 +825,10 @@ int main(void) {
   klog_puts("============== Spawner (Bootstrapper) Started =================");
 
   // Directory layout
-  mkdir("/data/OrionHEN", 0777);
-  mkdir("/data/OrionHEN/payloads", 0777);
-  mkdir("/data/OrionHEN/assets", 0777);
-  mkdir("/data/OrionHEN/games", 0777);
+  mkdir("/data/OnionHEN", 0777);
+  mkdir("/data/OnionHEN/payloads", 0777);
+  mkdir("/data/OnionHEN/assets", 0777);
+  mkdir("/data/OnionHEN/games", 0777);
 
   klog_printf("Registering signal handler ...");
   fault_handler_init(cleanup);

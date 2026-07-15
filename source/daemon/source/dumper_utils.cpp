@@ -1,4 +1,4 @@
-/* Copyright (C) 2025 OrionHEN / LightningMods
+/* Copyright (C) 2025 OnionHEN / LightningMods
 
 This program is free software; you can redistribute it and/or modify it
 under the terms of the GNU General Public License as published by the
@@ -15,7 +15,7 @@ along with this program; see the file COPYING. If not, see
 <http://www.gnu.org/licenses/>.  */
 
 #include <netinet/in.h>
-#include <orion/platform.h>
+#include <onion/platform.h>
 #include <stddef.h>
 #include <stdio.h>
 #include <sys/socket.h>
@@ -54,7 +54,7 @@ uint64_t calculateTotalSize(const char *path)
 
     if (dir == NULL)
     {
-        orion_notify(false, "calculateTotalSize failed for %s", path);
+        onion_notify(false, "calculateTotalSize failed for %s", path);
         return 0;
     }
 
@@ -121,16 +121,16 @@ bool copyFile(const char *source, const char *destination, bool for_dumper)
     FILE *src = fopen(source, "rb");
     if (src == NULL)
     {
-        orion_notify(false, "copyFile failed for %s", source);
-        OrionHEN_log("copyFile failed for %s", source);
+        onion_notify(false, "copyFile failed for %s", source);
+        OnionHEN_log("copyFile failed for %s", source);
         return false;
     }
 
     FILE *dest = fopen(destination, "wb");
     if (dest == NULL)
     {
-        orion_notify(false, "copyFile failed for %s", destination);
-        OrionHEN_log("copyFile failed for %s", destination);
+        onion_notify(false, "copyFile failed for %s", destination);
+        OnionHEN_log("copyFile failed for %s", destination);
         fclose(src);
         return false;
     }
@@ -161,7 +161,7 @@ bool copyRecursive(const char *source, const char *destination)
     DIR *dir = opendir(source);
     if (dir == NULL)
     {
-        orion_notify(false, "copyRecursive failed for %s", source);
+        onion_notify(false, "copyRecursive failed for %s", source);
         return false;
     }
 
@@ -188,7 +188,7 @@ bool copyRecursive(const char *source, const char *destination)
             {
                 if (!copyFile(srcPath, destPath, true))
                 {
-                    orion_notify(false, "copyRecursive failed for %s", srcPath);
+                    onion_notify(false, "copyRecursive failed for %s", srcPath);
                     return false;
                 }
             }

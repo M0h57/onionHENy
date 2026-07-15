@@ -1,3 +1,3 @@
-/* Compatibility shim — LNC types live in <orion/lnc.h>. */
+/* Compatibility shim — LNC types live in <onion/lnc.h>. */
 #pragma once
-#include <orion/lnc.h>
+#include <onion/lnc.h>

@@ -1,11 +1,11 @@
-/* Copyright (C) 2025 OrionHEN / LightningMods — P0 split. */
+/* Copyright (C) 2025 OnionHEN / LightningMods — P0 split. */
 
 
-#include <orion/platform.h>
-#include <orion/ready.h>
-#include <orion/ipc_client.hpp>
-#include <orion/settings.hpp>
-#include <orion/toolbox_timing.h>
+#include <onion/platform.h>
+#include <onion/ready.h>
+#include <onion/ipc_client.hpp>
+#include <onion/settings.hpp>
+#include <onion/toolbox_timing.h>
 #include "common_utils.h"
 #include <atomic>
 #include <unistd.h>
@@ -25,12 +25,12 @@ bool enable_toolbox() {
     // Single client path into crit daemon (replaces hand-rolled Unix socket).
     // Wait briefly for crit socket / ready — bootstrap order is util then daemon.
     for (int wait = 0; wait <= 20; ++wait) {
-      if (orion_ready_is_set(ORION_READY_DAEMON) ||
-          if_exists("/system_tmp/OrionHEN_crit_service")) {
+      if (onion_ready_is_set(ONION_READY_DAEMON) ||
+          if_exists("/system_tmp/OnionHEN_crit_service")) {
         break;
       }
       if (wait == 20) {
-        orion_notify(true, "Failed to load the OrionHEN toolbox");
+        onion_notify(true, "Failed to load the OnionHEN toolbox");
         return false;
       }
       sleep(1);
@@ -53,7 +53,7 @@ bool isUserLoggedIn() {
         int userid = userIdList.user_id[i];
         if (userid != -1) {
             int ret = sceUserServiceGetUserName(userid, &username[0], sizeof(username));
-            OrionHEN_log("sceUserServiceGetUserName returned %d", ret);
+            OnionHEN_log("sceUserServiceGetUserName returned %d", ret);
             if (ret == 0) {
                 isLoggedIn = true;
                 break;
@@ -71,26 +71,26 @@ bool isUserLoggedIn() {
  */
 void patch_checker(bool rest_resume) {
     if (!isUserLoggedIn()) {
-        OrionHEN_log("User is not logged in yet, skipping toolbox reinject...");
+        OnionHEN_log("User is not logged in yet, skipping toolbox reinject...");
         return;
     }
 
     LoadSettings();
-    const orion::Settings cfg = g_settings.snapshot();
+    const onion::Settings cfg = g_settings.snapshot();
 
     if (rest_resume &&
-        orion_toolbox_should_apply_rest_delay(true, cfg.rest_mode_delay_seconds)) {
-        OrionHEN_log("rest resume delay %llu secs",
+        onion_toolbox_should_apply_rest_delay(true, cfg.rest_mode_delay_seconds)) {
+        OnionHEN_log("rest resume delay %llu secs",
                      static_cast<unsigned long long>(cfg.rest_mode_delay_seconds));
         sleep(static_cast<unsigned int>(cfg.rest_mode_delay_seconds));
-        orion_notify(true,
-                     "Coming out of Rest Mode — re-activating the OrionHEN toolbox...");
+        onion_notify(true,
+                     "Coming out of Rest Mode — re-activating the OnionHEN toolbox...");
     } else {
-        OrionHEN_log("toolbox reinject (not rest resume)");
+        OnionHEN_log("toolbox reinject (not rest resume)");
     }
 
     if (!enable_toolbox()) {
-        orion_notify(true, "Failed to inject toolbox");
+        onion_notify(true, "Failed to inject toolbox");
     }
 
     if (rest_resume) {

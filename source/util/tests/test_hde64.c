@@ -1,7 +1,7 @@
 /* Host tests for hde64 (x86_64 length disassembler). */
 #include "test_harness.h"
 
-#include <orion/hde64.h>
+#include <onion/hde64.h>
 
 #include <string.h>
 
@@ -71,10 +71,10 @@ static int test_multi_insn_lengths(void) {
 
 int test_hde64_suite(void) {
   int failures = 0;
-  failures += orion_test_run("hde64.nop", test_nop);
-  failures += orion_test_run("hde64.ret", test_ret);
-  failures += orion_test_run("hde64.mov_rax_imm64", test_mov_rax_imm64);
-  failures += orion_test_run("hde64.jmp_rel32", test_jmp_rel32);
-  failures += orion_test_run("hde64.multi_lengths", test_multi_insn_lengths);
+  failures += onion_test_run("hde64.nop", test_nop);
+  failures += onion_test_run("hde64.ret", test_ret);
+  failures += onion_test_run("hde64.mov_rax_imm64", test_mov_rax_imm64);
+  failures += onion_test_run("hde64.jmp_rel32", test_jmp_rel32);
+  failures += onion_test_run("hde64.multi_lengths", test_multi_insn_lengths);
   return failures;
 }

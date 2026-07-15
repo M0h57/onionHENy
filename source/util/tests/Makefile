@@ -1,13 +1,13 @@
-# Host unit tests for OrionHEN shared libs + util cheats (no PS5 SDK).
+# Host unit tests for OnionHEN shared libs + util cheats (no PS5 SDK).
 # Usage (from this directory):
 #   make
 #   make test
-#   ORION_TEST_VERBOSE=1 make test
+#   ONION_TEST_VERBOSE=1 make test
 
 UTIL_ROOT := $(abspath ..)
 REPO_ROOT := $(abspath $(UTIL_ROOT)/../..)
 BUILD_DIR := $(UTIL_ROOT)/build/host-tests
-BIN := $(BUILD_DIR)/orion-host-tests
+BIN := $(BUILD_DIR)/onion-host-tests
 
 HOST_CC ?= cc
 HOST_CXX ?= c++
@@ -15,23 +15,23 @@ KEYSTONE_PREFIX ?= /opt/homebrew
 KEYSTONE_CFLAGS := -I$(KEYSTONE_PREFIX)/include
 KEYSTONE_LDFLAGS := -L$(KEYSTONE_PREFIX)/lib -lkeystone
 
-COMMON_FLAGS := -Wall -Wextra -g -O0 -DORION_HOST_TEST=1 -DCBC=1 \
-	-DORION_TEST_DIR=\"$(CURDIR)\" \
+COMMON_FLAGS := -Wall -Wextra -g -O0 -DONION_HOST_TEST=1 -DCBC=1 \
+	-DONION_TEST_DIR=\"$(CURDIR)\" \
 	-I$(UTIL_ROOT)/include \
 	-I$(UTIL_ROOT)/tests \
 	-I$(REPO_ROOT)/source/include \
-	-I$(REPO_ROOT)/source/liborion_settings/include \
-	-I$(REPO_ROOT)/source/liborion_platform/include \
-	-I$(REPO_ROOT)/source/liborion_payload/include \
-	-I$(REPO_ROOT)/source/liborion_proc/include \
-	-I$(REPO_ROOT)/source/liborion_ipc/include \
-	-I$(REPO_ROOT)/source/liborion_detour/include \
-	-I$(REPO_ROOT)/source/liborion_ready \
+	-I$(REPO_ROOT)/source/libonion_settings/include \
+	-I$(REPO_ROOT)/source/libonion_platform/include \
+	-I$(REPO_ROOT)/source/libonion_payload/include \
+	-I$(REPO_ROOT)/source/libonion_proc/include \
+	-I$(REPO_ROOT)/source/libonion_ipc/include \
+	-I$(REPO_ROOT)/source/libonion_detour/include \
+	-I$(REPO_ROOT)/source/libonion_ready \
 	-I$(REPO_ROOT)/source/extern/cJSON \
 	-I$(REPO_ROOT)/source/shellui/include \
 	$(KEYSTONE_CFLAGS)
 
-# ready.h lives under source/include/orion/
+# ready.h lives under source/include/onion/
 COMMON_FLAGS += -I$(REPO_ROOT)/source/include
 
 CFLAGS := $(COMMON_FLAGS) -std=c11
@@ -47,12 +47,12 @@ PROD_C_SRCS := \
 	$(UTIL_ROOT)/source/cheats/third_party/base64.c \
 	$(UTIL_ROOT)/source/cheats/third_party/miniz.c \
 	$(UTIL_ROOT)/source/cheats/third_party/sha256.c \
-	$(REPO_ROOT)/source/liborion_platform/source/fs.c \
-	$(REPO_ROOT)/source/liborion_platform/source/log.c \
-	$(REPO_ROOT)/source/liborion_platform/source/notify.c \
-	$(REPO_ROOT)/source/liborion_ready/source/ready.c \
-	$(REPO_ROOT)/source/liborion_payload/source/payload.c \
-	$(REPO_ROOT)/source/liborion_playtime/source/playtime.c
+	$(REPO_ROOT)/source/libonion_platform/source/fs.c \
+	$(REPO_ROOT)/source/libonion_platform/source/log.c \
+	$(REPO_ROOT)/source/libonion_platform/source/notify.c \
+	$(REPO_ROOT)/source/libonion_ready/source/ready.c \
+	$(REPO_ROOT)/source/libonion_payload/source/payload.c \
+	$(REPO_ROOT)/source/libonion_playtime/source/playtime.c
 
 PROD_CXX_SRCS := \
 	$(UTIL_ROOT)/source/cheats/JsonCheatParser.cpp \
@@ -62,8 +62,8 @@ PROD_CXX_SRCS := \
 	$(UTIL_ROOT)/source/cheats/CheatParserFactory.cpp \
 	$(UTIL_ROOT)/source/http_github.cpp \
 	$(REPO_ROOT)/source/extern/cJSON/cJSON.cpp \
-	$(REPO_ROOT)/source/liborion_settings/source/settings.cpp \
-	$(REPO_ROOT)/source/liborion_ipc/source/ipc_server.cpp \
+	$(REPO_ROOT)/source/libonion_settings/source/settings.cpp \
+	$(REPO_ROOT)/source/libonion_ipc/source/ipc_server.cpp \
 	$(REPO_ROOT)/source/shellui/src/ps5_settings_ui.cpp \
 	$(REPO_ROOT)/source/shellui/src/toolbox_route.cpp
 
@@ -100,19 +100,19 @@ TEST_CXX_SRCS := \
 	test_main.cpp
 
 PROD_C_OBJS := $(patsubst $(UTIL_ROOT)/%.c,$(BUILD_DIR)/prod/%.o,$(filter $(UTIL_ROOT)/%,$(PROD_C_SRCS)))
-PROD_C_OBJS += $(BUILD_DIR)/prod/liborion_platform/fs.o
-PROD_C_OBJS += $(BUILD_DIR)/prod/liborion_platform/log.o
-PROD_C_OBJS += $(BUILD_DIR)/prod/liborion_platform/notify.o
-PROD_C_OBJS += $(BUILD_DIR)/prod/liborion_ready/ready.o
-PROD_C_OBJS += $(BUILD_DIR)/prod/liborion_payload/payload.o
-PROD_C_OBJS += $(BUILD_DIR)/prod/liborion_detour/hde64.o
-PROD_C_OBJS += $(BUILD_DIR)/prod/liborion_playtime/playtime.o
+PROD_C_OBJS += $(BUILD_DIR)/prod/libonion_platform/fs.o
+PROD_C_OBJS += $(BUILD_DIR)/prod/libonion_platform/log.o
+PROD_C_OBJS += $(BUILD_DIR)/prod/libonion_platform/notify.o
+PROD_C_OBJS += $(BUILD_DIR)/prod/libonion_ready/ready.o
+PROD_C_OBJS += $(BUILD_DIR)/prod/libonion_payload/payload.o
+PROD_C_OBJS += $(BUILD_DIR)/prod/libonion_detour/hde64.o
+PROD_C_OBJS += $(BUILD_DIR)/prod/libonion_playtime/playtime.o
 
 PROD_CXX_OBJS := $(patsubst $(UTIL_ROOT)/%.cpp,$(BUILD_DIR)/prod/%.o,$(filter $(UTIL_ROOT)/%,$(PROD_CXX_SRCS)))
 PROD_CXX_OBJS += $(BUILD_DIR)/prod/extern/cJSON.o
-PROD_CXX_OBJS += $(BUILD_DIR)/prod/liborion_settings/settings.o
-PROD_CXX_OBJS += $(BUILD_DIR)/prod/liborion_ipc/ipc_server.o
-PROD_CXX_OBJS += $(BUILD_DIR)/prod/liborion_detour/x64_relocator.o
+PROD_CXX_OBJS += $(BUILD_DIR)/prod/libonion_settings/settings.o
+PROD_CXX_OBJS += $(BUILD_DIR)/prod/libonion_ipc/ipc_server.o
+PROD_CXX_OBJS += $(BUILD_DIR)/prod/libonion_detour/x64_relocator.o
 PROD_CXX_OBJS += $(BUILD_DIR)/prod/shellui/ps5_settings_ui.o
 PROD_CXX_OBJS += $(BUILD_DIR)/prod/shellui/toolbox_route.o
 
@@ -130,7 +130,7 @@ THIRD_PARTY_FLAGS := -Wno-error -Wno-unused-function -Wno-sign-compare \
 all: $(BIN)
 
 test: $(BIN)
-	cd $(CURDIR) && ORION_TEST_ROOT=$(CURDIR) $(BIN)
+	cd $(CURDIR) && ONION_TEST_ROOT=$(CURDIR) $(BIN)
 
 $(BIN): $(ALL_OBJS) | $(BUILD_DIR)
 	$(HOST_CXX) -o $@ $^ $(LDFLAGS)
@@ -155,15 +155,15 @@ $(BUILD_DIR)/prod/extern/cJSON.o: $(REPO_ROOT)/source/extern/cJSON/cJSON.cpp | $
 	@mkdir -p $(dir $@)
 	$(HOST_CXX) $(CXXFLAGS) $(THIRD_PARTY_FLAGS) -c -o $@ $<
 
-$(BUILD_DIR)/prod/liborion_settings/settings.o: $(REPO_ROOT)/source/liborion_settings/source/settings.cpp | $(BUILD_DIR)
+$(BUILD_DIR)/prod/libonion_settings/settings.o: $(REPO_ROOT)/source/libonion_settings/source/settings.cpp | $(BUILD_DIR)
 	@mkdir -p $(dir $@)
 	$(HOST_CXX) $(CXXFLAGS) -c -o $@ $<
 
-$(BUILD_DIR)/prod/liborion_ipc/ipc_server.o: $(REPO_ROOT)/source/liborion_ipc/source/ipc_server.cpp | $(BUILD_DIR)
+$(BUILD_DIR)/prod/libonion_ipc/ipc_server.o: $(REPO_ROOT)/source/libonion_ipc/source/ipc_server.cpp | $(BUILD_DIR)
 	@mkdir -p $(dir $@)
 	$(HOST_CXX) $(CXXFLAGS) -c -o $@ $<
 
-$(BUILD_DIR)/prod/liborion_detour/x64_relocator.o: $(REPO_ROOT)/source/liborion_detour/source/x64_relocator.cpp | $(BUILD_DIR)
+$(BUILD_DIR)/prod/libonion_detour/x64_relocator.o: $(REPO_ROOT)/source/libonion_detour/source/x64_relocator.cpp | $(BUILD_DIR)
 	@mkdir -p $(dir $@)
 	$(HOST_CXX) $(CXXFLAGS) -c -o $@ $<
 
@@ -175,31 +175,31 @@ $(BUILD_DIR)/prod/shellui/toolbox_route.o: $(REPO_ROOT)/source/shellui/src/toolb
 	@mkdir -p $(dir $@)
 	$(HOST_CXX) $(CXXFLAGS) -c -o $@ $<
 
-$(BUILD_DIR)/prod/liborion_ready/ready.o: $(REPO_ROOT)/source/liborion_ready/source/ready.c | $(BUILD_DIR)
+$(BUILD_DIR)/prod/libonion_ready/ready.o: $(REPO_ROOT)/source/libonion_ready/source/ready.c | $(BUILD_DIR)
 	@mkdir -p $(dir $@)
 	$(HOST_CC) $(CFLAGS) -c -o $@ $<
 
-$(BUILD_DIR)/prod/liborion_platform/fs.o: $(REPO_ROOT)/source/liborion_platform/source/fs.c | $(BUILD_DIR)
+$(BUILD_DIR)/prod/libonion_platform/fs.o: $(REPO_ROOT)/source/libonion_platform/source/fs.c | $(BUILD_DIR)
 	@mkdir -p $(dir $@)
 	$(HOST_CC) $(CFLAGS) -c -o $@ $<
 
-$(BUILD_DIR)/prod/liborion_platform/log.o: $(REPO_ROOT)/source/liborion_platform/source/log.c | $(BUILD_DIR)
+$(BUILD_DIR)/prod/libonion_platform/log.o: $(REPO_ROOT)/source/libonion_platform/source/log.c | $(BUILD_DIR)
 	@mkdir -p $(dir $@)
 	$(HOST_CC) $(CFLAGS) -c -o $@ $<
 
-$(BUILD_DIR)/prod/liborion_platform/notify.o: $(REPO_ROOT)/source/liborion_platform/source/notify.c | $(BUILD_DIR)
+$(BUILD_DIR)/prod/libonion_platform/notify.o: $(REPO_ROOT)/source/libonion_platform/source/notify.c | $(BUILD_DIR)
 	@mkdir -p $(dir $@)
 	$(HOST_CC) $(CFLAGS) -c -o $@ $<
 
-$(BUILD_DIR)/prod/liborion_payload/payload.o: $(REPO_ROOT)/source/liborion_payload/source/payload.c | $(BUILD_DIR)
+$(BUILD_DIR)/prod/libonion_payload/payload.o: $(REPO_ROOT)/source/libonion_payload/source/payload.c | $(BUILD_DIR)
 	@mkdir -p $(dir $@)
 	$(HOST_CC) $(CFLAGS) -c -o $@ $<
 
-$(BUILD_DIR)/prod/liborion_detour/hde64.o: $(REPO_ROOT)/source/liborion_detour/source/hde64.cpp | $(BUILD_DIR)
+$(BUILD_DIR)/prod/libonion_detour/hde64.o: $(REPO_ROOT)/source/libonion_detour/source/hde64.cpp | $(BUILD_DIR)
 	@mkdir -p $(dir $@)
 	$(HOST_CXX) $(CXXFLAGS) -c -o $@ $<
 
-$(BUILD_DIR)/prod/liborion_playtime/playtime.o: $(REPO_ROOT)/source/liborion_playtime/source/playtime.c | $(BUILD_DIR)
+$(BUILD_DIR)/prod/libonion_playtime/playtime.o: $(REPO_ROOT)/source/libonion_playtime/source/playtime.c | $(BUILD_DIR)
 	@mkdir -p $(dir $@)
 	$(HOST_CC) $(CFLAGS) -c -o $@ $<
 

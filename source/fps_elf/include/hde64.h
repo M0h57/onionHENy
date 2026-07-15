@@ -1,3 +1,3 @@
-/* Compatibility shim — implementation lives in liborion_detour. */
+/* Compatibility shim — implementation lives in libonion_detour. */
 #pragma once
-#include <orion/hde64.h>
+#include <onion/hde64.h>

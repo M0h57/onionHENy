@@ -1,4 +1,4 @@
-/* Copyright (C) 2025 OrionHEN / LightningMods — OnPress network domain */
+/* Copyright (C) 2025 OnionHEN / LightningMods — OnPress network domain */
 #include "onpress.hpp"
 #include <cstdlib>
 

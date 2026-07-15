@@ -12,7 +12,7 @@
 | **Strategy** | `IMemoryBackend` | mdbg vs kdirect 可替换写内存策略 |
 | **Factory Method** | `MemoryBackendFactory::create()` | 按 `util_system_fw_major()` 选后端 |
 | **Strategy + Factory** | `ICheatParser` / `CheatParserFactory` | json / shn / mc4 / ShnExt 解析路径统一 |
-| **Adapter** | `ShnExtCheatParser` | 包装 `orion_cheat_parse_shnext_buffer` |
+| **Adapter** | `ShnExtCheatParser` | 包装 `onion_cheat_parse_shnext_buffer` |
 | **RAII** | `std::mutex` + `lock_guard` | 锁与服务状态生命周期 |
 | **Singleton（进程级服务）** | `CheatService::instance()` | 与原全局 service 同生命周期，线程安全访问 |
 
@@ -21,7 +21,7 @@
 ## 模块结构
 
 ```text
-orion::cheats
+onion::cheats
 ├── IMemoryBackend.hpp
 │   ├── MdbgMemoryBackend
 │   └── KdirectMemoryBackend
@@ -63,7 +63,7 @@ IPC handleIPC
 
 | 扩展名 | Parser | 说明 |
 |--------|--------|------|
-| `.json` | `JsonCheatParser` | GoldHEN/OrionHEN JSON（手写 key 扫描） |
+| `.json` | `JsonCheatParser` | GoldHEN/OnionHEN JSON（手写 key 扫描） |
 | `.shn` | `XmlCheatParser` | Trainer XML |
 | `.mc4` | `Mc4CheatParser` | Base64 + AES-256-CBC → XML |
 | `.ShnExt` | `ShnExtCheatParser` | deflate + AES + cJSON + 可选 keystone |

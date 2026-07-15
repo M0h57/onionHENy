@@ -1,4 +1,4 @@
-/* Copyright (C) 2025 OrionHEN / LightningMods
+/* Copyright (C) 2025 OnionHEN / LightningMods
 
 This program is free software; you can redistribute it and/or modify it
 under the terms of the GNU General Public License as published by the
@@ -83,7 +83,7 @@ void crash_log(const char *fmt, ...) {
 		msg[sizeof(msg) - 1] = '\0';
 	}
 
-	int fd = open("/data/OrionHEN/OrionHEN_util_crash.log", O_WRONLY | O_CREAT | O_APPEND, 0777);
+	int fd = open("/data/OnionHEN/OnionHEN_util_crash.log", O_WRONLY | O_CREAT | O_APPEND, 0777);
 	if (fd < 0) {
 		return;
 	}
@@ -115,13 +115,13 @@ extern void shutdown_ipc(void);
 extern void kill_loading_app(void);
 
 static void __attribute__((used)) cleanup_and_throw(void) {
-	//orion_notify(true, "Fatal error occured. Cleaning up, catching and exiting...");
+	//onion_notify(true, "Fatal error occured. Cleaning up, catching and exiting...");
 	if (g_cleanup_handler != NULL) {
 		g_cleanup_handler();
 		g_cleanup_handler = NULL;
 	}
 	longjmp(g_catch_buf, 1);
-	orion_notify(true, "OrionHEN utilities daemon has crashed ...\n\nSome OrionHEN features will be unavailable until you reboot");
+	onion_notify(true, "OnionHEN utilities daemon has crashed ...\n\nSome OnionHEN features will be unavailable until you reboot");
 	// TODO longjump here
 }
 

@@ -1,12 +1,12 @@
-/* Copyright (C) 2025 OrionHEN / LightningMods — P0 split. */
+/* Copyright (C) 2025 OnionHEN / LightningMods — P0 split. */
 
 
 #include "HookedFuncs.hpp"
 #include "ipc.hpp"
 #include "external_symbols.hpp"
 #include "Detour.h"
-#include <orion/settings.hpp>
-#include <orion/fps_shm.h>
+#include <onion/settings.hpp>
+#include <onion/fps_shm.h>
 #include <cstring>
 #include <cstdio>
 #include <cstdlib>
@@ -19,7 +19,7 @@ extern void (*OnRender_orig)(MonoObject* instance);
 extern MonoObject* rootWidget;
 extern MonoObject* font;
 extern OverlayLayout g_overlay_layout;
-extern orion::Settings g_settings;
+extern onion::Settings g_settings;
 #include "shellui_state.hpp"
 void RemoveGameWidget(RemoveWidget widget);
 void CreateGameWidget(CreateWidget widget);
@@ -237,13 +237,13 @@ ssize_t(*read_orig)(int fd, void *buf, size_t count) = nullptr;
 
 /** Publish a sample into the SHM file (ShellUI is privileged; can create). */
 static void publish_fps_shm(float fps, const char *api_name) {
-  if (orion_fps_shm_ensure() != 0)
+  if (onion_fps_shm_ensure() != 0)
     return;
   int n = 0;
-  const char *const *paths = orion_fps_shm_paths(&n);
-  orion_fps_shm_t blk{};
-  blk.magic = ORION_FPS_SHM_MAGIC;
-  blk.version = ORION_FPS_SHM_VERSION;
+  const char *const *paths = onion_fps_shm_paths(&n);
+  onion_fps_shm_t blk{};
+  blk.magic = ONION_FPS_SHM_MAGIC;
+  blk.version = ONION_FPS_SHM_VERSION;
   blk.fps = fps;
   blk.hooks_armed = 1;
   blk.flags = 1;
@@ -281,7 +281,7 @@ ssize_t read_hook(int fd, void* buf, size_t count) {
 
             if (!fps_value.empty()) {
                 fps_string.store(fps_value);
-                /* Classic Orion scrape → SHM so the overlay has one channel. */
+                /* Classic Onion scrape → SHM so the overlay has one channel. */
                 float v = 0.f;
                 if (std::sscanf(fps_value.c_str(), "%f", &v) == 1 && v > 0.f)
                   publish_fps_shm(v, "notify-scrape");
@@ -358,17 +358,17 @@ void set_label_layout(const char *widget_name, float margin_left,
 bool read_fps_shm(float &out_fps, char *api_out, size_t api_sz,
                   uint32_t *hooks_out) {
   int n = 0;
-  const char *const *paths = orion_fps_shm_paths(&n);
+  const char *const *paths = onion_fps_shm_paths(&n);
   for (int i = 0; i < n; ++i) {
     int fd = open(paths[i], O_RDONLY);
     if (fd < 0)
       continue;
-    orion_fps_shm_t blk{};
+    onion_fps_shm_t blk{};
     const ssize_t nr = pread(fd, &blk, sizeof(blk), 0);
     close(fd);
     if (nr != (ssize_t)sizeof(blk))
       continue;
-    if (blk.magic != ORION_FPS_SHM_MAGIC || blk.version != ORION_FPS_SHM_VERSION)
+    if (blk.magic != ONION_FPS_SHM_MAGIC || blk.version != ONION_FPS_SHM_VERSION)
       continue;
     out_fps = blk.fps;
     if (api_out && api_sz)
@@ -540,7 +540,7 @@ void init_overlay_once(unsigned int idle_tid[kCpuCores]) {
   font = CreateUIFont(kOverlayFontSize, 1, 900);
 
   if (g_settings.overlay_fps)
-    (void)orion_fps_shm_ensure();
+    (void)onion_fps_shm_ensure();
 
   apply_overlay_layout();
   if (g_settings.overlay_fps)

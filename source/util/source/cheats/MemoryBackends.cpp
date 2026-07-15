@@ -10,9 +10,9 @@
 #include "pt.h"
 #include "util_platform.h"
 
-extern "C" void OrionHEN_log(const char *fmt, ...);
+extern "C" void OnionHEN_log(const char *fmt, ...);
 
-namespace orion::cheats {
+namespace onion::cheats {
 namespace {
 
 constexpr uint64_t kPageSize = 0x4000ULL;
@@ -30,7 +30,7 @@ int mapCodeCaveCommon(pid_t pid, uint64_t addr, size_t len) {
   const size_t page_len = static_cast<size_t>(page_end - page_start);
 
   if (pt_attach_proc(pid) < 0) {
-    OrionHEN_log("[Cheat] code cave attach failed pid=%d errno=%d", pid,
+    OnionHEN_log("[Cheat] code cave attach failed pid=%d errno=%d", pid,
                  errno);
     return -1;
   }
@@ -39,7 +39,7 @@ int mapCodeCaveCommon(pid_t pid, uint64_t addr, size_t len) {
       pt_mmap(pid, static_cast<intptr_t>(page_start), page_len,
               PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
   if (mapped != static_cast<intptr_t>(page_start)) {
-    OrionHEN_log("[Cheat] code cave mmap failed page=0x%llx ret=0x%llx",
+    OnionHEN_log("[Cheat] code cave mmap failed page=0x%llx ret=0x%llx",
                  (unsigned long long)page_start, (unsigned long long)mapped);
     pt_detach_proc(pid, 0);
     return -1;
@@ -47,7 +47,7 @@ int mapCodeCaveCommon(pid_t pid, uint64_t addr, size_t len) {
 
   if (kernel_mprotect(pid, page_start, page_len,
                       PROT_READ | PROT_WRITE | PROT_EXEC) < 0) {
-    OrionHEN_log("[Cheat] code cave mprotect failed page=0x%llx",
+    OnionHEN_log("[Cheat] code cave mprotect failed page=0x%llx",
                  (unsigned long long)page_start);
     pt_detach_proc(pid, 0);
     return -1;
@@ -175,4 +175,4 @@ std::unique_ptr<IMemoryBackend> MemoryBackendFactory::create(uint32_t fw_major) 
   return std::make_unique<MdbgBackend>();
 }
 
-} // namespace orion::cheats
+} // namespace onion::cheats

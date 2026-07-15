@@ -21,10 +21,10 @@ endif()
 message("IS_SUBPROJECT: ${IS_SUBPROJECT}")
 
 set(D_CWD "${CMAKE_CURRENT_SOURCE_DIR}")
-if(DEFINED ORIONHEN_OUT_BIN)
-	set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${ORIONHEN_OUT_BIN})
-	set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${ORIONHEN_OUT_LIB})
-	set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${ORIONHEN_OUT_LIB})
+if(DEFINED ONIONHEN_OUT_BIN)
+	set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${ONIONHEN_OUT_BIN})
+	set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${ONIONHEN_OUT_LIB})
+	set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${ONIONHEN_OUT_LIB})
 else()
 	set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${D_CWD}/../bin)
 	set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${D_CWD}/bin)
@@ -67,28 +67,28 @@ set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O0 ")
 target_sources(${PROJECT_NAME} PRIVATE ${SrcFiles} "${PROJECT_ROOT}/lib/elfldr_remote.c")
 # .incbin in embeddded_payloads.c is invisible to the compiler dependency scanner.
 # Without OBJECT_DEPENDS, embedded payload rebuilds do not re-embed into daemon.elf.
-if(DEFINED ORIONHEN_OUT_BIN)
-	set(_orion_util_elf "${ORIONHEN_OUT_BIN}/util.elf")
+if(DEFINED ONIONHEN_OUT_BIN)
+	set(_onion_util_elf "${ONIONHEN_OUT_BIN}/util.elf")
 else()
-	set(_orion_util_elf "${PROJECT_ROOT}/bin/util.elf")
+	set(_onion_util_elf "${PROJECT_ROOT}/bin/util.elf")
 endif()
 set_source_files_properties(
 	${D_SRC}/embeddded_payloads.c
 	PROPERTIES OBJECT_DEPENDS
-		"${D_CWD}/assets/shellui.elf;${D_CWD}/assets/fps_elf.elf;${_orion_util_elf}"
+		"${D_CWD}/assets/shellui.elf;${D_CWD}/assets/fps_elf.elf;${_onion_util_elf}"
 )
 target_include_directories(${PROJECT_NAME} PRIVATE
 	"${D_CWD}/include"
-	"${PROJECT_ROOT}/liborion_settings/include"
-	"${PROJECT_ROOT}/liborion_ipc/include"
-	"${PROJECT_ROOT}/liborion_proc/include"
-	"${PROJECT_ROOT}/liborion_platform/include"
+	"${PROJECT_ROOT}/libonion_settings/include"
+	"${PROJECT_ROOT}/libonion_ipc/include"
+	"${PROJECT_ROOT}/libonion_proc/include"
+	"${PROJECT_ROOT}/libonion_platform/include"
 	"${PROJECT_ROOT}/include"
 )
 target_link_directories	(${PROJECT_NAME} PUBLIC "${PROJECT_ROOT}/lib")
-add_dependencies(${PROJECT_NAME} util NineS shellui hijacker orion_settings orion_ipc orion_proc orion_platform orion_ready orion_playtime orion_elfldr)
+add_dependencies(${PROJECT_NAME} util NineS shellui hijacker onion_settings onion_ipc onion_proc onion_platform onion_ready onion_playtime onion_elfldr)
 # Restarts the embedded util bytes via external 9021 elfldr.
-target_link_libraries	(${PROJECT_NAME} PUBLIC orion_ipc orion_settings orion_proc orion_platform orion_ready orion_playtime orion_elfldr hijacker ScePad SceSystemService SceNotification SceNet SceRegMgr SceSysmodule SceUserService SceNetCtl SceSysCore kernel_sys NineS)
+target_link_libraries	(${PROJECT_NAME} PUBLIC onion_ipc onion_settings onion_proc onion_platform onion_ready onion_playtime onion_elfldr hijacker ScePad SceSystemService SceNotification SceNet SceRegMgr SceSysmodule SceUserService SceNetCtl SceSysCore kernel_sys NineS)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 # Add post-build command
 add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD

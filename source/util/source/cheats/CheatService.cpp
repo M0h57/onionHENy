@@ -5,11 +5,11 @@
 #include <fstream>
 
 extern "C" {
-void OrionHEN_log(const char *fmt, ...);
+void OnionHEN_log(const char *fmt, ...);
 int sceKernelGetProcessName(int pid, char *name);
 }
 
-namespace orion::cheats {
+namespace onion::cheats {
 
 CheatService &CheatService::instance() {
   static CheatService svc;
@@ -24,7 +24,7 @@ CheatService::CheatService() {
 
 CheatService::~CheatService() {
   std::lock_guard<std::mutex> lock(mu_);
-  orion_cheat_file_clear(&file_);
+  onion_cheat_file_clear(&file_);
 }
 
 void CheatService::ensureDir() { CheatRepository::ensureCheatsDir(); }
@@ -41,7 +41,7 @@ void CheatService::onGameExec(pid_t pid, const char *title_id, int appid) {
   if (title_id) {
     std::snprintf(game_.title_id, sizeof(game_.title_id), "%s", title_id);
   }
-  OrionHEN_log("[service] cheat track exec title=%s pid=%d",
+  OnionHEN_log("[service] cheat track exec title=%s pid=%d",
                title_id ? title_id : "?", (int)pid);
 }
 
@@ -50,7 +50,7 @@ void CheatService::onGameExit(pid_t pid) {
   if (!has_tracked_game_ || tracked_pid_ != pid) {
     return;
   }
-  OrionHEN_log("[service] cheat track exit title=%s pid=%d", game_.title_id,
+  OnionHEN_log("[service] cheat track exit title=%s pid=%d", game_.title_id,
                (int)pid);
   has_tracked_game_ = false;
   tracked_pid_ = 0;
@@ -104,14 +104,14 @@ void CheatService::disableEnabledLocked(const char *reason) {
     }
     std::string status;
     if (applier_.toggle(game_, file_, static_cast<int>(i), status) < 0) {
-      OrionHEN_log("[service] disable stale cheat %zu (%s): %s", i,
+      OnionHEN_log("[service] disable stale cheat %zu (%s): %s", i,
                    reason ? reason : "?", status.c_str());
     }
   }
 }
 
 void CheatService::clearFileLocked() {
-  orion_cheat_file_clear(&file_);
+  onion_cheat_file_clear(&file_);
   loaded_ = false;
   sig_ = {};
 }
@@ -142,14 +142,14 @@ int CheatService::refreshLocked(const game_context_t &game) {
 
   if (!loaded_ || sig != sig_) {
     disableEnabledLocked("reload");
-    orion_cheat_file_clear(&file_);
+    onion_cheat_file_clear(&file_);
     if (CheatRepository::loadFile(path, file_) < 0) {
       clearFileLocked();
       return -1;
     }
     sig_ = std::move(sig);
     loaded_ = true;
-    OrionHEN_log("[service] loaded %s cheats=%zu", path.c_str(),
+    OnionHEN_log("[service] loaded %s cheats=%zu", path.c_str(),
                  file_.cheat_count);
   }
   return 0;
@@ -245,4 +245,4 @@ int CheatService::flattenInstallTree(const std::string &root) {
   return CheatRepository::flattenInstallTree(root);
 }
 
-} // namespace orion::cheats
+} // namespace onion::cheats

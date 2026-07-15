@@ -8,9 +8,9 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
-void OrionHEN_log(const char *fmt, ...);
+void OnionHEN_log(const char *fmt, ...);
 
-int orion_cheat_match_ext(const char *name, char *ext_out, size_t ext_out_size) {
+int onion_cheat_match_ext(const char *name, char *ext_out, size_t ext_out_size) {
   static const char *exts[] = {".json", ".shn", ".mc4", ".ShnExt", ".shnext"};
   size_t n;
 
@@ -36,12 +36,12 @@ int orion_cheat_match_ext(const char *name, char *ext_out, size_t ext_out_size) 
 }
 
 /*
- * Build flat name TITLEID_VERSION.ext from GoldHEN/OrionHEN style filenames:
+ * Build flat name TITLEID_VERSION.ext from GoldHEN/OnionHEN style filenames:
  *   CUSA05786_01.04.json
  *   CUSA05786_01.04_eboot.bin.json
  *   PPSA01340_01.004.000.shn
  */
-int orion_cheat_build_flat_name(const char *filename, char *out, size_t out_size) {
+int onion_cheat_build_flat_name(const char *filename, char *out, size_t out_size) {
   char base[256];
   char ext[16];
   char title_id[32];
@@ -54,7 +54,7 @@ int orion_cheat_build_flat_name(const char *filename, char *out, size_t out_size
   if (filename == NULL || out == NULL || out_size == 0)
     return -1;
 
-  if (!orion_cheat_match_ext(filename, ext, sizeof(ext))) {
+  if (!onion_cheat_match_ext(filename, ext, sizeof(ext))) {
     return -1;
   }
 
@@ -169,16 +169,16 @@ static void walk_and_flatten(const char *dir, int *copied, int *skipped) {
     if (!S_ISREG(st.st_mode)) {
       continue;
     }
-    if (orion_cheat_build_flat_name(ent->d_name, flat, sizeof(flat)) < 0) {
+    if (onion_cheat_build_flat_name(ent->d_name, flat, sizeof(flat)) < 0) {
       continue;
     }
-    snprintf(dest, sizeof(dest), ORION_CHEATS_DIR "/%s", flat);
+    snprintf(dest, sizeof(dest), ONION_CHEATS_DIR "/%s", flat);
     if (strcmp(path, dest) == 0) {
       continue;
     }
     if (copy_file(path, dest) == 0) {
       (*copied)++;
-      OrionHEN_log("[flatten] %s -> %s", path, dest);
+      OnionHEN_log("[flatten] %s -> %s", path, dest);
     } else {
       (*skipped)++;
     }
@@ -188,9 +188,9 @@ static void walk_and_flatten(const char *dir, int *copied, int *skipped) {
 
 /**
  * Walk a tree (typically after zip extract) and install flat cheat files into
- * ORION_CHEATS_DIR as <TITLE_ID>_<VERSION>.<ext>.
+ * ONION_CHEATS_DIR as <TITLE_ID>_<VERSION>.<ext>.
  */
-void orion_cheat_normalize_version(const char *version, char *out,
+void onion_cheat_normalize_version(const char *version, char *out,
                                    size_t out_size) {
   size_t j = 0;
   if (out == NULL || out_size == 0)
@@ -210,18 +210,18 @@ void orion_cheat_normalize_version(const char *version, char *out,
   out[j] = '\0';
 }
 
-int orion_cheat_flatten_install_tree(const char *root) {
+int onion_cheat_flatten_install_tree(const char *root) {
   int copied = 0;
   int skipped = 0;
 
-  mkdir(ORION_DATA_ROOT, 0777);
-  mkdir(ORION_CHEATS_DIR, 0777);
+  mkdir(ONION_DATA_ROOT, 0777);
+  mkdir(ONION_CHEATS_DIR, 0777);
 
   if (root == NULL || root[0] == '\0') {
-    root = ORION_CHEATS_DIR;
+    root = ONION_CHEATS_DIR;
   }
   walk_and_flatten(root, &copied, &skipped);
-  OrionHEN_log("[flatten] installed %d cheat file(s), skipped %d", copied,
+  OnionHEN_log("[flatten] installed %d cheat file(s), skipped %d", copied,
                    skipped);
   return copied > 0 ? 0 : -1;
 }

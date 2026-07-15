@@ -1,4 +1,4 @@
-/* Copyright (C) 2025 OrionHEN / LightningMods
+/* Copyright (C) 2025 OnionHEN / LightningMods
  *
  * Pure ShellUI helpers (host-testable, no Mono/PS5 I/O).
  */
@@ -43,7 +43,7 @@ inline bool is_payload_elf_name(const char *name) {
 
 /**
  * Launch/PID key for payload: "foo.elf" → "foo".
- * Matches util orion_payload_elf_key_from_name.
+ * Matches util onion_payload_elf_key_from_name.
  */
 inline bool elf_key_from_name(const char *name, char *out, std::size_t out_sz) {
   if (!name || !out || out_sz < 2)

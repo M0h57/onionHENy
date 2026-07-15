@@ -1,15 +1,15 @@
 # util 守护进程架构
 
-`util.elf` 是 OrionHEN 的 **Utility 守护进程**：与 `daemon.elf`（critical）分离，承载网络 IO、PKG 安装、金手指、Toolbox 相关修补等较重业务。
+`util.elf` 是 OnionHEN 的 **Utility 守护进程**：与 `daemon.elf`（critical）分离，承载网络 IO、PKG 安装、金手指、Toolbox 相关修补等较重业务。
 
 | 项 | 值 |
 |----|-----|
 | 产物 | `build/bin/util.elf` |
 | 源码根 | `source/util/` |
-| Unix IPC | `/system_tmp/OrionHEN_util_service` |
+| Unix IPC | `/system_tmp/OnionHEN_util_service` |
 | IPC 命令前缀 | `0x8000000`（`BREW_UTIL_*`） |
-| 日志 | `OrionHEN_log` → stdout + klog + `/data/OrionHEN/OrionHEN_util_daemon.log` |
-| 崩溃日志 | `/data/OrionHEN/OrionHEN_util_crash.log` |
+| 日志 | `OnionHEN_log` → stdout + klog + `/data/OnionHEN/OnionHEN_util_daemon.log` |
+| 崩溃日志 | `/data/OnionHEN/OnionHEN_util_crash.log` |
 
 全局架构见 [arch.md](../arch.md)。  
 金手指 **C++ 设计**见 [cheats_cpp.md](cheats_cpp.md)；格式细节见 `source/util/source/cheats/README.md`。
@@ -21,7 +21,7 @@
 ```text
 ┌─────────────┐     spawn/load      ┌──────────────┐
 │ bootstrapper│ ──────────────────► │  daemon.elf  │  critical IPC
-└─────────────┘                     │  (main)      │  /system_tmp/OrionHEN_crit_service
+└─────────────┘                     │  (main)      │  /system_tmp/OnionHEN_crit_service
                                     └──────┬───────┘
                                            │ 也可拉起
                                            ▼
@@ -52,7 +52,7 @@ main()
  ├─ 5. set_proc_authid(self, DEBUG_AUTHID) # 提权本进程
  ├─ 6. 默认 global_conf
  ├─ 7. unlink 旧 util 日志
- ├─ 8. LoadSettings()                      # /data/OrionHEN/config.ini
+ ├─ 8. LoadSettings()                      # /data/OnionHEN/config.ini
  ├─ 9. start_ip_thread()                   # cpp_service：后台刷本机 IP
  ├─10. pthread_create(IPC_loop)            # msg.cpp：常驻 Unix 监听
  ├─11. IniliatizeHTTP()                    # http.c：curl 下载能力
@@ -86,7 +86,7 @@ source/util/
 ├── source/
 │   ├── main.cpp                 # 生命周期编排
 │   ├── msg.cpp                  # Unix IPC 服务端 + handleIPC 分发
-│   ├── common_utils.c           # OrionHEN_log / notify / ptrace attach / 通用工具
+│   ├── common_utils.c           # OnionHEN_log / notify / ptrace attach / 通用工具
 │   ├── faulthandler.c           # 信号与崩溃落盘
 │   ├── http.c                   # curl 下载、zip 解压、cheats commit 检查
 │   ├── cpp_service.cpp          # IP 线程、CMD:9028、Toolbox/shellcore 修补
@@ -168,7 +168,7 @@ struct IPCMessage {
 | `DOWNLOAD_CHEATS` | 下仓库 zip → staging → flatten | `http` + `CheatService::flattenInstallTree` |
 | `RELOAD_CHEATS` | **已移除**（枚举占位 `UNUSED_RELOAD_CHEATS`） | 列表/开关靠文件签名热重载，无索引重建 |
 | `DOWNLOAD_KSTUFF` | 下载 kstuff.elf | `http` |
-| `LAUNCH_PAYLOAD` | 加载 payload `.elf` | `load_payload` → `orion_payload_load`（9021） |
+| `LAUNCH_PAYLOAD` | 加载 payload `.elf` | `load_payload` → `onion_payload_load`（9021） |
 | `TOGGLE_LEGACY_CMD_SERVER` | 开关 9028 处理 | `global_conf.legacy_cmd_server` |
 | `LAUNCH_ELFLDR` | 已移除 | 固定失败 |
 | `UNUSED_FTP` / `UNUSED_KLOG` | 已移除 | 固定失败 |
@@ -185,15 +185,15 @@ util handleIPC ──► param.json / sfo ──► version 字符串
   │ GET_GAME_CHEAT(tid, version)
   ▼
 cheat_service_export_list
-  │  resolve /data/OrionHEN/cheats/<TID>_<VER>.{json,shn,mc4,ShnExt}
-  │  load + parse → 写 /user/data/OrionHEN/<tid>_cheats
+  │  resolve /data/OnionHEN/cheats/<TID>_<VER>.{json,shn,mc4,ShnExt}
+  │  load + parse → 写 /user/data/OnionHEN/<tid>_cheats
   ▼
 ShellUI 读列表 JSON，渲染开关
   │
   │ TOGGLE_CHEAT(tid, version, pid, cheat_id)
   ▼
 cheat_service_toggle_index
-  │  refresh 文件签名 → orion_toggle_cheat
+  │  refresh 文件签名 → onion_toggle_cheat
   ▼
 cheat_engine_runtime
   │  util_find_module → base
@@ -208,12 +208,12 @@ cheat_engine_runtime
 
 ### 6.1 `common_utils` / 日志
 
-- **`OrionHEN_log`**：格式化 → 追加 `\n` → `printf` + `klog_printf` + append 日志文件。
+- **`OnionHEN_log`**：格式化 → 追加 `\n` → `printf` + `klog_printf` + append 日志文件。
 - **`notify`**：系统通知气泡。
 - **`pt_attach_proc` / `pt_detach_proc`**：提权 authid 后 `ptrace`（code cave mmap 用）。
 - 其它：HTTP 初始化封装声明、`download` 相关声明等。
 
-全模块日志统一走 `OrionHEN_log`，金手指不再单独 logger。
+全模块日志统一走 `OnionHEN_log`，金手指不再单独 logger。
 
 ### 6.2 `util_platform`（共享平台）
 
@@ -244,7 +244,7 @@ cheat_engine_runtime
 - **`patch_checker` / `enable_toolbox`**：与 Toolbox 注入、ShellCore 相关修补（部分路径已裁剪）。
 - **`start_ip_thread`**：维护全局 IP 字符串，供 notify 文案使用。
 
-### 6.6 金手指（C++：`orion::cheats`）
+### 6.6 金手指（C++：`onion::cheats`）
 
 编排与格式解析均为 C++（Facade / Strategy / Factory）；ShnExt crypto 经 Adapter 调 C。详见 [cheats_cpp.md](cheats_cpp.md)。
 
@@ -270,7 +270,7 @@ cheat_engine_runtime
 #### 路径与格式
 
 ```text
-/data/OrionHEN/cheats/<TITLE_ID>_<VERSION>.{json,shn,mc4,ShnExt}
+/data/OnionHEN/cheats/<TITLE_ID>_<VERSION>.{json,shn,mc4,ShnExt}
 ```
 
 解析优先级：`json` → `shn` → `mc4` → `ShnExt`。  
@@ -278,7 +278,7 @@ cheat_engine_runtime
 
 #### 热重载
 
-`cheat_service` 缓存：path + size + inode + mtime + ctime。变化则 `disable` 已启用项并重新 `orion_load_cheat_file`。
+`cheat_service` 缓存：path + size + inode + mtime + ctime。变化则 `disable` 已启用项并重新 `onion_load_cheat_file`。
 
 #### Toggle 写内存顺序（`cheat_engine_runtime`）
 
@@ -296,7 +296,7 @@ cheat_engine_runtime
 
 #### 下载 flatten
 
-IPC `DOWNLOAD_CHEATS`：zip → staging → `orion_cheat_flatten_install_tree` 把嵌套仓库文件规范成 flat 命名装入 `ORION_CHEATS_DIR`。
+IPC `DOWNLOAD_CHEATS`：zip → staging → `onion_cheat_flatten_install_tree` 把嵌套仓库文件规范成 flat 命名装入 `ONION_CHEATS_DIR`。
 
 ---
 
@@ -318,13 +318,13 @@ IPC `DOWNLOAD_CHEATS`：zip → staging → `orion_cheat_flatten_install_tree` �
 
 | 路径 | 用途 |
 |------|------|
-| `/data/OrionHEN/config.ini` | toolbox、legacy CMD 等 |
-| `/data/OrionHEN/cheats/` | 金手指 flat 文件 |
-| `/data/OrionHEN/cheats_staging/` | 下载解压临时区 |
-| `/user/data/OrionHEN/<tid>_cheats` | ShellUI 消费的列表 JSON |
-| `/data/OrionHEN/OrionHEN_util_daemon.log` | 运行日志 |
-| `/data/OrionHEN/kstuff.elf` | 下载的 kstuff |
-| `ORION_FLAG_UTIL_BOOTED` | util 是否已完成过冷启动（typed ready flag） |
+| `/data/OnionHEN/config.ini` | toolbox、legacy CMD 等 |
+| `/data/OnionHEN/cheats/` | 金手指 flat 文件 |
+| `/data/OnionHEN/cheats_staging/` | 下载解压临时区 |
+| `/user/data/OnionHEN/<tid>_cheats` | ShellUI 消费的列表 JSON |
+| `/data/OnionHEN/OnionHEN_util_daemon.log` | 运行日志 |
+| `/data/OnionHEN/kstuff.elf` | 下载的 kstuff |
+| `ONION_FLAG_UTIL_BOOTED` | util 是否已完成过冷启动（typed ready flag） |
 
 `LoadSettings` 读取的主要键（节选）：`legacy_cmd_server`、`Rest_Mode_Delay_Seconds`、`Util_rest_kill`。
 
@@ -342,7 +342,7 @@ IPC `DOWNLOAD_CHEATS`：zip → staging → `orion_cheat_flatten_install_tree` �
 | 版本/模块/固件 | `util_platform.c` |
 | 9028 协议 | `cpp_service.cpp` |
 | 下载/zip | `http.c` |
-| 日志 | `common_utils.c` → `OrionHEN_log` |
+| 日志 | `common_utils.c` → `OnionHEN_log` |
 
 ---
 
@@ -350,7 +350,7 @@ IPC `DOWNLOAD_CHEATS`：zip → staging → `orion_cheat_flatten_install_tree` �
 
 1. **业务进 util，不进 critical daemon**（稳定性边界）。
 2. **平台能力放 `util_platform`**，避免功能目录再复制一份进程/固件逻辑。
-3. **日志统一 `OrionHEN_log`**（klog 仅作底层 sink，不是第二套业务 logger）。
+3. **日志统一 `OnionHEN_log`**（klog 仅作底层 sink，不是第二套业务 logger）。
 4. **金手指路径 flat、无 txt 索引、无扩展名子目录**。
 5. **高固件写内存优先 kdirect**，避免无必要 `PT_ATTACH` 停进程；code cave 仍可短时 ptrace mmap。
 6. **C++ 单元勿 include NineS `freebsd-helper`**（与 SDK 头冲突）；模块信息用 `util_module_info_t` ABI 对齐。

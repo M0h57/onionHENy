@@ -5,7 +5,7 @@
 #include "cheats/cheat_engine.h"
 #include "util_platform.h"
 
-namespace orion::cheats {
+namespace onion::cheats {
 
 /**
  * Applies / restores cheat patches against a live process.
@@ -16,8 +16,8 @@ public:
   /**
    * Toggle cheat at index. Returns 0 on success; status holds human message.
    */
-  int toggle(const game_context_t &game, orion_cheat_file_t &file, int index,
+  int toggle(const game_context_t &game, onion_cheat_file_t &file, int index,
              std::string &status);
 };
 
-} // namespace orion::cheats
+} // namespace onion::cheats

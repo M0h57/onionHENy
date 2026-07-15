@@ -1,4 +1,4 @@
-/* Copyright (C) 2025 OrionHEN / LightningMods
+/* Copyright (C) 2025 OnionHEN / LightningMods
 
 This program is free software; you can redistribute it and/or modify it
 under the terms of the GNU General Public License as published by the
@@ -15,7 +15,7 @@ along with this program; see the file COPYING. If not, see
 <http://www.gnu.org/licenses/>.  */
 
 #include "../include/AccountActivator.h"
-#include <orion/reg_entity.h>
+#include <onion/reg_entity.h>
 
 
 Activator::Activator(bool skip_userservice_init)
@@ -184,7 +184,7 @@ uint64_t Activator::GenerateAccountID(const char* username)
 
 int Activator::GetEntityNumber(int a, int d, int e)
 {
-    return orion_reg_entity_number(a, d, e);
+    return onion_reg_entity_number(a, d, e);
 }
 
 void Activator::GetPSAccount(std::string& account)

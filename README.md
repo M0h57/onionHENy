@@ -1,26 +1,26 @@
-# OrionHEN
+# OnionHEN
 
 **All-in-one homebrew enabler for the PlayStation 5.**
 
-OrionHEN is a community continuation of **[etaHEN](https://github.com/LightningMods/etaHEN)** by [LightningMods](https://github.com/LightningMods). The original etaHEN project is no longer actively maintained; this repository continues that work under a new name, built **directly on etaHEN’s open-source code** (GPLv3).
+OnionHEN is a community continuation of **[etaHEN](https://github.com/LightningMods/etaHEN)** by [LightningMods](https://github.com/LightningMods). The original etaHEN project is no longer actively maintained; this repository continues that work under a new name, built **directly on etaHEN’s open-source code** (GPLv3).
 
 ```
 PS4  →  GoldHEN
-PS5  →  etaHEN  →  OrionHEN (this project)
+PS5  →  etaHEN  →  OnionHEN (this project)
 ```
 
 ---
 
 ## Heritage & respect
 
-Homebrew on PlayStation did not appear overnight. OrionHEN stands on the shoulders of two landmark projects:
+Homebrew on PlayStation did not appear overnight. OnionHEN stands on the shoulders of two landmark projects:
 
 | Project | Platform | Role |
 |---------|----------|------|
 | **[GoldHEN](https://github.com/GoldHEN/GoldHEN)** | PS4 | The gold standard AIO HEN for PS4 — the bar every later enabler is measured against |
-| **[etaHEN](https://github.com/LightningMods/etaHEN)** | PS5 | The first serious AIO homebrew stack for PS5; **OrionHEN’s direct source base** |
+| **[etaHEN](https://github.com/LightningMods/etaHEN)** | PS5 | The first serious AIO homebrew stack for PS5; **OnionHEN’s direct source base** |
 
-OrionHEN does **not** claim to invent that foundation. We fork, maintain, and extend **etaHEN’s published GPLv3 source**, in the same spirit that GoldHEN defined for the PS4 generation: one payload, many services, practical tools for developers and users.
+OnionHEN does **not** claim to invent that foundation. We fork, maintain, and extend **etaHEN’s published GPLv3 source**, in the same spirit that GoldHEN defined for the PS4 generation: one payload, many services, practical tools for developers and users.
 
 ### Thank you
 
@@ -28,14 +28,14 @@ OrionHEN does **not** claim to invent that foundation. We fork, maintain, and ex
 - **LightningMods** — for designing, shipping, and open-sourcing etaHEN under GPLv3 so the community could carry it forward.
 - **Every etaHEN & GoldHEN contributor, tester, and reverse engineer** listed below and in their respective projects.
 
-If you benefit from OrionHEN, please also consider supporting the original authors:
+If you benefit from OnionHEN, please also consider supporting the original authors:
 
 - GoldHEN / SiSTR0: [https://ko-fi.com/sistro](https://ko-fi.com/sistro/)
 - LightningMods (etaHEN): [GitHub Sponsors](https://github.com/sponsors/LightningMods)
 
 ---
 
-## What is OrionHEN?
+## What is OnionHEN?
 
 
 - **License:** GPLv3 (same family of obligations as etaHEN; see [`LICENSE`](LICENSE))
@@ -49,7 +49,7 @@ If you benefit from OrionHEN, please also consider supporting the original autho
 ## Repository layout
 
 ```
-OrionHEN/
+OnionHEN/
 ├── assets/          # Icons and images
 ├── docs/            # Technical writeups
 ├── releases/        # Prebuilt payload binaries
@@ -108,11 +108,11 @@ Technical notes and writeups: [`docs/`](docs/).
 
 ### Prebuilt binary
 
-Current tree still ships the last public etaHEN-line binary packaging for convenience while OrionHEN branding and versioning settle in:
+Current tree still ships the last public etaHEN-line binary packaging for convenience while OnionHEN branding and versioning settle in:
 
 - [`releases/etaHEN-2.5B.bin`](releases/etaHEN-2.5B.bin)
 
-Future releases will be published under the **OrionHEN** name.
+Future releases will be published under the **OnionHEN** name.
 
 ---
 
@@ -129,14 +129,14 @@ Set-ExecutionPolicy Bypass
 Or run once:
 
 ```powershell
-powershell.exe -ExecutionPolicy Bypass -File C:\Path\To\OrionHEN\scripts\send_payload.ps1
+powershell.exe -ExecutionPolicy Bypass -File C:\Path\To\OnionHEN\scripts\send_payload.ps1
 ```
 
 ```powershell
 .\scripts\send_payload.ps1 -Payload "C:\path\to\example.elf" -IP "192.168.x.x" -Port XXXX
 ```
 
-Common ports: exploit elfldr **9020** and runtime elfldr **9021**. OrionHEN does **not** ship the 9021 service; start an external elfldr before loading OrionHEN.
+Common ports: exploit elfldr **9020** and runtime elfldr **9021**. OnionHEN does **not** ship the 9021 service; start an external elfldr before loading OnionHEN.
 
 ### Other tools
 
@@ -152,10 +152,10 @@ Common ports: exploit elfldr **9020** and runtime elfldr **9021**. OrionHEN does
 
 ## Features
 
-(Feature set is inherited from etaHEN and will evolve under OrionHEN.)
+(Feature set is inherited from etaHEN and will evolve under OnionHEN.)
 
 - ★ Toolbox (debug settings replacement)
-- Custom plugins via the [etaHEN SDK](https://github.com/LightningMods/etaHEN-SDK/tree/main/Plugin_samples) (still used until an OrionHEN SDK is split out)
+- Custom plugins via the [etaHEN SDK](https://github.com/LightningMods/etaHEN-SDK/tree/main/Plugin_samples) (still used until an OnionHEN SDK is split out)
 - [Toolbox] Rest Mode options
 - [Toolbox] Remote Play menu
 - [Toolbox] Plugin / payload ELF menu with auto-start
@@ -175,7 +175,7 @@ Common ports: exploit elfldr **9020** and runtime elfldr **9021**. OrionHEN does
 - Two daemons for stability (util daemon auto-restarted by the main daemon)
 - Custom system software version string
 - kstuff-related flows for fself / fpkg support
-- Logs under `/data/OrionHEN`
+- Logs under `/data/OnionHEN`
 - Jailbreak IPC for homebrew apps
 - Update blocker (unmounts update partition)
 - Optional Illusions cheats/patches [plugin](https://github.com/LightningMods/etaHEN-SDK/tree/main/Plugin_samples/Illusion_cheats)
@@ -187,19 +187,19 @@ Common ports: exploit elfldr **9020** and runtime elfldr **9021**. OrionHEN does
 
 ### Plugin / SDK
 
-Custom plugins are still developed against the public [etaHEN SDK](https://github.com/LightningMods/etaHEN-SDK). See that repo’s [README](https://github.com/LightningMods/etaHEN-SDK/blob/main/README.md). OrionHEN aims to stay compatible where practical and may publish its own SDK docs later.
+Custom plugins are still developed against the public [etaHEN SDK](https://github.com/LightningMods/etaHEN-SDK). See that repo’s [README](https://github.com/LightningMods/etaHEN-SDK/blob/main/README.md). OnionHEN aims to stay compatible where practical and may publish its own SDK docs later.
 
 ### Roadmap (high level)
 
 - Keep the stack building and usable on supported firmwares
 - Stability and maintenance after the etaHEN hand-off
-- Clear OrionHEN branding for binaries and config over time
+- Clear OnionHEN branding for binaries and config over time
 
 ---
 
 ## Configuration (`config.ini`)
 
-Settings file: **`/data/OrionHEN/config.ini`** (created on first run).
+Settings file: **`/data/OnionHEN/config.ini`** (created on first run).
 
 | INI key | Description | Default |
 |---------|-------------|---------|
@@ -209,7 +209,7 @@ Settings file: **`/data/OrionHEN/config.ini`** (created on first run).
 | `Game_rest_kill` | Kill open game on rest | 0 |
 | `Display_tids` | Show title IDs | 0 |
 | `APP_JB_Debug_Msg` | App jailbreak debug messages | 0 |
-| `OrionHEN_Game_Options` | Game options menu | 1 |
+| `OnionHEN_Game_Options` | Game options menu | 1 |
 | `auto_eject_disc` | Auto eject disc | 0 |
 | `Cheats_shortcut_opt` | Cheats shortcut | 0 (`CHEATS_SC_OFF`) |
 | `Toolbox_shortcut_opt` | Toolbox shortcut | 0 (`TOOLBOX_SC_OFF`) |
@@ -311,8 +311,8 @@ int main()
 
 ### Lineage
 
-- **[GoldHEN](https://github.com/GoldHEN/GoldHEN)** — SiSTR0 and contributors. PS4 AIO HEN; the spiritual predecessor of the “one payload that does everything” model OrionHEN follows on PS5.
-- **[etaHEN](https://github.com/LightningMods/etaHEN)** — LightningMods and contributors. **Direct open-source base of OrionHEN.**
+- **[GoldHEN](https://github.com/GoldHEN/GoldHEN)** — SiSTR0 and contributors. PS4 AIO HEN; the spiritual predecessor of the “one payload that does everything” model OnionHEN follows on PS5.
+- **[etaHEN](https://github.com/LightningMods/etaHEN)** — LightningMods and contributors. **Direct open-source base of OnionHEN.**
 
 ### Upstream contributors (etaHEN / shared ecosystem)
 
@@ -331,7 +331,7 @@ int main()
 - [BedroZen](https://twitter.com/BedroZen)
 - [MODDED WARFARE](https://twitter.com/MODDED_WARFARE)
 
-OrionHEN will add its own contributor and tester lists as this fork grows. If you contributed to etaHEN and want an explicit OrionHEN credit line, open an issue or PR.
+OnionHEN will add its own contributor and tester lists as this fork grows. If you contributed to etaHEN and want an explicit OnionHEN credit line, open an issue or PR.
 
 ---
 
@@ -339,10 +339,10 @@ OrionHEN will add its own contributor and tester lists as this fork grows. If yo
 
 This project is licensed under the **GNU General Public License v3.0** — see [`LICENSE`](LICENSE).
 
-Because OrionHEN is based on etaHEN’s GPLv3 source, derivative works must remain under compatible terms. We are grateful that LightningMods released etaHEN as free software so the community could continue it.
+Because OnionHEN is based on etaHEN’s GPLv3 source, derivative works must remain under compatible terms. We are grateful that LightningMods released etaHEN as free software so the community could continue it.
 
 ---
 
 ## Disclaimer
 
-OrionHEN is for research and homebrew on devices you own. Use at your own risk. This project is not affiliated with Sony Interactive Entertainment, GoldHEN, or the original etaHEN author beyond use of publicly licensed code and public documentation.
+OnionHEN is for research and homebrew on devices you own. Use at your own risk. This project is not affiliated with Sony Interactive Entertainment, GoldHEN, or the original etaHEN author beyond use of publicly licensed code and public documentation.

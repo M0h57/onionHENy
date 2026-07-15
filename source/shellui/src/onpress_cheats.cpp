@@ -1,4 +1,4 @@
-/* Copyright (C) 2025 OrionHEN / LightningMods — OnPress cheats domain */
+/* Copyright (C) 2025 OnionHEN / LightningMods — OnPress cheats domain */
 #include "onpress.hpp"
 #include "shellui_state.hpp"
 #include "toolbox_route.hpp"
@@ -25,7 +25,7 @@ static OnPressResult prefix_id_cheat(OnPressContext &ctx) {
   std::string cheat_name;
   ParseCheatID(ctx.id.c_str(), tid, &cheat_id);
   shellui_log("Getting PID for %s", ctx.id.c_str());
-  int pid = orion_find_pid_ex(tid, false, true, true);
+  int pid = onion_find_pid_ex(tid, false, true, true);
   if (pid < 0) {
     notify("[ERROR] Failed to activate %s\nfailed to find game pid",
            cheat_name.c_str());

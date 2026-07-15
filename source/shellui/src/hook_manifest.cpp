@@ -1,4 +1,4 @@
-/* Copyright (C) 2025 OrionHEN / LightningMods — P0 split. */
+/* Copyright (C) 2025 OnionHEN / LightningMods — P0 split. */
 
 #include "HookedFuncs.hpp"
 #include "RemotePlay.h"
@@ -6,7 +6,7 @@
 #include "external_symbols.hpp"
 #include "shellui_state.hpp"
 #include "toolbox_route.hpp"
-#include <orion/platform.h>
+#include <onion/platform.h>
 #include <string>
 
 extern MonoClass *MemoryStream_IO;

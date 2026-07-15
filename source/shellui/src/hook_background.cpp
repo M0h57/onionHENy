@@ -1,4 +1,4 @@
-/* Copyright (C) 2025 OrionHEN / LightningMods — P0 split. */
+/* Copyright (C) 2025 OnionHEN / LightningMods — P0 split. */
 
 
 #include "HookedFuncs.hpp"
@@ -32,8 +32,8 @@ void *download_cheats_thr(void *) {
   }
   g_ui.cheat_action_in_progress = true;
   notify("Preparing to download the %s cheats repo...",
-         g_settings.selected_cheats_repo == CHEATS_REPO_ORIONHEN
-             ? "OrionHEN PS5"
+         g_settings.selected_cheats_repo == CHEATS_REPO_ONIONHEN
+             ? "OnionHEN PS5"
              : "GoldHEN PS4");
   IPC_Client &util_ipc = IPC_Client::getInstance(true);
   util_ipc.Cheats_Action(DOWNLOAD_CHEATS, g_settings.selected_cheats_repo);

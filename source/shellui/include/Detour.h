@@ -1,11 +1,11 @@
-/* Copyright (C) 2025 OrionHEN / LightningMods
+/* Copyright (C) 2025 OnionHEN / LightningMods
  *
- * Compatibility shim — implementation lives in liborion_detour.
+ * Compatibility shim — implementation lives in libonion_detour.
  * Historical Detour.h also pulled C APIs used by prx.cpp.
  */
 #pragma once
 
-#include <orion/Detour.h>
+#include <onion/Detour.h>
 
 extern "C" {
 #include "ucred.h"

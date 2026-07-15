@@ -1,4 +1,4 @@
-/* Copyright (C) 2025 OrionHEN / LightningMods
+/* Copyright (C) 2025 OnionHEN / LightningMods
  *
  * ShellUI API surface: types + Mono hooks.
  * Prefer including shellui_types.hpp alone when hooks are not needed.
@@ -359,8 +359,8 @@ void GoToHome();
 void GoToURI(const char* uri);
 bool Get_Running_App_TID(std::string& title_id, int& BigAppid);
 void generate_cheats_xml(std::string &new_xml, std::string& not_open_tid, bool running_as_debug_settings, bool show_while_not_open);
-#include <orion/proc_query.h>
-#include <orion/platform.h>
+#include <onion/proc_query.h>
+#include <onion/platform.h>
 int sceSystemServiceGetAppId(const char *tid);
 /** USB mass-storage index, or -1 when none mounted. */
 int usbpath();

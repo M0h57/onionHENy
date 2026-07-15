@@ -10,12 +10,12 @@ extern "C" {
 #include "mc4/base64.h"
 }
 
-extern "C" void OrionHEN_log(const char *fmt, ...);
+extern "C" void OnionHEN_log(const char *fmt, ...);
 
-namespace orion::cheats {
+namespace onion::cheats {
 
 /* Defined in XmlCheatParser.cpp */
-int parseXmlBuffer(char *xml, orion_cheat_file_t &out);
+int parseXmlBuffer(char *xml, onion_cheat_file_t &out);
 
 namespace {
 
@@ -34,25 +34,25 @@ char *mc4Decrypt(const char *encoded, size_t encoded_size) {
     return nullptr;
   }
   if (bin_size == 0 || (bin_size % 16) != 0) {
-    orion_cheat_secure_zero(bin, bin_size);
+    onion_cheat_secure_zero(bin, bin_size);
     free(bin);
     return nullptr;
   }
 
   auto *buf = static_cast<uint8_t *>(std::calloc(bin_size + 0x100 + 1, 1));
   if (buf == nullptr) {
-    orion_cheat_secure_zero(bin, bin_size);
+    onion_cheat_secure_zero(bin, bin_size);
     free(bin);
     return nullptr;
   }
   std::memcpy(buf, bin, bin_size);
-  orion_cheat_secure_zero(bin, bin_size);
+  onion_cheat_secure_zero(bin, bin_size);
   free(bin);
 
   struct AES_ctx ctx {};
   AES_init_ctx_iv(&ctx, kMc4AesKey, kMc4AesIv);
   AES_CBC_decrypt_buffer(&ctx, buf, bin_size);
-  orion_cheat_secure_zero(&ctx, sizeof(ctx));
+  onion_cheat_secure_zero(&ctx, sizeof(ctx));
   buf[bin_size] = '\0';
   return reinterpret_cast<char *>(buf);
 }
@@ -63,19 +63,19 @@ class Mc4CheatParser final : public ICheatParser {
 public:
   const char *name() const override { return "mc4"; }
 
-  int parse(const uint8_t *data, size_t size, orion_cheat_file_t &out) override {
+  int parse(const uint8_t *data, size_t size, onion_cheat_file_t &out) override {
     if (data == nullptr || size == 0) {
       return -1;
     }
     char *xml = mc4Decrypt(reinterpret_cast<const char *>(data), size);
     if (xml == nullptr) {
-      OrionHEN_log("[engine] mc4 decrypt failed");
+      OnionHEN_log("[engine] mc4 decrypt failed");
       return -1;
     }
     const int rc = parseXmlBuffer(xml, out);
-    orion_cheat_secure_zero(xml, std::strlen(xml));
+    onion_cheat_secure_zero(xml, std::strlen(xml));
     free(xml);
-    OrionHEN_log("[engine] mc4 cheats=%zu rc=%d", out.cheat_count, rc);
+    OnionHEN_log("[engine] mc4 cheats=%zu rc=%d", out.cheat_count, rc);
     return rc;
   }
 };
@@ -84,4 +84,4 @@ std::unique_ptr<ICheatParser> makeMc4CheatParser() {
   return std::make_unique<Mc4CheatParser>();
 }
 
-} // namespace orion::cheats
+} // namespace onion::cheats

@@ -1,4 +1,4 @@
-/* Copyright (C) 2025 OrionHEN / LightningMods
+/* Copyright (C) 2025 OnionHEN / LightningMods
  * Extracted from HookFunctions.cpp — hook_boot
  */
 #include "HookedFuncs.hpp"
@@ -18,7 +18,7 @@
 extern bool (*boot_orig)(MonoString* uri, int opt, MonoString* titleIdForBootAction);
 extern bool (*boot_orig_2)(MonoString* uri, int opt);
 #include "shellui_state.hpp"
-#include <orion/platform.h>
+#include <onion/platform.h>
 
 std::string Mono_to_String(MonoString *str);
 
@@ -62,28 +62,28 @@ bool handle_uri_boot_common(MonoString* uri, int opt, MonoString* titleIdForBoot
                 opt);
 #endif
   
-    if(uri_string == "OrionHEN?Cheats") {
+    if(uri_string == "OnionHEN?Cheats") {
 #if SHELL_DEBUG==1
       shellui_log("cheats_shortcut URI detected");
 #endif
       g_ui.cheats_shortcut_activated = true;
       return true; // Signal to redirect
     }
-    else if(uri_string == "OrionHEN?Cheats_not_open") {
+    else if(uri_string == "OnionHEN?Cheats_not_open") {
 #if SHELL_DEBUG==1
       shellui_log("cheats_shortcut (not open) URI detected");
 #endif
       g_ui.cheats_shortcut_activated_not_open = true;
       return true;
     }
-    else if (uri_string == "OrionHEN?Dump") {
+    else if (uri_string == "OnionHEN?Dump") {
 #if SHELL_DEBUG==1
         shellui_log("Dump URI detected");
 #endif
-        notify("Game dumper payload is not bundled in OrionHEN");
+        notify("Game dumper payload is not bundled in OnionHEN");
         return true; // Signal to redirect
     }
-    else if (uri_string == "OrionHEN?DL_UPDATE") {
+    else if (uri_string == "OnionHEN?DL_UPDATE") {
 #if SHELL_DEBUG==1
         shellui_log("DL_UPDATE URI detected");
 #endif
@@ -97,7 +97,7 @@ bool handle_uri_boot_common(MonoString* uri, int opt, MonoString* titleIdForBoot
   bool uri_boot_hook(MonoString* uri, int opt, MonoString* titleIdForBootAction) {
     if(handle_uri_boot_common(uri, opt, titleIdForBootAction)) {
         std::string uri_string = Mono_to_String(uri);
-        if(uri_string == "OrionHEN?Dump") {
+        if(uri_string == "OnionHEN?Dump") {
           return boot_orig(mono_string_new(Root_Domain, "pshomeui:navigateToHome?bootCondition=psButton"),  opt, titleIdForBootAction);
         }
       // Toolbox / cheats shortcuts → direct legacy DebugSettingsOldScreen
@@ -125,7 +125,7 @@ bool handle_uri_boot_common(MonoString* uri, int opt, MonoString* titleIdForBoot
   #endif
     if(handle_uri_boot_common(uri, opt, nullptr)) {
       // Redirect to debug settings (no titleId parameter for older fw)
-      if(original_uri == "OrionHEN?Dump") {
+      if(original_uri == "OnionHEN?Dump") {
         return boot_orig_2(mono_string_new(Root_Domain, "pshomeui:navigateToHome?bootCondition=psButton"),  opt);
       }
 
@@ -236,7 +236,7 @@ bool handle_uri_boot_common(MonoString* uri, int opt, MonoString* titleIdForBoot
 #if SHELL_DEBUG == 1
         shellui_log("Cheats Shortcut Activated");
 #endif
-        GoToURI("OrionHEN?Cheats");
+        GoToURI("OnionHEN?Cheats");
         result.Buttons = None; // Clear the Select button to prevent triggering other actions
         cheas_sc_activated = false; // Reset the flag
       }

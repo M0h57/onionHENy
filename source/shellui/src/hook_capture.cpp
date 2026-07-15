@@ -1,4 +1,4 @@
-/* Copyright (C) 2025 OrionHEN / LightningMods
+/* Copyright (C) 2025 OnionHEN / LightningMods
  * Extracted from HookFunctions.cpp — hook_capture
  */
 #include "HookedFuncs.hpp"
@@ -24,7 +24,7 @@ bool CaptureScreen();
 bool CaptureScreen(){
   if(g_settings.cheats_shortcut_opt == CHEATS_LONG_SHARE){
     //shellui_log("CaptureScreen: Long Share Shortcut activated");
-    GoToURI("OrionHEN?Cheats");
+    GoToURI("OnionHEN?Cheats");
     return true;
   }
   else if (g_settings.toolbox_shortcut_opt == TOOLBOX_LONG_SHARE){
@@ -71,7 +71,7 @@ void OnShareButton(MonoObject * data) {
 
   if( g_settings.cheats_shortcut_opt == CHEATS_SINGLE_SHARE) {
     // shellui_log("Share Shortcut: Redirecting to Cheats");
-    GoToURI("OrionHEN?Cheats");
+    GoToURI("OnionHEN?Cheats");
     return;
   }
   else if (g_settings.toolbox_shortcut_opt == TOOLBOX_SINGLE_SHARE) {

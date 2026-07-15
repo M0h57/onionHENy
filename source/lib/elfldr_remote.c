@@ -1,4 +1,4 @@
-/* OrionHEN: external elfldr (9021) launch helpers */
+/* OnionHEN: external elfldr (9021) launch helpers */
 
 #include "elfldr_remote.h"
 

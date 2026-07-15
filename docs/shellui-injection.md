@@ -1,6 +1,6 @@
 # ShellUI injection flow & kylin-core libNineS fixes
 
-## Call path (OrionHEN)
+## Call path (OnionHEN)
 
 ```
 daemon: cmd_enable_toolbox()          [daemon/source/msg.cpp]
@@ -23,9 +23,9 @@ ShellUI payload then signals readiness via `/system_tmp/toolbox_online` (daemon 
 
 kylin-core uses the same `inject_elf()` path for ShellUI overlay injection (`overlay_service.c` → `inject_elf`), plus higher-level retries / kill-respawn / boot-id skip that live outside libNineS.
 
-## Inconsistencies found (OrionHEN vs kylin-core)
+## Inconsistencies found (OnionHEN vs kylin-core)
 
-| Area | OrionHEN (before) | kylin-core | Risk |
+| Area | OnionHEN (before) | kylin-core | Risk |
 |------|-----------------|------------|------|
 | `sys_ptrace` | Flip authid to debugger **on every** ptrace call, then restore | Direct `syscall(SYS_ptrace)` | **Thread-unsafe race** between concurrent ptrace ops; can SIGSEGV daemon or corrupt authid |
 | `pt_call2` | `pt_continue` then **immediately** `pt_setregs(bak)` | `pt_continue` → **`waitpid`** → then restore regs | **Critical race**: restores ShellUI registers while bootstrap still runs → crash / freeze / power loss |
@@ -35,7 +35,7 @@ kylin-core uses the same `inject_elf()` path for ShellUI overlay injection (`ove
 | mprotect / copyin | Unchecked | Checked, fail inject | Partial maps then trigger entry |
 | `attached` flag | Not cleared after detach | Cleared when detach succeeds | Stale attach state on retry |
 
-## Fixes adopted in OrionHEN
+## Fixes adopted in OnionHEN
 
 Ported into `source/libNineS/src/pt.c` and `source/libNineS/src/injector.c` (without kylin-specific logger; uses `ps5/klog`).
 
@@ -54,7 +54,7 @@ These live in `kylin-core/src/services/overlay_service.c`, not libNineS:
 - Boot-time “already injected” record / skip
 - Multi-attempt inject + kill ShellUI + wait for respawn
 
-Optional follow-up for OrionHEN daemon: add similar retry/respawn around `cmd_enable_toolbox()` if field failure rate stays high.
+Optional follow-up for OnionHEN daemon: add similar retry/respawn around `cmd_enable_toolbox()` if field failure rate stays high.
 
 ## Upstream files for reference
 

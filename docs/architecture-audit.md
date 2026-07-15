@@ -1,16 +1,16 @@
-# OrionHEN 架构审计报告
+# OnionHEN 架构审计报告
 
-基于 `docs/arch.md`、`docs/util_arch/` 与 `source/` 源码的静态审计。项目整体方向正确（双守护进程、`liborion_*` 抽公共库、ready 协议替代固定 sleep），主要风险集中在 **协议边界、标志生命周期、并发、注入/加载路径的实现漂移**。
+基于 `docs/arch.md`、`docs/util_arch/` 与 `source/` 源码的静态审计。项目整体方向正确（双守护进程、`libonion_*` 抽公共库、ready 协议替代固定 sleep），主要风险集中在 **协议边界、标志生命周期、并发、注入/加载路径的实现漂移**。
 
 > 审计日期：2026-07-10  
-> 范围：`source/` 第一方代码（daemon / util / shellui / bootstrapper / fps_elf / liborion_* / libhijacker / libNineS），对照 `docs/arch.md`。
+> 范围：`source/` 第一方代码（daemon / util / shellui / bootstrapper / fps_elf / libonion_* / libhijacker / libNineS），对照 `docs/arch.md`。
 
 ---
 
 ## 1. 模块地图与关联关系
 
 ```text
-OrionHEN.elf (unpacker / LZMA)
+OnionHEN.elf (unpacker / LZMA)
         │
         ▼
 bootstrapper.elf ──9021──► util.elf ──► kstuff.elf ──► daemon.elf
@@ -19,8 +19,8 @@ bootstrapper.elf ──9021──► util.elf ──► kstuff.elf ──► dae
                               │ 0x8*                      ├─► shellui → SceShellUI
                               │                           └─► fps_elf → 游戏
                               │
-              shellui / fps ──┼── crit: /system_tmp/OrionHEN_crit_service (0x9*)
-                              └── util: /system_tmp/OrionHEN_util_service (0x8*)
+              shellui / fps ──┼── crit: /system_tmp/OnionHEN_crit_service (0x9*)
+                              └── util: /system_tmp/OnionHEN_util_service (0x8*)
 ```
 
 | 层 | 模块 | 职责 |
@@ -29,16 +29,16 @@ bootstrapper.elf ──9021──► util.elf ──► kstuff.elf ──► dae
 | Critical | daemon | Toolbox/FPS 注入、FS IPC、util 看门狗 |
 | Utility | util | 金手指、下载、9028、重业务 |
 | UI | shellui / fps_elf | Mono 注入 / overlay |
-| 共享库 | `liborion_{ipc,settings,proc,platform,ready,detour,payload,playtime}` | 协议/配置/进程/平台叶子能力 |
+| 共享库 | `libonion_{ipc,settings,proc,platform,ready,detour,payload,playtime}` | 协议/配置/进程/平台叶子能力 |
 | 注入原语 | libhijacker / libNineS / libNidResolver | 劫持、ptrace ELF 注入、NID |
 
 **依赖方向（目标态，大体已落地）：**
 
 ```text
-shellui/fps ──► orion_ipc / settings / detour / ready
-daemon/util ──► orion_ipc / settings / proc / platform / ready
+shellui/fps ──► onion_ipc / settings / detour / ready
+daemon/util ──► onion_ipc / settings / proc / platform / ready
 cheats      ──► util_platform + pt/mdbg/kernel
-NineS       ──► orion_proc（不再自带 proc 副本）
+NineS       ──► onion_proc（不再自带 proc 副本）
 ```
 
 **运行时环状耦合（有意，但脆弱）：**
@@ -57,7 +57,7 @@ NineS       ──► orion_proc（不再自带 proc 副本）
 
 | 已共享 | 仍散落在各模块 |
 |--------|----------------|
-| log/notify/fs (`liborion_platform`) | shellui 本地 `if_exists` 前向声明；bootstrapper 自有 notify 包装 |
+| log/notify/fs (`libonion_platform`) | shellui 本地 `if_exists` 前向声明；bootstrapper 自有 notify 包装 |
 | IPC 传输环 | 业务仍在 `daemon/util ipc_handle`（合理），但 **JSON 拼装/recv 语义** 仍脆弱 |
 | Settings schema | 三套 `LoadSettings` 契约（void/bool/mtime） |
 | proc 查询 | 尚可；elfldr/pt **三份分叉副本** |
@@ -82,7 +82,7 @@ NineS 已避免 per-call authid 翻转；bootstrapper/util attach 仍在翻转�
 
 文档称 `util_booted` 用于 rest-mode 延迟；**实现里冷启动几乎总会命中**：
 
-1. util 先起 → `orion_ready_signal(util)` → 立刻 `signal(util_booted)`
+1. util 先起 → `onion_ready_signal(util)` → 立刻 `signal(util_booted)`
 2. daemon 再起 → `cmd_enable_toolbox` 见 `util_booted` → `sleep(rest_mode_delay_seconds)`
 
 结果：`Rest_Mode_Delay_Seconds` 会拖慢 **首次** Toolbox 注入，表现为「toolbox 卡很久」。
@@ -92,7 +92,7 @@ Bootstrapper 只 clear util/kstuff/daemon/toolbox，**不清** `util_booted` / `
 ### 2.4 浅模块 / 胖入口
 
 - `shellui/src/prx.cpp` ~800+ 行、`toolbox_xml.cpp`、`daemon main` 仍偏厚；onpress 已表驱动，但生命周期/钩子入口仍难测。
-- `util_platform` 是金手指正确 seam；daemon 侧 `get_*_pid` 仍是 0..9999 盲扫，未完全收敛到 `liborion_proc`。
+- `util_platform` 是金手指正确 seam；daemon 侧 `get_*_pid` 仍是 0..9999 盲扫，未完全收敛到 `libonion_proc`。
 - `BREW_LAST_RET`、`BREW_UTIL_TEST_CONNECTION` 等协议位 **名义存在、语义残废**（见下节）。
 
 ### 2.5 测试覆盖偏斜
@@ -112,12 +112,12 @@ Bootstrapper 只 clear util/kstuff/daemon/toolbox，**不清** `util_booted` / `
 | 1 | `daemon_inject.cpp` `cmd_enable_fps` / `_new` | **`SuspendApp(appid)` 把 appid 当 pid**。注释已写清 “APP PID NOT TO BE CONFUSED WITH APPID”，却在解析 pid 前 suspend；`_new` 甚至 **suspend 错 id、resume 对 pid**。可致停错进程或挂起失败。 |
 | 2 | `util/cpp_service.cpp` ~141；`daemon_jailbreak.cpp` ~164 | Jailbreak 重试条件 **`isProcessAlive` 逻辑反了**：进程存活时立刻 break（日志却写 “process died”）；应 `!isProcessAlive`。首次 `getHijacker` 失败即放弃，存活目标几乎无法重试。 |
 | 3 | 同上 `cpp_service` 循环后 | `spawned->jailbreak(true)` **无空指针检查**；失败路径仍 notify “granted jailbreak”。 |
-| 4 | `liborion_ipc` `ipc_server.cpp` | 单次 `recv` 无组帧/`MSG_WAITALL`；短读 + `std::string(msg)` 可能未保证 NUL → 脏命令/崩溃。 |
+| 4 | `libonion_ipc` `ipc_server.cpp` | 单次 `recv` 无组帧/`MSG_WAITALL`；短读 + `std::string(msg)` 可能未保证 NUL → 脏命令/崩溃。 |
 | 5 | `ipc_server.hpp` `ipc_format_reply_body` | `out_var` **未 JSON 转义**；金手指状态、路径含 `"` `\` 时客户端解析失败。 |
 | 6 | `daemon/ipc_handle.cpp` STAT/COPY/DELETE | `string_item` 默认 `nullptr`，缺 key 时 **`stat(NULL)` / `rmtree(NULL)`**（仅 CHMOD 有检查）。 |
 | 7 | `MemoryBackends.cpp` `mapCodeCaveCommon` | `pt_mmap` **无 `MAP_FIXED`** 却要求返回地址 == `page_start` → code cave 回退基本必然失败。 |
 | 8 | `bootstrapper/elfldr.c:672` | `e_shnum * sizeof(Elf64_Ehdr)` 应为 **`Elf64_Shdr`** → section 表缓冲 undersize / OOB。 |
-| 9 | `liborion_detour/Detour.cpp` | `mprotect` 失败只打日志，仍写 jump → 注入崩溃。 |
+| 9 | `libonion_detour/Detour.cpp` | `mprotect` 失败只打日志，仍写 jump → 注入崩溃。 |
 | 10 | NineS `elfldr.c` | `kernel_mprotect` 失败 **不设 error**（bootstrapper 会）；注入「成功」但段权限错误。 |
 | 11 | shellui 多线程共用 `IPC_Client` 单例 | 无 mutex；hook/background/onpress 并发 send/recv → 串包、25s 超时。 |
 | 12 | `util_booted` + rest delay | 冷启动首次 toolbox 被 rest 延迟；用户体感「卡死」。 |
@@ -141,7 +141,7 @@ Bootstrapper 只 clear util/kstuff/daemon/toolbox，**不清** `util_booted` / `
 
 ### 低 / 气味
 
-- `OrionHEN_log("size %lu", size_buf)` 打的是指针不是字符串。
+- `OnionHEN_log("size %lu", size_buf)` 打的是指针不是字符串。
 - dumper `sprintf` 无 size 参数。
 - REMOUNT 路径校验逻辑怪异（短路径且不含 `/user` 才拒），不是可靠 allowlist。
 - 大量 UNUSED 命令仍进 default/失败回复——兼容有意，但无 capability 协商。
@@ -153,8 +153,8 @@ Bootstrapper 只 clear util/kstuff/daemon/toolbox，**不清** `util_booted` / `
 | `docs/arch.md` 说法 | 实际 |
 |---------------------|------|
 | `util_booted` 仅 rest/toolbox 延迟 | 冷启动首次 inject 也吃 delay |
-| §3.3 仍以 `toolbox_online` 为主 | 主路径是 `/system_tmp/orion_ready/toolbox`，legacy 仅兼容 |
-| 仓库布局列不全 | 缺少整组 `liborion_*` |
+| §3.3 仍以 `toolbox_online` 为主 | 主路径是 `/system_tmp/onion_ready/toolbox`，legacy 仅兼容 |
+| 仓库布局列不全 | 缺少整组 `libonion_*` |
 | 「IPC 协议稳定」 | 线格式稳定；转义/组帧/空 path **不稳** |
 | util 可崩溃恢复 | 有 9021 重启，但 5 次后静默放弃 |
 | Runtime atomics 仅 legacy_cmd | settings/fan/`is_handler_enabled` 不是 |
@@ -176,12 +176,12 @@ Bootstrapper 只 clear util/kstuff/daemon/toolbox，**不清** `util_booted` / `
    - `IPC_Client` 实例 mutex + full-frame 收发
 
 3. **Ready / Settings 语义收口** — 部分已落地
-   - rest delay：daemon 冷启动不再因 `util_booted` sleep（`orion/toolbox_timing.h`）
+   - rest delay：daemon 冷启动不再因 `util_booted` sleep（`onion/toolbox_timing.h`）
    - Settings store / fan 落盘 / `LoadSettings` 契约 — 见 §2.2
    - bootstrapper sticky flag clear — 仍待
 
 4. **加深模块（架构债）** — **已落地（2026-07-10）**
-   - 单一 `liborion_elfldr`；shellui `orion/platform`；daemon pid → `orion_proc`
+   - 单一 `libonion_elfldr`；shellui `onion/platform`；daemon pid → `onion_proc`
 
 5. **补测** — **已落地（2026-07-10）**
    - `test_ipc_harden` / `test_toolbox_timing` / `test_hijack_retry`
@@ -190,7 +190,7 @@ Bootstrapper 只 clear util/kstuff/daemon/toolbox，**不清** `util_booted` / `
 
 ## 6. 结论
 
-架构骨架（双 daemon、共享 `liborion_*`、util 承载重 IO、ready 协议）是清晰且在向深模块演进的。
+架构骨架（双 daemon、共享 `libonion_*`、util 承载重 IO、ready 协议）是清晰且在向深模块演进的。
 
 当前仍优先关注：
 

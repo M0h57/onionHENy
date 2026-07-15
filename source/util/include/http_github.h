@@ -1,4 +1,4 @@
-/* Copyright (C) 2025 OrionHEN / LightningMods
+/* Copyright (C) 2025 OnionHEN / LightningMods
  *
  * Pure GitHub API helpers (no network).
  */
@@ -16,7 +16,7 @@ extern "C" {
  * Accepts either a single commit object or an array (uses first element).
  * Returns true and NUL-terminates @p sha_buffer on success.
  */
-bool orion_http_extract_commit_sha(const char *json_data, char *sha_buffer,
+bool onion_http_extract_commit_sha(const char *json_data, char *sha_buffer,
                                    size_t buffer_size);
 
 #ifdef __cplusplus

@@ -1,4 +1,4 @@
-# OrionHEN Cheats (C++ orchestration)
+# OnionHEN Cheats (C++ orchestration)
 
 ## Architecture
 
@@ -6,7 +6,7 @@ See [docs/util_arch/cheats_cpp.md](../../../../docs/util_arch/cheats_cpp.md).
 
 ```text
 IPC / main
-  └─ orion::cheats::CheatService          # Facade + mutex + hot-reload state
+  └─ onion::cheats::CheatService          # Facade + mutex + hot-reload state
        ├─ CheatRepository                 # path resolve, load, flatten
        │    └─ CheatParserFactory         # Strategy by extension
        │         ├─ JsonCheatParser
@@ -34,7 +34,7 @@ IPC / main
 ## Formats / paths
 
 ```text
-/data/OrionHEN/cheats/<TITLE_ID>_<VERSION>.{json,shn,mc4,ShnExt}
+/data/OnionHEN/cheats/<TITLE_ID>_<VERSION>.{json,shn,mc4,ShnExt}
 ```
 
 Priority: json → shn → mc4 → ShnExt. No KCF/WMDW.

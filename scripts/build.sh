@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# OrionHEN one-shot build pipeline
+# OnionHEN one-shot build pipeline
 #
 # Phases:
 #   1) configure (prospero-cmake / PS5 payload SDK)
@@ -7,7 +7,7 @@
 #   3) stage vendor blobs (elfldr, kstuff)
 #   4) build daemon + util
 #   5) build bootstrapper  (-> bin/bootstrapper.elf + .lzma)
-#   6) build unpacker / OrionHEN.elf   (embeds bootstrapper.elf.lzma)
+#   6) build unpacker / OnionHEN.elf   (embeds bootstrapper.elf.lzma)
 #
 # Usage:
 #   export PS5_PAYLOAD_SDK=/path/to/ps5-payload-sdk
@@ -22,7 +22,7 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 SOURCE="${ROOT}/source"
 # CMake binary dir + final ELFs/libs: <repo>/build/{bin,lib}/
 BUILD="${BUILD_DIR:-${ROOT}/build}"
-VENDOR="${ORIONHEN_VENDOR:-${SOURCE}/vendor}"
+VENDOR="${ONIONHEN_VENDOR:-${SOURCE}/vendor}"
 BIN="${BUILD}/bin"
 
 PS5_PAYLOAD_SDK="${PS5_PAYLOAD_SDK:-${PS5SDK:-}}"
@@ -54,7 +54,7 @@ die()  { printf '\033[1;31m[error]\033[0m %s\n' "$*" >&2; exit 1; }
 
 usage() {
   cat <<EOF
-OrionHEN build pipeline
+OnionHEN build pipeline
 
 Usage: $(basename "$0") [options]
 
@@ -68,7 +68,7 @@ Options:
   --vendor <path>      Vendor blob directory (default: source/vendor)
   --stub-missing       Create tiny placeholder ELFs if vendor blobs missing
                        (links, but NOT for real hardware)
-  --skip-unpacker      Stop after bootstrapper (no OrionHEN.elf unpacker)
+  --skip-unpacker      Stop after bootstrapper (no OnionHEN.elf unpacker)
   --skip-vendor-sync   Do not call scripts/sync_vendor.sh
   --force-vendor-sync  Re-download kstuff even if already cached
   --init-submodules    git submodule update --init before sync
@@ -76,7 +76,7 @@ Options:
 
 Environment:
   PS5_PAYLOAD_SDK   Path to ps5-payload-sdk (required)
-  ORIONHEN_VENDOR   Override vendor directory
+  ONIONHEN_VENDOR   Override vendor directory
   BUILD_DIR         Override build directory
   V_FW              Same as --fw
 
@@ -89,7 +89,7 @@ Third-party (git submodules under third_party/ + release downloads):
   Removed: elfldr.elf (9021), ps5debug, app-dumper, Byepervisor/hen, Discord RPC
 
 Built-in outputs (under <repo>/build/):
-  build/bin/*.elf           final ELFs (util, daemon, bootstrapper, OrionHEN, …)
+  build/bin/*.elf           final ELFs (util, daemon, bootstrapper, OnionHEN, …)
   build/lib/*.a             first-party static libs
   source/daemon/assets/     shellui.elf / fps_elf.elf (daemon embeds only)
   source/bin                symlink → build/bin (for .incbin paths)
@@ -163,7 +163,7 @@ ensure_sdk_libcxx() {
   need_cmd unzip
 
   local tmp
-  tmp="$(mktemp -d "${TMPDIR:-/tmp}/orion-sdk-cxx.XXXXXX")"
+  tmp="$(mktemp -d "${TMPDIR:-/tmp}/onion-sdk-cxx.XXXXXX")"
   # shellcheck disable=SC2064
   trap "rm -rf '${tmp}'" RETURN
 
@@ -280,15 +280,15 @@ clean_build_artifacts() {
     "${SOURCE}/lib/libNidResolver.a" \
     "${SOURCE}/lib/libNineS.a" \
     "${SOURCE}/lib/libhijacker.a" \
-    "${SOURCE}/lib/liborion_detour.a" \
-    "${SOURCE}/lib/liborion_elfldr.a" \
-    "${SOURCE}/lib/liborion_ipc.a" \
-    "${SOURCE}/lib/liborion_platform.a" \
-    "${SOURCE}/lib/liborion_playtime.a" \
-    "${SOURCE}/lib/liborion_payload.a" \
-    "${SOURCE}/lib/liborion_proc.a" \
-    "${SOURCE}/lib/liborion_ready.a" \
-    "${SOURCE}/lib/liborion_settings.a"
+    "${SOURCE}/lib/libonion_detour.a" \
+    "${SOURCE}/lib/libonion_elfldr.a" \
+    "${SOURCE}/lib/libonion_ipc.a" \
+    "${SOURCE}/lib/libonion_platform.a" \
+    "${SOURCE}/lib/libonion_playtime.a" \
+    "${SOURCE}/lib/libonion_payload.a" \
+    "${SOURCE}/lib/libonion_proc.a" \
+    "${SOURCE}/lib/libonion_ready.a" \
+    "${SOURCE}/lib/libonion_settings.a"
 
   ok "old build outputs removed"
 }
@@ -316,7 +316,7 @@ build_targets() {
 # Main pipeline
 # ---------------------------------------------------------------------------
 main() {
-  log "OrionHEN build"
+  log "OnionHEN build"
   echo "  ROOT     = ${ROOT}"
   echo "  SDK      = ${PS5_PAYLOAD_SDK}"
   echo "  BUILD    = ${BUILD}"
@@ -424,18 +424,18 @@ main() {
   if [[ "${SKIP_UNPACKER}" -eq 1 ]]; then
     log "Skip unpacker (--skip-unpacker)"
   else
-    # Phase 5 — final payload (OrionHEN.elf embeds lzma bootstrapper)
-    log "Phase 5/5: unpacker (OrionHEN.elf)"
-    # Target project name is OrionHEN (see unpacker/CMakeLists.txt)
-    if cmake --build "${BUILD}" -j"${JOBS}" --target OrionHEN 2>/dev/null; then
-      ok "OrionHEN target built"
+    # Phase 5 — final payload (OnionHEN.elf embeds lzma bootstrapper)
+    log "Phase 5/5: unpacker (OnionHEN.elf)"
+    # Target project name is OnionHEN (see unpacker/CMakeLists.txt)
+    if cmake --build "${BUILD}" -j"${JOBS}" --target OnionHEN 2>/dev/null; then
+      ok "OnionHEN target built"
     else
-      build_targets unpacker 2>/dev/null || build_targets OrionHEN
+      build_targets unpacker 2>/dev/null || build_targets OnionHEN
     fi
-    if [[ -f "${BIN}/OrionHEN.elf" ]]; then
-      ok "final payload: ${BIN}/OrionHEN.elf"
+    if [[ -f "${BIN}/OnionHEN.elf" ]]; then
+      ok "final payload: ${BIN}/OnionHEN.elf"
     else
-      warn "OrionHEN.elf not found under bin/ — check unpacker target name/output"
+      warn "OnionHEN.elf not found under bin/ — check unpacker target name/output"
       ls -la "${BIN}" || true
     fi
   fi

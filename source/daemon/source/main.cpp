@@ -1,4 +1,4 @@
-/* Copyright (C) 2025 OrionHEN / LightningMods
+/* Copyright (C) 2025 OnionHEN / LightningMods
 
 This program is free software; you can redistribute it and/or modify it
 under the terms of the GNU General Public License as published by the
@@ -16,9 +16,9 @@ along with this program; see the file COPYING. If not, see
 
 // Include files
 #include <cstdint>
-#include <orion/ucred.h>
-#include <orion/proc_query.h>
-#include <orion/platform.h>
+#include <onion/ucred.h>
+#include <onion/proc_query.h>
+#include <onion/platform.h>
 #include "daemon_ops.hpp"
 #include <stdio.h>
 #include <stdarg.h>
@@ -45,7 +45,7 @@ along with this program; see the file COPYING. If not, see
 #include "globalconf.hpp"
 #include "launcher.hpp"
 #include "ipc.hpp"
-#include <orion/ready.h>
+#include <onion/ready.h>
 
 #define MSG_NOSIGNAL 0x20000 /* do not generate SIGPIPE on EOF. */
 pthread_t cheat_thr = nullptr;
@@ -149,18 +149,18 @@ constexpr const char kWelcomeToastJson[] =
     "      \"icon\": {\n"
     "        \"type\": \"Url\",\n"
     "        \"parameters\": {\n"
-    "          \"url\": \"/user/data/OrionHEN/orionhen.png\"\n"
+    "          \"url\": \"/user/data/OnionHEN/onionhen.png\"\n"
     "        }\n"
     "      },\n"
     "      \"message\": {\n"
-    "        \"body\": \"OrionHEN\"\n"
+    "        \"body\": \"OnionHEN\"\n"
     "      },\n"
     "      \"subMessage\": {\n"
-    "        \"body\": \"Welcome to OrionHEN\"\n"
+    "        \"body\": \"Welcome to OnionHEN\"\n"
     "      },\n"
     "      \"actions\": [\n"
     "        {\n"
-    "          \"actionName\": \"Go to the OrionHEN Toolbox\",\n"
+    "          \"actionName\": \"Go to the OnionHEN Toolbox\",\n"
     "          \"actionType\": \"DeepLink\",\n"
     "          \"defaultFocus\": true,\n"
     "          \"parameters\": {\n"
@@ -179,7 +179,7 @@ constexpr const char kWelcomeToastJson[] =
     "            }\n"
     "          },\n"
     "          \"message\": {\n"
-    "            \"body\": \"OrionHEN Running\"\n"
+    "            \"body\": \"OnionHEN Running\"\n"
     "          }\n"
     "        }\n"
     "      }\n"
@@ -226,7 +226,7 @@ int launchApp(const char *titleId) {
         printf("sceUserServiceGetForegroundUser failed: 0x%x", res);
         return res;
     }
-    OrionHEN_log("[LA] user id %u", id);
+    OnionHEN_log("[LA] user id %u", id);
 
     // the thread will clean this up
     Flag flag = Flag_None;
@@ -234,22 +234,22 @@ int launchApp(const char *titleId) {
 
     puts("calling sceLncUtilLaunchApp");
     int err = sceLncUtilLaunchApp(titleId, nullptr, &param);
-    OrionHEN_log("sceLncUtilLaunchApp returned 0x%x", (uint32_t)err);
+    OnionHEN_log("sceLncUtilLaunchApp returned 0x%x", (uint32_t)err);
     if (err >= 0) {
         return err;
     }
     
     switch ((uint32_t)err) {
     case SCE_LNC_UTIL_ERROR_ALREADY_RUNNING:
-        OrionHEN_log("app %s is already running", titleId);
+        OnionHEN_log("app %s is already running", titleId);
         break;
     case SCE_LNC_ERROR_APP_NOT_FOUND:
-        OrionHEN_log("app %s not found", titleId);
-        orion_notify(true, "app %s not found", titleId);
+        OnionHEN_log("app %s not found", titleId);
+        onion_notify(true, "app %s not found", titleId);
         break;
     default:
-        OrionHEN_log("[LA] unknown error 0x%x", (uint32_t)err);
-        // orion_notify(true, "unknown error 0x%llx", (uint32_t)err);
+        OnionHEN_log("[LA] unknown error 0x%x", (uint32_t)err);
+        // onion_notify(true, "unknown error 0x%llx", (uint32_t)err);
         break;
     }
     return err;
@@ -257,13 +257,13 @@ int launchApp(const char *titleId) {
 
 void sig_handler(int signo) {
     if(!is_handler_enabled){
-        OrionHEN_log("Signal handler is disabled, ignoring signal %d", signo);
+        OnionHEN_log("Signal handler is disabled, ignoring signal %d", signo);
         return;
     }
-    orion_notify(true,
-          "OrionHEN has crashed ...\n\nPlease send /data/OrionHEN/OrionHEN_crash.log "
+    onion_notify(true,
+          "OnionHEN has crashed ...\n\nPlease send /data/OnionHEN/OnionHEN_crash.log "
           "to the PKG-Zone discord: https://discord.gg/BduZHudWGj");
-    OrionHEN_log("main OrionHEN has crashed ...");
+    OnionHEN_log("main OnionHEN has crashed ...");
     //printBacktraceForCrash();
     exit(1);
 }
@@ -274,9 +274,9 @@ int main() {
   /* Raw 9021 uploads default to "payload.elf"; publish our stable name. */
   (void)syscall(SYS_thr_set_name, -1, "daemon.elf");
 
-  orion_log_configure("OrionHEN", "/data/OrionHEN/OrionHEN.log");
+  onion_log_configure("OnionHEN", "/data/OnionHEN/OnionHEN.log");
   /* Real linked kernel export (not a dlsym function-pointer variable). */
-  orion_notify_set_send(reinterpret_cast<orion_notify_send_fn>(
+  onion_notify_set_send(reinterpret_cast<onion_notify_send_fn>(
       sceKernelSendNotificationRequest));
 
   char buz[255];
@@ -294,21 +294,21 @@ int main() {
 
   install_crash_handlers();
 
-  unlink("/data/OrionHEN/OrionHEN.log");
-  unlink("/data/OrionHEN/OrionHEN_crash.log");
+  unlink("/data/OnionHEN/OnionHEN.log");
+  unlink("/data/OnionHEN/OnionHEN_crash.log");
 
   payload_args_t* args = payload_get_args();
   kernel_base = args->kdata_base_addr;
 
-  OrionHEN_log("=========== starting OrionHEN (0x%X) ... ===========", fw_ver);
+  OnionHEN_log("=========== starting OnionHEN (0x%X) ... ===========", fw_ver);
   (void)sceKernelMprotect(&buz[0], 100, 0x7); // probe mprotect / kstuff state
   const bool toolbox_only = (fw_ver >= 0x10000);
   is_800 = (fw_ver >= 0x800);
 
   LoadSettings();
 
-  /* liborion_proc big-app / name lookups used by get_game_pid / inject paths. */
-  orion_proc_set_sce_hooks(
+  /* libonion_proc big-app / name lookups used by get_game_pid / inject paths. */
+  onion_proc_set_sce_hooks(
       [](int pid, char *name) -> int {
         return sceKernelGetProcessName(pid, name);
       },
@@ -319,18 +319,18 @@ int main() {
 
   get_ip_address(&buz[0]);
   start_worker_threads(&fifo_thr, &pt_thr, &msg_thr);
-  orion_ready_signal(ORION_READY_DAEMON);
+  onion_ready_signal(ONION_READY_DAEMON);
 
-  OrionHEN_log("is toolbox only: %s | ver: %x", toolbox_only ? "Yes" : "No",
+  OnionHEN_log("is toolbox only: %s | ver: %x", toolbox_only ? "Yes" : "No",
                sys_ver.version);
 
   /* Always inject toolbox into ShellUI; do not auto-open any settings page. */
   cmd_enable_toolbox();
 
   sceNotificationSend(0xFE, true, kWelcomeToastJson);
-  OrionHEN_log("StartUp thread created!! - welcome to OrionHEN");
+  OnionHEN_log("StartUp thread created!! - welcome to OnionHEN");
 
-  const orion::Settings boot_cfg = g_settings.snapshot();
+  const onion::Settings boot_cfg = g_settings.snapshot();
   if (boot_cfg.auto_eject_disc)
     sceShellCoreUtilRequestEjectDevice("/dev/cd0");
 

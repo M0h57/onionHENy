@@ -10,7 +10,7 @@
 #include "mc4/base64.h"
 #include "sha256.h"
 
-void OrionHEN_log(const char *fmt, ...);
+void OnionHEN_log(const char *fmt, ...);
 
 struct AES_ctx {
   uint8_t RoundKey[240];
@@ -58,7 +58,7 @@ static int shnext_deflate_decompress(const uint8_t *data, size_t data_len,
       *out_len = result;
       return 0;
     }
-    orion_cheat_secure_zero(buf, buf_len);
+    onion_cheat_secure_zero(buf, buf_len);
     free(buf);
     buf_len *= 2;
     buf = (uint8_t *)malloc(buf_len);
@@ -67,7 +67,7 @@ static int shnext_deflate_decompress(const uint8_t *data, size_t data_len,
     }
   }
 
-  orion_cheat_secure_zero(buf, buf_len);
+  onion_cheat_secure_zero(buf, buf_len);
   free(buf);
   return -1;
 }
@@ -77,7 +77,7 @@ static void shnext_clear_json_strings(cJSON *item) {
     return;
   }
   if (item->valuestring != NULL) {
-    orion_cheat_secure_zero(item->valuestring, strlen(item->valuestring));
+    onion_cheat_secure_zero(item->valuestring, strlen(item->valuestring));
   }
   shnext_clear_json_strings(item->child);
   shnext_clear_json_strings(item->next);
@@ -133,7 +133,7 @@ static int shnext_aes256_cbc_decrypt(const uint8_t *ciphertext, size_t ct_len,
 
   AES_init_ctx_iv(&ctx, key, iv);
   AES_CBC_decrypt_buffer(&ctx, buf, ct_len);
-  orion_cheat_secure_zero(&ctx, sizeof(ctx));
+  onion_cheat_secure_zero(&ctx, sizeof(ctx));
 
   *out_len = shnext_pkcs7_unpad(buf, ct_len);
   *out = buf;
@@ -160,12 +160,12 @@ static char *shnext_decrypt_process_name(const char *b64_blob) {
 
   if (shnext_aes256_cbc_decrypt(raw + 16, raw_len - 16, proc_key, raw, &plain,
                                 &plain_len) < 0) {
-    orion_cheat_secure_zero(raw, raw_len);
-    orion_cheat_secure_zero(proc_key, sizeof(proc_key));
+    onion_cheat_secure_zero(raw, raw_len);
+    onion_cheat_secure_zero(proc_key, sizeof(proc_key));
     free(raw);
     return NULL;
   }
-  orion_cheat_secure_zero(raw, raw_len);
+  onion_cheat_secure_zero(raw, raw_len);
   free(raw);
 
   if (plain_len >= 23 && plain[17] == 0x06) {
@@ -189,8 +189,8 @@ static char *shnext_decrypt_process_name(const char *b64_blob) {
     }
   }
 
-  orion_cheat_secure_zero(plain, plain_len);
-  orion_cheat_secure_zero(proc_key, sizeof(proc_key));
+  onion_cheat_secure_zero(plain, plain_len);
+  onion_cheat_secure_zero(proc_key, sizeof(proc_key));
   free(plain);
   return result;
 }
@@ -213,10 +213,10 @@ static int shnext_parse_nop(const char *value, uint8_t *out_bytes,
   }
 
   if (sscanf(value, "nop:%d", &nop_count) == 1 && nop_count > 0 &&
-      nop_count <= (int)(ORION_MAX_PATCH_BYTES)) {
+      nop_count <= (int)(ONION_MAX_PATCH_BYTES)) {
     memset(out_bytes, 0x90, (size_t)nop_count);
     *out_len = (size_t)nop_count;
-    OrionHEN_log("[engine] shnext nop:%d -> %zu byte(s) of 0x90",
+    OnionHEN_log("[engine] shnext nop:%d -> %zu byte(s) of 0x90",
                      nop_count, *out_len);
     return 0;
   }
@@ -239,14 +239,14 @@ static int shnext_assemble(const char *asm_text, uint8_t *out_bytes,
 
   err = ks_open(KS_ARCH_X86, KS_MODE_64, &ks);
   if (err != KS_ERR_OK) {
-    OrionHEN_log("[engine] shnext keystone open failed: %s",
+    OnionHEN_log("[engine] shnext keystone open failed: %s",
                      ks_strerror(err));
     return -1;
   }
 
   rc = ks_asm(ks, asm_text, 0, &enc, &enc_size, &count);
   if (rc != 0) {
-    OrionHEN_log("[engine] shnext keystone asm failed: %s",
+    OnionHEN_log("[engine] shnext keystone asm failed: %s",
                      ks_strerror(ks_errno(ks)));
     ks_close(ks);
     return -1;
@@ -254,11 +254,11 @@ static int shnext_assemble(const char *asm_text, uint8_t *out_bytes,
 
   ks_close(ks);
 
-  if (enc_size == 0 || enc_size > ORION_MAX_PATCH_BYTES) {
-    OrionHEN_log("[engine] shnext keystone asm invalid size %zu",
+  if (enc_size == 0 || enc_size > ONION_MAX_PATCH_BYTES) {
+    OnionHEN_log("[engine] shnext keystone asm invalid size %zu",
                      enc_size);
     if(enc != NULL) {
-      orion_cheat_secure_zero(enc, enc_size);
+      onion_cheat_secure_zero(enc, enc_size);
     }
     ks_free(enc);
     return -1;
@@ -267,10 +267,10 @@ static int shnext_assemble(const char *asm_text, uint8_t *out_bytes,
   memcpy(out_bytes, enc, enc_size);
   *out_len = enc_size;
 
-  OrionHEN_log("[engine] shnext keystone asm produced %zu byte(s)",
+  OnionHEN_log("[engine] shnext keystone asm produced %zu byte(s)",
                    enc_size);
 
-  orion_cheat_secure_zero(enc, enc_size);
+  onion_cheat_secure_zero(enc, enc_size);
   ks_free(enc);
   return 0;
 }
@@ -286,7 +286,7 @@ static int shnext_asm_value_to_bytes(const char *value, uint8_t *out_bytes,
   return -1;
 }
 
-static int shnext_parse_variable(const cJSON *var_obj, orion_patch_t *patch) {
+static int shnext_parse_variable(const cJSON *var_obj, onion_patch_t *patch) {
   cJSON *field = NULL;
   const char *label = NULL;
   const char *on_str = NULL;
@@ -318,7 +318,7 @@ static int shnext_parse_variable(const cJSON *var_obj, orion_patch_t *patch) {
     patch->is_asm = true;
     patch->on_len = 0;
     if (on_str != NULL) {
-      OrionHEN_log("[engine] shnext failed to assemble on value");
+      OnionHEN_log("[engine] shnext failed to assemble on value");
     }
   }
 
@@ -330,11 +330,11 @@ static int shnext_parse_variable(const cJSON *var_obj, orion_patch_t *patch) {
     patch->is_asm = true;
     patch->off_len = 0;
     if (off_str != NULL) {
-      OrionHEN_log("[engine] shnext failed to assemble off value");
+      OnionHEN_log("[engine] shnext failed to assemble off value");
     }
   }
 
-  OrionHEN_log("[engine] shnext var label='%s' offset=0x%llx "
+  OnionHEN_log("[engine] shnext var label='%s' offset=0x%llx "
                    "on_len=%zu off_len=%zu is_asm=%d",
                    label ? label : "(none)",
                    (unsigned long long)patch->offset,
@@ -361,7 +361,7 @@ static int shnext_decrypt_patch_entry(const char *b64_blob, int entry_index,
                       &raw_len);
   if (raw == NULL || raw_len == 0 || (raw_len % AES_BLOCKLEN) != 0) {
     if(raw != NULL) {
-      orion_cheat_secure_zero(raw, raw_len);
+      onion_cheat_secure_zero(raw, raw_len);
     }
     free(raw);
     return -1;
@@ -371,41 +371,41 @@ static int shnext_decrypt_patch_entry(const char *b64_blob, int entry_index,
 
   if (shnext_aes256_cbc_decrypt(raw, raw_len, key, iv, &plain, &plain_len) <
       0) {
-    orion_cheat_secure_zero(raw, raw_len);
-    orion_cheat_secure_zero(key, sizeof(key));
-    orion_cheat_secure_zero(iv, sizeof(iv));
+    onion_cheat_secure_zero(raw, raw_len);
+    onion_cheat_secure_zero(key, sizeof(key));
+    onion_cheat_secure_zero(iv, sizeof(iv));
     free(raw);
     return -1;
   }
-  orion_cheat_secure_zero(raw, raw_len);
+  onion_cheat_secure_zero(raw, raw_len);
   free(raw);
 
   if (shnext_deflate_decompress(plain, plain_len, &json_buf, &json_len) < 0) {
-    orion_cheat_secure_zero(plain, plain_len);
-    orion_cheat_secure_zero(key, sizeof(key));
-    orion_cheat_secure_zero(iv, sizeof(iv));
+    onion_cheat_secure_zero(plain, plain_len);
+    onion_cheat_secure_zero(key, sizeof(key));
+    onion_cheat_secure_zero(iv, sizeof(iv));
     free(plain);
     return -1;
   }
-  orion_cheat_secure_zero(plain, plain_len);
+  onion_cheat_secure_zero(plain, plain_len);
   free(plain);
 
   resized_json = (uint8_t *)realloc(json_buf, json_len + 1);
   if (resized_json == NULL) {
-    orion_cheat_secure_zero(json_buf, json_len);
+    onion_cheat_secure_zero(json_buf, json_len);
     free(json_buf);
-    orion_cheat_secure_zero(key, sizeof(key));
-    orion_cheat_secure_zero(iv, sizeof(iv));
+    onion_cheat_secure_zero(key, sizeof(key));
+    onion_cheat_secure_zero(iv, sizeof(iv));
     return -1;
   }
   json_buf = resized_json;
   json_buf[json_len] = '\0';
 
   *out = cJSON_Parse((const char *)json_buf);
-  orion_cheat_secure_zero(json_buf, json_len + 1);
+  onion_cheat_secure_zero(json_buf, json_len + 1);
   free(json_buf);
-  orion_cheat_secure_zero(key, sizeof(key));
-  orion_cheat_secure_zero(iv, sizeof(iv));
+  onion_cheat_secure_zero(key, sizeof(key));
+  onion_cheat_secure_zero(iv, sizeof(iv));
 
   if (*out == NULL) {
     return -1;
@@ -414,8 +414,8 @@ static int shnext_decrypt_patch_entry(const char *b64_blob, int entry_index,
   return 0;
 }
 
-int orion_cheat_parse_shnext_buffer(const char *data, size_t size,
-                                    orion_cheat_file_t *out) {
+int onion_cheat_parse_shnext_buffer(const char *data, size_t size,
+                                    onion_cheat_file_t *out) {
   uint8_t *json_buf = NULL;
   uint8_t *resized_json = NULL;
   size_t json_len = 0;
@@ -425,7 +425,7 @@ int orion_cheat_parse_shnext_buffer(const char *data, size_t size,
   int entry_count = 0;
   char *proc_name = NULL;
 
-  orion_cheat_file_clear(out);
+  onion_cheat_file_clear(out);
 
   if (data == NULL || size == 0) {
     return -1;
@@ -433,13 +433,13 @@ int orion_cheat_parse_shnext_buffer(const char *data, size_t size,
 
   if (shnext_deflate_decompress((const uint8_t *)data, size, &json_buf,
                                 &json_len) < 0) {
-    OrionHEN_log("[engine] shnext deflate decompress failed");
+    OnionHEN_log("[engine] shnext deflate decompress failed");
     return -1;
   }
 
   resized_json = (uint8_t *)realloc(json_buf, json_len + 1);
   if (resized_json == NULL) {
-    orion_cheat_secure_zero(json_buf, json_len);
+    onion_cheat_secure_zero(json_buf, json_len);
     free(json_buf);
     return -1;
   }
@@ -447,11 +447,11 @@ int orion_cheat_parse_shnext_buffer(const char *data, size_t size,
   json_buf[json_len] = '\0';
 
   root = cJSON_Parse((const char *)json_buf);
-  orion_cheat_secure_zero(json_buf, json_len + 1);
+  onion_cheat_secure_zero(json_buf, json_len + 1);
   free(json_buf);
 
   if (root == NULL) {
-    OrionHEN_log("[engine] shnext JSON parse failed");
+    OnionHEN_log("[engine] shnext JSON parse failed");
     return -1;
   }
 
@@ -460,7 +460,7 @@ int orion_cheat_parse_shnext_buffer(const char *data, size_t size,
     proc_name = shnext_decrypt_process_name(field->valuestring);
     if (proc_name != NULL) {
       snprintf(out->process, sizeof(out->process), "%s", proc_name);
-      orion_cheat_secure_zero(proc_name, strlen(proc_name));
+      onion_cheat_secure_zero(proc_name, strlen(proc_name));
       free(proc_name);
     }
   }
@@ -482,7 +482,7 @@ int orion_cheat_parse_shnext_buffer(const char *data, size_t size,
     cJSON *entry_item = NULL;
     cJSON *vars_arr = NULL;
     cJSON *entry_field = NULL;
-    orion_cheat_entry_t *cheat = NULL;
+    onion_cheat_entry_t *cheat = NULL;
     int var_count = 0;
 
     entry_item = cJSON_GetArrayItem(entries_arr, i);
@@ -494,7 +494,7 @@ int orion_cheat_parse_shnext_buffer(const char *data, size_t size,
       continue;
     }
 
-    if (orion_cheat_file_ensure_cheat(out) != 0) {
+    if (onion_cheat_file_ensure_cheat(out) != 0) {
       cJSON_Delete(entry_json);
       continue;
     }
@@ -511,7 +511,7 @@ int orion_cheat_parse_shnext_buffer(const char *data, size_t size,
     if (cJSON_IsString(entry_field) && entry_field->valuestring != NULL) {
       snprintf(cheat->description, sizeof(cheat->description), "by %s",
                entry_field->valuestring);
-      orion_cheat_file_add_author(out, entry_field->valuestring);
+      onion_cheat_file_add_author(out, entry_field->valuestring);
     }
 
     if (out->process[0] != '\0') {
@@ -533,7 +533,7 @@ int orion_cheat_parse_shnext_buffer(const char *data, size_t size,
     for (int j = 0; j < var_count; ++j) {
       cJSON *var_obj = cJSON_GetArrayItem(vars_arr, j);
 
-      if (orion_cheat_entry_ensure_patch(cheat) != 0) {
+      if (onion_cheat_entry_ensure_patch(cheat) != 0) {
         break;
       }
       if (shnext_parse_variable(var_obj,
@@ -554,11 +554,11 @@ int orion_cheat_parse_shnext_buffer(const char *data, size_t size,
   cJSON_Delete(root);
 
   if (out->cheat_count == 0) {
-    OrionHEN_log("[engine] shnext no cheats parsed");
+    OnionHEN_log("[engine] shnext no cheats parsed");
     return -1;
   }
 
-  OrionHEN_log("[engine] shnext parsed %zu cheats",
+  OnionHEN_log("[engine] shnext parsed %zu cheats",
                    out->cheat_count);
   return 0;
 }

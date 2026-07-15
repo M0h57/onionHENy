@@ -1,4 +1,4 @@
-/* Copyright (C) 2025 OrionHEN / LightningMods
+/* Copyright (C) 2025 OnionHEN / LightningMods
 
 This program is free software; you can redistribute it and/or modify it
 under the terms of the GNU General Public License as published by the
@@ -17,8 +17,8 @@ along with this program; see the file COPYING. If not, see
 #pragma once
 #include <string>
 #include <msg.hpp>
-#include <orion/ipc_server.hpp>
-// clientArgs = orion::IpcClientArgs (see ipc_server.hpp)
+#include <onion/ipc_server.hpp>
+// clientArgs = onion::IpcClientArgs (see ipc_server.hpp)
 extern bool show_notification;
 #ifdef __cplusplus
 #define restrict // Define restrict as empty for C++

@@ -1,4 +1,4 @@
-/* Copyright (C) 2025 OrionHEN / LightningMods
+/* Copyright (C) 2025 OnionHEN / LightningMods
  *
  * Shared daemon helpers (file/net/app query) — extracted from commands.cpp.
  */
@@ -6,7 +6,7 @@
 #include "daemon_ops.hpp"
 #include "launcher.hpp"
 
-#include <orion/platform.h>
+#include <onion/platform.h>
 
 #include <errno.h>
 #include <fcntl.h>
@@ -63,7 +63,7 @@ struct UserServiceLoginUserIdList {
 bool GetFileContents(const char *path, char **buffer) {
   FILE *fp = fopen(path, "rb");
   if (fp == NULL) {
-    OrionHEN_log("failed to open %s", path);
+    OnionHEN_log("failed to open %s", path);
     return false;
   }
 
@@ -73,13 +73,13 @@ bool GetFileContents(const char *path, char **buffer) {
 
   if (size == 0) {
     fclose(fp);
-    OrionHEN_log("size is 0");
+    OnionHEN_log("size is 0");
     return false;
   }
 
   *buffer = (char *)malloc(size + 1);
   if (*buffer == NULL) {
-    OrionHEN_log("failed to allocate memory (OOM)");
+    OnionHEN_log("failed to allocate memory (OOM)");
     fclose(fp);
     return false;
   }
@@ -134,7 +134,7 @@ bool isUserLoggedIn() {
     if (userid == -1)
       continue;
     int ret = sceUserServiceGetUserName(userid, &username[0], sizeof(username));
-    OrionHEN_log("sceUserServiceGetUserName returned %d", ret);
+    OnionHEN_log("sceUserServiceGetUserName returned %d", ret);
     if (ret == 0) {
       isLoggedIn = true;
       break;
@@ -147,32 +147,32 @@ bool isUserLoggedIn() {
 
 bool Open_Utility_Elf(const char *path, uint8_t **buffer) {
   if (!path || !buffer) {
-    OrionHEN_log("Invalid arguments: path or buffer is null.");
+    OnionHEN_log("Invalid arguments: path or buffer is null.");
     return false;
   }
 
   int fd = open(path, O_RDONLY);
   if (fd < 0) {
-    OrionHEN_log("Failed to open file: %s (error: %s)", path, strerror(errno));
+    OnionHEN_log("Failed to open file: %s (error: %s)", path, strerror(errno));
     return false;
   }
 
   struct stat st;
   if (fstat(fd, &st) != 0) {
-    OrionHEN_log("Failed to get file stats for %s (error: %s)", path, strerror(errno));
+    OnionHEN_log("Failed to get file stats for %s (error: %s)", path, strerror(errno));
     close(fd);
     return false;
   }
 
   if (st.st_size == 0) {
-    OrionHEN_log("File %s is empty.", path);
+    OnionHEN_log("File %s is empty.", path);
     close(fd);
     return false;
   }
 
   uint8_t *buf = (uint8_t *)malloc((size_t)st.st_size);
   if (!buf) {
-    OrionHEN_log("Failed to allocate memory for file %s (size: %ld bytes).", path,
+    OnionHEN_log("Failed to allocate memory for file %s (size: %ld bytes).", path,
                  st.st_size);
     close(fd);
     return false;
@@ -180,7 +180,7 @@ bool Open_Utility_Elf(const char *path, uint8_t **buffer) {
 
   ssize_t bytes_read = read(fd, buf, (size_t)st.st_size);
   if (bytes_read != st.st_size) {
-    OrionHEN_log("Failed to read the entire file %s (read: %ld bytes, expected: %ld bytes).",
+    OnionHEN_log("Failed to read the entire file %s (read: %ld bytes, expected: %ld bytes).",
                  path, bytes_read, st.st_size);
     free(buf);
     close(fd);

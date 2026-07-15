@@ -1,11 +1,11 @@
 # Third-party open-source dependencies (git submodules)
 
-| Submodule | Upstream | Role in OrionHEN |
+| Submodule | Upstream | Role in OnionHEN |
 |-----------|----------|------------------|
-| [`elfldr`](elfldr/) | [ps5-payload-dev/elfldr](https://github.com/ps5-payload-dev/elfldr) | Optional source reference for the external 9021 loader. **Not** embedded or packaged by OrionHEN. |
+| [`elfldr`](elfldr/) | [ps5-payload-dev/elfldr](https://github.com/ps5-payload-dev/elfldr) | Optional source reference for the external 9021 loader. **Not** embedded or packaged by OnionHEN. |
 | [`kstuff-lite`](kstuff-lite/) | [EchoStretch/kstuff-lite](https://github.com/EchoStretch/kstuff-lite) | Provides `kstuff.elf` (vendored into bootstrapper) |
 
-## Removed from OrionHEN
+## Removed from OnionHEN
 
 | Former dependency | Reason |
 |-------------------|--------|

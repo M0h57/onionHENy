@@ -1,4 +1,4 @@
-/* Copyright (C) 2025 OrionHEN / LightningMods
+/* Copyright (C) 2025 OnionHEN / LightningMods
 
 This program is free software; you can redistribute it and/or modify it
 under the terms of the GNU General Public License as published by the
@@ -32,9 +32,9 @@ along with this program; see the file COPYING. If not, see
 #include <unistd.h>
 #include <vector>
 
-// Thin compatibility shim: implementation lives in liborion_ipc.
+// Thin compatibility shim: implementation lives in libonion_ipc.
 // game_log / shellui_log / IPC_Client are provided by the shared library.
-#include <orion/ipc_client.hpp>
+#include <onion/ipc_client.hpp>
 
 extern bool cheats_shortcut_activate;
 pid_t find_pid(const char *name, bool needle, bool for_bigapp,

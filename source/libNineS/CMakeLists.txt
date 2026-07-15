@@ -36,7 +36,7 @@ set(SrcFiles
   ${D_SRC}/main.c
   ${D_SRC}/notify.c
 )
-# pt.c / elfldr.c → liborion_elfldr; proc/ucred → liborion_proc
+# pt.c / elfldr.c → libonion_elfldr; proc/ucred → libonion_proc
 
 add_library(${PROJECT_NAME} STATIC ${SrcFiles})
 set_target_properties(${PROJECT_NAME} PROPERTIES OUTPUT_NAME "${PROJECT_NAME}")
@@ -55,24 +55,24 @@ set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fPIC")
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -gfull -O3 -march=znver2 -Wall -Werror")
 target_include_directories(${PROJECT_NAME} PRIVATE
   "${D_CWD}/include"
-  "${CMAKE_SOURCE_DIR}/liborion_proc/include"
-  "${CMAKE_SOURCE_DIR}/liborion_elfldr/include"
+  "${CMAKE_SOURCE_DIR}/libonion_proc/include"
+  "${CMAKE_SOURCE_DIR}/libonion_elfldr/include"
   "${CMAKE_SOURCE_DIR}/include"
 )
 # When built as subproject of source/, CMAKE_SOURCE_DIR is source/
 # Prefer PROJECT_ROOT if parent set it.
 if(DEFINED PROJECT_ROOT)
   target_include_directories(${PROJECT_NAME} PRIVATE
-    "${PROJECT_ROOT}/liborion_proc/include"
-    "${PROJECT_ROOT}/liborion_elfldr/include"
+    "${PROJECT_ROOT}/libonion_proc/include"
+    "${PROJECT_ROOT}/libonion_elfldr/include"
     "${PROJECT_ROOT}/include"
   )
 endif()
-if(TARGET orion_proc)
-  add_dependencies(${PROJECT_NAME} orion_proc)
+if(TARGET onion_proc)
+  add_dependencies(${PROJECT_NAME} onion_proc)
 endif()
-if(TARGET orion_elfldr)
-  add_dependencies(${PROJECT_NAME} orion_elfldr)
-  target_link_libraries(${PROJECT_NAME} PUBLIC orion_elfldr)
+if(TARGET onion_elfldr)
+  add_dependencies(${PROJECT_NAME} onion_elfldr)
+  target_link_libraries(${PROJECT_NAME} PUBLIC onion_elfldr)
 endif()
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)

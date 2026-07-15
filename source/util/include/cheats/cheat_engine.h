@@ -11,17 +11,17 @@
 extern "C" {
 #endif
 
-/* Patch byte cap (fixed arrays in orion_patch_t). Cheat/patch counts are dynamic. */
-#ifndef ORION_MAX_PATCH_BYTES
-#define ORION_MAX_PATCH_BYTES 1024
+/* Patch byte cap (fixed arrays in onion_patch_t). Cheat/patch counts are dynamic. */
+#ifndef ONION_MAX_PATCH_BYTES
+#define ONION_MAX_PATCH_BYTES 1024
 #endif
 
 /* File-level credit authors (GoldHEN credits / SHN Moder / ShnExt author). */
-#ifndef ORION_MAX_AUTHORS
-#define ORION_MAX_AUTHORS 16
+#ifndef ONION_MAX_AUTHORS
+#define ONION_MAX_AUTHORS 16
 #endif
-#ifndef ORION_AUTHOR_NAME_LEN
-#define ORION_AUTHOR_NAME_LEN 64
+#ifndef ONION_AUTHOR_NAME_LEN
+#define ONION_AUTHOR_NAME_LEN 64
 #endif
 
 /* Section bounds (matches util_module_info_t / NineS util_module_info_t) */
@@ -37,9 +37,9 @@ typedef struct {
   uint64_t offset;
   size_t on_len;
   size_t off_len;
-  uint8_t on[ORION_MAX_PATCH_BYTES];
-  uint8_t off[ORION_MAX_PATCH_BYTES];
-} orion_patch_t;
+  uint8_t on[ONION_MAX_PATCH_BYTES];
+  uint8_t off[ONION_MAX_PATCH_BYTES];
+} onion_patch_t;
 
 typedef struct {
   char name[128];
@@ -48,28 +48,28 @@ typedef struct {
   bool enabled;
   size_t patch_count;
   size_t patch_capacity;
-  orion_patch_t *patches;
-} orion_cheat_entry_t;
+  onion_patch_t *patches;
+} onion_cheat_entry_t;
 
 typedef struct {
   char name[128];
   char process[128];
   size_t author_count;
-  char authors[ORION_MAX_AUTHORS][ORION_AUTHOR_NAME_LEN];
+  char authors[ONION_MAX_AUTHORS][ONION_AUTHOR_NAME_LEN];
   size_t cheat_count;
   size_t cheat_capacity;
   int master_code_id;
   pid_t last_applied_pid;
-  orion_cheat_entry_t *cheats;
-} orion_cheat_file_t;
+  onion_cheat_entry_t *cheats;
+} onion_cheat_file_t;
 
-void orion_cheat_file_clear(orion_cheat_file_t *f);
+void onion_cheat_file_clear(onion_cheat_file_t *f);
 /** Append unique non-empty author; returns 0 on success/duplicate, -1 if full/invalid. */
-int orion_cheat_file_add_author(orion_cheat_file_t *f, const char *author);
-int orion_cheat_file_ensure_cheat(orion_cheat_file_t *f);
-int orion_cheat_entry_ensure_patch(orion_cheat_entry_t *e);
+int onion_cheat_file_add_author(onion_cheat_file_t *f, const char *author);
+int onion_cheat_file_ensure_cheat(onion_cheat_file_t *f);
+int onion_cheat_entry_ensure_patch(onion_cheat_entry_t *e);
 
-/* Load path: orion::cheats::CheatParserFactory / CheatRepository (C++ only). */
+/* Load path: onion::cheats::CheatParserFactory / CheatRepository (C++ only). */
 
 #ifdef __cplusplus
 }

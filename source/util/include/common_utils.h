@@ -1,4 +1,4 @@
-/* Copyright (C) 2025 OrionHEN / LightningMods
+/* Copyright (C) 2025 OnionHEN / LightningMods
 
 This program is free software; you can redistribute it and/or modify it
 under the terms of the GNU General Public License as published by the
@@ -92,12 +92,12 @@ typedef struct notify_request
 } notify_request_t;
 
 /*================ SETTINGS ==============*/
-/* Persisted keys: orion::SettingsStore. Concurrent CMD flags stay atomic.
+/* Persisted keys: onion::SettingsStore. Concurrent CMD flags stay atomic.
  * Always C++ linkage even when this header is included under extern "C". */
 #ifdef __cplusplus
 extern "C++" {
-#include <orion/settings.hpp>
-extern orion::SettingsStore g_settings;
+#include <onion/settings.hpp>
+extern onion::SettingsStore g_settings;
 /** Reload twin config into g_settings; missing file applies defaults (true). */
 bool LoadSettings();
 } /* extern "C++" */
@@ -105,8 +105,8 @@ bool LoadSettings();
 extern atomic_bool g_legacy_cmd_server;
 extern atomic_bool g_legacy_cmd_server_exit;
 /*================ SETTINGS ==============*/
-/* Payload load helpers (shared orion_payload). */
-#include <orion/payload.h>
+/* Payload load helpers (shared onion_payload). */
+#include <onion/payload.h>
 
 /* load_payload: see extern "C" block below */
 
@@ -122,7 +122,7 @@ enum Commands
 	KILL_APP_CMD,
 	JAILBREAK_CMD,
 	REMOUNT_FOLDER_CMD,
-	ORIONHEN_VER_CMD,
+	ONIONHEN_VER_CMD,
 	PATCH_LNC_DEBUG_CMD,
 	TEST_CMD,
 	SYMLINK_CMD,
@@ -148,7 +148,7 @@ typedef struct
 } OrbisNotificationRequest;	 // Size = 0xC30
 
 
-#include <orion/lnc.h>
+#include <onion/lnc.h>
 
 bool copyFile(const char *source, const char *destination);
 
@@ -163,8 +163,8 @@ bool IniliatizeHTTP(void);
 extern "C" {
 #endif
 int get_ip_address(char *ip_address);
-#include <orion/platform.h>
-#include <orion/proc_query.h>
+#include <onion/platform.h>
+#include <onion/proc_query.h>
 int sceNetCtlInit(void);
 int sceUserServiceInitialize(void *ptr);
 bool load_payload(const char *path);

@@ -5,7 +5,7 @@
 #include <memory>
 #include <sys/types.h>
 
-namespace orion::cheats {
+namespace onion::cheats {
 
 /** Strategy: remote process memory access for patch apply. */
 class IMemoryBackend {
@@ -23,4 +23,4 @@ public:
   static std::unique_ptr<IMemoryBackend> create(uint32_t fw_major);
 };
 
-} // namespace orion::cheats
+} // namespace onion::cheats

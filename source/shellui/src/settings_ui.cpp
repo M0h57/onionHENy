@@ -1,13 +1,13 @@
-/* Copyright (C) 2025 OrionHEN / LightningMods
+/* Copyright (C) 2025 OnionHEN / LightningMods
  *
  * Extracted from MonoUtils.cpp for module locality.
  */
 
 #include "HookedFuncs.hpp"
-#include <orion/platform.h>
-#include <orion/ready.h>
+#include <onion/platform.h>
+#include <onion/ready.h>
 #include "ipc.hpp" // shellui_log + IPC_Client
-#include <orion/settings.hpp>
+#include <onion/settings.hpp>
 
 void apply_overlay_layout() {
   /*
@@ -97,18 +97,18 @@ void apply_overlay_layout() {
 
 bool LoadSettings()
 {
-  orion::Settings s{};
+  onion::Settings s{};
   /* false from settings_load means defaults only — not a hard failure. */
-  if (!orion::settings_load(&s)) {
+  if (!onion::settings_load(&s)) {
     shellui_log("config.ini missing; using defaults");
   } else {
-    shellui_log("Loaded settings from %s", orion::settings_last_loaded_path());
+    shellui_log("Loaded settings from %s", onion::settings_last_loaded_path());
   }
 
   // Process-local store (UI thread); twin disk paths via settings_load/save.
   g_settings = s;
   if (g_settings.overlay_fps) {
-    orion_ready_signal(ORION_FLAG_FPS_OVERLAY);
+    onion_ready_signal(ONION_FLAG_FPS_OVERLAY);
   }
   apply_overlay_layout();
   /* Always true once defaults-or-file applied (prx boot requires success). */
@@ -117,7 +117,7 @@ bool LoadSettings()
 
 bool SaveSettings()
 {
-  if (!orion::settings_save(g_settings)) {
+  if (!onion::settings_save(g_settings)) {
     shellui_log("Failed to save settings to any config path");
     return false;
   }

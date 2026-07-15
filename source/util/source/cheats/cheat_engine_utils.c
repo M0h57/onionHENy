@@ -7,7 +7,7 @@
 
 #include "util_platform.h"
 
-void OrionHEN_log(const char *fmt, ...);
+void OnionHEN_log(const char *fmt, ...);
 
 /**
  * 跳过字符串中的空白字符。
@@ -16,7 +16,7 @@ void OrionHEN_log(const char *fmt, ...);
  * @param end 字符串结束指针。
  * @return 跳过空白后的新指针位置。
  */
-const char *orion_cheat_skip_ws(const char *p, const char *end) {
+const char *onion_cheat_skip_ws(const char *p, const char *end) {
   while (p < end && isspace((unsigned char)*p)) {
     ++p;
   }
@@ -32,7 +32,7 @@ const char *orion_cheat_skip_ws(const char *p, const char *end) {
  * @param key 待查找的键名。
  * @return 找到时返回键值对中冒号后的位置，未找到返回 NULL。
  */
-const char *orion_cheat_find_key(const char *start, const char *end,
+const char *onion_cheat_find_key(const char *start, const char *end,
                                  const char *key) {
   char pattern[64];
   const char *p = start;
@@ -43,7 +43,7 @@ const char *orion_cheat_find_key(const char *start, const char *end,
       return NULL;
     }
     p += strlen(pattern);
-    p = orion_cheat_skip_ws(p, end);
+    p = onion_cheat_skip_ws(p, end);
     if (p < end && *p == ':') {
       return p + 1;
     }
@@ -62,7 +62,7 @@ const char *orion_cheat_find_key(const char *start, const char *end,
  * @param close_ch 结束括号字符。
  * @return 匹配的结束括号位置，未找到返回 NULL。
  */
-const char *orion_cheat_find_matching(const char *start, const char *end,
+const char *onion_cheat_find_matching(const char *start, const char *end,
                                       char open_ch, char close_ch) {
   int depth = 0;
   bool in_string = false;
@@ -99,9 +99,9 @@ const char *orion_cheat_find_matching(const char *start, const char *end,
  * @param out_size 输出缓冲区的大小。
  * @return 成功返回 0，失败返回 -1。
  */
-int orion_cheat_extract_string(const char *start, const char *end,
+int onion_cheat_extract_string(const char *start, const char *end,
                                const char *key, char *out, size_t out_size) {
-  const char *p = orion_cheat_find_key(start, end, key);
+  const char *p = onion_cheat_find_key(start, end, key);
   const char *q = NULL;
   size_t len = 0;
 
@@ -110,7 +110,7 @@ int orion_cheat_extract_string(const char *start, const char *end,
     return -1;
   }
 
-  p = orion_cheat_skip_ws(p, end);
+  p = onion_cheat_skip_ws(p, end);
   if (p >= end || *p != '"') {
     return -1;
   }
@@ -147,9 +147,9 @@ int orion_cheat_extract_string(const char *start, const char *end,
  * @param out_size 输出缓冲区的大小。
  * @return 成功返回 0，失败返回 -1。
  */
-int orion_cheat_extract_scalar(const char *start, const char *end,
+int onion_cheat_extract_scalar(const char *start, const char *end,
                                const char *key, char *out, size_t out_size) {
-  const char *p = orion_cheat_find_key(start, end, key);
+  const char *p = onion_cheat_find_key(start, end, key);
   const char *q = NULL;
   size_t len = 0;
 
@@ -158,13 +158,13 @@ int orion_cheat_extract_scalar(const char *start, const char *end,
     return -1;
   }
 
-  p = orion_cheat_skip_ws(p, end);
+  p = onion_cheat_skip_ws(p, end);
   if (p >= end) {
     return -1;
   }
 
   if (*p == '"') {
-    return orion_cheat_extract_string(start, end, key, out, out_size);
+    return onion_cheat_extract_string(start, end, key, out, out_size);
   }
 
   q = p;
@@ -192,7 +192,7 @@ int orion_cheat_extract_scalar(const char *start, const char *end,
  * @param out_len 输出参数，实际解码的字节数。
  * @return 成功返回 0，失败返回 -1。
  */
-int orion_cheat_hex_decode(const char *hex, uint8_t *out, size_t max_len,
+int onion_cheat_hex_decode(const char *hex, uint8_t *out, size_t max_len,
                            size_t *out_len) {
   size_t len = strlen(hex);
   size_t i = 0;
@@ -231,20 +231,20 @@ int orion_cheat_hex_decode(const char *hex, uint8_t *out, size_t max_len,
  * @param size_out 输出参数，文件大小（字节）。
  * @return 指向文件内容的缓冲区指针（需调用者 free），失败返回 NULL。
  */
-char *orion_cheat_load_file_buffer(const char *path, long *size_out) {
+char *onion_cheat_load_file_buffer(const char *path, long *size_out) {
   char *buf = NULL;
   size_t buf_size = 0;
 
-  OrionHEN_log("[engine] load_file_buffer path=%s",
+  OnionHEN_log("[engine] load_file_buffer path=%s",
                    path ? path : "(null)");
   if (util_file_read_alloc(path, &buf, &buf_size, (size_t)-1) < 0) {
-    OrionHEN_log("[engine] load_file_buffer failed path=%s", path);
+    OnionHEN_log("[engine] load_file_buffer failed path=%s", path);
     return NULL;
   }
   if (size_out != NULL) {
     *size_out = (long)buf_size;
   }
-  OrionHEN_log("[engine] load_file_buffer ok size=%zu",
+  OnionHEN_log("[engine] load_file_buffer ok size=%zu",
                    buf_size);
   return buf;
 }
@@ -259,7 +259,7 @@ char *orion_cheat_load_file_buffer(const char *path, long *size_out) {
  * @param to 替换后的目标子串。
  * @return 无返回值。
  */
-void orion_cheat_replace_all(char *text, size_t cap, const char *from,
+void onion_cheat_replace_all(char *text, size_t cap, const char *from,
                              const char *to) {
   size_t text_len = strlen(text);
   size_t tmp_cap = (text_len + 1) * 4;
@@ -292,11 +292,11 @@ void orion_cheat_replace_all(char *text, size_t cap, const char *from,
   }
   *dst = '\0';
   snprintf(text, cap, "%s", tmp);
-  orion_cheat_secure_zero(tmp, tmp_cap);
+  onion_cheat_secure_zero(tmp, tmp_cap);
   free(tmp);
 }
 
-void orion_cheat_secure_zero(void *ptr, size_t len) {
+void onion_cheat_secure_zero(void *ptr, size_t len) {
   volatile unsigned char *p = (volatile unsigned char *)ptr;
 
   if (p == NULL) {
@@ -307,26 +307,26 @@ void orion_cheat_secure_zero(void *ptr, size_t len) {
   }
 }
 
-void orion_cheat_file_clear(orion_cheat_file_t *f) {
+void onion_cheat_file_clear(onion_cheat_file_t *f) {
   if (f == NULL) return;
   for (size_t i = 0; i < f->cheat_count; i++) {
     if (f->cheats[i].patches != NULL) {
-      orion_cheat_secure_zero(f->cheats[i].patches,
+      onion_cheat_secure_zero(f->cheats[i].patches,
                               f->cheats[i].patch_capacity *
-                                  sizeof(orion_patch_t));
+                                  sizeof(onion_patch_t));
     }
     free(f->cheats[i].patches);
   }
   if (f->cheats != NULL) {
-    orion_cheat_secure_zero(f->cheats,
-                            f->cheat_capacity * sizeof(orion_cheat_entry_t));
+    onion_cheat_secure_zero(f->cheats,
+                            f->cheat_capacity * sizeof(onion_cheat_entry_t));
   }
   free(f->cheats);
   memset(f, 0, sizeof(*f));
   f->master_code_id = -1;
 }
 
-int orion_cheat_file_add_author(orion_cheat_file_t *f, const char *author) {
+int onion_cheat_file_add_author(onion_cheat_file_t *f, const char *author) {
   size_t i = 0;
 
   if (f == NULL || author == NULL || author[0] == '\0') {
@@ -337,35 +337,35 @@ int orion_cheat_file_add_author(orion_cheat_file_t *f, const char *author) {
       return 0;
     }
   }
-  if (f->author_count >= ORION_MAX_AUTHORS) {
+  if (f->author_count >= ONION_MAX_AUTHORS) {
     return -1;
   }
-  snprintf(f->authors[f->author_count], ORION_AUTHOR_NAME_LEN, "%s", author);
+  snprintf(f->authors[f->author_count], ONION_AUTHOR_NAME_LEN, "%s", author);
   ++f->author_count;
   return 0;
 }
 
-int orion_cheat_file_ensure_cheat(orion_cheat_file_t *f) {
+int onion_cheat_file_ensure_cheat(onion_cheat_file_t *f) {
   if (f == NULL) return -1;
   if (f->cheat_count < f->cheat_capacity) return 0;
   size_t new_cap = f->cheat_capacity == 0 ? 4 : f->cheat_capacity * 2;
-  orion_cheat_entry_t *new_arr = realloc(f->cheats, new_cap * sizeof(orion_cheat_entry_t));
+  onion_cheat_entry_t *new_arr = realloc(f->cheats, new_cap * sizeof(onion_cheat_entry_t));
   if (new_arr == NULL) return -1;
   memset(&new_arr[f->cheat_capacity], 0,
-         (new_cap - f->cheat_capacity) * sizeof(orion_cheat_entry_t));
+         (new_cap - f->cheat_capacity) * sizeof(onion_cheat_entry_t));
   f->cheats = new_arr;
   f->cheat_capacity = new_cap;
   return 0;
 }
 
-int orion_cheat_entry_ensure_patch(orion_cheat_entry_t *e) {
+int onion_cheat_entry_ensure_patch(onion_cheat_entry_t *e) {
   if (e == NULL) return -1;
   if (e->patch_count < e->patch_capacity) return 0;
   size_t new_cap = e->patch_capacity == 0 ? 4 : e->patch_capacity * 2;
-  orion_patch_t *new_arr = realloc(e->patches, new_cap * sizeof(orion_patch_t));
+  onion_patch_t *new_arr = realloc(e->patches, new_cap * sizeof(onion_patch_t));
   if (new_arr == NULL) return -1;
   memset(&new_arr[e->patch_capacity], 0,
-         (new_cap - e->patch_capacity) * sizeof(orion_patch_t));
+         (new_cap - e->patch_capacity) * sizeof(onion_patch_t));
   e->patches = new_arr;
   e->patch_capacity = new_cap;
   return 0;

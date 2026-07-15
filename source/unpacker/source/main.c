@@ -1,4 +1,4 @@
-/* Copyright (C) 2025 OrionHEN / LightningMods
+/* Copyright (C) 2025 OnionHEN / LightningMods
 
 This program is free software; you can redistribute it and/or modify it
 under the terms of the GNU General Public License as published by the
@@ -83,28 +83,28 @@ void notify(const char *text, ...) {
 
 __asm__(".intel_syntax noprefix\n"
         ".section .data\n"
-        ".global orionhen_compressed\n"
-        ".type   orionhen_compressed, @object\n"
+        ".global onionhen_compressed\n"
+        ".type   onionhen_compressed, @object\n"
         ".align  16\n"
-        "orionhen_compressed:\n"
+        "onionhen_compressed:\n"
         /* source/bin → build/bin (symlink); same layout as other embeds */
         ".incbin \"../../bin/bootstrapper.elf.lzma\"\n"
-        "orionhen_compressed_end:\n"
-        ".global orionhen_compressed_size\n"
-        ".type  orionhen_compressed_size, @object\n"
+        "onionhen_compressed_end:\n"
+        ".global onionhen_compressed_size\n"
+        ".type  onionhen_compressed_size, @object\n"
         ".align  4\n"
-        "orionhen_compressed_size:\n"
-        ".int    orionhen_compressed_end - orionhen_compressed\n"
-        ".global orionhen_decompressed_size\n"
-        ".type   orionhen_decompressed_size, @object\n"
+        "onionhen_compressed_size:\n"
+        ".int    onionhen_compressed_end - onionhen_compressed\n"
+        ".global onionhen_decompressed_size\n"
+        ".type   onionhen_decompressed_size, @object\n"
         ".align  16\n"
-        "orionhen_decompressed_size:\n"
+        "onionhen_decompressed_size:\n"
         ".incbin \"../../bin/bootstrapper.elf.lzma.size\"\n");
 
-extern uint32_t orionhen_compressed_size;
-extern uint8_t orionhen_compressed[];
-extern uint8_t orionhen_compressed_end[];
-extern uint8_t orionhen_decompressed_size[];
+extern uint32_t onionhen_compressed_size;
+extern uint8_t onionhen_compressed[];
+extern uint8_t onionhen_compressed_end[];
+extern uint8_t onionhen_decompressed_size[];
 
 bool send_to_elfldr(const void* buffer, size_t buffer_size) {
     int sockfd = -1;
@@ -160,22 +160,22 @@ bool send_to_elfldr(const void* buffer, size_t buffer_size) {
 
 int main() {
 
-  if (orionhen_compressed_size <= 0) {
-    printf("Invalid OrionHEN payload! unable to unpack it!");
+  if (onionhen_compressed_size <= 0) {
+    printf("Invalid OnionHEN payload! unable to unpack it!");
     return 0;
   }
 
-  size_t decompress_size = atoi((char *)orionhen_decompressed_size);
+  size_t decompress_size = atoi((char *)onionhen_decompressed_size);
   // printf("Decompressed size: %zu bytes\nCompressed: %d\n", size,
-  // orionhen_compressed_size); printf("Payload has %d bytes, decompressing...\n",
-  // orionhen_compressed_size);
+  // onionhen_compressed_size); printf("Payload has %d bytes, decompressing...\n",
+  // onionhen_compressed_size);
   uint8_t *decompressed = (uint8_t *)malloc(decompress_size);
   if (!decompressed) {
-    notify("Failed to allocate memory for decompressed OrionHEN payload!");
+    notify("Failed to allocate memory for decompressed OnionHEN payload!");
     return -1;
   }
   size_t size = decompress_size;
-  size_t srcLen = orionhen_compressed_size;
+  size_t srcLen = onionhen_compressed_size;
 
   //
   // The PROPS used by the LZMA is located at the first 5 bytes of the file, the
@@ -183,19 +183,19 @@ int main() {
   // compressed data
   //
   int res = LzmaUncompress(decompressed, &size,
-                           orionhen_compressed + LZMA_CLI_HEADER_SIZE, &srcLen,
-                           orionhen_compressed, LZMA_PROPS_SIZE);
+                           onionhen_compressed + LZMA_CLI_HEADER_SIZE, &srcLen,
+                           onionhen_compressed, LZMA_PROPS_SIZE);
   if (res != 0) {
-    notify("Failed to decompress OrionHEN payload! error: %d", res);
+    notify("Failed to decompress OnionHEN payload! error: %d", res);
     free(decompressed);
     return -1;
   }
 
-  puts("Bootstrapping OrionHEN.elf...");
+  puts("Bootstrapping OnionHEN.elf...");
 
-  mkdir("/data/OrionHEN", 0777);
+  mkdir("/data/OnionHEN", 0777);
   // cache decompressed payload for re-launch / recovery
-  int fd = open("/data/OrionHEN/OrionHEN.bin", O_WRONLY | O_CREAT | O_TRUNC, 0666);
+  int fd = open("/data/OnionHEN/OnionHEN.bin", O_WRONLY | O_CREAT | O_TRUNC, 0666);
   if (fd >= 0) {
 
     // Write the buffer to the file
@@ -208,7 +208,7 @@ int main() {
   }
 
   if(!send_to_elfldr(decompressed, decompress_size)) {
-    notify("The elfldr on port 9021 is REQUIRED for OrionHEN make sure its running and try again!");
+    notify("The elfldr on port 9021 is REQUIRED for OnionHEN make sure its running and try again!");
     free(decompressed);
     return -1;
   }

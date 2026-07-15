@@ -2,15 +2,15 @@
 #include "test_harness.h"
 
 #include <msg.hpp>
-#include <orion/ipc_server.hpp>
+#include <onion/ipc_server.hpp>
 
 #include <cstring>
 #include <string>
 #include <type_traits>
 
 static int test_ipc_paths_and_magic(void) {
-  TEST_ASSERT_STREQ("/system_tmp/OrionHEN_crit_service", CRIT_IPC_SOC);
-  TEST_ASSERT_STREQ("/system_tmp/OrionHEN_util_service", UTIL_IPC_SOC);
+  TEST_ASSERT_STREQ("/system_tmp/OnionHEN_crit_service", CRIT_IPC_SOC);
+  TEST_ASSERT_STREQ("/system_tmp/OnionHEN_util_service", UTIL_IPC_SOC);
   TEST_ASSERT_EQ_INT(0x1000, DAEMON_BUFF_MAX);
 
   IPCMessage msg{};
@@ -46,8 +46,8 @@ static int test_special_commands_stable(void) {
   TEST_ASSERT_EQ_U64(0xDEAD0001u, static_cast<unsigned>(BREW_KILL_DAEMON));
   TEST_ASSERT_EQ_U64(0xDEAD0002u, static_cast<unsigned>(BREW_SHUTDOWN_STACK));
   TEST_ASSERT_EQ_U64(0xDEADCAFEu, static_cast<unsigned>(BREW_FORCE_KILL_PID));
-  TEST_ASSERT_EQ_INT(9048, ORION_CTRL_TCP_PORT);
-  TEST_ASSERT_EQ_U64(0x4F52494Fu, static_cast<unsigned>(ORION_CTRL_TCP_MAGIC));
+  TEST_ASSERT_EQ_INT(9048, ONION_CTRL_TCP_PORT);
+  TEST_ASSERT_EQ_U64(0x4F4E494Fu, static_cast<unsigned>(ONION_CTRL_TCP_MAGIC));
   return 0;
 }
 
@@ -72,7 +72,7 @@ static int test_message_pod_layout(void) {
 }
 
 static int test_ipc_format_reply_body(void) {
-  using orion::ipc_format_reply_body;
+  using onion::ipc_format_reply_body;
   std::string ok = ipc_format_reply_body(false, "Nothing");
   std::string err = ipc_format_reply_body(true, "fail");
   std::string tid = ipc_format_reply_body(false, "CUSA12345");
@@ -85,12 +85,12 @@ static int test_ipc_format_reply_body(void) {
 
 extern "C" int test_msg_protocol_suite(void) {
   int failures = 0;
-  failures += orion_test_run("ipc_paths_magic", test_ipc_paths_and_magic);
-  failures += orion_test_run("crit_cmd_base_order", test_crit_command_base_and_order);
-  failures += orion_test_run("util_cmd_base", test_util_command_base);
-  failures += orion_test_run("special_cmds_stable", test_special_commands_stable);
-  failures += orion_test_run("ipc_ret_distinct", test_ipc_ret_distinct);
-  failures += orion_test_run("message_pod_layout", test_message_pod_layout);
-  failures += orion_test_run("ipc_format_reply_body", test_ipc_format_reply_body);
+  failures += onion_test_run("ipc_paths_magic", test_ipc_paths_and_magic);
+  failures += onion_test_run("crit_cmd_base_order", test_crit_command_base_and_order);
+  failures += onion_test_run("util_cmd_base", test_util_command_base);
+  failures += onion_test_run("special_cmds_stable", test_special_commands_stable);
+  failures += onion_test_run("ipc_ret_distinct", test_ipc_ret_distinct);
+  failures += onion_test_run("message_pod_layout", test_message_pod_layout);
+  failures += onion_test_run("ipc_format_reply_body", test_ipc_format_reply_body);
   return failures;
 }

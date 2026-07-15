@@ -1,4 +1,4 @@
-/* Copyright (C) 2025 OrionHEN / LightningMods
+/* Copyright (C) 2025 OnionHEN / LightningMods
  * ShellUI OnPress_Hook — table-driven toolbox press dispatch.
  */
 #include "onpress.hpp"
@@ -55,7 +55,7 @@ int OnPress_Hook(MonoObject *Instance, MonoObject *element, MonoObject *e) {
   ctx.value = GetPropertyValue(element, "Value");
   ctx.title = GetPropertyValue(element, "Title");
 
-  bool is_orionhen_pl = (ctx.id.rfind("id_orionhen_pl_loader_", 0) == 0);
+  bool is_onionhen_pl = (ctx.id.rfind("id_onionhen_pl_loader_", 0) == 0);
 
   if (ctx.id.rfind("id_cheat_", 0) == 0 && !g_ui.is_current_game_open) {
     notify("The Game is not running, to activate cheats launch the game first");
@@ -69,7 +69,7 @@ int OnPress_Hook(MonoObject *Instance, MonoObject *element, MonoObject *e) {
   bool isExcludedId =
       std::find(excludedIds.begin(), excludedIds.end(), ctx.id) !=
       excludedIds.end();
-  if (ctx.value.empty() && !isExcludedId && !is_orionhen_pl) {
+  if (ctx.value.empty() && !isExcludedId && !is_onionhen_pl) {
 #if SHELL_DEBUG == 1
     shellui_log("[LM HOOK] OnPress_Hook: Id: %s has no value set",
                 ctx.id.c_str());
@@ -109,7 +109,7 @@ int OnPress_Hook(MonoObject *Instance, MonoObject *element, MonoObject *e) {
   run_exact(onpress_misc_exact);
 
   if (result == OnPressResult::Consumed) {
-    // Fully owned by OrionHEN (dynamic XML). Skip stock SettingPage.OnPressed.
+    // Fully owned by OnionHEN (dynamic XML). Skip stock SettingPage.OnPressed.
     if (ctx.dirty) {
       settings_commit(ctx.reload_main, ctx.reload_util);
     }

@@ -1,4 +1,4 @@
-/* Copyright (C) 2025 OrionHEN / LightningMods
+/* Copyright (C) 2025 OnionHEN / LightningMods
  *
  * Table-driven OnPress dispatch for ShellUI toolbox items.
  */
@@ -8,8 +8,8 @@
 #include "shellui_types.hpp"
 #include "HookedFuncs.hpp"
 #include "ipc.hpp"
-#include <orion/platform.h>
-#include <orion/proc_query.h>
+#include <onion/platform.h>
+#include <onion/proc_query.h>
 #include <cstddef>
 #include <string>
 

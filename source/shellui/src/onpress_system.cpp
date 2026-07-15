@@ -1,4 +1,4 @@
-/* Copyright (C) 2025 OrionHEN / LightningMods — OnPress system settings domain */
+/* Copyright (C) 2025 OnionHEN / LightningMods — OnPress system settings domain */
 #include "onpress.hpp"
 #include <cstdlib>
 
@@ -14,22 +14,22 @@ static OnPressResult id_debug_jb(OnPressContext &ctx) {
 }
 
 static OnPressResult id_custom_game_opts(OnPressContext &ctx) {
-  if (atoi(ctx.value.c_str()) == g_settings.orionhen_game_opts) {
-    shellui_log("OrionHEN Game Options already %s",
-                g_settings.orionhen_game_opts ? "Enabled" : "Disabled");
+  if (atoi(ctx.value.c_str()) == g_settings.onionhen_game_opts) {
+    shellui_log("OnionHEN Game Options already %s",
+                g_settings.onionhen_game_opts ? "Enabled" : "Disabled");
     return OnPressResult::EarlyReturn;
   }
-  g_settings.orionhen_game_opts = !g_settings.orionhen_game_opts;
-  shellui_log("OrionHEN Game Options: %s",
-              g_settings.orionhen_game_opts ? "Enabled" : "Disabled");
+  g_settings.onionhen_game_opts = !g_settings.onionhen_game_opts;
+  shellui_log("OnionHEN Game Options: %s",
+              g_settings.onionhen_game_opts ? "Enabled" : "Disabled");
   return OnPressResult::Handled;
 }
 
 static OnPressResult id_selected_cheats_repo(OnPressContext &ctx) {
   g_settings.selected_cheats_repo = atoi(ctx.value.c_str());
   shellui_log("Selected cheats repo: %s",
-              g_settings.selected_cheats_repo == CHEATS_REPO_ORIONHEN
-                  ? "OrionHEN PS5"
+              g_settings.selected_cheats_repo == CHEATS_REPO_ONIONHEN
+                  ? "OnionHEN PS5"
                   : "GoldHEN PS4");
   return OnPressResult::Handled;
 }

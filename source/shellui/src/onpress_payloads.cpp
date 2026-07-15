@@ -1,4 +1,4 @@
-/* Copyright (C) 2025 OrionHEN / LightningMods — OnPress payloads / auto-start */
+/* Copyright (C) 2025 OnionHEN / LightningMods — OnPress payloads / auto-start */
 #include "onpress.hpp"
 #include <fcntl.h>
 #include <pthread.h>

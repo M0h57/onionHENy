@@ -1,4 +1,4 @@
-/* Copyright (C) 2025 OrionHEN / LightningMods
+/* Copyright (C) 2025 OnionHEN / LightningMods
 
 This program is free software; you can redistribute it and/or modify it
 under the terms of the GNU General Public License as published by the
@@ -20,10 +20,10 @@ along with this program; see the file COPYING. If not, see
 // SDK / pad / video-out / net typedefs do NOT belong here — use the payload
 // SDK headers or local decls in the .cpp that needs them.
 
-#include <orion/settings.hpp>
+#include <onion/settings.hpp>
 
 // Thread-safe process store (same schema as util / shellui).
 // Readers: g_settings.snapshot().  Writers: g_settings.store / update.
-extern orion::SettingsStore g_settings;
+extern onion::SettingsStore g_settings;
 
 int launchApp(const char *titleId);

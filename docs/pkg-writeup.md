@@ -11,8 +11,8 @@ This implementation requires one of the following privilege escalation methods:
 1. **Auth ID Modification**: Modify the auth ID within the `struct ucred` authentication information to match ShellCore's identifier (`0x3800000000000010`)
 
 2. **Other Options**:
-   - For FPKG applications: Utilize OrionHEN's Jailbreak IPC Command functionality
-   - For integrated solutions: Leverage OrionHEN payload ELF loading or [ps5-payload-dev SDK](https://github.com/ps5-payload-dev/sdk)
+   - For FPKG applications: Utilize OnionHEN's Jailbreak IPC Command functionality
+   - For integrated solutions: Leverage OnionHEN payload ELF loading or [ps5-payload-dev SDK](https://github.com/ps5-payload-dev/sdk)
 
 ## Module Requirements
 
@@ -21,7 +21,7 @@ The procedure necessitates loading and initializing the system module:
 /system/common/lib/libSceAppInstUtil.sprx
 ```
 
-Note: When developing for the OrionHEN Plugin System or building ELF executables with the ps5-payload-dev SDK, this module dependency is automatically resolved when the SceAppInstallUtil stub is properly linked.
+Note: When developing for the OnionHEN Plugin System or building ELF executables with the ps5-payload-dev SDK, this module dependency is automatically resolved when the SceAppInstallUtil stub is properly linked.
 
 ## Step 1, Identifying the problem
 

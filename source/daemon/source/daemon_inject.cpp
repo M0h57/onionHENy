@@ -1,13 +1,13 @@
-/* Copyright (C) 2025 OrionHEN / LightningMods */
+/* Copyright (C) 2025 OnionHEN / LightningMods */
 
 #include "daemon_ops.hpp"
 #include "globalconf.hpp"
-#include <orion/platform.h>
-#include <orion/proc_query.h>
-#include <orion/ready.h>
-#include <orion/settings.hpp>
-#include <orion/toolbox_timing.h>
-#include <orion/fps_shm.h>
+#include <onion/platform.h>
+#include <onion/proc_query.h>
+#include <onion/ready.h>
+#include <onion/settings.hpp>
+#include <onion/toolbox_timing.h>
+#include <onion/fps_shm.h>
 #include "globalconf.hpp"
 #include "dbg/dbg.hpp"
 #include "elf/elf.hpp"
@@ -82,43 +82,43 @@ static constexpr GameBuilder BUILDER_TEMPLATE{
 };
 
 bool HookGame(UniquePtr<Hijacker>& hijacker, uint64_t alsr_b) {
-    OrionHEN_log("Patching Game Now");
+    OnionHEN_log("Patching Game Now");
 
     GameBuilder builder = BUILDER_TEMPLATE;
     GameStuff stuff{ *hijacker };
 
     UniquePtr<SharedLib> lib = hijacker->getLib("libScePad.sprx");
     if (lib.get() == nullptr) {
-        OrionHEN_log("libScePad.sprx not found!");
+        OnionHEN_log("libScePad.sprx not found!");
         return false;
     }
-    OrionHEN_log("libScePad.sprx addr: 0x%llx", lib->imagebase());
+    OnionHEN_log("libScePad.sprx addr: 0x%llx", lib->imagebase());
     stuff.scePadReadState = hijacker->getFunctionAddress(lib.get(), nid::scePadReadState);
 
     //libSceGnmDriver
     UniquePtr<SharedLib> gnmlib = hijacker->getLib("libSceGnmDriverForNeoMode.sprx");
     if (gnmlib.get() == nullptr) {
-        OrionHEN_log("libSceGnmDriverForNeoMode.sprx not found!");
+        OnionHEN_log("libSceGnmDriverForNeoMode.sprx not found!");
         gnmlib = hijacker->getLib("libSceGnmDriver.sprx");
         if (gnmlib.get() == nullptr) {
-            OrionHEN_log("libSceGnmDriver.sprx not found!");
+            OnionHEN_log("libSceGnmDriver.sprx not found!");
 			return false;
 		}   
     }
-    OrionHEN_log("libSceGnmDriver.sprx addr: 0x%llx", gnmlib->imagebase());
+    OnionHEN_log("libSceGnmDriver.sprx addr: 0x%llx", gnmlib->imagebase());
     stuff.anything = hijacker->getFunctionAddress(gnmlib.get(), nid::sceGnmSubmitAndFlipCommandBuffersForWorkload);
 
-    OrionHEN_log("scePadReadState addr: 0x%llx", stuff.scePadReadState);
+    OnionHEN_log("scePadReadState addr: 0x%llx", stuff.scePadReadState);
     if (stuff.scePadReadState == 0) {
-        OrionHEN_log("failed to locate scePadReadState");
+        OnionHEN_log("failed to locate scePadReadState");
         return false;
     }
 
     stuff.ASLR_Base = alsr_b;
-    strcpy(stuff.prx_path, "/data/OrionHEN/fps.prx");
+    strcpy(stuff.prx_path, "/data/OnionHEN/fps.prx");
 
     auto code = hijacker->getTextAllocator().allocate(GameBuilder::SHELLCODE_SIZE);
-    OrionHEN_log("shellcode addr: 0x%llx", code);
+    OnionHEN_log("shellcode addr: 0x%llx", code);
     auto stuffAddr = hijacker->getDataAllocator().allocate(sizeof(GameStuff));
     // static constexpr Nid printfNid{"hcuQgD53UxM"};
     // static constexpr Nid amd64_set_fsbaseNid{"3SVaehJvYFk"};
@@ -135,7 +135,7 @@ bool HookGame(UniquePtr<Hijacker>& hijacker, uint64_t alsr_b) {
 
             // write the hook
             hijacker->write<uintptr_t>(hook_adr, code);
-            OrionHEN_log("hook addr: 0x%llx", hook_adr);
+            OnionHEN_log("hook addr: 0x%llx", hook_adr);
             hijacker.release();
 
             return true;
@@ -167,7 +167,7 @@ static int resolve_game_pid_for_appid(int appid) {
         if (_sceApplicationGetAppId(j, &bappid) < 0)
             continue;
         if (bappid == appid) {
-            OrionHEN_log("resolved appid 0x%X -> pid %d", appid, j);
+            OnionHEN_log("resolved appid 0x%X -> pid %d", appid, j);
             return j;
         }
     }
@@ -177,20 +177,20 @@ static int resolve_game_pid_for_appid(int appid) {
 bool cmd_enable_fps_new(int appid) {
  
     if(done_appid == appid){
-       // OrionHEN_log("FPS already enabled for %x", appid);
+       // OnionHEN_log("FPS already enabled for %x", appid);
         return true;
   	}
     
-    OrionHEN_log("Enabling fps for appid 0x%X", appid);
+    OnionHEN_log("Enabling fps for appid 0x%X", appid);
 
     /*
      * Pre-create world-writable sample files. Game sandbox cannot mkdir/create
      * under /data or /system_tmp; fps_elf only opens existing.
      */
-    if (orion_fps_shm_ensure() != 0)
-      OrionHEN_log("orion_fps_shm_ensure failed — fps_elf may not publish");
+    if (onion_fps_shm_ensure() != 0)
+      OnionHEN_log("onion_fps_shm_ensure failed — fps_elf may not publish");
     else
-      OrionHEN_log("fps SHM files ready for sandboxed writer");
+      OnionHEN_log("fps SHM files ready for sandboxed writer");
 
     /*
      * Do NOT sceKernelSuspendProcess here.
@@ -202,19 +202,19 @@ bool cmd_enable_fps_new(int appid) {
 
     int pid = resolve_game_pid_for_appid(appid);
     if (pid < 0) {
-        orion_notify(true, "Failed to get game pid");
+        onion_notify(true, "Failed to get game pid");
         return false;
     }
-    OrionHEN_log("fps inject (no-suspend): appid=0x%X pid=%d", appid, pid);
+    OnionHEN_log("fps inject (no-suspend): appid=0x%X pid=%d", appid, pid);
 
     if (!Inject_Toolbox(pid, fps_elf_start)) {
         /* Do NOT kill the game — inject failure must not terminate titles. */
-        orion_notify(true, "Failed to inject fps (game left running)");
+        onion_notify(true, "Failed to inject fps (game left running)");
         return false;
     }
 
     done_appid = appid;
-    OrionHEN_log("fps inject done pid=%d (hooks deferred inside fps_elf)", pid);
+    OnionHEN_log("fps inject done pid=%d (hooks deferred inside fps_elf)", pid);
     return true;
 }
 
@@ -222,18 +222,18 @@ bool cmd_enable_fps_new(int appid) {
 bool cmd_enable_fps(int appid) {
    
     if(done_appid == appid){
-       // OrionHEN_log("FPS already enabled for %x", appid);
+       // OnionHEN_log("FPS already enabled for %x", appid);
         return true;
 	   }
 
-    (void)orion_fps_shm_ensure();
+    (void)onion_fps_shm_ensure();
 
     int pid = resolve_game_pid_for_appid(appid);
     if (pid < 0) {
-        OrionHEN_log("cmd_enable_fps: failed to resolve pid for appid 0x%X", appid);
+        OnionHEN_log("cmd_enable_fps: failed to resolve pid for appid 0x%X", appid);
         return false;
     }
-    OrionHEN_log("Game is running, appid 0x%X, pid %i (no-suspend HookGame)", appid, pid);
+    OnionHEN_log("Game is running, appid 0x%X, pid %i (no-suspend HookGame)", appid, pid);
 
     /*
      * Same policy as fps_new: never SuspendApp for FPS. A failed resume leaves
@@ -249,12 +249,12 @@ bool cmd_enable_fps(int appid) {
     }
     else
     {
-        OrionHEN_log("Failed to get hijacker for (%d)", pid);
+        OnionHEN_log("Failed to get hijacker for (%d)", pid);
         return false;
     }
     if (text_base == 0 || text_size == 0)
     {
-        OrionHEN_log("text_base == 0 || text_size == 0");
+        OnionHEN_log("text_base == 0 || text_size == 0");
         return false;
     }
 
@@ -263,7 +263,7 @@ bool cmd_enable_fps(int appid) {
             break;
         sleep(1);
         if (attempt == 29) {
-            OrionHEN_log("HookGame failed for pid %d", pid);
+            OnionHEN_log("HookGame failed for pid %d", pid);
             return false;
         }
     }
@@ -284,7 +284,7 @@ bool cmd_enable_toolbox(){
      * mprotect readiness.
      */
     if (find_pid("kstuff.elf") > 0 || find_pid("kstuff") > 0) {
-      OrionHEN_log("kstuff present — waiting for mprotect before toolbox inject");
+      OnionHEN_log("kstuff present — waiting for mprotect before toolbox inject");
       for (int i = 0; i < 20; i++) {
         if (sceKernelMprotect(&buz[0], 100, 0x7) == 0)
           break;
@@ -293,7 +293,7 @@ bool cmd_enable_toolbox(){
       sleep(2);
     }
 
-    OrionHEN_log("Activating toolbox...");
+    OnionHEN_log("Activating toolbox...");
     /*
      * Rest_Mode_Delay only on rest resume — never on cold start.
      * util_booted is true almost immediately after util starts (before this
@@ -304,24 +304,24 @@ bool cmd_enable_toolbox(){
     {
       const uint64_t delay = g_settings.snapshot().rest_mode_delay_seconds;
       constexpr bool kRestResume = false; /* daemon cold/direct inject path */
-      if (orion_toolbox_should_apply_rest_delay(kRestResume, delay)) {
-        OrionHEN_log("rest delay %llu (rest resume path)",
+      if (onion_toolbox_should_apply_rest_delay(kRestResume, delay)) {
+        OnionHEN_log("rest delay %llu (rest resume path)",
                      static_cast<unsigned long long>(delay));
         sleep(static_cast<unsigned int>(delay));
       }
     }
 
     /* Prefer kstuff ready marker when present; fall back to short settle. */
-    if (!orion_ready_wait(ORION_READY_KSTUFF, /*timeout_ms=*/5000, /*poll_ms=*/200)) {
+    if (!onion_ready_wait(ONION_READY_KSTUFF, /*timeout_ms=*/5000, /*poll_ms=*/200)) {
       sleep(1);
     }
 
     int pid = get_shellui_pid();
     if (pid < 0) {
-      orion_notify(true, "Failed to get shellui pid");
+      onion_notify(true, "Failed to get shellui pid");
       return false;
     }
-    OrionHEN_log("Injecting toolbox into SceShellUI pid=%d", pid);
+    OnionHEN_log("Injecting toolbox into SceShellUI pid=%d", pid);
 
     /*
      * A previous ShellUI crash or direct daemon restart can leave either the
@@ -329,22 +329,22 @@ bool cmd_enable_toolbox(){
      * produced by this injection; otherwise callers may race a not-ready
      * settings scene while the new module is still installing its hooks.
      */
-    orion_ready_clear(ORION_READY_TOOLBOX);
+    onion_ready_clear(ONION_READY_TOOLBOX);
 
     if (!Inject_Toolbox(pid, shellui_elf_start)) {
       /* Do NOT ForceKill ShellUI — that loops home menu / coredumps */
-      orion_notify(true, "Failed to inject toolbox");
+      onion_notify(true, "Failed to inject toolbox");
       return false;
     }
 
-    /* Ready protocol: shellui signals ORION_READY_TOOLBOX after inject hooks run */
-    if (!orion_ready_wait(ORION_READY_TOOLBOX, /*timeout_ms=*/45 * 1000,
+    /* Ready protocol: shellui signals ONION_READY_TOOLBOX after inject hooks run */
+    if (!onion_ready_wait(ONION_READY_TOOLBOX, /*timeout_ms=*/45 * 1000,
                           /*poll_ms=*/250)) {
-      orion_notify(true, "Failed to load the OrionHEN toolbox (timeout, ShellUI left running)");
+      onion_notify(true, "Failed to load the OnionHEN toolbox (timeout, ShellUI left running)");
       return false;
     }
-    orion_ready_clear(ORION_READY_TOOLBOX);
-    OrionHEN_log("Toolbox online (ready protocol)");
+    onion_ready_clear(ONION_READY_TOOLBOX);
+    OnionHEN_log("Toolbox online (ready protocol)");
 
     return true;
 }

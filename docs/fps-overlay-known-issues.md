@@ -13,7 +13,7 @@ detour is disabled** because it freezes titles after the hook arms.
 |------|--------|
 | Resolve game **pid** (not appid) | OK |
 | Soft inject `fps_elf` (**no** `sceKernelSuspendProcess`) | OK |
-| Open SHM (`/system_tmp/orion_fps_shm` etc.) | OK |
+| Open SHM (`/system_tmp/onion_fps_shm` etc.) | OK |
 | Defer hook 20s after inject | Payload sleeps; process stays alive |
 
 ### What freezes the game
@@ -49,7 +49,7 @@ the title sticks on the load screen / black screen.
 ### Current workaround
 
 - `fps_elf` keeps SHM writer + deferred install path, but **does not arm** the
-  GNM detour (`ORION_FPS_ARM_GNM_HOOK=0` in `fps_elf/src/prx.cpp`).
+  GNM detour (`ONION_FPS_ARM_GNM_HOOK=0` in `fps_elf/src/prx.cpp`).
 - Overlay still reads SHM; ShellUI notify-scrape can still *publish* SHM if a
   notification path provides `FPS …` text.
 - Re-enable the detour only after a safe patch strategy is verified on-console.
@@ -57,7 +57,7 @@ the title sticks on the load screen / black screen.
 ### Reproduction log (abridged)
 
 ```
-[eboot.bin] fps_elf (Orion GNM count + SHM)
+[eboot.bin] fps_elf (Onion GNM count + SHM)
 [fps] shm writer ready fd=32
 [fps] payload online shm_fd=32 (hooks deferred 20s)
 [fps] deferring GNM hook for 20s ...

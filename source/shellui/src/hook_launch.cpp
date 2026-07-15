@@ -1,10 +1,10 @@
-/* Copyright (C) 2025 OrionHEN / LightningMods — P0 split. */
+/* Copyright (C) 2025 OnionHEN / LightningMods — P0 split. */
 
 
 #include "HookedFuncs.hpp"
 #include "ipc.hpp"
 #include "external_symbols.hpp"
-#include <orion/platform.h>
+#include <onion/platform.h>
 #include <string>
 #include <fstream>
 
@@ -154,7 +154,7 @@ void createJson_hook(MonoObject* inst, MonoObject* array, MonoString* id, MonoSt
                Mono_to_String(messageId).c_str());
 #endif
 
-    if(!g_settings.orionhen_game_opts) {
+    if(!g_settings.onionhen_game_opts) {
         createJson(inst, array, id, label, actionUrl, actionId, messageId, subMenu, enable);
         return;
     }
@@ -170,13 +170,13 @@ void createJson_hook(MonoObject* inst, MonoObject* array, MonoString* id, MonoSt
     }
 #if 1
     if(id_str == "MENU_ID_SAVE_DATA_MANAGEMENT_PS4_MANUAL" || id_str == "MENU_ID_SAVE_DATA_MANAGEMENT_PS5_MANUAL" || (id_str == "MENU_ID_UPDATE_HISTORY" && 0)){
-       createJson(inst, array, mono_string_new(Root_Domain, "MENU_ID_CUST_UPDATES"), mono_string_new(Root_Domain, "★ (测试版) 转储游戏/应用"), mono_string_new(Root_Domain, "OrionHEN?Dump"), actionId, nullptr, subMenu, enable);
+       createJson(inst, array, mono_string_new(Root_Domain, "MENU_ID_CUST_UPDATES"), mono_string_new(Root_Domain, "★ (测试版) 转储游戏/应用"), mono_string_new(Root_Domain, "OnionHEN?Dump"), actionId, nullptr, subMenu, enable);
        return;
     }
 #endif
     if(id_str == "MENU_ID_CHECK_PATCH"){  
       //createJson_hook: 8815fec90 id: MENU_ID_CHECK_PATCH, label: , actionUrl: pspatchcheck:check-for-update?titleid=CUSA01127, actionId: , messageId: msgid_check_update
-        createJson(inst, array, mono_string_new(Root_Domain, "MENU_ID_CHEATS"), mono_string_new(Root_Domain, "★ OrionHEN 金手指"), mono_string_new(Root_Domain, "OrionHEN?Cheats_not_open"), actionId, nullptr, subMenu, enable);
+        createJson(inst, array, mono_string_new(Root_Domain, "MENU_ID_CHEATS"), mono_string_new(Root_Domain, "★ OnionHEN 金手指"), mono_string_new(Root_Domain, "OnionHEN?Cheats_not_open"), actionId, nullptr, subMenu, enable);
         return;
     }
 
@@ -195,7 +195,7 @@ void Terminate() {
     IPC_Client& main_ipc = IPC_Client::getInstance(false);
     if(g_settings.game_rest_kill) {
 	    	shellui_log("Killing Game");
-        int pid = orion_find_pid_ex("NA", false, true, false);
+        int pid = onion_find_pid_ex("NA", false, true, false);
         if(pid > 0)
            main_ipc.ForceKillPID(pid);
     }

@@ -1,3 +1,3 @@
-/* Compatibility shim — implementation lives in liborion_elfldr. */
+/* Compatibility shim — implementation lives in libonion_elfldr. */
 #pragma once
-#include <orion/pt.h>
+#include <onion/pt.h>

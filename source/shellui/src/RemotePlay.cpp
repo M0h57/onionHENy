@@ -1,4 +1,4 @@
-/* Copyright (C) 2025 OrionHEN / LightningMods
+/* Copyright (C) 2025 OnionHEN / LightningMods
 
 This program is free software; you can redistribute it and/or modify it
 under the terms of the GNU General Public License as published by the
@@ -15,13 +15,13 @@ along with this program; see the file COPYING. If not, see
 <http://www.gnu.org/licenses/>.  */
 
 #include "RemotePlay.h"
-#include <orion/account_id_b64.h>
+#include <onion/account_id_b64.h>
 
 bool IsRunningConfirmRegistLoop = false;
 pthread_t ConfirmRegistLoop_Thread;
 
 void Base64Encode(uint64_t input, char *output) {
-  orion_account_id_base64_encode(input, output);
+  onion_account_id_base64_encode(input, output);
 }
     
 

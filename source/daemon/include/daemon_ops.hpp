@@ -1,4 +1,4 @@
-/* Copyright (C) 2025 OrionHEN / LightningMods
+/* Copyright (C) 2025 OnionHEN / LightningMods
  *
  * Daemon domain ops — settings, FS, inject. msg.cpp only owns IPC_loop.
  */
@@ -8,10 +8,10 @@
 #include <string>
 #include <sys/types.h>
 #include <msg.hpp>
-#include <orion/ipc_server.hpp>
+#include <onion/ipc_server.hpp>
 
 // clientArgs alias
-using clientArgs = orion::IpcClientArgs;
+using clientArgs = onion::IpcClientArgs;
 
 /** IPC accept/handle loops only — not util lifecycle. */
 extern bool is_handler_enabled;
@@ -45,12 +45,12 @@ void ForceKillProc(int pid);
 bool set_fan_threshold(int temp);
 
 /**
- * Tear down OrionHEN userland (does not return). Caller should reply to IPC first.
+ * Tear down OnionHEN userland (does not return). Caller should reply to IPC first.
  *
  * Sets g_stack_shutting_down, then: stop util → restart SceShellUI → exit.
  * Does NOT kill kstuff — hard-unloading kernel patches panics the console.
  */
-[[noreturn]] void cmd_shutdown_orion_stack(void);
+[[noreturn]] void cmd_shutdown_onion_stack(void);
 
 bool cmd_enable_toolbox();
 bool cmd_enable_fps(int appid);

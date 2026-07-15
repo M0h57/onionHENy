@@ -1,4 +1,4 @@
-# OrionHEN host unit tests
+# OnionHEN host unit tests
 
 Host-side unit tests for shared libraries and util cheat **file parsing**
 (no PS5 SDK). Modeled after `kylin-core/tests`.
@@ -18,11 +18,11 @@ Requirements:
 Optional:
 
 ```bash
-ORION_TEST_VERBOSE=1 make test   # extra klog-style noise on stderr
+ONION_TEST_VERBOSE=1 make test   # extra klog-style noise on stderr
 make clean && make test
 ```
 
-Binary: `source/util/build/host-tests/orion-host-tests`
+Binary: `source/util/build/host-tests/onion-host-tests`
 
 ## Coverage
 
@@ -31,7 +31,7 @@ Binary: `source/util/build/host-tests/orion-host-tests`
 | `test_cheat_utils` | hex decode, JSON extract, braces, replace_all, load buffer, ABI layout |
 | `test_cheat_parsers` | JSON / SHN / MC4 / ShnExt via factory + real fixtures |
 | `test_cheat_flatten` | extension match + GoldHEN-style flat install names + version sanitize |
-| `test_payload` | `liborion_payload` ELF magic, package header, pid path/file, read_file |
+| `test_payload` | `libonion_payload` ELF magic, package header, pid path/file, read_file |
 | `test_base64` | encode / decode / round-trip (MC4 codec) |
 | `test_aes_cbc` | AES-256-CBC encrypt/decrypt with MC4 key/IV |
 | `test_hde64` | x86_64 length decode (nop/ret/mov/jmp) |
@@ -43,9 +43,9 @@ Binary: `source/util/build/host-tests/orion-host-tests`
 | `test_toolbox_helpers` | UI path rewrite + payload .elf basename filter |
 | `test_settings` | full schema serialize/round-trip, partial INI defaults, legacy keys |
 | `test_ready` | ready markers, path builder, name rejection, **fps_overlay / util_booted** flags, toolbox legacy alias |
-| `test_platform_fs` | `if_exists` / `touch_file` / `rmtree` (liborion_platform) |
-| `test_platform_log` | `orion_log_configure` + file sink |
-| `test_platform_notify` | `orion_notify_format` prefix/truncate + send stub |
+| `test_platform_fs` | `if_exists` / `touch_file` / `rmtree` (libonion_platform) |
+| `test_platform_log` | `onion_log_configure` + file sink |
+| `test_platform_notify` | `onion_notify_format` prefix/truncate + send stub |
 | `test_msg_protocol` | IPC paths, magic, command ordinals, `IPC_Ret`, message POD, reply JSON body |
 | `test_ps5_settings_ui` | fluent XML builder + escaping |
 | `test_toolbox_route` | resource → page routing + cheat map helpers |
@@ -55,7 +55,7 @@ Binary: `source/util/build/host-tests/orion-host-tests`
 | Area | Why |
 |------|-----|
 | `CheatApplier` / memory backends | needs target process / mdbg |
-| `liborion_proc` allproc / ucred | kernel_copyout |
+| `libonion_proc` allproc / ucred | kernel_copyout |
 | ShellUI Mono / OnPress | SceShellUI |
 | Full IPC server accept loop | device sockets + daemon world |
 | libNineS inject | ptrace |

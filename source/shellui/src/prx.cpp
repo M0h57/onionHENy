@@ -1,4 +1,4 @@
-/* Copyright (C) 2025 OrionHEN / LightningMods
+/* Copyright (C) 2025 OnionHEN / LightningMods
 
 This program is free software; you can redistribute it and/or modify it
 under the terms of the GNU General Public License as published by the
@@ -25,9 +25,9 @@ along with this program; see the file COPYING. If not, see
 #include "ucred.h"
 #include "webserver.hpp"
 
-#include <orion/notify.h>
-#include <orion/proc_query.h>
-#include <orion/ready.h>
+#include <onion/notify.h>
+#include <onion/proc_query.h>
+#include <onion/ready.h>
 
 #include <cstring>
 #include <cstdint>
@@ -222,9 +222,9 @@ bool resolve_native_symbols(pid_t pid, void*& out_read,
   KERNEL_DLSYM(libkernelsys, read);
   out_read = reinterpret_cast<void*>(read);
 
-  /* liborion_platform must not CALL sceKernelSendNotificationRequest by name —
+  /* libonion_platform must not CALL sceKernelSendNotificationRequest by name —
    * here that symbol is a dlsym'd *function pointer*. Register a trampoline. */
-  orion_notify_set_send(+[](int32_t device, void *req, size_t size,
+  onion_notify_set_send(+[](int32_t device, void *req, size_t size,
                             int32_t blocking) -> int32_t {
     if (!sceKernelSendNotificationRequest)
       return -1;
@@ -389,13 +389,13 @@ void init_resource_names() {
 
 bool init_version_string(const OrbisKernelSwVersion& sw) {
   /* XOR with base64_decode(kXorKeyB64) == "SISTR0_I_SEE_YOU" (not the b64 text). */
-  const char enc_ver[] = "\x1c\x3b\x3a\x3b\x3c\x78\x1a\x07\x7f"; /* "OrionHEN " */
+  const char enc_ver[] = "\x1c\x3b\x3a\x3b\x3c\x78\x1a\x07\x7f"; /* "OnionHEN " */
   const std::string key = base64_decode(kXorKeyB64);
   auto dev_ver_bytes =
       encrypt_decrypt(reinterpret_cast<const unsigned char*>(enc_ver),
                       sizeof(enc_ver) - 1, key);
   std::string dec_ver(dev_ver_bytes.begin(), dev_ver_bytes.end());
-  dec_ver += OrionHEN_VERSION;
+  dec_ver += OnionHEN_VERSION;
 
   std::string final_ver;
 #if PUBLIC_TEST == 1
@@ -573,7 +573,7 @@ bool install_hooks(const ShellImages& img, void* read_fn) {
        *
        * Historical field logs faulted at trampoline+0x6 because the old
        * DetourFunction copied RIP-relative JIT instructions without relocation.
-       * liborion_detour now relocates those instructions, but this unrelated hook
+       * libonion_detour now relocates those instructions, but this unrelated hook
        * stays off until its lifecycle behavior is validated on hardware. Remote-play
        * cleanup is already handled from GetManifestResourceStream when leaving the
        * remote_play page.
@@ -708,7 +708,7 @@ bool install_hooks(const ShellImages& img, void* read_fn) {
 // ---------------------------------------------------------------------------
 
 void setup_proc_hooks() {
-  orion_proc_set_sce_hooks(
+  onion_proc_set_sce_hooks(
       [](int pid, char* name) -> int {
         return sceKernelGetProcessName ? sceKernelGetProcessName(pid, name) : -1;
       },
@@ -727,7 +727,7 @@ void setup_proc_hooks() {
 void run_keep_alive() {
   pthread_t thread_id{};
   scePthreadCreate(&thread_id, nullptr, dialogue_thread, nullptr, "dialogue_thread");
-  orion_ready_signal(ORION_READY_TOOLBOX);
+  onion_ready_signal(ONION_READY_TOOLBOX);
 
   while (true) {
     shellui_log("sleeping ....");

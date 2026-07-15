@@ -1,4 +1,4 @@
-/* Copyright (C) 2025 OrionHEN / LightningMods
+/* Copyright (C) 2025 OnionHEN / LightningMods
 
 This program is free software; you can redistribute it and/or modify it
 under the terms of the GNU General Public License as published by the
@@ -16,11 +16,11 @@ along with this program; see the file COPYING. If not, see
 
 #include "ipc.hpp"
 #include "cheats/CheatService.hpp"
-#include <orion/settings.hpp>
-#include <orion/platform.h>
-#include <orion/ucred.h>
-#include <orion/proc_query.h>
-#include <orion/ready.h>
+#include <onion/settings.hpp>
+#include <onion/platform.h>
+#include <onion/ucred.h>
+#include <onion/proc_query.h>
+#include <onion/ready.h>
 extern "C" {
 #include "freebsd-helper.h"
 }
@@ -50,12 +50,12 @@ extern "C" {
   int sceKernelGetProcessName(int pid, char * out);
   int _sceApplicationGetAppId(int pid, uint32_t * appId);
 
-  // set_proc_authid / get_proc_by_pid: liborion_proc
+  // set_proc_authid / get_proc_by_pid: libonion_proc
 }
 
 extern bool is_handler_enabled;
 
-orion::SettingsStore g_settings;
+onion::SettingsStore g_settings;
 atomic_bool g_legacy_cmd_server = false;
 atomic_bool g_legacy_cmd_server_exit = false;
 void start_ip_thread(void);
@@ -71,7 +71,7 @@ uintptr_t kernel_base = 0;
 void* __stack_chk_guard = (void*)0xdeadbeef;
 
 static void cleanup(void) {
-    orion_notify(true, "OrionHEN utilities daemon has crashed...\n\nAttemping to recover...");
+    onion_notify(true, "OnionHEN utilities daemon has crashed...\n\nAttemping to recover...");
     exit(1);
 }
 
@@ -80,12 +80,12 @@ void __stack_chk_fail(void) {
 }
 
 bool LoadSettings() {
-    orion::Settings s{};
-    if (!orion::settings_load(&s)) {
-        OrionHEN_log("config.ini missing; using defaults (path primary=%s)",
-                     orion::kConfigPathPrimary);
+    onion::Settings s{};
+    if (!onion::settings_load(&s)) {
+        OnionHEN_log("config.ini missing; using defaults (path primary=%s)",
+                     onion::kConfigPathPrimary);
     } else {
-        OrionHEN_log("Loaded settings from %s", orion::settings_last_loaded_path());
+        OnionHEN_log("Loaded settings from %s", onion::settings_last_loaded_path());
     }
 
     g_settings.store(s);
@@ -103,20 +103,20 @@ int main(void) {
     
     sceNetCtlInit();
     sceUserServiceInitialize(NULL);
-    orion_log_configure("OrionHEN utils", "/data/OrionHEN/OrionHEN_util_daemon.log");
+    onion_log_configure("OnionHEN utils", "/data/OnionHEN/OnionHEN_util_daemon.log");
     /* Real linked kernel export (not a dlsym function-pointer variable). */
-    orion_notify_set_send(reinterpret_cast<orion_notify_send_fn>(
+    onion_notify_set_send(reinterpret_cast<onion_notify_send_fn>(
         sceKernelSendNotificationRequest));
-    OrionHEN_log("util daemon entered");
+    OnionHEN_log("util daemon entered");
 
     if (setjmp(g_catch_buf) == 0)
-        OrionHEN_log("jump has been set");
+        OnionHEN_log("jump has been set");
     else
-        orion_notify(true, "The Fatal error has been successfully resolved\n\nyou have nothing to worry about");
+        onion_notify(true, "The Fatal error has been successfully resolved\n\nyou have nothing to worry about");
 
-    OrionHEN_log("Registering signal handler...");
+    OnionHEN_log("Registering signal handler...");
     fault_handler_init(cleanup);
-    OrionHEN_log("   Success!");
+    OnionHEN_log("   Success!");
 
     payload_args_t* args = payload_get_args();
     kernel_base = args->kdata_base_addr;
@@ -125,30 +125,30 @@ int main(void) {
 
 	g_legacy_cmd_server_exit = false;
 
-    unlink("/data/OrionHEN/OrionHEN_util_daemon.log");
-    unlink("/data/OrionHEN/OrionHEN_util_crash.log");
+    unlink("/data/OnionHEN/OnionHEN_util_daemon.log");
+    unlink("/data/OnionHEN/OnionHEN_util_crash.log");
 
-    OrionHEN_log("=========== starting OrionHEN Utilities... ===========");
+    OnionHEN_log("=========== starting OnionHEN Utilities... ===========");
 
     LoadSettings();
 
     start_ip_thread();
     pthread_create(&ipc_server, NULL, IPC_loop, NULL);
     /* IPC thread is up — publish ready for bootstrapper/daemon consumers */
-    orion_ready_signal(ORION_READY_UTIL);
+    onion_ready_signal(ONION_READY_UTIL);
 
     if (!IniliatizeHTTP()) {
-        OrionHEN_log("Failed to initialize HTTP lib");
-        orion_notify(true, "Failed to initialize the HTTP lib, downloading cheats will not work");
+        OnionHEN_log("Failed to initialize HTTP lib");
+        onion_notify(true, "Failed to initialize the HTTP lib, downloading cheats will not work");
     }
 
-    if (orion_ready_is_set(ORION_FLAG_UTIL_BOOTED)) {
+    if (onion_ready_is_set(ONION_FLAG_UTIL_BOOTED)) {
         /* util.elf restarted mid-session (crash recover / re-launch) — not rest. */
-        OrionHEN_log("util already booted once — toolbox reinject (not rest)");
+        OnionHEN_log("util already booted once — toolbox reinject (not rest)");
         patch_checker(/*rest_resume=*/false);
     }
     /* Mark that util completed cold start (typed flag; replaces util_first_boot file). */
-    orion_ready_signal(ORION_FLAG_UTIL_BOOTED);
+    onion_ready_signal(ONION_FLAG_UTIL_BOOTED);
 
     for (;;) {
         // for rest mode we wait til we can restart everything
@@ -173,12 +173,12 @@ int main(void) {
         no_network_rest_mode_action = false;
 
         pthread_create(&cmd_server, NULL, runCommandNControlServer, NULL);
-        OrionHEN_log("loading settings...");
+        OnionHEN_log("loading settings...");
         LoadSettings();
-        OrionHEN_log("done loading settings...");
+        OnionHEN_log("done loading settings...");
 
-        OrionHEN_log("Initializing cheat engine...");
-        orion::cheats::CheatService::instance().ensureDir();
+        OnionHEN_log("Initializing cheat engine...");
+        onion::cheats::CheatService::instance().ensureDir();
 
         pthread_join(cmd_server, NULL);
 

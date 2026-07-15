@@ -3,7 +3,7 @@
 #include <stdarg.h>
 #include <stdio.h>
 
-int orion_test_fail(const char *file, int line, const char *fmt, ...) {
+int onion_test_fail(const char *file, int line, const char *fmt, ...) {
   va_list args;
 
   fprintf(stderr, "  %s:%d: ", file, line);
@@ -14,7 +14,7 @@ int orion_test_fail(const char *file, int line, const char *fmt, ...) {
   return 1;
 }
 
-int orion_test_run(const char *name, orion_test_fn_t fn) {
+int onion_test_run(const char *name, onion_test_fn_t fn) {
   const int rc = fn();
   fprintf(stderr, "[%s] %s\n", rc == 0 ? "PASS" : "FAIL", name);
   return rc;

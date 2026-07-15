@@ -7,9 +7,9 @@
 
 #include "cheats/cheat_engine_internal.h"
 
-extern "C" void OrionHEN_log(const char *fmt, ...);
+extern "C" void OnionHEN_log(const char *fmt, ...);
 
-namespace orion::cheats {
+namespace onion::cheats {
 namespace {
 
 const char *findXmlTagValue(const char *start, const char *tag, char *out,
@@ -85,23 +85,23 @@ void stripDashes(char *s) {
 }
 
 /** Mutating SHN/XML parse (entities replaced in-place; buffer must be writable). */
-int parseXmlMutating(char *xml, orion_cheat_file_t &out) {
+int parseXmlMutating(char *xml, onion_cheat_file_t &out) {
   const char *cursor = xml;
   char process[128];
   char game_name[128];
 
-  OrionHEN_log("[engine] parse_xml begin");
-  orion_cheat_file_clear(&out);
-  orion_cheat_replace_all(xml, 65536, "&lt;", "<");
-  orion_cheat_replace_all(xml, 65536, "&gt;", ">");
-  orion_cheat_replace_all(xml, 65536, "\\&quot;", "\"");
-  orion_cheat_replace_all(xml, 65536, "&quot;", "\"");
+  OnionHEN_log("[engine] parse_xml begin");
+  onion_cheat_file_clear(&out);
+  onion_cheat_replace_all(xml, 65536, "&lt;", "<");
+  onion_cheat_replace_all(xml, 65536, "&gt;", ">");
+  onion_cheat_replace_all(xml, 65536, "\\&quot;", "\"");
+  onion_cheat_replace_all(xml, 65536, "&quot;", "\"");
 
-  char moder[ORION_AUTHOR_NAME_LEN];
+  char moder[ONION_AUTHOR_NAME_LEN];
 
   if (findXmlAttr(xml, "Trainer", "Process", process, sizeof(process)) < 0 ||
       findXmlAttr(xml, "Trainer", "Game", game_name, sizeof(game_name)) < 0) {
-    OrionHEN_log("[engine] parse_xml trainer attrs missing");
+    OnionHEN_log("[engine] parse_xml trainer attrs missing");
     return -1;
   }
   std::snprintf(out.process, sizeof(out.process), "%s", process);
@@ -110,9 +110,9 @@ int parseXmlMutating(char *xml, orion_cheat_file_t &out) {
   moder[0] = '\0';
   if (findXmlAttr(xml, "Trainer", "Moder", moder, sizeof(moder)) == 0 &&
       moder[0] != '\0') {
-    orion_cheat_file_add_author(&out, moder);
+    onion_cheat_file_add_author(&out, moder);
   }
-  OrionHEN_log("[engine] parse_xml trainer process=%s game=%s", out.process,
+  OnionHEN_log("[engine] parse_xml trainer process=%s game=%s", out.process,
                out.name);
 
   while ((cursor = std::strstr(cursor, "<Cheat ")) != nullptr) {
@@ -121,18 +121,18 @@ int parseXmlMutating(char *xml, orion_cheat_file_t &out) {
     char name[128];
     char description[256];
 
-    if (orion_cheat_file_ensure_cheat(&out) != 0) {
+    if (onion_cheat_file_ensure_cheat(&out) != 0) {
       break;
     }
-    orion_cheat_entry_t *entry = &out.cheats[out.cheat_count];
+    onion_cheat_entry_t *entry = &out.cheats[out.cheat_count];
 
     if (cheat_end == nullptr) {
-      OrionHEN_log("[engine] parse_xml cheat_end missing");
+      OnionHEN_log("[engine] parse_xml cheat_end missing");
       break;
     }
     std::memset(entry, 0, sizeof(*entry));
     if (findXmlAttr(cursor, "Cheat", "Text", name, sizeof(name)) < 0) {
-      OrionHEN_log("[engine] parse_xml cheat name missing");
+      OnionHEN_log("[engine] parse_xml cheat name missing");
       cursor = cheat_end + 8;
       continue;
     }
@@ -153,10 +153,10 @@ int parseXmlMutating(char *xml, orion_cheat_file_t &out) {
       char on[512];
       char off[512];
       char absolute[32];
-      orion_patch_t *patch = nullptr;
+      onion_patch_t *patch = nullptr;
 
       if (line_end == nullptr || line_end > cheat_end) {
-        OrionHEN_log("[engine] parse_xml line_end missing cheat=%s",
+        OnionHEN_log("[engine] parse_xml line_end missing cheat=%s",
                      entry->name);
         break;
       }
@@ -173,14 +173,14 @@ int parseXmlMutating(char *xml, orion_cheat_file_t &out) {
       findXmlTagValue(line_cursor, "Absolute", absolute, sizeof(absolute));
 
       if (offset[0] == '\0' || on[0] == '\0' || off[0] == '\0') {
-        OrionHEN_log("[engine] parse_xml incomplete patch cheat=%s",
+        OnionHEN_log("[engine] parse_xml incomplete patch cheat=%s",
                      entry->name);
         line_cursor = line_end + 12;
         continue;
       }
 
-      if (orion_cheat_entry_ensure_patch(entry) != 0) {
-        OrionHEN_log("[engine] parse_xml ensure_patch failed");
+      if (onion_cheat_entry_ensure_patch(entry) != 0) {
+        OnionHEN_log("[engine] parse_xml ensure_patch failed");
         line_cursor = line_end + 12;
         continue;
       }
@@ -198,9 +198,9 @@ int parseXmlMutating(char *xml, orion_cheat_file_t &out) {
       stripDashes(on);
       stripDashes(off);
 
-      if (orion_cheat_hex_decode(on, patch->on, sizeof(patch->on),
+      if (onion_cheat_hex_decode(on, patch->on, sizeof(patch->on),
                                  &patch->on_len) == 0 &&
-          orion_cheat_hex_decode(off, patch->off, sizeof(patch->off),
+          onion_cheat_hex_decode(off, patch->off, sizeof(patch->off),
                                  &patch->off_len) == 0) {
         entry->patch_count++;
       }
@@ -208,21 +208,21 @@ int parseXmlMutating(char *xml, orion_cheat_file_t &out) {
     }
 
     if (entry->patch_count > 0) {
-      OrionHEN_log("[engine] parse_xml cheat=%s patches=%zu", entry->name,
+      OnionHEN_log("[engine] parse_xml cheat=%s patches=%zu", entry->name,
                    entry->patch_count);
       out.cheat_count++;
     }
     cursor = cheat_end + 8;
   }
 
-  OrionHEN_log("[engine] parse_xml done cheats=%zu", out.cheat_count);
+  OnionHEN_log("[engine] parse_xml done cheats=%zu", out.cheat_count);
   return out.cheat_count > 0 ? 0 : -1;
 }
 
 } // namespace
 
 /** Internal: parse writable NUL-terminated XML (used by MC4 after decrypt). */
-int parseXmlBuffer(char *xml, orion_cheat_file_t &out) {
+int parseXmlBuffer(char *xml, onion_cheat_file_t &out) {
   if (xml == nullptr) {
     return -1;
   }
@@ -233,7 +233,7 @@ class XmlCheatParser final : public ICheatParser {
 public:
   const char *name() const override { return "shn"; }
 
-  int parse(const uint8_t *data, size_t size, orion_cheat_file_t &out) override {
+  int parse(const uint8_t *data, size_t size, onion_cheat_file_t &out) override {
     if (data == nullptr || size == 0) {
       return -1;
     }
@@ -250,4 +250,4 @@ std::unique_ptr<ICheatParser> makeXmlCheatParser() {
   return std::make_unique<XmlCheatParser>();
 }
 
-} // namespace orion::cheats
+} // namespace onion::cheats

@@ -6,41 +6,41 @@
 
 #include "cheats/cheat_engine_internal.h"
 
-namespace orion::cheats {
+namespace onion::cheats {
 namespace {
 
-int parseMemoryObject(const char *start, const char *end, orion_patch_t *patch) {
+int parseMemoryObject(const char *start, const char *end, onion_patch_t *patch) {
   char value[512];
 
   std::memset(patch, 0, sizeof(*patch));
   patch->section = 0;
   patch->absolute = false;
 
-  if (orion_cheat_extract_scalar(start, end, "offset", value, sizeof(value)) <
+  if (onion_cheat_extract_scalar(start, end, "offset", value, sizeof(value)) <
       0) {
     return -1;
   }
   patch->offset = std::strtoull(value, nullptr, 16);
 
-  if (orion_cheat_extract_string(start, end, "on", value, sizeof(value)) < 0 ||
-      orion_cheat_hex_decode(value, patch->on, sizeof(patch->on),
+  if (onion_cheat_extract_string(start, end, "on", value, sizeof(value)) < 0 ||
+      onion_cheat_hex_decode(value, patch->on, sizeof(patch->on),
                              &patch->on_len) < 0) {
     return -1;
   }
-  if (orion_cheat_extract_string(start, end, "off", value, sizeof(value)) < 0 ||
-      orion_cheat_hex_decode(value, patch->off, sizeof(patch->off),
+  if (onion_cheat_extract_string(start, end, "off", value, sizeof(value)) < 0 ||
+      onion_cheat_hex_decode(value, patch->off, sizeof(patch->off),
                              &patch->off_len) < 0) {
     return -1;
   }
 
-  if (orion_cheat_extract_scalar(start, end, "section", value,
+  if (onion_cheat_extract_scalar(start, end, "section", value,
                                  sizeof(value)) == 0) {
     const int section = std::atoi(value);
     if (section < MODULE_INFO_MAX_SECTIONS) {
       patch->section = section;
     }
   }
-  if (orion_cheat_extract_scalar(start, end, "absolute", value,
+  if (onion_cheat_extract_scalar(start, end, "absolute", value,
                                  sizeof(value)) == 0) {
     patch->absolute = (std::strcmp(value, "1") == 0 ||
                        std::strcmp(value, "true") == 0 ||
@@ -51,17 +51,17 @@ int parseMemoryObject(const char *start, const char *end, orion_patch_t *patch) 
 }
 
 int parseModObject(const char *start, const char *end, const char *process_name,
-                   orion_cheat_entry_t *entry) {
-  const char *memory = orion_cheat_find_key(start, end, "memory");
+                   onion_cheat_entry_t *entry) {
+  const char *memory = onion_cheat_find_key(start, end, "memory");
   const char *arr_end = nullptr;
   const char *p = nullptr;
 
   std::memset(entry, 0, sizeof(*entry));
-  if (orion_cheat_extract_string(start, end, "name", entry->name,
+  if (onion_cheat_extract_string(start, end, "name", entry->name,
                                  sizeof(entry->name)) < 0) {
     return -1;
   }
-  orion_cheat_extract_string(start, end, "description", entry->description,
+  onion_cheat_extract_string(start, end, "description", entry->description,
                              sizeof(entry->description));
   std::snprintf(entry->module_name, sizeof(entry->module_name), "%s",
                 process_name);
@@ -69,12 +69,12 @@ int parseModObject(const char *start, const char *end, const char *process_name,
   if (memory == nullptr) {
     return 0;
   }
-  memory = orion_cheat_skip_ws(memory, end);
+  memory = onion_cheat_skip_ws(memory, end);
   if (memory >= end || *memory != '[') {
     return -1;
   }
 
-  arr_end = orion_cheat_find_matching(memory, end, '[', ']');
+  arr_end = onion_cheat_find_matching(memory, end, '[', ']');
   if (arr_end == nullptr) {
     return -1;
   }
@@ -83,11 +83,11 @@ int parseModObject(const char *start, const char *end, const char *process_name,
   while (p < arr_end) {
     if (*p == '{') {
       const char *obj_end =
-          orion_cheat_find_matching(p, arr_end + 1, '{', '}');
+          onion_cheat_find_matching(p, arr_end + 1, '{', '}');
       if (obj_end == nullptr) {
         return -1;
       }
-      if (orion_cheat_entry_ensure_patch(entry) != 0) {
+      if (onion_cheat_entry_ensure_patch(entry) != 0) {
         return -1;
       }
       if (parseMemoryObject(p, obj_end + 1,
@@ -105,33 +105,33 @@ int parseModObject(const char *start, const char *end, const char *process_name,
 
 /** GoldHEN uses "credits"; some files may use "authors". Both are string arrays. */
 void parseAuthorArray(const char *json, size_t size, const char *key,
-                      orion_cheat_file_t &out) {
+                      onion_cheat_file_t &out) {
   const char *end = json + size;
-  const char *arr = orion_cheat_find_key(json, end, key);
+  const char *arr = onion_cheat_find_key(json, end, key);
   const char *arr_end = nullptr;
   const char *p = nullptr;
 
   if (arr == nullptr) {
     return;
   }
-  arr = orion_cheat_skip_ws(arr, end);
+  arr = onion_cheat_skip_ws(arr, end);
   if (arr >= end || *arr != '[') {
     return;
   }
-  arr_end = orion_cheat_find_matching(arr, end, '[', ']');
+  arr_end = onion_cheat_find_matching(arr, end, '[', ']');
   if (arr_end == nullptr) {
     return;
   }
 
   p = arr + 1;
   while (p < arr_end) {
-    p = orion_cheat_skip_ws(p, arr_end);
+    p = onion_cheat_skip_ws(p, arr_end);
     if (p >= arr_end) {
       break;
     }
     if (*p == '"') {
       const char *q = ++p;
-      char name[ORION_AUTHOR_NAME_LEN];
+      char name[ONION_AUTHOR_NAME_LEN];
       size_t len = 0;
       while (q < arr_end && !(*q == '"' && q[-1] != '\\')) {
         ++q;
@@ -146,7 +146,7 @@ void parseAuthorArray(const char *json, size_t size, const char *key,
       if (len > 0) {
         std::memcpy(name, p, len);
         name[len] = '\0';
-        orion_cheat_file_add_author(&out, name);
+        onion_cheat_file_add_author(&out, name);
       }
       p = q + 1;
       continue;
@@ -161,7 +161,7 @@ class JsonCheatParser final : public ICheatParser {
 public:
   const char *name() const override { return "json"; }
 
-  int parse(const uint8_t *data, size_t size, orion_cheat_file_t &out) override {
+  int parse(const uint8_t *data, size_t size, onion_cheat_file_t &out) override {
     if (data == nullptr || size == 0) {
       return -1;
     }
@@ -170,11 +170,11 @@ public:
     const char *mods_end = nullptr;
     const char *p = nullptr;
 
-    orion_cheat_file_clear(&out);
+    onion_cheat_file_clear(&out);
 
-    if (orion_cheat_extract_string(json, json + size, "process", out.process,
+    if (onion_cheat_extract_string(json, json + size, "process", out.process,
                                    sizeof(out.process)) < 0 ||
-        orion_cheat_extract_string(json, json + size, "name", out.name,
+        onion_cheat_extract_string(json, json + size, "name", out.name,
                                    sizeof(out.name)) < 0) {
       return -1;
     }
@@ -183,17 +183,17 @@ public:
     parseAuthorArray(json, size, "credits", out);
     parseAuthorArray(json, size, "authors", out);
 
-    mods = orion_cheat_find_key(json, json + size, "mods");
+    mods = onion_cheat_find_key(json, json + size, "mods");
     if (mods == nullptr) {
       return -1;
     }
 
-    mods = orion_cheat_skip_ws(mods, json + size);
+    mods = onion_cheat_skip_ws(mods, json + size);
     if (*mods != '[') {
       return -1;
     }
 
-    mods_end = orion_cheat_find_matching(mods, json + size, '[', ']');
+    mods_end = onion_cheat_find_matching(mods, json + size, '[', ']');
     if (mods_end == nullptr) {
       return -1;
     }
@@ -202,14 +202,14 @@ public:
     while (p < mods_end) {
       if (*p == '{') {
         const char *obj_end =
-            orion_cheat_find_matching(p, mods_end + 1, '{', '}');
+            onion_cheat_find_matching(p, mods_end + 1, '{', '}');
         if (obj_end == nullptr) {
           break;
         }
-        if (orion_cheat_file_ensure_cheat(&out) != 0) {
+        if (onion_cheat_file_ensure_cheat(&out) != 0) {
           break;
         }
-        orion_cheat_entry_t *entry = &out.cheats[out.cheat_count];
+        onion_cheat_entry_t *entry = &out.cheats[out.cheat_count];
         if (parseModObject(p, obj_end + 1, out.process, entry) == 0 &&
             entry->patch_count > 0) {
           ++out.cheat_count;
@@ -228,4 +228,4 @@ std::unique_ptr<ICheatParser> makeJsonCheatParser() {
   return std::make_unique<JsonCheatParser>();
 }
 
-} // namespace orion::cheats
+} // namespace onion::cheats

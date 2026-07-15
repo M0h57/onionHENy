@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Sync / build third-party embeds for OrionHEN.
+# Sync / build third-party embeds for OnionHEN.
 #
 # Remaining embeds: kstuff.elf
 # Removed: elfldr.elf (9021 service), ps5debug, ps5-app-dumper, Byepervisor/hen.bin
@@ -9,7 +9,7 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 SOURCE="${ROOT}/source"
 TP="${ROOT}/third_party"
-VENDOR="${ORIONHEN_VENDOR:-${SOURCE}/vendor}"
+VENDOR="${ONIONHEN_VENDOR:-${SOURCE}/vendor}"
 
 PS5_PAYLOAD_SDK="${PS5_PAYLOAD_SDK:-}"
 FROM_SOURCE=0
@@ -28,13 +28,13 @@ die()  { printf '\033[1;31m[error]\033[0m %s\n' "$*" >&2; exit 1; }
 
 usage() {
   cat <<EOF
-Sync OrionHEN vendor embeds from open-source upstreams.
+Sync OnionHEN vendor embeds from open-source upstreams.
 
 Submodules (under third_party/):
   elfldr           https://github.com/ps5-payload-dev/elfldr          (optional external 9021 loader reference)
   kstuff-lite      https://github.com/EchoStretch/kstuff-lite
 
-Removed from OrionHEN (not synced):
+Removed from OnionHEN (not synced):
   elfldr.elf (9021 service), ps5debug, ps5-app-dumper, Byepervisor/hen.bin
 
 Options:
@@ -80,7 +80,7 @@ place() {
 stub() {
   local dest="$1" name="$2"
   mkdir -p "$(dirname "${dest}")"
-  printf 'OrionHEN-STUB:%s\0' "${name}" > "${dest}"
+  printf 'OnionHEN-STUB:%s\0' "${name}" > "${dest}"
   warn "STUB ${dest} (not for real hardware)"
 }
 
@@ -102,11 +102,11 @@ kstuff_looks_cached() {
   [[ -f "${path}" ]] || return 1
   local sz
   sz="$(wc -c < "${path}" | tr -d ' ')"
-  # Reject empty / OrionHEN-STUB placeholders from --stub-missing.
+  # Reject empty / OnionHEN-STUB placeholders from --stub-missing.
   if [[ "${sz}" -lt "${KSTUFF_MIN_BYTES}" ]]; then
     return 1
   fi
-  if head -c 16 "${path}" 2>/dev/null | grep -q 'OrionHEN-STUB'; then
+  if head -c 16 "${path}" 2>/dev/null | grep -q 'OnionHEN-STUB'; then
     return 1
   fi
   return 0
@@ -155,7 +155,7 @@ sync_kstuff() {
 }
 
 main() {
-  log "OrionHEN vendor sync"
+  log "OnionHEN vendor sync"
   echo "  third_party = ${TP}"
 
   mkdir -p \

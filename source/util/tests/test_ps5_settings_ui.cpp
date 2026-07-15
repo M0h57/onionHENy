@@ -11,13 +11,13 @@ static int test_escape_special_chars(void) {
   const std::string a = escape("a&b");
   const std::string b = escape("<tag>");
   const std::string c = escape("\"q\"");
-  const std::string d = escape("/user/data/OrionHEN");
+  const std::string d = escape("/user/data/OnionHEN");
   const std::string e = escape("金手指");
   TEST_ASSERT_STREQ("a&amp;b", a.c_str());
   TEST_ASSERT_STREQ("&lt;tag&gt;", b.c_str());
   TEST_ASSERT_STREQ("&quot;q&quot;", c.c_str());
   /* Legacy path convention: / → // */
-  TEST_ASSERT_STREQ("//user//data//OrionHEN", d.c_str());
+  TEST_ASSERT_STREQ("//user//data//OnionHEN", d.c_str());
   /* CJK unchanged */
   TEST_ASSERT_STREQ("金手指", e.c_str());
   return 0;
@@ -71,18 +71,18 @@ static int test_list_and_items(void) {
       Page("id_cheats", "Cheats")
           .list("id_selected_cheats_repo", "Repo",
                 [](ListBuilder& L) {
-                  L.item("id_selected_cheats_repo_1", "OrionHEN PS5", "0")
+                  L.item("id_selected_cheats_repo_1", "OnionHEN PS5", "0")
                       .item("id_selected_cheats_repo_2", "GoldHEN PS4", "1");
                 },
                 std::nullopt, "1")
-          .button("id_dl_cheats", "Download", "to /data/OrionHEN/cheats/")
+          .button("id_dl_cheats", "Download", "to /data/OnionHEN/cheats/")
           .build();
 
   TEST_ASSERT_TRUE(
       xml.find("<list id=\"id_selected_cheats_repo\" title=\"Repo\" value=\"1\">") !=
       std::string::npos);
   TEST_ASSERT_TRUE(
-      xml.find("<list_item id=\"id_selected_cheats_repo_1\" title=\"OrionHEN PS5\" "
+      xml.find("<list_item id=\"id_selected_cheats_repo_1\" title=\"OnionHEN PS5\" "
                "value=\"0\"/>") != std::string::npos);
   TEST_ASSERT_TRUE(
       xml.find("<list_item id=\"id_selected_cheats_repo_2\" title=\"GoldHEN PS4\" "
@@ -90,7 +90,7 @@ static int test_list_and_items(void) {
   TEST_ASSERT_TRUE(xml.find("</list>") != std::string::npos);
   TEST_ASSERT_TRUE(xml.find("id=\"id_dl_cheats\"") != std::string::npos);
   /* path second_title must escape slashes */
-  TEST_ASSERT_TRUE(xml.find("second_title=\"to //data//OrionHEN//cheats//\"") !=
+  TEST_ASSERT_TRUE(xml.find("second_title=\"to //data//OnionHEN//cheats//\"") !=
                    std::string::npos);
   return 0;
 }
@@ -214,7 +214,7 @@ static int test_text_field_and_confirm(void) {
 
 static int test_toolbox_like_skeleton(void) {
   const std::string xml =
-      Page("id_debug_settings", "★OrionHEN 工具箱")
+      Page("id_debug_settings", "★OnionHEN 工具箱")
           .root_focus("id_group_pkg")
           .group(
               "id_group_pkg", "软件包安装",
@@ -223,7 +223,7 @@ static int test_toolbox_like_skeleton(void) {
                        "PkgInstaller/data/pkginstaller.xml");
               },
               "安装 PKG 与附加内容",
-              "/user/data/OrionHEN/assets/icon_xml_package.png",
+              "/user/data/OnionHEN/assets/icon_xml_package.png",
               "id_game_package_installer")
           .build();
 
@@ -233,7 +233,7 @@ static int test_toolbox_like_skeleton(void) {
   TEST_ASSERT_TRUE(xml.find("id=\"id_group_pkg\"") != std::string::npos);
   /* icon uses path-style // ; file keeps single / for plugin resources */
   TEST_ASSERT_TRUE(
-      xml.find("icon=\"//user//data//OrionHEN//assets//icon_xml_package.png\"") !=
+      xml.find("icon=\"//user//data//OnionHEN//assets//icon_xml_package.png\"") !=
       std::string::npos);
   TEST_ASSERT_TRUE(xml.find("file=\"PkgInstaller/data/pkginstaller.xml\"") !=
                    std::string::npos);
@@ -242,17 +242,17 @@ static int test_toolbox_like_skeleton(void) {
 
 extern "C" int test_ps5_settings_ui_suite(void) {
   int fails = 0;
-  fails += orion_test_run("ps5ui.escape", test_escape_special_chars);
-  fails += orion_test_run("ps5ui.minimal_page", test_minimal_page_shell);
-  fails += orion_test_run("ps5ui.widgets", test_toggle_button_label_attrs);
-  fails += orion_test_run("ps5ui.toggle_off", test_toggle_off_value);
-  fails += orion_test_run("ps5ui.list", test_list_and_items);
-  fails += orion_test_run("ps5ui.nested_group", test_nested_group);
-  fails += orion_test_run("ps5ui.link_style", test_link_and_root_style);
-  fails += orion_test_run("ps5ui.attr_escape", test_attr_escaping_in_titles);
-  fails += orion_test_run("ps5ui.remote_play_like", test_remote_play_like_page);
-  fails += orion_test_run("ps5ui.fluent_chain", test_fluent_returns_this);
-  fails += orion_test_run("ps5ui.text_field_confirm", test_text_field_and_confirm);
-  fails += orion_test_run("ps5ui.toolbox_skeleton", test_toolbox_like_skeleton);
+  fails += onion_test_run("ps5ui.escape", test_escape_special_chars);
+  fails += onion_test_run("ps5ui.minimal_page", test_minimal_page_shell);
+  fails += onion_test_run("ps5ui.widgets", test_toggle_button_label_attrs);
+  fails += onion_test_run("ps5ui.toggle_off", test_toggle_off_value);
+  fails += onion_test_run("ps5ui.list", test_list_and_items);
+  fails += onion_test_run("ps5ui.nested_group", test_nested_group);
+  fails += onion_test_run("ps5ui.link_style", test_link_and_root_style);
+  fails += onion_test_run("ps5ui.attr_escape", test_attr_escaping_in_titles);
+  fails += onion_test_run("ps5ui.remote_play_like", test_remote_play_like_page);
+  fails += onion_test_run("ps5ui.fluent_chain", test_fluent_returns_this);
+  fails += onion_test_run("ps5ui.text_field_confirm", test_text_field_and_confirm);
+  fails += onion_test_run("ps5ui.toolbox_skeleton", test_toolbox_like_skeleton);
   return fails;
 }

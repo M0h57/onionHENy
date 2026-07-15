@@ -1,4 +1,4 @@
-/* Copyright (C) 2025 OrionHEN / LightningMods
+/* Copyright (C) 2025 OnionHEN / LightningMods
 
 This program is free software; you can redistribute it and/or modify it
 under the terms of the GNU General Public License as published by the
@@ -21,8 +21,8 @@ along with this program; see the file COPYING. If not, see
 #include <sys/mman.h>
 #include <string>
 #include <msg.hpp>
-#include <orion/ipc_server.hpp>
-// clientArgs = orion::IpcClientArgs (see ipc_server.hpp)
+#include <onion/ipc_server.hpp>
+// clientArgs = onion::IpcClientArgs (see ipc_server.hpp)
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -59,5 +59,5 @@ bool notifyHandlers(const uint32_t prefix, const pid_t pid, const bool isHomebre
 bool hasPrefixHandler(const uint32_t prefix) noexcept;
 void* messageThread(void*);
 bool GetFileContents(const char *path, char **buffer);
-// touch_file: liborion_platform (orion/fs.h)
+// touch_file: libonion_platform (onion/fs.h)
 void *IPC_loop(void *args);

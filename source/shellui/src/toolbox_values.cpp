@@ -1,4 +1,4 @@
-/* Copyright (C) 2025 OrionHEN / LightningMods
+/* Copyright (C) 2025 OnionHEN / LightningMods
  *
  * Shared value providers for toolbox UI binding (XML path + optional hooks).
  */
@@ -8,7 +8,7 @@
 #include "external_symbols.hpp"
 #include "shellui_state.hpp"
 
-#include <orion/platform.h>
+#include <onion/platform.h>
 
 #include <cstring>
 #include <string>
@@ -39,7 +39,7 @@ const ExactValueEntry kExactValues[] = {
      +[]() -> std::string { return bool_str(g_settings.overlay_ram); }},
     {"id_kstuff_autoload",
      +[]() -> std::string {
-       return bool_str(!if_exists("/user/data/OrionHEN/no_kstuff"));
+       return bool_str(!if_exists("/user/data/OnionHEN/no_kstuff"));
      }},
     {"id_disp_titleids",
      +[]() -> std::string { return bool_str(g_settings.display_tids); }},
@@ -67,7 +67,7 @@ const ExactValueEntry kExactValues[] = {
     {"id_debug_legacy_cmd",
      +[]() -> std::string { return bool_str(g_settings.legacy_cmd_server); }},
     {"id_custom_game_opts",
-     +[]() -> std::string { return bool_str(g_settings.orionhen_game_opts); }},
+     +[]() -> std::string { return bool_str(g_settings.onionhen_game_opts); }},
     {"id_auto_eject",
      +[]() -> std::string { return bool_str(g_settings.auto_eject_disc); }},
     {"id_overlay_change_pos",

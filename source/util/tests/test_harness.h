@@ -7,15 +7,15 @@
 extern "C" {
 #endif
 
-typedef int (*orion_test_fn_t)(void);
+typedef int (*onion_test_fn_t)(void);
 
-int orion_test_run(const char *name, orion_test_fn_t fn);
-int orion_test_fail(const char *file, int line, const char *fmt, ...);
+int onion_test_run(const char *name, onion_test_fn_t fn);
+int onion_test_fail(const char *file, int line, const char *fmt, ...);
 
 #define TEST_ASSERT_TRUE(expr)                                                \
   do {                                                                        \
     if (!(expr)) {                                                            \
-      return orion_test_fail(__FILE__, __LINE__,                              \
+      return onion_test_fail(__FILE__, __LINE__,                              \
                              "assertion failed: %s", #expr);                  \
     }                                                                         \
   } while (0)
@@ -25,7 +25,7 @@ int orion_test_fail(const char *file, int line, const char *fmt, ...);
     int expected_value__ = (expected);                                        \
     int actual_value__ = (actual);                                            \
     if (expected_value__ != actual_value__) {                                 \
-      return orion_test_fail(__FILE__, __LINE__,                              \
+      return onion_test_fail(__FILE__, __LINE__,                              \
                              "expected %d, got %d", expected_value__,         \
                              actual_value__);                                 \
     }                                                                         \
@@ -38,7 +38,7 @@ int orion_test_fail(const char *file, int line, const char *fmt, ...);
     unsigned long long actual_value__ =                                       \
         (unsigned long long)(actual);                                         \
     if (expected_value__ != actual_value__) {                                 \
-      return orion_test_fail(__FILE__, __LINE__,                              \
+      return onion_test_fail(__FILE__, __LINE__,                              \
                              "expected %llu, got %llu", expected_value__,     \
                              actual_value__);                                 \
     }                                                                         \
@@ -49,7 +49,7 @@ int orion_test_fail(const char *file, int line, const char *fmt, ...);
     const char *expected_value__ = (expected);                                \
     const char *actual_value__ = (actual);                                    \
     if (strcmp(expected_value__, actual_value__) != 0) {                      \
-      return orion_test_fail(__FILE__, __LINE__,                              \
+      return onion_test_fail(__FILE__, __LINE__,                              \
                              "expected \"%s\", got \"%s\"",                  \
                              expected_value__, actual_value__);                \
     }                                                                         \
@@ -58,7 +58,7 @@ int orion_test_fail(const char *file, int line, const char *fmt, ...);
 #define TEST_ASSERT_MEMEQ(expected, actual, len)                              \
   do {                                                                        \
     if (memcmp((expected), (actual), (len)) != 0) {                           \
-      return orion_test_fail(__FILE__, __LINE__,                              \
+      return onion_test_fail(__FILE__, __LINE__,                              \
                              "memory mismatch for %zu bytes",                 \
                              (size_t)(len));                                  \
     }                                                                         \

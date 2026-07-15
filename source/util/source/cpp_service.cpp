@@ -1,4 +1,4 @@
-/* Copyright (C) 2025 OrionHEN / LightningMods
+/* Copyright (C) 2025 OnionHEN / LightningMods
 
 This program is free software; you can redistribute it and/or modify it
 under the terms of the GNU General Public License as published by the
@@ -14,12 +14,12 @@ You should have received a copy of the GNU General Public License
 along with this program; see the file COPYING. If not, see
 <http://www.gnu.org/licenses/>.  */
 
-#include <orion/platform.h>
-#include <orion/ipc_client.hpp>
-#include <orion/ready.h>
-#include <orion/proc_query.h>
-#include <orion/settings.hpp>
-#include <orion/hijack_retry.h>
+#include <onion/platform.h>
+#include <onion/ipc_client.hpp>
+#include <onion/ready.h>
+#include <onion/proc_query.h>
+#include <onion/settings.hpp>
+#include <onion/hijack_retry.h>
 #include "common_utils.h"
 #include <string>
 #include <vector>
@@ -112,7 +112,7 @@ static void replyOk(int sock) {
 void cmd_server(int sock, Command &cmd) {
     pthread_mutex_lock(&jb_lock);
     UniquePtr<Hijacker> spawned = nullptr;
-    OrionHEN_log("command: %u", cmd.cmd);
+    OnionHEN_log("command: %u", cmd.cmd);
     
     if (cmd.cmd == 0) {
         numb_of_tries++;
@@ -125,28 +125,28 @@ void cmd_server(int sock, Command &cmd) {
     switch (cmd.cmd) {
     case JAILBREAK_CMD:
         if (cmd.magic != 0xDEADBEEF) {
-            orion_notify(true, "Jailbreak failed, magic is invaild");
+            onion_notify(true, "Jailbreak failed, magic is invaild");
             replyError(sock);
             break;
         }
         if (cmd.PID == -1 || !isProcessAlive(cmd.PID)) {
-            orion_notify(true, "Jailbreak failed, PID is invaild");
+            onion_notify(true, "Jailbreak failed, PID is invaild");
             replyError(sock);
             break;
         }
         
-        OrionHEN_log("WRONG Jailbreak command received: jailbreaking...");
+        OnionHEN_log("WRONG Jailbreak command received: jailbreaking...");
         {
             do {
                 spawned = Hijacker::getHijacker(cmd.PID);
                 if (spawned == nullptr) {
                     retries++;
-                    OrionHEN_log("is null for PID %d (attempt %d)", cmd.PID,
+                    OnionHEN_log("is null for PID %d (attempt %d)", cmd.PID,
                                  retries);
-                    if (orion_hijack_retry_should_stop(isProcessAlive(cmd.PID),
+                    if (onion_hijack_retry_should_stop(isProcessAlive(cmd.PID),
                                                        retries, 30)) {
-                        orion_notify(true, "Jailbreak failed, PID is invaild");
-                        OrionHEN_log("Jailbreak failed, PID is invaild");
+                        onion_notify(true, "Jailbreak failed, PID is invaild");
+                        OnionHEN_log("Jailbreak failed, PID is invaild");
                         break;
                     }
                 }
@@ -159,10 +159,10 @@ void cmd_server(int sock, Command &cmd) {
                 break;
             }
 
-            orion_notify(true, "[Legacy] App has been granted a jailbreak\n\nAn update for "
+            onion_notify(true, "[Legacy] App has been granted a jailbreak\n\nAn update for "
                       "this PKG is available");
             spawned->jailbreak(true);
-            OrionHEN_log("jailbroke app %s", cmd.msg1);
+            OnionHEN_log("jailbroke app %s", cmd.msg1);
         }
         replyOk(sock);
         break;
@@ -174,7 +174,7 @@ void cmd_server(int sock, Command &cmd) {
         
     default:
         puts("default command");
-        orion_notify(true, "Update the PKG you are using before continuing\nGot Command %i",
+        onion_notify(true, "Update the PKG you are using before continuing\nGot Command %i",
               cmd.cmd);
         replyError(sock);
         break;
@@ -191,7 +191,7 @@ void *runCommandNControlServer(void *) {
 
     s = socket(AF_INET, SOCK_STREAM, 0);
     if (s == -1) {
-        orion_notify(true, "Failed to create socket %s", strerror(errno));
+        onion_notify(true, "Failed to create socket %s", strerror(errno));
         return nullptr;
     }
 
@@ -207,17 +207,17 @@ void *runCommandNControlServer(void *) {
     sockaddr.sin_addr.s_addr = INADDR_ANY;
 
     if (bind(s, (const struct sockaddr *)&sockaddr, sizeof(sockaddr)) < 0) {
-        orion_notify(true, "Failed to bind to port 9028 %s", strerror(errno));
+        onion_notify(true, "Failed to bind to port 9028 %s", strerror(errno));
         return nullptr;
     }
 
     if (listen(s, 5) < 0) {
-        orion_notify(true, "Failed to listen on port 9028 %s", strerror(errno));
+        onion_notify(true, "Failed to listen on port 9028 %s", strerror(errno));
         return nullptr;
     }
 
     if(g_legacy_cmd_server)
-	   OrionHEN_log("[Daemon LEGACY IPC] Server started on port 9028");
+	   OnionHEN_log("[Daemon LEGACY IPC] Server started on port 9028");
 
     // Accept clients
     while (!g_legacy_cmd_server_exit) {
@@ -229,13 +229,13 @@ void *runCommandNControlServer(void *) {
             break;
         }
         if (client > 0 && g_legacy_cmd_server) {
-            OrionHEN_log("[Daemon IPC] Client connected");
+            OnionHEN_log("[Daemon IPC] Client connected");
             while ((readSize = recv(client, reinterpret_cast<void *>(&cmd),
                                   sizeof(cmd), MSG_NOSIGNAL)) > 0) {
                 if (cmd.magic == 0xDEADBEEF ) {
                     cmd_server(client, cmd);
                 } else {
-                    OrionHEN_log("[Daemon IPC] Invalid magic number");
+                    OnionHEN_log("[Daemon IPC] Invalid magic number");
                 }
             }
         }
@@ -247,7 +247,7 @@ void *runCommandNControlServer(void *) {
     if (s >= 0)
         close(s), s = -1;
 
-    OrionHEN_log("[Daemon IPC] Server stopped");
+    OnionHEN_log("[Daemon IPC] Server stopped");
 
     if (g_legacy_cmd_server_exit) {
         g_legacy_cmd_server_exit = false;
@@ -274,29 +274,29 @@ void check_addr_change(void) {
     bool ip_changed = strcmp(&ip_address[0], &func_ip_address[0]) != 0;
     if (ip_changed || rest_mode_action) {
         if (ip_changed || !real_rest_mode_detected) {
-            orion_notify(true, "IP Address changed to %s, restarting server(s)",
+            onion_notify(true, "IP Address changed to %s, restarting server(s)",
                   func_ip_address);
         } else if (rest_mode_action && !no_network_patched && !not_connected &&
                   real_rest_mode_detected) {
             LoadSettings();
             const uint64_t delay =
                 g_settings.snapshot().rest_mode_delay_seconds;
-            OrionHEN_log("sleeping for %llu secs",
+            OnionHEN_log("sleeping for %llu secs",
                          static_cast<unsigned long long>(delay));
             sleep(static_cast<unsigned int>(delay));
-            orion_notify(true, "Coming out of Rest Mode detected, restarting server(s)");
-            OrionHEN_log("waiting for logged in user");
+            onion_notify(true, "Coming out of Rest Mode detected, restarting server(s)");
+            OnionHEN_log("waiting for logged in user");
             
             while (!isUserLoggedIn()) {
                 sleep(2);
             }
             
-            OrionHEN_log("user is logged in");
-            OrionHEN_log("Coming out rest mode, activating patches");
+            OnionHEN_log("user is logged in");
+            OnionHEN_log("Coming out rest mode, activating patches");
             
 
             if (!enable_toolbox()) {
-                orion_notify(true, "Failed to inject toolbox");
+                onion_notify(true, "Failed to inject toolbox");
             }
         }
         

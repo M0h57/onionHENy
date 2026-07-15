@@ -14,7 +14,7 @@
 
 #include <ps5/kernel.h>
 
-void OrionHEN_log(const char *fmt, ...);
+void OnionHEN_log(const char *fmt, ...);
 
 /* Same as NineS SYS_dl_get_list / SYS_dl_get_info_2 */
 #ifndef SYS_dl_get_list

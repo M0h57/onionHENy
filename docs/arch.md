@@ -1,6 +1,6 @@
-# OrionHEN 架构分析
+# OnionHEN 架构分析
 
-OrionHEN 是 PS5 的 All-in-One Homebrew Enabler，基于 **etaHEN**（LightningMods）GPLv3 源码的社区续作，定位类似 PS4 上的 GoldHEN。
+OnionHEN 是 PS5 的 All-in-One Homebrew Enabler，基于 **etaHEN**（LightningMods）GPLv3 源码的社区续作，定位类似 PS4 上的 GoldHEN。
 
 | 维度 | 说明 |
 |------|------|
@@ -9,7 +9,7 @@ OrionHEN 是 PS5 的 All-in-One Homebrew Enabler，基于 **etaHEN**（Lightning
 | 许可证 | GPLv3 |
 | 构建 | CMake + Ninja + `PS5_PAYLOAD_SDK`（clang） |
 
-**运行时前置条件：** 必须先有 **外部 elfldr（端口 9021）**。OrionHEN 不再内嵌 9021 服务，只通过它启动子 ELF。
+**运行时前置条件：** 必须先有 **外部 elfldr（端口 9021）**。OnionHEN 不再内嵌 9021 服务，只通过它启动子 ELF。
 
 ---
 
@@ -21,7 +21,7 @@ OrionHEN 是 PS5 的 All-in-One Homebrew Enabler，基于 **etaHEN**（Lightning
 [WebKit / IPV6 等 Kernel Exploit]
         │
         ▼
-  OrionHEN.elf  (unpacker)
+  OnionHEN.elf  (unpacker)
         │  LZMA 解压内嵌 bootstrapper
         │  经 9021 送出 bootstrapper.elf
         ▼
@@ -30,7 +30,7 @@ OrionHEN 是 PS5 的 All-in-One Homebrew Enabler，基于 **etaHEN**（Lightning
         │  2. remount /system、/system_ex
         │  3. unmount /update（阻止系统更新）
         │  4. 将内嵌 ELF 字节经 9021 顺序启动：util → kstuff → daemon
-        │  5. 加载 /data/OrionHEN/payloads/ 下 .elf
+        │  5. 加载 /data/OnionHEN/payloads/ 下 .elf
         ▼
 ┌───────────────┬────────────────┬──────────────────┐
 │  util.elf     │  kstuff.elf    │  daemon.elf      │
@@ -67,7 +67,7 @@ fps_elf.elf ──┼──► 嵌入 daemon.elf ──┐
               └───────────────────────┘   bootstrapper.elf.lzma
                                               │
                                               ▼ 嵌入
-                                         OrionHEN.elf  (最终用户 payload)
+                                         OnionHEN.elf  (最终用户 payload)
 ```
 
 构建阶段（`scripts/build.sh`）：
@@ -77,17 +77,17 @@ fps_elf.elf ──┼──► 嵌入 daemon.elf ──┐
 3. sync vendor（kstuff）
 4. `daemon` + `util`
 5. `bootstrapper`（再 lzma 压缩）
-6. `unpacker` → `OrionHEN.elf`
+6. `unpacker` → `OnionHEN.elf`
 
-> **Payload only:** OrionHEN no longer supports `.plugin` packages. Place
-> bare `.elf` under `/data/OrionHEN/payloads/` (or USB `.../payloads/`).
+> **Payload only:** OnionHEN no longer supports `.plugin` packages. Place
+> bare `.elf` under `/data/OnionHEN/payloads/` (or USB `.../payloads/`).
 
 产物落在仓库根目录 `build/bin/`（静态库 `build/lib/`；CMake 树 `build/`）。
 
 ### 1.3 仓库布局
 
 ```
-OrionHEN/
+OnionHEN/
 ├── assets/           # 图标等
 ├── docs/             # 技术文档（含本文）
 ├── scripts/          # 构建与主机侧工具
@@ -97,9 +97,9 @@ OrionHEN/
 │   ├── util/         # 工具守护（金手指、IPC 等）
 │   ├── shellui/      # Toolbox
 │   ├── fps_elf/      # 游戏 overlay
-│   ├── unpacker/     # 最终 OrionHEN.elf
+│   ├── unpacker/     # 最终 OnionHEN.elf
 │   ├── libhijacker/ libNineS/ libNidResolver/
-│   ├── liborion_*    # 共享：ipc/settings/proc/platform/ready/detour/payload/playtime/elfldr
+│   ├── libonion_*    # 共享：ipc/settings/proc/platform/ready/detour/payload/playtime/elfldr
 │   ├── extern/       # 第三方源码
 │   ├── include/ lib/ # 公共头文件与预编译库
 │   └── vendor/       # 同步后的 kstuff 等
@@ -110,7 +110,7 @@ OrionHEN/
 
 ## 2. 模块职责
 
-### 2.1 `unpacker` → `OrionHEN.elf`
+### 2.1 `unpacker` → `OnionHEN.elf`
 
 - 用户侧最终 payload
 - 内嵌 **LZMA 压缩** 的 `bootstrapper.elf`
@@ -130,16 +130,16 @@ OrionHEN/
 1. 检查 `127.0.0.1:9021` 上的 elfldr
 2. 顺序发送原始 ELF 字节：util → kstuff → daemon
 3. 各子 ELF 启动后把主线程名设为稳定进程名（`util.elf` / `kstuff.elf` / `daemon.elf`）
-4. 加载 `/data/OrionHEN/payloads/` 下带 `.auto_start` 的 `.elf`
+4. 加载 `/data/OnionHEN/payloads/` 下带 `.auto_start` 的 `.elf`
 
-可用 `/data/OrionHEN/no_kstuff` 或 `/mnt/usb0/no_kstuff` 跳过 kstuff。
+可用 `/data/OnionHEN/no_kstuff` 或 `/mnt/usb0/no_kstuff` 跳过 kstuff。
 
 ### 2.3 `daemon` → `daemon.elf`（Critical 守护进程）
 
 - 内嵌 `shellui.elf`、`fps_elf.elf`，并保留一份 `util.elf` 供 watchdog 纯内存重启
 - 经 **libNineS** 将 Toolbox 注入 `SceShellUI`
 - 监视 util，崩溃可重启
-- Unix socket：`/system_tmp/OrionHEN_crit_service`
+- Unix socket：`/system_tmp/OnionHEN_crit_service`
 - IPC 前缀 `0x9000000`（`BREW_*`）
 
 主要能力：
@@ -152,7 +152,7 @@ OrionHEN/
 ### 2.4 `util` → `util.elf`（Utility 守护进程）
 
 - 与 critical 分离，承载网络/IO 与较重业务，提高稳定性
-- Unix socket：`/system_tmp/OrionHEN_util_service`
+- Unix socket：`/system_tmp/OnionHEN_util_service`
 - IPC 前缀 `0x8000000`（`BREW_UTIL_*`）
 
 | 服务 | 端口 / 入口 | 说明 |
@@ -191,17 +191,17 @@ OrionHEN/
 | 库 | 作用 |
 |----|------|
 | **libhijacker** | 进程劫持、kernel R/W、spawner、调试、通知；依赖 NidResolver |
-| **liborion_elfldr** | **唯一** ptrace/`pt_*` + inject 侧 `elfldr_load` / `elfldr_payload_args` / `elfldr_raise_privileges`；**authid 不在每条 ptrace 上翻转**（由 inject 入口一次提权） |
-| **libNineS** | 进程注入编排（`inject_elf` / stager）；**pt/elfldr 实现来自 liborion_elfldr** |
+| **libonion_elfldr** | **唯一** ptrace/`pt_*` + inject 侧 `elfldr_load` / `elfldr_payload_args` / `elfldr_raise_privileges`；**authid 不在每条 ptrace 上翻转**（由 inject 入口一次提权） |
+| **libNineS** | 进程注入编排（`inject_elf` / stager）；**pt/elfldr 实现来自 libonion_elfldr** |
 | **libNidResolver** | PS5 模块 NID 解析（SHA1 等） |
-| **liborion_ipc** | **客户端**（injectee 双单例）+ **服务端传输环**（`ipc_server`：listen/accept/loop/reply）；daemon/util/shellui/fps 共用 |
-| **liborion_settings** | 统一 `config.ini` schema；各进程以 `orion::Settings g_settings` 为真相源 |
-| **liborion_detour** | 共享 Detour + hde64 钩子栈；shellui / fps_elf 共用 |
-| **liborion_proc** | 共享 proc/ucred（allproc 遍历、dynlib、authid）+ **sysctl 进程查询**（`find_pid` / `orion_find_pid_ex` / `isProcessAlive`）；daemon / util / shellui / bootstrapper / fps 共用 |
-| **liborion_platform** | 平台叶子：`if_exists` / `touch_file` / `rmtree`、`OrionHEN_log`（可配置 tag/路径）、`orion_notify`；修一处全树受益 |
-| **liborion_ready** | 跨进程 ready/runtime 标记（`/system_tmp/orion_ready/<name>` + wait/timeout）；替代固定 sleep 与 ad-hoc 文件旗 |
-| **orion/lnc.h** | 共享 LNC 启动 ABI（`LncAppParam` / `Flag` / 错误码）；daemon `launcher.hpp` 仅为 shim |
-| **libNineS** | ptrace 注入编排；**proc/ucred → liborion_proc**；**pt/elfldr → liborion_elfldr** |
+| **libonion_ipc** | **客户端**（injectee 双单例）+ **服务端传输环**（`ipc_server`：listen/accept/loop/reply）；daemon/util/shellui/fps 共用 |
+| **libonion_settings** | 统一 `config.ini` schema；各进程以 `onion::Settings g_settings` 为真相源 |
+| **libonion_detour** | 共享 Detour + hde64 钩子栈；shellui / fps_elf 共用 |
+| **libonion_proc** | 共享 proc/ucred（allproc 遍历、dynlib、authid）+ **sysctl 进程查询**（`find_pid` / `onion_find_pid_ex` / `isProcessAlive`）；daemon / util / shellui / bootstrapper / fps 共用 |
+| **libonion_platform** | 平台叶子：`if_exists` / `touch_file` / `rmtree`、`OnionHEN_log`（可配置 tag/路径）、`onion_notify`；修一处全树受益 |
+| **libonion_ready** | 跨进程 ready/runtime 标记（`/system_tmp/onion_ready/<name>` + wait/timeout）；替代固定 sleep 与 ad-hoc 文件旗 |
+| **onion/lnc.h** | 共享 LNC 启动 ABI（`LncAppParam` / `Flag` / 错误码）；daemon `launcher.hpp` 仅为 shim |
+| **libNineS** | ptrace 注入编排；**proc/ucred → libonion_proc**；**pt/elfldr → libonion_elfldr** |
 
 #### Daemon 模块（加深后）
 
@@ -217,7 +217,7 @@ OrionHEN/
 
 | 模块 | 职责 |
 |------|------|
-| **ipc.hpp** | 仅 `orion/ipc_client`（**不**拉 HookedFuncs） |
+| **ipc.hpp** | 仅 `onion/ipc_client`（**不**拉 HookedFuncs） |
 | **shellui_types.hpp** | 枚举 / 插件 / overlay / settings 类型 |
 | **HookedFuncs.hpp** | Mono hooks + UI API（include types） |
 | **mono_runtime** | Mono 反射 / 属性读写 / 类查找 |
@@ -249,8 +249,8 @@ ipc_client.*     注入侧客户端
 #### 配置分层
 
 ```
-orion::Settings       持久化 schema（双路径 twin：primary + shellui）
-orion::SettingsStore  进程内线程安全真相源（mutex + snapshot/store/update）
+onion::Settings       持久化 schema（双路径 twin：primary + shellui）
+onion::SettingsStore  进程内线程安全真相源（mutex + snapshot/store/update）
 g_settings            daemon/util：SettingsStore；shellui：Settings（UI 线程）
 LoadSettings()        统一 bool 契约：刷新 store；缺文件用默认并成功
 mtime 门控            settings_config_newest_mtime — 任一 twin 更新即失效
@@ -266,7 +266,7 @@ OverlayLayout         仅 shellui：由 overlay_pos 派生的像素坐标
 | `sync_vendor.sh` | 同步 kstuff 等 vendor |
 | `send_elf.py` / `send_payload.ps1` | 网络发送 ELF |
 | `launch.py` | IPC 控制应用 |
-| `shutdown_orion.py` / `kill_daemon.py` | 从 PC 关栈：util → 重启 ShellUI → daemon 退出；**不杀 kstuff**（TCP **9048**） |
+| `shutdown_onion.py` / `kill_daemon.py` | 从 PC 关栈：util → 重启 ShellUI → daemon 退出；**不杀 kstuff**（TCP **9048**） |
 | `daemon_log.py` | 守护进程日志 |
 | `ps5_cmake.sh` | Prospero CMake 封装 |
 | `pack_bootstrapper.sh` | bootstrapper 尺寸记录 + lzma 打包 |
@@ -278,8 +278,8 @@ OverlayLayout         仅 shellui：由 overlay_pos 派生的像素坐标
 ```
 shellui / fps_elf / homebrew
         │ Unix domain socket
-        ├─► /system_tmp/OrionHEN_crit_service  (daemon, 0x9xxxxxxx)
-        └─► /system_tmp/OrionHEN_util_service  (util,   0x8xxxxxxx)
+        ├─► /system_tmp/OnionHEN_crit_service  (daemon, 0x9xxxxxxx)
+        └─► /system_tmp/OnionHEN_util_service  (util,   0x8xxxxxxx)
 
 homebrew (legacy)
         └─► TCP 127.0.0.1:9028  (HijackerCommand, magic 0xDEADBEEF)
@@ -329,11 +329,11 @@ struct IPCMessage {
 
 | 路径 | 用途 |
 |------|------|
-| `/data/OrionHEN/` | 数据根目录 |
-| `/data/OrionHEN/config.ini` | 配置 |
-| `/data/OrionHEN/OrionHEN.log` | 日志 |
-| `/data/OrionHEN/payloads/` | payload `.elf`（唯一扩展包格式；启动时 stage 到同目录） |
-| `/system_tmp/OrionHEN_*_service` | Unix IPC socket |
+| `/data/OnionHEN/` | 数据根目录 |
+| `/data/OnionHEN/config.ini` | 配置 |
+| `/data/OnionHEN/OnionHEN.log` | 日志 |
+| `/data/OnionHEN/payloads/` | payload `.elf`（唯一扩展包格式；启动时 stage 到同目录） |
+| `/system_tmp/OnionHEN_*_service` | Unix IPC socket |
 | `/system_tmp/toolbox_online` | Toolbox 注入就绪信号 |
 
 ---
@@ -391,7 +391,7 @@ struct IPCMessage {
 |------|------|
 | **ps5-payload-sdk** (`PS5_PAYLOAD_SDK`) | Prospero 工具链、`prospero-cmake`、系统头文件 |
 | **clang** | 目标 `x86_64-sie-ps5` |
-| **elfldr @ 9021** | 运行时必需，不随 OrionHEN 打包 |
+| **elfldr @ 9021** | 运行时必需，不随 OnionHEN 打包 |
 | Kernel exploit | 如 IPV6 等，用于先获得代码执行 |
 
 ### 5.2 Git Submodules（`third_party/`）
@@ -454,7 +454,7 @@ git submodule update --init --recursive
 ## 6. 架构特点小结
 
 1. **分层嵌入**  
-   用户只下发一个 `OrionHEN.elf`，内部层层解压/拉起全套服务。
+   用户只下发一个 `OnionHEN.elf`，内部层层解压/拉起全套服务。
 
 2. **双守护进程**  
    critical（注入/监视）与 util（网络/IO）分离，util 可崩溃恢复。
@@ -466,7 +466,7 @@ git submodule update --init --recursive
    Toolbox 不是独立 App，而是 ptrace 注入 ShellUI 的 Mono 代码。
 
 5. **kstuff 解耦**  
-   fPKG/fSELF 能力来自 kstuff-lite；可用 `/data/OrionHEN/kstuff.elf` 覆盖。
+   fPKG/fSELF 能力来自 kstuff-lite；可用 `/data/OnionHEN/kstuff.elf` 覆盖。
 
 6. **IPC 协议稳定**  
    Unix socket + 兼容旧 9028；废弃命令保留序号，便于旧客户端不崩。

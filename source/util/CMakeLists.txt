@@ -20,10 +20,10 @@ endif()
 message("IS_SUBPROJECT: ${IS_SUBPROJECT}")
 
 set(D_CWD "${CMAKE_CURRENT_SOURCE_DIR}")
-if(DEFINED ORIONHEN_OUT_BIN)
-	set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${ORIONHEN_OUT_BIN})
-	set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${ORIONHEN_OUT_LIB})
-	set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${ORIONHEN_OUT_LIB})
+if(DEFINED ONIONHEN_OUT_BIN)
+	set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${ONIONHEN_OUT_BIN})
+	set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${ONIONHEN_OUT_LIB})
+	set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${ONIONHEN_OUT_LIB})
 else()
 	set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${D_CWD}/../bin)
 	set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${D_CWD}/bin)
@@ -74,12 +74,12 @@ set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O0")
 target_sources(${PROJECT_NAME} PRIVATE ${SrcFiles} "${PROJECT_ROOT}/lib/elfldr_remote.c")
 target_include_directories(${PROJECT_NAME} PRIVATE
   "${D_CWD}/include"
-  "${PROJECT_ROOT}/liborion_settings/include"
-  "${PROJECT_ROOT}/liborion_ipc/include"
-  "${PROJECT_ROOT}/liborion_proc/include"
-  "${PROJECT_ROOT}/liborion_platform/include"
-  "${PROJECT_ROOT}/liborion_payload/include"
-  "${PROJECT_ROOT}/liborion_elfldr/include"
+  "${PROJECT_ROOT}/libonion_settings/include"
+  "${PROJECT_ROOT}/libonion_ipc/include"
+  "${PROJECT_ROOT}/libonion_proc/include"
+  "${PROJECT_ROOT}/libonion_platform/include"
+  "${PROJECT_ROOT}/libonion_payload/include"
+  "${PROJECT_ROOT}/libonion_elfldr/include"
   "${PROJECT_ROOT}/include"
 )
 # CBC for MC4 / ShnExt AES; no KCF/WMDW
@@ -89,16 +89,16 @@ target_link_directories(${PROJECT_NAME} PUBLIC
   "${D_CWD}/lib"
   "${D_CWD}/lib/keystone_cxxrt"
 )
-add_dependencies(${PROJECT_NAME} hijacker NineS orion_settings orion_ipc orion_proc orion_platform orion_payload orion_ready orion_elfldr)
+add_dependencies(${PROJECT_NAME} hijacker NineS onion_settings onion_ipc onion_proc onion_platform onion_payload onion_ready onion_elfldr)
 # keystone: ShnExt ASM only
 target_link_libraries(${PROJECT_NAME} PUBLIC
-    orion_ipc
-    orion_settings
-    orion_proc
-    orion_platform
-    orion_payload
-    orion_ready
-    orion_elfldr
+    onion_ipc
+    onion_settings
+    onion_proc
+    onion_platform
+    onion_payload
+    onion_ready
+    onion_elfldr
     keystone
     c++
     c++abi

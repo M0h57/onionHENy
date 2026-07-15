@@ -1,4 +1,4 @@
-/* Copyright (C) 2025 OrionHEN / LightningMods
+/* Copyright (C) 2025 OnionHEN / LightningMods
 
 This program is free software; you can redistribute it and/or modify it
 under the terms of the GNU General Public License as published by the
@@ -28,15 +28,15 @@ along with this program; see the file COPYING. If not, see
 #include <minizip/unzip.h>
 #include "../../extern/cJSON/cJSON.hpp"
 
-#define TEST_USER_AGENT "OrionHEN_Downloader"
+#define TEST_USER_AGENT "OnionHEN_Downloader"
 #include <curl/curl.h>
 
 #define NET_HEAP_SIZE	(32 * 1024)
 #define MAX_CONCURRENT_REQUEST	(4)
 #define PRIVATE_CA_CERT_NUM		(0)
-#define COMMIT_HASH_FILE "/data/OrionHEN/cheat_commit_hash.txt"
-/* PS5 cheats repository used by OrionHEN (public GitHub source) */
-#define ORIONHEN_GITHUB_API_URL "https://api.github.com/repos/etaHEN/PS5_Cheats/commits"
+#define COMMIT_HASH_FILE "/data/OnionHEN/cheat_commit_hash.txt"
+/* PS5 cheats repository used by OnionHEN (public GitHub source) */
+#define ONIONHEN_GITHUB_API_URL "https://api.github.com/repos/etaHEN/PS5_Cheats/commits"
 #define GOLDHEN_GITHUB_API_URL "https://api.github.com/repos/GoldHEN/GoldHEN_Cheat_Repository/commits"
 
 uint64_t sceKernelGetProcessTime(void);
@@ -59,11 +59,11 @@ struct json_data {
 bool IniliatizeHTTP() {
     CURLcode res = curl_global_init(CURL_GLOBAL_DEFAULT);
     if (res != CURLE_OK) {
-        OrionHEN_log("curl_global_init() error: %s", curl_easy_strerror(res));
+        OnionHEN_log("curl_global_init() error: %s", curl_easy_strerror(res));
         return false;
     }
 
-	OrionHEN_log("cURL initialized successfully, version %s", curl_version());
+	OnionHEN_log("cURL initialized successfully, version %s", curl_version());
     return true;
 }
 
@@ -74,7 +74,7 @@ static size_t write_file_callback(void* contents, size_t size, size_t nmemb, voi
 
     ssize_t written = sceKernelWrite(progress->fd, contents, real_size);
     if (written != real_size) {
-        OrionHEN_log("sceKernelWrite() error: written %ld, expected %zu", written, real_size);
+        OnionHEN_log("sceKernelWrite() error: written %ld, expected %zu", written, real_size);
         return 0; // This will cause curl to abort
     }
 
@@ -106,7 +106,7 @@ static int progress_callback(void* clientp, curl_off_t dltotal, curl_off_t dlnow
                 dlnow_mb);
         }
 
-        orion_notify(true, notifyMsg);
+        onion_notify(true, notifyMsg);
         progress->last_notify_time = current_time;
     }
 
@@ -128,7 +128,7 @@ bool download_file(const char* url, const char* dst) {
     // Open file for writing
     int fd = sceKernelOpen(dst, O_WRONLY | O_CREAT, 0777);
     if (fd < 0) {
-        OrionHEN_log("Failed to open destination file: %s (error: 0x%08X)", dst, fd);
+        OnionHEN_log("Failed to open destination file: %s (error: 0x%08X)", dst, fd);
         return false;
     }
 
@@ -143,13 +143,13 @@ bool download_file(const char* url, const char* dst) {
     // Initialize curl
     curl = curl_easy_init();
     if (!curl) {
-        OrionHEN_log("curl_easy_init() failed");
+        OnionHEN_log("curl_easy_init() failed");
         sceKernelClose(fd);
         return false;
     }
 
     // Initial notification
-    OrionHEN_log("Downloading %s to %s", url, dst);
+    OnionHEN_log("Downloading %s to %s", url, dst);
 
     // Set curl options
     curl_easy_setopt(curl, CURLOPT_URL, url);
@@ -173,14 +173,14 @@ bool download_file(const char* url, const char* dst) {
     res = curl_easy_perform(curl);
 
     if (res != CURLE_OK) {
-        OrionHEN_log("curl_easy_perform() failed: %s", curl_easy_strerror(res));
-        orion_notify(true, "Failed to download the %s!\n\nCheck your internet connection and try again.\nError: %s", filename, curl_easy_strerror(res));
+        OnionHEN_log("curl_easy_perform() failed: %s", curl_easy_strerror(res));
+        onion_notify(true, "Failed to download the %s!\n\nCheck your internet connection and try again.\nError: %s", filename, curl_easy_strerror(res));
     }
     else {
         // Check HTTP response code
         long response_code;
         curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &response_code);
-        OrionHEN_log("Response status code: %ld", response_code);
+        OnionHEN_log("Response status code: %ld", response_code);
 
         if (response_code == 200) {
             // Get download size info
@@ -190,13 +190,13 @@ bool download_file(const char* url, const char* dst) {
             snprintf(notifyMsg, sizeof(notifyMsg),
                 "Successfully downloaded the %s\nTotal Size: %.1f MB", filename,
                 (float)download_size / (1024 * 1024));
-            orion_notify(true, notifyMsg);
-            OrionHEN_log("Download complete: %lld bytes", download_size);
+            onion_notify(true, notifyMsg);
+            OnionHEN_log("Download complete: %lld bytes", download_size);
             success = true;
         }
         else {
-            OrionHEN_log("HTTP error: unexpected status code %ld", response_code);
-            orion_notify(true, "Failed to download the %s!\n\nServer returned an error.", filename);
+            OnionHEN_log("HTTP error: unexpected status code %ld", response_code);
+            onion_notify(true, "Failed to download the %s!\n\nServer returned an error.", filename);
         }
     }
 
@@ -221,7 +221,7 @@ static size_t write_json_callback(void* contents, size_t size, size_t nmemb, voi
 
         char* new_data = realloc(json->data, new_capacity);
         if (!new_data) {
-            OrionHEN_log("Failed to reallocate memory for JSON data");
+            OnionHEN_log("Failed to reallocate memory for JSON data");
             return 0; // This will cause curl to abort
         }
 
@@ -250,10 +250,10 @@ static char* download_json(const char* url) {
         .capacity = 0x1000
     };
 
-    OrionHEN_log("Downloading JSON data from %s", url);
+    OnionHEN_log("Downloading JSON data from %s", url);
 
     if (!json.data) {
-        OrionHEN_log("Failed to allocate initial memory for JSON data");
+        OnionHEN_log("Failed to allocate initial memory for JSON data");
         return NULL;
     }
 
@@ -262,7 +262,7 @@ static char* download_json(const char* url) {
     // Initialize curl
     curl = curl_easy_init();
     if (!curl) {
-        OrionHEN_log("curl_easy_init() failed");
+        OnionHEN_log("curl_easy_init() failed");
         free(json.data);
         return NULL;
     }
@@ -281,7 +281,7 @@ static char* download_json(const char* url) {
     res = curl_easy_perform(curl);
 
     if (res != CURLE_OK) {
-        OrionHEN_log("curl_easy_perform() failed: %s", curl_easy_strerror(res));
+        OnionHEN_log("curl_easy_perform() failed: %s", curl_easy_strerror(res));
         free(json.data);
     }
     else {
@@ -290,11 +290,11 @@ static char* download_json(const char* url) {
         curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &response_code);
 
         if (response_code == 200) {
-            OrionHEN_log("Downloaded %zu bytes of JSON data", json.size);
+            OnionHEN_log("Downloaded %zu bytes of JSON data", json.size);
             result = json.data; // Return the data
         }
         else {
-            OrionHEN_log("HTTP error: unexpected status code %ld", response_code);
+            OnionHEN_log("HTTP error: unexpected status code %ld", response_code);
             free(json.data);
         }
     }
@@ -317,8 +317,8 @@ static void ensure_directory(const char* path) {
 bool extract_zip(const char* zip_path, const char* extract_dir) {
     unzFile zip = unzOpen(zip_path);
     if (!zip) {
-        OrionHEN_log("Failed to open zip file: %s", zip_path);
-        orion_notify(true, "Failed to open zip file");
+        OnionHEN_log("Failed to open zip file: %s", zip_path);
+        onion_notify(true, "Failed to open zip file");
         return false;
     }
 
@@ -326,9 +326,9 @@ bool extract_zip(const char* zip_path, const char* extract_dir) {
 
     // Go to the first file
     if (unzGoToFirstFile(zip) != UNZ_OK) {
-        OrionHEN_log("Empty zip file");
+        OnionHEN_log("Empty zip file");
         unzClose(zip);
-        orion_notify(true, "Empty zip file");
+        onion_notify(true, "Empty zip file");
         return false;
     }
 
@@ -356,8 +356,8 @@ bool extract_zip(const char* zip_path, const char* extract_dir) {
     // Initial notification
     char notifyMsg[256];
     snprintf(notifyMsg, sizeof(notifyMsg), "Preparing to extract the cheats repo (%d files)", total_files);
-    orion_notify(true, notifyMsg);
-    OrionHEN_log("%s", notifyMsg);
+    onion_notify(true, notifyMsg);
+    OnionHEN_log("%s", notifyMsg);
 
     // Get current time for notification timing
     last_notify_time = sceKernelGetProcessTime();
@@ -376,7 +376,7 @@ bool extract_zip(const char* zip_path, const char* extract_dir) {
         root_folder_len = first_slash - filename + 1;
         strncpy(root_folder, filename, root_folder_len);
         root_folder[root_folder_len] = '\0';
-        OrionHEN_log("Detected root folder: %s", root_folder);
+        OnionHEN_log("Detected root folder: %s", root_folder);
     }
 
     // Reset to the first file
@@ -400,7 +400,7 @@ bool extract_zip(const char* zip_path, const char* extract_dir) {
 
         // Check if this is a directory
         if (filename[strlen(filename) - 1] == '/') {
-            OrionHEN_log("Creating directory: %s", full_path);
+            OnionHEN_log("Creating directory: %s", full_path);
             ensure_directory(full_path);
             processed_files++;
             continue;
@@ -416,14 +416,14 @@ bool extract_zip(const char* zip_path, const char* extract_dir) {
 
         // Extract the file
         if (unzOpenCurrentFile(zip) != UNZ_OK) {
-            OrionHEN_log("Failed to open file in zip");
+            OnionHEN_log("Failed to open file in zip");
             continue;
         }
 
         // Open with POSIX open() instead of fopen()
         int out = open(full_path, O_WRONLY | O_CREAT | O_TRUNC, 0644);
         if (out == -1) {
-            OrionHEN_log("Failed to create output file: %s (error: %d)", full_path, errno);
+            OnionHEN_log("Failed to create output file: %s (error: %d)", full_path, errno);
             unzCloseCurrentFile(zip);
             continue;
         }
@@ -447,8 +447,8 @@ bool extract_zip(const char* zip_path, const char* extract_dir) {
             snprintf(notifyMsg, sizeof(notifyMsg),
                 "Extracting the cheats: %d/%d files (%d%%)",
                 processed_files, total_files, progress_percent);
-            orion_notify(true, notifyMsg);
-            OrionHEN_log("%s", notifyMsg);
+            onion_notify(true, notifyMsg);
+            OnionHEN_log("%s", notifyMsg);
             last_notify_time = current_time;
         }
 
@@ -458,8 +458,8 @@ bool extract_zip(const char* zip_path, const char* extract_dir) {
     snprintf(notifyMsg, sizeof(notifyMsg),
         "Cheats Extraction complete (%d files)",
         processed_files);
-    orion_notify(true, notifyMsg);
-    OrionHEN_log("%s", notifyMsg);
+    onion_notify(true, notifyMsg);
+    OnionHEN_log("%s", notifyMsg);
 
     unzClose(zip);
     return true;
@@ -469,7 +469,7 @@ bool extract_zip(const char* zip_path, const char* extract_dir) {
 static bool read_stored_commit_hash(char* hash_buffer, size_t buffer_size) {
     int fd = sceKernelOpen(COMMIT_HASH_FILE, O_RDONLY, 0);
     if (fd < 0) {
-        OrionHEN_log("No stored commit hash file found");
+        OnionHEN_log("No stored commit hash file found");
         return false;
     }
     
@@ -477,7 +477,7 @@ static bool read_stored_commit_hash(char* hash_buffer, size_t buffer_size) {
     sceKernelClose(fd);
     
     if (read_bytes <= 0) {
-        OrionHEN_log("Failed to read stored commit hash");
+        OnionHEN_log("Failed to read stored commit hash");
         return false;
     }
     
@@ -490,7 +490,7 @@ static bool read_stored_commit_hash(char* hash_buffer, size_t buffer_size) {
         end--;
     }
     
-    OrionHEN_log("Read stored commit hash: %s", hash_buffer);
+    OnionHEN_log("Read stored commit hash: %s", hash_buffer);
     return true;
 }
 
@@ -498,7 +498,7 @@ static bool read_stored_commit_hash(char* hash_buffer, size_t buffer_size) {
 static bool write_commit_hash(const char* hash) {
     int fd = sceKernelOpen(COMMIT_HASH_FILE, O_WRONLY | O_CREAT | O_TRUNC, 0644);
     if (fd < 0) {
-        OrionHEN_log("Failed to open commit hash file for writing: 0x%08X", fd);
+        OnionHEN_log("Failed to open commit hash file for writing: 0x%08X", fd);
         return false;
     }
     
@@ -506,11 +506,11 @@ static bool write_commit_hash(const char* hash) {
     sceKernelClose(fd);
     
     if (written != (int)strlen(hash)) {
-        OrionHEN_log("Failed to write commit hash to file");
+        OnionHEN_log("Failed to write commit hash to file");
         return false;
     }
     
-    OrionHEN_log("Stored new commit hash: %s", hash);
+    OnionHEN_log("Stored new commit hash: %s", hash);
     return true;
 }
 
@@ -521,22 +521,22 @@ bool check_for_new_commit(int repo) {
     char stored_commit[64] = {0};
     bool has_new_commit = false;
     
-    OrionHEN_log("Checking for new commits...");
-    orion_notify(true, "Checking for updates to the cheats repo...");
+    OnionHEN_log("Checking for new commits...");
+    onion_notify(true, "Checking for updates to the cheats repo...");
     
     // Download the latest commit information
-    json_data = download_json(repo ? GOLDHEN_GITHUB_API_URL : ORIONHEN_GITHUB_API_URL);
+    json_data = download_json(repo ? GOLDHEN_GITHUB_API_URL : ONIONHEN_GITHUB_API_URL);
     if (!json_data) {
-        OrionHEN_log("Failed to download commit information from GitHub API");
-        orion_notify(true, "Failed to check the cheats repo for updates\nCheck your Connection and try again");
+        OnionHEN_log("Failed to download commit information from GitHub API");
+        onion_notify(true, "Failed to check the cheats repo for updates\nCheck your Connection and try again");
         return false;
     }
     
     // Extract the latest commit SHA
-    if (!orion_http_extract_commit_sha(json_data, latest_commit,
+    if (!onion_http_extract_commit_sha(json_data, latest_commit,
                                        sizeof(latest_commit))) {
-        OrionHEN_log("Failed to extract commit SHA from JSON response");
-        orion_notify(true, "Failed to parse update information\nUsing existing cheats repo");
+        OnionHEN_log("Failed to extract commit SHA from JSON response");
+        onion_notify(true, "Failed to parse update information\nUsing existing cheats repo");
         free(json_data);
         return false;
     }
@@ -544,15 +544,15 @@ bool check_for_new_commit(int repo) {
     // Read the stored commit hash
     bool has_stored_hash = read_stored_commit_hash(stored_commit, sizeof(stored_commit));
     if (!has_stored_hash) {
-        OrionHEN_log("No stored commit hash - treating as new commit");
+        OnionHEN_log("No stored commit hash - treating as new commit");
         has_new_commit = true;
     } else {
         // Compare the commits
         if (strcmp(latest_commit, stored_commit) != 0) {
-            OrionHEN_log("New commit detected: %s (was: %s)", latest_commit, stored_commit);
+            OnionHEN_log("New commit detected: %s (was: %s)", latest_commit, stored_commit);
             has_new_commit = true;
         } else {
-            OrionHEN_log("No new commits - repo is up to date");
+            OnionHEN_log("No new commits - repo is up to date");
             has_new_commit = false;
         }
     }
@@ -560,11 +560,11 @@ bool check_for_new_commit(int repo) {
     // If there's a new commit, store the new hash
     if (has_new_commit) {
         if (!write_commit_hash(latest_commit)) {
-            OrionHEN_log("Warning: Failed to store new commit hash");
+            OnionHEN_log("Warning: Failed to store new commit hash");
         }
-        orion_notify(true, "New cheats update found!\nDownloading latest version...");
+        onion_notify(true, "New cheats update found!\nDownloading latest version...");
     } else {
-        orion_notify(true, "Cheats repo is up to date!");
+        onion_notify(true, "Cheats repo is up to date!");
     }
     
     free(json_data);

@@ -1,4 +1,4 @@
-/* Copyright (C) 2025 OrionHEN / LightningMods — OnPress misc (kstuff, RP, credits) */
+/* Copyright (C) 2025 OnionHEN / LightningMods — OnPress misc (kstuff, RP, credits) */
 #include "onpress.hpp"
 #include <fstream>
 #include <pthread.h>
@@ -17,10 +17,10 @@ static OnPressResult id_download_kstuff(OnPressContext &ctx) {
 
 static OnPressResult id_kstuff_autoload(OnPressContext &ctx) {
   if (atol(ctx.value.c_str())) {
-    unlink("/user/data/OrionHEN/no_kstuff");
+    unlink("/user/data/OnionHEN/no_kstuff");
     notify("Kstuff will be loaded on next boot");
   } else {
-    touch_file("/user/data/OrionHEN/no_kstuff");
+    touch_file("/user/data/OnionHEN/no_kstuff");
     notify("Kstuff will NOT be loaded on next boot");
   }
   return OnPressResult::Handled;
@@ -28,7 +28,7 @@ static OnPressResult id_kstuff_autoload(OnPressContext &ctx) {
 
 static OnPressResult id_delete_kstuff(OnPressContext &ctx) {
   (void)ctx;
-  unlink("/user/data/OrionHEN/kstuff.elf");
+  unlink("/user/data/OnionHEN/kstuff.elf");
   notify("The external kstuff download has been deleted");
   return OnPressResult::Handled;
 }
@@ -59,7 +59,7 @@ static OnPressResult id_lm_test(OnPressContext &ctx) {
   return OnPressResult::Handled;
 }
 
-static OnPressResult id_orionhen_credits(OnPressContext &ctx) {
+static OnPressResult id_onionhen_credits(OnPressContext &ctx) {
   (void)ctx;
   return OnPressResult::EarlyReturn;
 }
@@ -80,7 +80,7 @@ static const OnPressExactEntry kExact[] = {
     {"id_delete_kstuff", id_delete_kstuff},
     {"id_save_rp_info", id_save_rp_info},
     {"id_lm_test", id_lm_test},
-    {"id_orionhen_credits", id_orionhen_credits},
+    {"id_onionhen_credits", id_onionhen_credits},
     {"id_dl_cheats", id_dl_cheats},
 };
 

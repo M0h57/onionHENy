@@ -8,27 +8,27 @@
 using namespace toolbox;
 
 static int test_display_strip_user(void) {
-  std::string a = display_path_for_ui("/user/data/OrionHEN/payloads/x.elf");
+  std::string a = display_path_for_ui("/user/data/OnionHEN/payloads/x.elf");
   std::string b = display_path_for_ui("/user");
-  TEST_ASSERT_STREQ("/data/OrionHEN/payloads/x.elf", a.c_str());
+  TEST_ASSERT_STREQ("/data/OnionHEN/payloads/x.elf", a.c_str());
   TEST_ASSERT_STREQ("", b.c_str());
   return 0;
 }
 
 static int test_display_map_usb(void) {
-  std::string a = display_path_for_ui("/usb0/orionhen/payloads/a.elf");
+  std::string a = display_path_for_ui("/usb0/onionhen/payloads/a.elf");
   std::string b = display_path_for_ui("/usb3/x");
-  TEST_ASSERT_STREQ("/mnt/usb0/orionhen/payloads/a.elf", a.c_str());
+  TEST_ASSERT_STREQ("/mnt/usb0/onionhen/payloads/a.elf", a.c_str());
   TEST_ASSERT_STREQ("/mnt/usb3/x", b.c_str());
   return 0;
 }
 
 static int test_display_passthrough(void) {
-  std::string a = display_path_for_ui("/data/OrionHEN/x");
+  std::string a = display_path_for_ui("/data/OnionHEN/x");
   std::string b = display_path_for_ui("relative/path");
   std::string c = display_path_for_ui("");
   std::string d = display_path_for_ui("/userdata/x");
-  TEST_ASSERT_STREQ("/data/OrionHEN/x", a.c_str());
+  TEST_ASSERT_STREQ("/data/OnionHEN/x", a.c_str());
   TEST_ASSERT_STREQ("relative/path", b.c_str());
   TEST_ASSERT_STREQ("", c.c_str());
   TEST_ASSERT_STREQ("/userdata/x", d.c_str());
@@ -60,7 +60,7 @@ static int test_elf_key_from_name(void) {
   TEST_ASSERT_TRUE(elf_key_from_name("payload.elf", key, sizeof(key)));
   TEST_ASSERT_STREQ("payload", key);
   TEST_ASSERT_TRUE(
-      elf_key_from_name("/user/data/OrionHEN/payloads/x.elf", key, sizeof(key)));
+      elf_key_from_name("/user/data/OnionHEN/payloads/x.elf", key, sizeof(key)));
   TEST_ASSERT_STREQ("x", key);
   TEST_ASSERT_TRUE(!elf_key_from_name(".elf", key, sizeof(key)));
   return 0;
@@ -68,11 +68,11 @@ static int test_elf_key_from_name(void) {
 
 extern "C" int test_toolbox_helpers_suite(void) {
   int fails = 0;
-  fails += orion_test_run("toolbox.display_strip_user", test_display_strip_user);
-  fails += orion_test_run("toolbox.display_map_usb", test_display_map_usb);
-  fails += orion_test_run("toolbox.display_passthrough", test_display_passthrough);
-  fails += orion_test_run("toolbox.payload_name_accept", test_payload_name_accept);
-  fails += orion_test_run("toolbox.payload_name_reject", test_payload_name_reject);
-  fails += orion_test_run("toolbox.elf_key_from_name", test_elf_key_from_name);
+  fails += onion_test_run("toolbox.display_strip_user", test_display_strip_user);
+  fails += onion_test_run("toolbox.display_map_usb", test_display_map_usb);
+  fails += onion_test_run("toolbox.display_passthrough", test_display_passthrough);
+  fails += onion_test_run("toolbox.payload_name_accept", test_payload_name_accept);
+  fails += onion_test_run("toolbox.payload_name_reject", test_payload_name_reject);
+  fails += onion_test_run("toolbox.elf_key_from_name", test_elf_key_from_name);
   return fails;
 }

@@ -1,11 +1,11 @@
-/* Copyright (C) 2025 OrionHEN / LightningMods
+/* Copyright (C) 2025 OnionHEN / LightningMods
  *
  * Extracted from MonoUtils.cpp for module locality.
  */
 
 #include "HookedFuncs.hpp"
-#include <orion/proc_query.h>
-#include <orion/platform.h>
+#include <onion/proc_query.h>
+#include <onion/platform.h>
 #include "ipc.hpp" // shellui_log + IPC_Client
 #include "external_symbols.hpp"
 #include "proc.h"
@@ -69,9 +69,9 @@ std::string remove_ps5_suffix(const std::string& filename) {
 
 int sceSystemServiceGetAppId(const char * tid){
    // shellui_log("looking for tid %s", tid);
-    pid_t success = orion_find_pid_ex(tid, false, false, false);
+    pid_t success = onion_find_pid_ex(tid, false, false, false);
     if(success < 0){
-       success = orion_find_pid_ex(remove_ps5_suffix(tid).c_str(), false, false, false);
+       success = onion_find_pid_ex(remove_ps5_suffix(tid).c_str(), false, false, false);
     }
     return success;
 }
@@ -79,7 +79,7 @@ int sceSystemServiceGetAppId(const char * tid){
 void KillAllWithName(const char * name, int signal){
     int pid = -1;
     IPC_Client& main_ipc = IPC_Client::getInstance(false);
-    while ((pid = orion_find_pid_ex(name, true, false, false)) > 0) {
+    while ((pid = onion_find_pid_ex(name, true, false, false)) > 0) {
         main_ipc.ForceKillPID(pid);
     }
 }

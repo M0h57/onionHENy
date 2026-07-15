@@ -1,4 +1,4 @@
-/* Copyright (C) 2025 OrionHEN / LightningMods
+/* Copyright (C) 2025 OnionHEN / LightningMods
  * ShellUI domain types / enums / settings externs (no Mono hooks).
  */
 #pragma once
@@ -7,7 +7,7 @@
 #include <vector>
 #include <iostream>
 #include "defs.h"
-#include <orion/settings.hpp>
+#include <onion/settings.hpp>
 
 #define MAX_LINE 256
 #define MAX_PAIRS 100
@@ -133,11 +133,11 @@ enum Cheats_Shortcut{
  };
 
  enum cheats_repo_source{
-    CHEATS_REPO_ORIONHEN = 0,
+    CHEATS_REPO_ONIONHEN = 0,
     CHEATS_REPO_GOLDHEN
  };
 
-extern orion::Settings g_settings;
+extern onion::Settings g_settings;
 
 /**
  * PHU flex banner layout: full-width edge strip + centered metric segments.

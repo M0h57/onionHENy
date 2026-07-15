@@ -1,4 +1,4 @@
-/* Copyright (C) 2025 OrionHEN / LightningMods — P0 split.
+/* Copyright (C) 2025 OnionHEN / LightningMods — P0 split.
  *
  * PHU-matched horizontal monitor bar (phu_overlay.cfg defaults, r19.72):
  *   font_size=18, font_style=1 (Bold), font_weight=900
@@ -20,7 +20,7 @@ extern MonoObject *rootWidget;
 extern MonoObject *font;
 extern OverlayLayout g_overlay_layout;
 #include "shellui_state.hpp"
-extern orion::Settings g_settings;
+extern onion::Settings g_settings;
 
 MonoObject *CreateLabel(const char *name, float x, float y, const char *text,
                         MonoObject *fontObj, int horzAlign, int vertAlign,
@@ -32,7 +32,7 @@ int get_ip_address(char *ip_address);
 
 namespace {
 
-constexpr const char *kBgPanelName = "id_orion_overlay_bg";
+constexpr const char *kBgPanelName = "id_onion_overlay_bg";
 
 /* PHU flex banner font (phu_overlay.cfg §1). */
 constexpr int kFontSize = 18;

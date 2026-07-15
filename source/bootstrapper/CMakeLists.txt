@@ -21,10 +21,10 @@ endif()
 message("IS_SUBPROJECT: ${IS_SUBPROJECT}")
 
 set(D_CWD "${CMAKE_CURRENT_SOURCE_DIR}")
-if(DEFINED ORIONHEN_OUT_BIN)
-	set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${ORIONHEN_OUT_BIN})
-	set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${ORIONHEN_OUT_LIB})
-	set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${ORIONHEN_OUT_LIB})
+if(DEFINED ONIONHEN_OUT_BIN)
+	set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${ONIONHEN_OUT_BIN})
+	set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${ONIONHEN_OUT_LIB})
+	set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${ONIONHEN_OUT_LIB})
 else()
 	set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${D_CWD}/../bin)
 	set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${D_CWD}/bin)
@@ -56,8 +56,8 @@ target_compile_options(${PROJECT_NAME} PUBLIC
 message("========== build: ${PROJECT_NAME} ==========")
 
 
-# Byepervisor removed from OrionHEN — bootstrapper sources only.
-# pt.c / elfldr.c live in liborion_elfldr (raise_privileges + inject primitives).
+# Byepervisor removed from OnionHEN — bootstrapper sources only.
+# pt.c / elfldr.c live in libonion_elfldr (raise_privileges + inject primitives).
 file(GLOB SrcFiles ${D_SRC}/*.c ${D_SRC}/*.cpp ${D_SRC}/../include/*.h ${D_SRC}/../include/*.hpp ${D_SRC}/*.s ${D_SRC}/../../extern/cJSON/*.cpp ${D_SRC}/../../extern/cJSON/*.hpp ${D_SRC}/../../lib/backtrace.cpp)
 list(FILTER SrcFiles EXCLUDE REGEX ".*/(pt|elfldr)\\.c$")
 
@@ -69,32 +69,32 @@ set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O0")
 target_sources(${PROJECT_NAME} PRIVATE ${SrcFiles})
 # .incbin in daemon.c is invisible to the compiler dependency scanner.
 # Without OBJECT_DEPENDS, daemon/util/kstuff rebuilds do not re-embed into bootstrapper.
-if(DEFINED ORIONHEN_OUT_BIN)
-	set(_orion_daemon_elf "${ORIONHEN_OUT_BIN}/daemon.elf")
-	set(_orion_util_elf "${ORIONHEN_OUT_BIN}/util.elf")
+if(DEFINED ONIONHEN_OUT_BIN)
+	set(_onion_daemon_elf "${ONIONHEN_OUT_BIN}/daemon.elf")
+	set(_onion_util_elf "${ONIONHEN_OUT_BIN}/util.elf")
 else()
-	set(_orion_daemon_elf "${PROJECT_ROOT}/bin/daemon.elf")
-	set(_orion_util_elf "${PROJECT_ROOT}/bin/util.elf")
+	set(_onion_daemon_elf "${PROJECT_ROOT}/bin/daemon.elf")
+	set(_onion_util_elf "${PROJECT_ROOT}/bin/util.elf")
 endif()
 set_source_files_properties(
 	${D_SRC}/daemon.c
 	PROPERTIES OBJECT_DEPENDS
-		"${_orion_daemon_elf};${_orion_util_elf};${D_CWD}/assets/kstuff.elf;${D_CWD}/assets/orionhen_sicon.png;${D_CWD}/assets/icon_xml_package.png;${D_CWD}/assets/icon_xml_plugins.png;${D_CWD}/assets/icon_xml_game.png;${D_CWD}/assets/icon_xml_network.png;${D_CWD}/assets/icon_xml_settings.png;${D_CWD}/assets/icon_xml_shortcuts.png;${D_CWD}/assets/icon_xml_debug.png;${D_CWD}/assets/icon_xml_about.png"
+		"${_onion_daemon_elf};${_onion_util_elf};${D_CWD}/assets/kstuff.elf;${D_CWD}/assets/onionhen_sicon.png;${D_CWD}/assets/icon_xml_package.png;${D_CWD}/assets/icon_xml_plugins.png;${D_CWD}/assets/icon_xml_game.png;${D_CWD}/assets/icon_xml_network.png;${D_CWD}/assets/icon_xml_settings.png;${D_CWD}/assets/icon_xml_shortcuts.png;${D_CWD}/assets/icon_xml_debug.png;${D_CWD}/assets/icon_xml_about.png"
 )
-# elfldr_raise_privileges from liborion_elfldr; launches go via 9021 (elfldr_remote.c).
+# elfldr_raise_privileges from libonion_elfldr; launches go via 9021 (elfldr_remote.c).
 target_include_directories(${PROJECT_NAME} PRIVATE
 	"${D_CWD}/include"
-	"${PROJECT_ROOT}/liborion_proc/include"
-	"${PROJECT_ROOT}/liborion_platform/include"
-	"${PROJECT_ROOT}/liborion_payload/include"
-	"${PROJECT_ROOT}/liborion_elfldr/include"
+	"${PROJECT_ROOT}/libonion_proc/include"
+	"${PROJECT_ROOT}/libonion_platform/include"
+	"${PROJECT_ROOT}/libonion_payload/include"
+	"${PROJECT_ROOT}/libonion_elfldr/include"
 	"${PROJECT_ROOT}/include"
 )
 target_link_directories	(${PROJECT_NAME} PUBLIC "${PROJECT_ROOT}/lib")
 target_sources(${PROJECT_NAME} PRIVATE "${PROJECT_ROOT}/lib/elfldr_remote.c")
-target_link_libraries	(${PROJECT_NAME} PUBLIC orion_proc orion_platform orion_payload orion_ready orion_elfldr NineS SceSystemService SceUserService kernel_sys SceNotification SceNet)
+target_link_libraries	(${PROJECT_NAME} PUBLIC onion_proc onion_platform onion_payload onion_ready onion_elfldr NineS SceSystemService SceUserService kernel_sys SceNotification SceNet)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
-add_dependencies(${PROJECT_NAME} daemon util shellui orion_proc orion_platform orion_payload orion_ready orion_elfldr)
+add_dependencies(${PROJECT_NAME} daemon util shellui onion_proc onion_platform onion_payload onion_ready onion_elfldr)
 
 # Copy bootstrapper.elf as test.elf before processing
 add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD

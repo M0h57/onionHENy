@@ -148,19 +148,19 @@ static int test_cheatmap_bounds(void) {
 
 extern "C" int test_toolbox_route_suite(void) {
   int fails = 0;
-  fails += orion_test_run("route.unknown", test_unknown_passthrough);
-  fails += orion_test_run("route.payloads", test_payloads_page);
-  fails += orion_test_run("route.debug", test_debug_settings_page);
-  fails += orion_test_run("route.cheats", test_cheats_page);
-  fails += orion_test_run("route.auto_plapps", test_auto_payloads_and_plapps);
-  fails += orion_test_run("route.remote_play", test_remote_play);
-  fails += orion_test_run("route.superuser", test_superuser_pass_through);
-  fails += orion_test_run("route.og_debug", test_og_debug_redirect);
-  fails += orion_test_run("route.shortcut_force", test_shortcut_force_cheats);
-  fails += orion_test_run("route.shortcut_not_open", test_shortcut_not_open);
-  fails += orion_test_run("route.matrix", test_matrix);
-  fails += orion_test_run("session.flags_clear", test_session_flags_clear);
-  fails += orion_test_run("cheatmap.tid_reset", test_cheatmap_tid_reset);
-  fails += orion_test_run("cheatmap.bounds", test_cheatmap_bounds);
+  fails += onion_test_run("route.unknown", test_unknown_passthrough);
+  fails += onion_test_run("route.payloads", test_payloads_page);
+  fails += onion_test_run("route.debug", test_debug_settings_page);
+  fails += onion_test_run("route.cheats", test_cheats_page);
+  fails += onion_test_run("route.auto_plapps", test_auto_payloads_and_plapps);
+  fails += onion_test_run("route.remote_play", test_remote_play);
+  fails += onion_test_run("route.superuser", test_superuser_pass_through);
+  fails += onion_test_run("route.og_debug", test_og_debug_redirect);
+  fails += onion_test_run("route.shortcut_force", test_shortcut_force_cheats);
+  fails += onion_test_run("route.shortcut_not_open", test_shortcut_not_open);
+  fails += onion_test_run("route.matrix", test_matrix);
+  fails += onion_test_run("session.flags_clear", test_session_flags_clear);
+  fails += onion_test_run("cheatmap.tid_reset", test_cheatmap_tid_reset);
+  fails += onion_test_run("cheatmap.bounds", test_cheatmap_bounds);
   return fails;
 }

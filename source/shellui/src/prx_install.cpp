@@ -1,4 +1,4 @@
-/* Copyright (C) 2025 OrionHEN / LightningMods — P0 split. */
+/* Copyright (C) 2025 OnionHEN / LightningMods — P0 split. */
 
 
 #include "HookedFuncs.hpp"
@@ -6,7 +6,7 @@
 #include "external_symbols.hpp"
 #include "Detour.h"
 #include "appinst_types.hpp"
-#include <orion/platform.h>
+#include <onion/platform.h>
 #include <cstring>
 #include <string>
 #include <pthread.h>

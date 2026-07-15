@@ -1,7 +1,7 @@
-/* Host tests for liborion_platform fs helpers. */
+/* Host tests for libonion_platform fs helpers. */
 #include "test_harness.h"
 
-#include <orion/fs.h>
+#include <onion/fs.h>
 
 #include <stdio.h>
 #include <string.h>
@@ -9,7 +9,7 @@
 #include <unistd.h>
 
 static int make_temp_dir(char *buf, size_t buflen) {
-  char tmpl[] = "/tmp/orion-fs-XXXXXX";
+  char tmpl[] = "/tmp/onion-fs-XXXXXX";
   if (!mkdtemp(tmpl)) {
     return -1;
   }
@@ -22,7 +22,7 @@ static int make_temp_dir(char *buf, size_t buflen) {
 
 static int test_if_exists_null_and_missing(void) {
   TEST_ASSERT_TRUE(!if_exists(NULL));
-  TEST_ASSERT_TRUE(!if_exists("/tmp/orion-fs-definitely-missing-xyz-9f3a"));
+  TEST_ASSERT_TRUE(!if_exists("/tmp/onion-fs-definitely-missing-xyz-9f3a"));
   return 0;
 }
 
@@ -59,14 +59,14 @@ static int test_rmtree_nested(void) {
   TEST_ASSERT_TRUE(rmtree(dir));
   TEST_ASSERT_TRUE(!if_exists(dir));
   TEST_ASSERT_TRUE(!rmtree(NULL));
-  TEST_ASSERT_TRUE(!rmtree("/tmp/orion-fs-missing-tree-xyz"));
+  TEST_ASSERT_TRUE(!rmtree("/tmp/onion-fs-missing-tree-xyz"));
   return 0;
 }
 
 int test_platform_fs_suite(void) {
   int failures = 0;
-  failures += orion_test_run("fs_if_exists_null_missing", test_if_exists_null_and_missing);
-  failures += orion_test_run("fs_touch_and_exists", test_touch_and_exists);
-  failures += orion_test_run("fs_rmtree_nested", test_rmtree_nested);
+  failures += onion_test_run("fs_if_exists_null_missing", test_if_exists_null_and_missing);
+  failures += onion_test_run("fs_touch_and_exists", test_touch_and_exists);
+  failures += onion_test_run("fs_rmtree_nested", test_rmtree_nested);
   return failures;
 }

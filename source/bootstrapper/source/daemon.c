@@ -28,7 +28,7 @@ __asm__(".intel_syntax noprefix\n"
         ".type   sicon_start, @object\n"
         ".align  16\n"
         "sicon_start:\n"
-        ".incbin \"../assets/orionhen_sicon.png\"\n"
+        ".incbin \"../assets/onionhen_sicon.png\"\n"
         "sicon_end:\n"
         ".global sicon_size\n"
         ".type   sicon_size, @object\n"
@@ -36,7 +36,7 @@ __asm__(".intel_syntax noprefix\n"
         "sicon_size:\n"
         ".int    sicon_end - sicon_start\n"
 
-        /* Toolbox menu icons → /data/OrionHEN/assets/ (XML uses //user//data//...) */
+        /* Toolbox menu icons → /data/OnionHEN/assets/ (XML uses //user//data//...) */
         ".global icon_xml_package_start\n"
         ".type   icon_xml_package_start, @object\n"
         ".align  16\n"

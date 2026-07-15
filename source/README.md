@@ -1,8 +1,8 @@
-# OrionHEN — source tree
+# OnionHEN — source tree
 
-This directory is the CMake project for **OrionHEN**, a community continuation of **etaHEN** (LightningMods), licensed under **GPLv3**.
+This directory is the CMake project for **OnionHEN**, a community continuation of **etaHEN** (LightningMods), licensed under **GPLv3**.
 
-OrionHEN is based on etaHEN’s open-source release. See the [root README](../README.md) for project goals, credits to **GoldHEN** and **etaHEN**, and full documentation.
+OnionHEN is based on etaHEN’s open-source release. See the [root README](../README.md) for project goals, credits to **GoldHEN** and **etaHEN**, and full documentation.
 
 ## Layout
 

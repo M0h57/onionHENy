@@ -8,17 +8,17 @@
 #include "util_platform.h"
 
 extern "C" {
-void OrionHEN_log(const char *fmt, ...);
+void OnionHEN_log(const char *fmt, ...);
 }
 
-namespace orion::cheats {
+namespace onion::cheats {
 namespace {
 
 bool containsToken(const char *hay, const char *needle) {
   return hay && needle && std::strstr(hay, needle) != nullptr;
 }
 
-uint64_t resolveAddr(const util_module_info_t &mod, const orion_patch_t &patch,
+uint64_t resolveAddr(const util_module_info_t &mod, const onion_patch_t &patch,
                      bool is_ps2, uint64_t base) {
   if (is_ps2 || patch.absolute) {
     return patch.offset;
@@ -27,8 +27,8 @@ uint64_t resolveAddr(const util_module_info_t &mod, const orion_patch_t &patch,
   return base + patch.offset;
 }
 
-void fixMasterCode(const game_context_t &game, orion_cheat_file_t &file,
-                   orion_cheat_entry_t &entry, uint64_t base,
+void fixMasterCode(const game_context_t &game, onion_cheat_file_t &file,
+                   onion_cheat_entry_t &entry, uint64_t base,
                    IMemoryBackend &mem) {
   if (file.master_code_id < 0 || !containsToken(entry.name, "MC") ||
       entry.patch_count != 1 || entry.patches[0].section == 0) {
@@ -57,7 +57,7 @@ void fixMasterCode(const game_context_t &game, orion_cheat_file_t &file,
 
 } // namespace
 
-int CheatApplier::toggle(const game_context_t &game, orion_cheat_file_t &file,
+int CheatApplier::toggle(const game_context_t &game, onion_cheat_file_t &file,
                          int index, std::string &status) {
   status.clear();
   if (index < 0 || static_cast<size_t>(index) >= file.cheat_count) {
@@ -77,7 +77,7 @@ int CheatApplier::toggle(const game_context_t &game, orion_cheat_file_t &file,
   pid_t pid = game.pid;
 
   if (file.last_applied_pid != 0 && file.last_applied_pid != pid) {
-    OrionHEN_log("[Cheat] PID changed %d -> %d, reset states",
+    OnionHEN_log("[Cheat] PID changed %d -> %d, reset states",
                  (int)file.last_applied_pid, (int)pid);
     for (size_t i = 0; i < file.cheat_count; ++i) {
       file.cheats[i].enabled = false;
@@ -114,7 +114,7 @@ int CheatApplier::toggle(const game_context_t &game, orion_cheat_file_t &file,
     fixMasterCode(target, file, entry, base, *backend);
   }
 
-  OrionHEN_log("[Cheat] Toggle '%s' patches=%zu base=0x%llx %s", entry.name,
+  OnionHEN_log("[Cheat] Toggle '%s' patches=%zu base=0x%llx %s", entry.name,
                entry.patch_count, (unsigned long long)base,
                entry.enabled ? "ON->OFF" : "OFF->ON");
 
@@ -124,7 +124,7 @@ int CheatApplier::toggle(const game_context_t &game, orion_cheat_file_t &file,
     const uint8_t *data = entry.enabled ? patch.off : patch.on;
     const size_t len = entry.enabled ? patch.off_len : patch.on_len;
 
-    if (len == 0 || len > ORION_MAX_PATCH_BYTES) {
+    if (len == 0 || len > ONION_MAX_PATCH_BYTES) {
       status = std::string(entry.name) + " -> invalid patch size";
       return -1;
     }
@@ -139,7 +139,7 @@ int CheatApplier::toggle(const game_context_t &game, orion_cheat_file_t &file,
     }
 
     if (!entry.enabled) {
-      uint8_t verify[ORION_MAX_PATCH_BYTES];
+      uint8_t verify[ONION_MAX_PATCH_BYTES];
       bool ok = backend->read(pid, addr, verify, len) >= 0 &&
                 std::memcmp(verify, data, len) == 0;
       if (!ok && !patch.code_cave_reloc) {
@@ -161,8 +161,8 @@ int CheatApplier::toggle(const game_context_t &game, orion_cheat_file_t &file,
   entry.enabled = !entry.enabled;
   file.last_applied_pid = pid;
   status = std::string(entry.name) + (entry.enabled ? " -> enabled" : " -> disabled");
-  OrionHEN_log("[Cheat] %s", status.c_str());
+  OnionHEN_log("[Cheat] %s", status.c_str());
   return 0;
 }
 
-} // namespace orion::cheats
+} // namespace onion::cheats

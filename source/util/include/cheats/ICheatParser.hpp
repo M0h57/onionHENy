@@ -7,10 +7,10 @@
 
 #include "cheats/cheat_engine.h"
 
-namespace orion::cheats {
+namespace onion::cheats {
 
 /**
- * Strategy: parse a single cheat-file format into orion_cheat_file_t.
+ * Strategy: parse a single cheat-file format into onion_cheat_file_t.
  *
  * Implementations: JSON, SHN(XML), MC4 (decrypt → XML), ShnExt (C adapter).
  */
@@ -23,7 +23,7 @@ public:
    * @return 0 on success (at least one cheat), negative on failure.
    */
   virtual int parse(const uint8_t *data, size_t size,
-                    orion_cheat_file_t &out) = 0;
+                    onion_cheat_file_t &out) = 0;
 
   /** Short format id: "json", "shn", "mc4", "ShnExt". */
   virtual const char *name() const = 0;
@@ -46,9 +46,9 @@ public:
   static std::unique_ptr<ICheatParser>
   createByPath(const std::string &path);
 
-  static int loadFile(const std::string &path, orion_cheat_file_t &out);
+  static int loadFile(const std::string &path, onion_cheat_file_t &out);
   static int loadBuffer(const std::string &format, const uint8_t *data,
-                        size_t size, orion_cheat_file_t &out);
+                        size_t size, onion_cheat_file_t &out);
 };
 
-} // namespace orion::cheats
+} // namespace onion::cheats

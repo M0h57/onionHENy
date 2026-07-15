@@ -1,4 +1,4 @@
-/* Copyright (C) 2025 OrionHEN / LightningMods
+/* Copyright (C) 2025 OnionHEN / LightningMods
 
 This program is free software; you can redistribute it and/or modify it
 under the terms of the GNU General Public License as published by the
@@ -22,9 +22,9 @@ along with this program; see the file COPYING. If not, see
 #include <freebsd-helper.h>
 #include <libgen.h>
 #include <ps5/klog.h>
-#include <orion/platform.h>
-#include <orion/proc_query.h>
-#include <orion/payload.h>
+#include <onion/platform.h>
+#include <onion/proc_query.h>
+#include <onion/payload.h>
 
 typedef struct app_info {
   uint32_t app_id;
@@ -47,8 +47,8 @@ atomic_bool not_connected = false;
 #define SCE_NET_CTL_ERROR_NOT_CONNECTED 0x80412108
 #define SCE_NET_CTL_ERROR_NOT_AVAIL 0x80412109
 
-/* OrionHEN: no local spawn — payloads launch via external elfldr :9021.
- * ptrace attach/mmap: liborion_elfldr (pt_attach / pt_mmap). Authid is raised
+/* OnionHEN: no local spawn — payloads launch via external elfldr :9021.
+ * ptrace attach/mmap: libonion_elfldr (pt_attach / pt_mmap). Authid is raised
  * once in util main via set_ucred_to_ptrace(), not flipped per ptrace call.
  */
 
@@ -84,16 +84,16 @@ bool copyFile(const char *source, const char *destination)
     FILE *src = fopen(source, "rb");
     if (src == NULL)
     {
-        orion_notify(false, "copyFile failed for %s", source);
-        OrionHEN_log("copyFile failed for %s", source);
+        onion_notify(false, "copyFile failed for %s", source);
+        OnionHEN_log("copyFile failed for %s", source);
         return false;
     }
 
     FILE *dest = fopen(destination, "wb");
     if (dest == NULL)
     {
-        orion_notify(false, "copyFile failed for %s", destination);
-        OrionHEN_log("copyFile failed for %s", destination);
+        onion_notify(false, "copyFile failed for %s", destination);
+        OnionHEN_log("copyFile failed for %s", destination);
         fclose(src);
         return false;
     }
@@ -116,10 +116,10 @@ bool copyFile(const char *source, const char *destination)
 
 bool load_payload(const char *path) {
   /* Payload .elf only — .plugin packages removed. */
-  orion_payload_load_opts opts = {
+  onion_payload_load_opts opts = {
       .always_succeed_after_launch = 0,
   };
-  return orion_payload_load(path, /*filename=*/NULL, &opts);
+  return onion_payload_load(path, /*filename=*/NULL, &opts);
 }
 
 int launchApp(const char *titleId)
@@ -132,7 +132,7 @@ int launchApp(const char *titleId)
 		printf("sceUserServiceGetForegroundUser failed: 0x%x\n", res);
 		return res;
 	}
-	OrionHEN_log("[LA] user id %u", id);
+	OnionHEN_log("[LA] user id %u", id);
 
     LncAppParam param;
 	param.sz = sizeof(LncAppParam);
@@ -144,7 +144,7 @@ int launchApp(const char *titleId)
 
 	puts("calling sceLncUtilLaunchApp");
 	int err = sceLncUtilLaunchApp(titleId, NULL, &param);
-	OrionHEN_log("sceLncUtilLaunchApp returned 0x%x", (uint32_t)err);
+	OnionHEN_log("sceLncUtilLaunchApp returned 0x%x", (uint32_t)err);
 	if (err >= 0)
 	{
 		return err;
@@ -152,15 +152,15 @@ int launchApp(const char *titleId)
 	switch ((uint32_t)err)
 	{
 	case SCE_LNC_UTIL_ERROR_ALREADY_RUNNING:
-		OrionHEN_log("app %s is already running", titleId);
+		OnionHEN_log("app %s is already running", titleId);
 		break;
 	case SCE_LNC_ERROR_APP_NOT_FOUND:
-		OrionHEN_log("app %s not found", titleId);
-		orion_notify(true, "app %s not found", titleId);
+		OnionHEN_log("app %s not found", titleId);
+		onion_notify(true, "app %s not found", titleId);
 		break;
 	default:
-		OrionHEN_log("[LA] unknown error 0x%x", (uint32_t)err);
-		// orion_notify(true, "unknown error 0x%llx", (uint32_t)err);
+		OnionHEN_log("[LA] unknown error 0x%x", (uint32_t)err);
+		// onion_notify(true, "unknown error 0x%llx", (uint32_t)err);
 		break;
 	}
 	return err;

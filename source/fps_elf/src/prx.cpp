@@ -1,8 +1,8 @@
-/* Copyright (C) 2025 OrionHEN / LightningMods
+/* Copyright (C) 2025 OnionHEN / LightningMods
  *
  * fps_elf — inject into game process (no process suspend from daemon).
  *
- * Classic Orion counting: detour GNM submit/flip → rolling FPS.
+ * Classic Onion counting: detour GNM submit/flip → rolling FPS.
  * Publish via file SHM only (no notification spam).
  * Hooks are deferred so the title can finish loading first.
  */
@@ -13,7 +13,7 @@
 #include "external_symbols.hpp"
 #include <ps5/klog.h>
 
-#include <orion/fps_shm.h>
+#include <onion/fps_shm.h>
 
 #include <atomic>
 #include <chrono>
@@ -59,7 +59,7 @@ std::atomic<uint64_t> g_flip_total{0};
 std::atomic<uint32_t> g_hooks_armed{0};
 
 int g_shm_fd = -1;
-orion_fps_shm_t g_shm_cache{};
+onion_fps_shm_t g_shm_cache{};
 
 /* ---- resolve libkernel mprotect pointer (required by Detour) ---- */
 
@@ -90,7 +90,7 @@ bool wait_mprotect_ready() {
   return false;
 }
 
-/* ---- single flip hook (classic Orion path) ---- */
+/* ---- single flip hook (classic Onion path) ---- */
 
 using GnmFlipWorkload_t = s32 (*)(u32, u32, u32 **, u32 *, u32 **, u32 *, u32,
                                   u32, u32, u32);
@@ -125,11 +125,11 @@ bool install_gnm_hook() {
 
 bool open_shm() {
   char err[128] = {};
-  int fd = orion_fps_shm_open_existing(err, sizeof(err));
+  int fd = onion_fps_shm_open_existing(err, sizeof(err));
   if (fd < 0) {
     klog_printf("[fps] shm open existing failed (%s)\n", err);
-    if (orion_fps_shm_ensure() == 0)
-      fd = orion_fps_shm_open_existing(err, sizeof(err));
+    if (onion_fps_shm_ensure() == 0)
+      fd = onion_fps_shm_open_existing(err, sizeof(err));
   }
   if (fd < 0) {
     klog_printf("[fps] shm still unavailable (%s)\n", err);
@@ -138,8 +138,8 @@ bool open_shm() {
 
   g_shm_fd = fd;
   std::memset(&g_shm_cache, 0, sizeof(g_shm_cache));
-  g_shm_cache.magic = ORION_FPS_SHM_MAGIC;
-  g_shm_cache.version = ORION_FPS_SHM_VERSION;
+  g_shm_cache.magic = ONION_FPS_SHM_MAGIC;
+  g_shm_cache.version = ONION_FPS_SHM_VERSION;
   g_shm_cache.flags = 1;
   g_shm_cache.hooks_armed = 0;
   std::snprintf(g_shm_cache.api_name, sizeof(g_shm_cache.api_name), "%s",
@@ -152,8 +152,8 @@ bool open_shm() {
 void publish_once(uint64_t flips_delta, double dt) {
   float fps = (dt > 1e-6) ? static_cast<float>(flips_delta / dt) : 0.f;
 
-  g_shm_cache.magic = ORION_FPS_SHM_MAGIC;
-  g_shm_cache.version = ORION_FPS_SHM_VERSION;
+  g_shm_cache.magic = ONION_FPS_SHM_MAGIC;
+  g_shm_cache.version = ONION_FPS_SHM_VERSION;
   g_shm_cache.fps = fps;
   g_shm_cache.flip_total = g_flip_total.load(std::memory_order_relaxed);
   g_shm_cache.hooks_armed = g_hooks_armed.load(std::memory_order_relaxed);
@@ -194,13 +194,13 @@ void *publish_thread(void *) {
 constexpr int kHookDeferSeconds = 20;
 
 /* 0 = ship-safe (SHM only, no detour). 1 = experimental GNM arm. */
-#ifndef ORION_FPS_ARM_GNM_HOOK
-#define ORION_FPS_ARM_GNM_HOOK 0
+#ifndef ONION_FPS_ARM_GNM_HOOK
+#define ONION_FPS_ARM_GNM_HOOK 0
 #endif
 
 void *hook_install_thread(void *) {
-#if !ORION_FPS_ARM_GNM_HOOK
-  klog_puts("[fps] GNM detour DISABLED (ORION_FPS_ARM_GNM_HOOK=0) — "
+#if !ONION_FPS_ARM_GNM_HOOK
+  klog_puts("[fps] GNM detour DISABLED (ONION_FPS_ARM_GNM_HOOK=0) — "
             "see docs/fps-overlay-known-issues.md");
   if (g_shm_fd >= 0) {
     std::snprintf(g_shm_cache.api_name, sizeof(g_shm_cache.api_name), "%s",
@@ -235,7 +235,7 @@ void *hook_install_thread(void *) {
 int main(int argc, char const *argv[]) {
   (void)argc;
   (void)argv;
-  klog_puts("============== fps_elf (Orion GNM count + SHM) ==============");
+  klog_puts("============== fps_elf (Onion GNM count + SHM) ==============");
 
   resolve_kernel_syms();
 

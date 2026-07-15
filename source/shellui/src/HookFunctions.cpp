@@ -1,4 +1,4 @@
-﻿/* Copyright (C) 2025 OrionHEN / LightningMods
+﻿/* Copyright (C) 2025 OnionHEN / LightningMods
 
 This program is free software; you can redistribute it and/or modify it
 under the terms of the GNU General Public License as published by the
@@ -15,7 +15,7 @@ along with this program; see the file COPYING. If not, see
 <http://www.gnu.org/licenses/>.  */
 
 #include "HookedFuncs.hpp"
-#include <orion/platform.h>
+#include <onion/platform.h>
 #include "RemotePlay.h"
 #include "Detour.h"
 #include "ipc.hpp"
@@ -117,13 +117,13 @@ MonoString *GetString_Hook(MonoObject *Instance, MonoString *str) {
     if (resourceName == "msg_options") {
       return mono_str_ui("PKG 安装器选项");
     } else if (resourceName == "msg_installing") {
-      return mono_str_ui("OrionHEN 正在安装所选 PKG");
+      return mono_str_ui("OnionHEN 正在安装所选 PKG");
     } else if (resourceName == "msg_yes") {
       return mono_str_ui("是");
     } else if (resourceName == "msg_no") {
       return mono_str_ui("否");
     } else if (resourceName == "msg_sort") {
-      return mono_str_ui("OrionHEN PKG 排序");
+      return mono_str_ui("OnionHEN PKG 排序");
     } else if (resourceName == "msg_sort_name_az") {
       return mono_str_ui("名称（A-Z）");
     } else if (resourceName == "msg_sort_name_za") {
@@ -146,7 +146,7 @@ MonoString *GetString_Hook(MonoObject *Instance, MonoString *str) {
       return mono_str_ui("全选");
     }
 
-    // XML title/description literals (e.g. "★OrionHEN 工具箱") are already valid
+    // XML title/description literals (e.g. "★OnionHEN 工具箱") are already valid
     // MonoStrings. Re-allocating with mono_string_new(Root_Domain, ...) on the UI
     // thread has crashed ShellUI (wrong domain / GC). Pass the original through.
     if (resourceName.rfind("msg_", 0) != 0) {
@@ -213,7 +213,7 @@ void patch_bundle_strings(unsigned char* buffer, int* size_ptr, int buffer_capac
   (void)buffer_capacity;
   const int size = *size_ptr;
 
-  /* ★Debug Settings → ★OrionHEN Tools  (15 UTF-16 code units = 30 bytes) */
+  /* ★Debug Settings → ★OnionHEN Tools  (15 UTF-16 code units = 30 bytes) */
   static const unsigned char kOldDbgLabel[] = {
       0x05, 0x26, /* ★ U+2605 */
       'D', 0x00, 'e', 0x00, 'b', 0x00, 'u', 0x00, 'g', 0x00,
@@ -233,7 +233,7 @@ void patch_bundle_strings(unsigned char* buffer, int* size_ptr, int buffer_capac
                                  kNewDbgLabel, sizeof(kNewDbgLabel));
 #if SHELL_DEBUG == 1
   if (count > 0) {
-      shellui_log("patch_bundle_strings: UTF-16LE ★Debug Settings → ★OrionHEN Tools");
+      shellui_log("patch_bundle_strings: UTF-16LE ★Debug Settings → ★OnionHEN Tools");
   } else {
       shellui_log("patch_bundle_strings: UTF-16LE ★Debug Settings not found (size=%d)",
                  size);
@@ -243,7 +243,7 @@ void patch_bundle_strings(unsigned char* buffer, int* size_ptr, int buffer_capac
 #endif
 
   /* ASCII Hermes strings remain raw bytes (no UTF-16). Equal length. */
-  replace_all(buffer, size_ptr, buffer_capacity, "icon_setting", "orionh_sicon");
+  replace_all(buffer, size_ptr, buffer_capacity, "icon_setting", "onionh_sicon");
 }
 
 int ioctl_hook(int fd, unsigned long request, void *argp) {
@@ -290,7 +290,7 @@ void ParseCheatID(const char* id, char* tid, int* cheat_id)
 // Scene has changed, stop Remote Play thread if is running.
 //
 // Kept disabled pending a dedicated 11.600 device regression pass. The original
-// crash was caused by the old memcpy-only trampoline; liborion_detour now
+// crash was caused by the old memcpy-only trampoline; libonion_detour now
 // relocates RIP-relative prologues. Remote-play cleanup remains in
 // hook_manifest.cpp, so there is no reason to re-enable this hook speculatively.
 //

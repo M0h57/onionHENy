@@ -7,8 +7,8 @@
 #include <sys/param.h>
 
 #define INVAIL -1
-#define CRIT_IPC_SOC "/system_tmp/OrionHEN_crit_service"
-#define UTIL_IPC_SOC "/system_tmp/OrionHEN_util_service"
+#define CRIT_IPC_SOC "/system_tmp/OnionHEN_crit_service"
+#define UTIL_IPC_SOC "/system_tmp/OnionHEN_util_service"
 #define DAEMON_BUFF_MAX 0x1000
 
 
@@ -73,12 +73,12 @@ enum DaemonCommands : unsigned int {
   BREW_FORCE_KILL_PID = 0xDEADCAFEu,
 };
 
-/** TCP control port on crit daemon (LAN). Same wire as scripts/shutdown_orion.py. */
-#define ORION_CTRL_TCP_PORT 9048
-/** LE magic 'ORIO' for TCP control frames. */
-#define ORION_CTRL_TCP_MAGIC 0x4F52494Fu
+/** TCP control port on crit daemon (LAN). Same wire as scripts/shutdown_onion.py. */
+#define ONION_CTRL_TCP_PORT 9048
+/** TCP control frame magic: ASCII 'ONIO' as BE u32. */
+#define ONION_CTRL_TCP_MAGIC 0x4F4E494Fu
 /** TCP cmd: full stack shutdown (util + ShellUI + daemon). */
-#define ORION_CTRL_TCP_CMD_SHUTDOWN 1u
+#define ONION_CTRL_TCP_CMD_SHUTDOWN 1u
 
 struct IPCMessage {
   int magic = 0xDEADBABE;

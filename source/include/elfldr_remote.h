@@ -1,4 +1,4 @@
-/* OrionHEN: launch ELFs via external elfldr on TCP 9021 (no local spawn). */
+/* OnionHEN: launch ELFs via external elfldr on TCP 9021 (no local spawn). */
 
 #pragma once
 

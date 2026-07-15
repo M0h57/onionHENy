@@ -1,7 +1,7 @@
-/* Copyright (C) 2025 OrionHEN / LightningMods — OnPress overlay domain */
+/* Copyright (C) 2025 OnionHEN / LightningMods — OnPress overlay domain */
 #include "onpress.hpp"
-#include <orion/ready.h>
-#include <orion/fps_shm.h>
+#include <onion/ready.h>
+#include <onion/fps_shm.h>
 #include <cstdlib>
 #include <unistd.h>
 
@@ -32,9 +32,9 @@ static OnPressResult toggle_overlay_flag(OnPressContext &ctx, bool &flag,
   flag = !flag;
   if (fps_special) {
     if (flag)
-      orion_ready_signal(ORION_FLAG_FPS_OVERLAY);
+      onion_ready_signal(ONION_FLAG_FPS_OVERLAY);
     else
-      orion_ready_clear(ORION_FLAG_FPS_OVERLAY);
+      onion_ready_clear(ONION_FLAG_FPS_OVERLAY);
   }
   rebuild_overlay_bar();
   return OnPressResult::Handled;
@@ -65,7 +65,7 @@ static OnPressResult id_overlay_fps(OnPressContext &ctx) {
   OnPressResult r = toggle_overlay_flag(ctx, g_settings.overlay_fps, true);
   /* Privileged: pre-create SHM so the next game inject can open it. */
   if (g_settings.overlay_fps)
-    (void)orion_fps_shm_ensure();
+    (void)onion_fps_shm_ensure();
   return r;
 }
 

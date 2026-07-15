@@ -7,15 +7,15 @@
 #include "test_harness.h"
 #include "test_support.h"
 
-using orion::cheats::CheatParserFactory;
+using onion::cheats::CheatParserFactory;
 
 namespace {
 
-int load_path(const char *path, orion_cheat_file_t &file) {
+int load_path(const char *path, onion_cheat_file_t &file) {
   return CheatParserFactory::loadFile(path, file);
 }
 
-int load_buf(const char *format, const char *data, orion_cheat_file_t &file) {
+int load_buf(const char *format, const char *data, onion_cheat_file_t &file) {
   return CheatParserFactory::loadBuffer(
       format, reinterpret_cast<const uint8_t *>(data), std::strlen(data), file);
 }
@@ -37,7 +37,7 @@ int test_parse_json_buffer_success() {
       "}],"
       "\"credits\":[\"Alice\",\"Bob\"]"
       "}";
-  static orion_cheat_file_t file;
+  static onion_cheat_file_t file;
   const uint8_t on_expected[] = {0xAA, 0xBB, 0xCC, 0xDD};
   const uint8_t off_expected[] = {0x11, 0x22, 0x33, 0x44};
 
@@ -56,7 +56,7 @@ int test_parse_json_buffer_success() {
                     sizeof(on_expected));
   TEST_ASSERT_MEMEQ(off_expected, file.cheats[0].patches[0].off,
                     sizeof(off_expected));
-  orion_cheat_file_clear(&file);
+  onion_cheat_file_clear(&file);
   return 0;
 }
 
@@ -76,13 +76,13 @@ int test_parse_json_authors_alias_and_dedup() {
       "\"credits\":[\"Same\"],"
       "\"authors\":[\"Same\",\"Extra\"]"
       "}";
-  static orion_cheat_file_t file;
+  static onion_cheat_file_t file;
 
   TEST_ASSERT_EQ_INT(0, load_buf("json", json, file));
   TEST_ASSERT_EQ_INT(2, static_cast<int>(file.author_count));
   TEST_ASSERT_STREQ("Same", file.authors[0]);
   TEST_ASSERT_STREQ("Extra", file.authors[1]);
-  orion_cheat_file_clear(&file);
+  onion_cheat_file_clear(&file);
   return 0;
 }
 
@@ -100,10 +100,10 @@ int test_parse_json_buffer_rejects_invalid_hex() {
       "}]"
       "}]"
       "}";
-  static orion_cheat_file_t file;
+  static onion_cheat_file_t file;
 
   TEST_ASSERT_EQ_INT(-1, load_buf("json", json, file));
-  orion_cheat_file_clear(&file);
+  onion_cheat_file_clear(&file);
   return 0;
 }
 
@@ -122,11 +122,11 @@ int test_parse_json_ignores_out_of_range_section() {
       "}]"
       "}]"
       "}";
-  static orion_cheat_file_t file;
+  static onion_cheat_file_t file;
 
   TEST_ASSERT_EQ_INT(0, load_buf("json", json, file));
   TEST_ASSERT_EQ_INT(0, file.cheats[0].patches[0].section);
-  orion_cheat_file_clear(&file);
+  onion_cheat_file_clear(&file);
   return 0;
 }
 
@@ -138,7 +138,7 @@ int test_parse_xml_buffer_success() {
       "<ValueOn>AA-BB</ValueOn><ValueOff>00-11</ValueOff></Cheatline>"
       "</Cheat>"
       "</Trainer>";
-  static orion_cheat_file_t file;
+  static onion_cheat_file_t file;
   const uint8_t on_expected[] = {0xAA, 0xBB};
   const uint8_t off_expected[] = {0x00, 0x11};
 
@@ -156,7 +156,7 @@ int test_parse_xml_buffer_success() {
                     sizeof(on_expected));
   TEST_ASSERT_MEMEQ(off_expected, file.cheats[0].patches[0].off,
                     sizeof(off_expected));
-  orion_cheat_file_clear(&file);
+  onion_cheat_file_clear(&file);
   return 0;
 }
 
@@ -168,11 +168,11 @@ int test_parse_xml_ignores_out_of_range_section() {
       "<ValueOn>AA</ValueOn><ValueOff>BB</ValueOff></Cheatline>"
       "</Cheat>"
       "</Trainer>";
-  static orion_cheat_file_t file;
+  static onion_cheat_file_t file;
 
   TEST_ASSERT_EQ_INT(0, load_buf("shn", xml, file));
   TEST_ASSERT_EQ_INT(0, file.cheats[0].patches[0].section);
-  orion_cheat_file_clear(&file);
+  onion_cheat_file_clear(&file);
   return 0;
 }
 
@@ -185,24 +185,24 @@ int test_load_file_mc4_success() {
       "</Cheat>"
       "</Trainer>";
   char path[256];
-  static orion_cheat_file_t file;
+  static onion_cheat_file_t file;
 
-  TEST_ASSERT_EQ_INT(0, orion_test_write_temp_mc4_file(xml, path, sizeof(path)));
+  TEST_ASSERT_EQ_INT(0, onion_test_write_temp_mc4_file(xml, path, sizeof(path)));
   TEST_ASSERT_EQ_INT(0, load_path(path, file));
   TEST_ASSERT_STREQ("eboot.bin", file.process);
   TEST_ASSERT_EQ_INT(1, static_cast<int>(file.cheat_count));
   TEST_ASSERT_STREQ("Master Code", file.cheats[0].name);
-  orion_cheat_file_clear(&file);
-  orion_test_remove_file(path);
+  onion_cheat_file_clear(&file);
+  onion_test_remove_file(path);
   return 0;
 }
 
 int test_fixture_json_file_loads() {
   char path[512];
-  static orion_cheat_file_t file;
+  static onion_cheat_file_t file;
 
   TEST_ASSERT_EQ_INT(
-      0, orion_test_fixture_path("fixtures/cheats/PPSA26344_01.008.000.json",
+      0, onion_test_fixture_path("fixtures/cheats/PPSA26344_01.008.000.json",
                                  path, sizeof(path)));
   TEST_ASSERT_EQ_INT(0, load_path(path, file));
   /* extract_string does not unescape JSON; keep raw \u014d sequence */
@@ -212,16 +212,16 @@ int test_fixture_json_file_loads() {
   TEST_ASSERT_STREQ("Yharnam", file.authors[0]);
   TEST_ASSERT_EQ_INT(3, static_cast<int>(file.cheat_count));
   TEST_ASSERT_STREQ("Infi Health", file.cheats[0].name);
-  orion_cheat_file_clear(&file);
+  onion_cheat_file_clear(&file);
   return 0;
 }
 
 int test_fixture_shn_file_loads() {
   char path[512];
-  static orion_cheat_file_t file;
+  static onion_cheat_file_t file;
 
   TEST_ASSERT_EQ_INT(
-      0, orion_test_fixture_path("fixtures/cheats/PPSA21159_01.001.000.shn",
+      0, onion_test_fixture_path("fixtures/cheats/PPSA21159_01.001.000.shn",
                                  path, sizeof(path)));
   TEST_ASSERT_EQ_INT(0, load_path(path, file));
   TEST_ASSERT_STREQ("Silent Hill f", file.name);
@@ -230,29 +230,29 @@ int test_fixture_shn_file_loads() {
   TEST_ASSERT_STREQ("Yharnam", file.authors[0]);
   TEST_ASSERT_EQ_INT(9, static_cast<int>(file.cheat_count));
   TEST_ASSERT_STREQ("Infi Health", file.cheats[0].name);
-  orion_cheat_file_clear(&file);
+  onion_cheat_file_clear(&file);
   return 0;
 }
 
 int test_fixture_mc4_file_loads() {
   char path[512];
-  static orion_cheat_file_t file;
+  static onion_cheat_file_t file;
 
   TEST_ASSERT_EQ_INT(
-      0, orion_test_fixture_path("fixtures/cheats/PPSA08710_01.005.000.mc4",
+      0, onion_test_fixture_path("fixtures/cheats/PPSA08710_01.005.000.mc4",
                                  path, sizeof(path)));
   TEST_ASSERT_EQ_INT(0, load_path(path, file));
   TEST_ASSERT_STREQ("eboot.bin", file.process);
   TEST_ASSERT_TRUE(file.cheat_count > 0);
   TEST_ASSERT_TRUE(file.name[0] != '\0');
   TEST_ASSERT_TRUE(file.cheats[0].name[0] != '\0');
-  orion_cheat_file_clear(&file);
+  onion_cheat_file_clear(&file);
   return 0;
 }
 
 int test_fixture_shnext_file_loads() {
   char path[512];
-  static orion_cheat_file_t file;
+  static onion_cheat_file_t file;
   uint8_t nop3[3];
   uint8_t nop6[6];
   uint8_t nop8[8];
@@ -262,7 +262,7 @@ int test_fixture_shnext_file_loads() {
   std::memset(nop8, 0x90, 8);
 
   TEST_ASSERT_EQ_INT(
-      0, orion_test_fixture_path(
+      0, onion_test_fixture_path(
              "fixtures/cheats/"
              "Assassins-Creed-Mirage_PPSA07230_01.012.000_Aigars_Uze.ShnExt",
              path, sizeof(path)));
@@ -299,7 +299,7 @@ int test_fixture_shnext_file_loads() {
   TEST_ASSERT_TRUE(file.cheats[3].patches[0].on_len > 0);
   TEST_ASSERT_TRUE(file.cheats[3].patches[0].off_len > 0);
 
-  orion_cheat_file_clear(&file);
+  onion_cheat_file_clear(&file);
   return 0;
 }
 
@@ -321,29 +321,29 @@ int test_factory_extension_routing() {
 extern "C" int test_cheat_parsers_suite(void) {
   int failures = 0;
 
-  failures += orion_test_run("cheat json parse success",
+  failures += onion_test_run("cheat json parse success",
                              test_parse_json_buffer_success);
-  failures += orion_test_run("cheat json authors alias and dedup",
+  failures += onion_test_run("cheat json authors alias and dedup",
                              test_parse_json_authors_alias_and_dedup);
-  failures += orion_test_run("cheat json rejects invalid hex",
+  failures += onion_test_run("cheat json rejects invalid hex",
                              test_parse_json_buffer_rejects_invalid_hex);
-  failures += orion_test_run("cheat json ignores out-of-range section",
+  failures += onion_test_run("cheat json ignores out-of-range section",
                              test_parse_json_ignores_out_of_range_section);
   failures +=
-      orion_test_run("cheat xml parse success", test_parse_xml_buffer_success);
-  failures += orion_test_run("cheat xml ignores out-of-range section",
+      onion_test_run("cheat xml parse success", test_parse_xml_buffer_success);
+  failures += onion_test_run("cheat xml ignores out-of-range section",
                              test_parse_xml_ignores_out_of_range_section);
   failures +=
-      orion_test_run("cheat mc4 load success", test_load_file_mc4_success);
+      onion_test_run("cheat mc4 load success", test_load_file_mc4_success);
   failures +=
-      orion_test_run("fixture json file loads", test_fixture_json_file_loads);
+      onion_test_run("fixture json file loads", test_fixture_json_file_loads);
   failures +=
-      orion_test_run("fixture shn file loads", test_fixture_shn_file_loads);
+      onion_test_run("fixture shn file loads", test_fixture_shn_file_loads);
   failures +=
-      orion_test_run("fixture mc4 file loads", test_fixture_mc4_file_loads);
-  failures += orion_test_run("fixture shnext file loads",
+      onion_test_run("fixture mc4 file loads", test_fixture_mc4_file_loads);
+  failures += onion_test_run("fixture shnext file loads",
                              test_fixture_shnext_file_loads);
-  failures += orion_test_run("parser factory extension routing",
+  failures += onion_test_run("parser factory extension routing",
                              test_factory_extension_routing);
   return failures;
 }

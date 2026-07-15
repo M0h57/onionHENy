@@ -7,9 +7,9 @@
 
 #include "cheats/cheat_engine_internal.h"
 
-extern "C" void OrionHEN_log(const char *fmt, ...);
+extern "C" void OnionHEN_log(const char *fmt, ...);
 
-namespace orion::cheats {
+namespace onion::cheats {
 
 /* Factories implemented in format translation units */
 std::unique_ptr<ICheatParser> makeJsonCheatParser();
@@ -62,29 +62,29 @@ CheatParserFactory::createByPath(const std::string &path) {
 
 int CheatParserFactory::loadBuffer(const std::string &format,
                                    const uint8_t *data, size_t size,
-                                   orion_cheat_file_t &out) {
+                                   onion_cheat_file_t &out) {
   if (data == nullptr || size == 0) {
     return -1;
   }
   auto parser = createByFormat(format);
-  OrionHEN_log("[engine] parse format=%s size=%zu", parser->name(), size);
+  OnionHEN_log("[engine] parse format=%s size=%zu", parser->name(), size);
   return parser->parse(data, size, out);
 }
 
 int CheatParserFactory::loadFile(const std::string &path,
-                                 orion_cheat_file_t &out) {
+                                 onion_cheat_file_t &out) {
   long size = 0;
   char *buf = nullptr;
 
-  orion_cheat_file_clear(&out);
+  onion_cheat_file_clear(&out);
   if (path.empty()) {
     return -1;
   }
 
-  OrionHEN_log("[engine] load path=%s", path.c_str());
-  buf = orion_cheat_load_file_buffer(path.c_str(), &size);
+  OnionHEN_log("[engine] load path=%s", path.c_str());
+  buf = onion_cheat_load_file_buffer(path.c_str(), &size);
   if (buf == nullptr || size <= 0) {
-    OrionHEN_log("[engine] load failed path=%s", path.c_str());
+    OnionHEN_log("[engine] load failed path=%s", path.c_str());
     free(buf);
     return -1;
   }
@@ -93,11 +93,11 @@ int CheatParserFactory::loadFile(const std::string &path,
   const int rc = parser->parse(reinterpret_cast<const uint8_t *>(buf),
                                static_cast<size_t>(size), out);
 
-  orion_cheat_secure_zero(buf, static_cast<size_t>(size));
+  onion_cheat_secure_zero(buf, static_cast<size_t>(size));
   free(buf);
-  OrionHEN_log("[engine] loaded format=%s cheats=%zu rc=%d", parser->name(),
+  OnionHEN_log("[engine] loaded format=%s cheats=%zu rc=%d", parser->name(),
                out.cheat_count, rc);
   return rc;
 }
 
-} // namespace orion::cheats
+} // namespace onion::cheats

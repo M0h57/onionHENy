@@ -1,4 +1,4 @@
-/* Copyright (C) 2025 OrionHEN / LightningMods
+/* Copyright (C) 2025 OnionHEN / LightningMods
  *
  * Extracted from MonoUtils.cpp for module locality.
  * Dynamic settings pages are built via ps5ui::Page (fluent XML builder).
@@ -10,7 +10,7 @@
 #include "ipc.hpp"
 #include "ps5_settings_ui.hpp"
 #include "toolbox_values.hpp"
-#include "../../extern/cJSON/orion_cjson.hpp"
+#include "../../extern/cJSON/onion_cjson.hpp"
 
 #define PIN_CODE_SIZE 30
 #define ACCOUNT_ID_BASE64_SIZE 16
@@ -41,7 +41,7 @@ void escapeXML(std::string& input) {
 
 namespace {
 
-/** Payload .elf only (OrionHEN no longer supports .plugin packages). */
+/** Payload .elf only (OnionHEN no longer supports .plugin packages). */
 template <typename G>
 void append_payload_entry(G& page, const std::string& directory, const char* filename,
                           bool list_page, int& next_id) {
@@ -115,7 +115,7 @@ void append_homebrew_game(G& page, const std::string& game_dir, const char* dir_
   game.path = shown_path;
   game.dir_name = dir_name;
   game.icon_path = icon_path;
-  game.id = "id_orionhen_pl_loader_" + title_id + "_" + std::to_string(random_num);
+  game.id = "id_onionhen_pl_loader_" + title_id + "_" + std::to_string(random_num);
   g_ui.games_list.push_back(game);
 
   page.button(game.id, "(" + title_id + ") " + title,
@@ -153,25 +153,25 @@ void append_download_cheats_block(G& page) {
     repo_value = "0";
   page.list("id_selected_cheats_repo", "金手指仓库来源",
             [](ps5ui::ListBuilder& L) {
-              L.item("id_selected_cheats_repo_1", "OrionHEN PS5 金手指仓库", "0")
+              L.item("id_selected_cheats_repo_1", "OnionHEN PS5 金手指仓库", "0")
                   .item("id_selected_cheats_repo_2", "GoldHEN PS4 金手指仓库", "1");
             },
             /*second_title=*/std::nullopt, /*value=*/repo_value)
       .button("id_dl_cheats", "下载/更新金手指",
-              "从所选 GitHub 仓库下载到 /data/OrionHEN/cheats/（TITLEID_VERSION.ext）");
+              "从所选 GitHub 仓库下载到 /data/OnionHEN/cheats/（TITLEID_VERSION.ext）");
 }
 
 std::string join_authors(cJSON* root) {
   std::unordered_set<std::string> seen;
   std::string joined;
   bool first = true;
-  cJSON* authors = orion_cjson::item(root, "authors");
+  cJSON* authors = onion_cjson::item(root, "authors");
   if (!cJSON_IsArray(authors))
     return joined;
 
   cJSON* author = nullptr;
   cJSON_ArrayForEach(author, authors) {
-    const char* value = orion_cjson::string_value(author);
+    const char* value = onion_cjson::string_value(author);
     if (!value || !seen.insert(value).second)
       continue;
     if (!first)
@@ -185,16 +185,16 @@ std::string join_authors(cJSON* root) {
 template <typename G>
 void append_cheat_entries(G& page, cJSON* root, const std::string& tid,
                           const std::string& game_name, bool can_toggle) {
-  cJSON* cheats = orion_cjson::item(root, "cheats");
+  cJSON* cheats = onion_cjson::item(root, "cheats");
   if (!cJSON_IsArray(cheats))
     return;
 
   cJSON* entry = nullptr;
   cJSON_ArrayForEach(entry, cheats) {
-    const std::string name = orion_cjson::string_item(entry, "name", "");
-    const std::string desc = orion_cjson::string_item(entry, "description", "开/关");
-    const int id = orion_cjson::int_item(entry, "id");
-    const bool enabled = orion_cjson::bool_item(entry, "enabled");
+    const std::string name = onion_cjson::string_item(entry, "name", "");
+    const std::string desc = onion_cjson::string_item(entry, "description", "开/关");
+    const int id = onion_cjson::int_item(entry, "id");
+    const bool enabled = onion_cjson::bool_item(entry, "enabled");
     const std::string id_attr = "id_cheat_" + tid + "_" + std::to_string(id);
 
     if (can_toggle) {
@@ -228,7 +228,7 @@ void generate_remote_play_xml(std::string& xml_buffer) {
   if (IsNotActivated()) {
     GetEncodedAccountID(AccountID, dec_account_id);
     page.label("id_pin_2",
-               "账号已由 OrionHEN 激活，请重启主机后再使用远程游玩！",
+               "账号已由 OnionHEN 激活，请重启主机后再使用远程游玩！",
                ps5ui::Style::Center);
     xml_buffer = page.build();
     return;
@@ -264,12 +264,12 @@ void generate_remote_play_xml(std::string& xml_buffer) {
 
 void generate_payload_xml(std::string& xml_buffer, bool list_page) {
   static const std::vector<std::string> kPayloadDirs = {
-      "/user/data/OrionHEN/payloads",
-      "/data/OrionHEN/payloads",
-      "/usb0/OrionHEN/payloads",
-      "/usb1/OrionHEN/payloads",
-      "/usb2/OrionHEN/payloads",
-      "/usb3/OrionHEN/payloads",
+      "/user/data/OnionHEN/payloads",
+      "/data/OnionHEN/payloads",
+      "/usb0/OnionHEN/payloads",
+      "/usb1/OnionHEN/payloads",
+      "/usb2/OnionHEN/payloads",
+      "/usb3/OnionHEN/payloads",
   };
 
   const char* root_id = list_page ? "id_payload" : "id_auto_payloads";
@@ -291,7 +291,7 @@ void generate_payload_xml(std::string& xml_buffer, bool list_page) {
 
   if (list_page) {
     page.link("id_auto_payloads", "★ Payload 自动启动", "auto_payloads.xml",
-              "配置在加载 OrionHEN 时自动启动的 .elf（放在 payloads/）");
+              "配置在加载 OnionHEN 时自动启动的 .elf（放在 payloads/）");
   }
 
   xml_buffer = page.build();
@@ -309,7 +309,7 @@ void generate_cheats_xml(std::string& new_xml, std::string& not_open_tid,
       g_ui.running_tid == (show_while_not_open ? not_open_tid : g_ui.running_tid);
 
   if (!g_ui.is_game_open && !show_while_not_open) {
-    ps5ui::Page page(list_id, "OrionHEN 金手指 - 当前没有打开的游戏");
+    ps5ui::Page page(list_id, "OnionHEN 金手指 - 当前没有打开的游戏");
     append_download_cheats_block(page);
     new_xml = page.build();
     return;
@@ -323,7 +323,7 @@ void generate_cheats_xml(std::string& new_xml, std::string& not_open_tid,
     game_ver = "无法检测补丁版本";
 
   ps5ui::Page page(list_id,
-                   "OrionHEN 金手指 - " + g_ui.running_tid + " - " + game_ver);
+                   "OnionHEN 金手指 - " + g_ui.running_tid + " - " + game_ver);
 
   if (!g_ui.is_game_open && show_while_not_open) {
     page.label("id_cheat_disclaimer",
@@ -345,7 +345,7 @@ void generate_cheats_xml(std::string& new_xml, std::string& not_open_tid,
   }
   unlink(cheat_path.c_str());
 
-  orion_cjson::Root res_json(json_string);
+  onion_cjson::Root res_json(json_string);
   if (!res_json) {
     shellui_log("Failed to parse json from cheat response!");
     new_xml = page.build();
@@ -353,7 +353,7 @@ void generate_cheats_xml(std::string& new_xml, std::string& not_open_tid,
   }
 
   const std::string game_name =
-      orion_cjson::string_item(res_json.get(), "name", "");
+      onion_cjson::string_item(res_json.get(), "name", "");
   page.label("id_cheat_title", "★ " + game_name + " ★", ps5ui::Style::Center);
 
   const std::string authors = join_authors(res_json.get());
@@ -376,7 +376,7 @@ void generate_plapps_xml(std::string& new_xml) {
       "/mnt/ext0/homebrew/games",
   };
 
-  ps5ui::Page page("id_plapps", "OrionHEN Payload 自制软件 - 应用程序");
+  ps5ui::Page page("id_plapps", "OnionHEN Payload 自制软件 - 应用程序");
 
   std::random_device rd;
   std::mt19937 gen(rd());
@@ -415,18 +415,18 @@ void generate_plapps_xml(std::string& new_xml) {
 namespace {
 
 constexpr const char* kIconPkg =
-    "/user/data/OrionHEN/assets/icon_xml_package.png";
+    "/user/data/OnionHEN/assets/icon_xml_package.png";
 constexpr const char* kIconPlugins =
-    "/user/data/OrionHEN/assets/icon_xml_plugins.png";
-constexpr const char* kIconGame = "/user/data/OrionHEN/assets/icon_xml_game.png";
+    "/user/data/OnionHEN/assets/icon_xml_plugins.png";
+constexpr const char* kIconGame = "/user/data/OnionHEN/assets/icon_xml_game.png";
 constexpr const char* kIconSettings =
-    "/user/data/OrionHEN/assets/icon_xml_settings.png";
+    "/user/data/OnionHEN/assets/icon_xml_settings.png";
 constexpr const char* kIconShortcuts =
-    "/user/data/OrionHEN/assets/icon_xml_shortcuts.png";
+    "/user/data/OnionHEN/assets/icon_xml_shortcuts.png";
 constexpr const char* kIconDebug =
-    "/user/data/OrionHEN/assets/icon_xml_debug.png";
+    "/user/data/OnionHEN/assets/icon_xml_debug.png";
 constexpr const char* kIconAbout =
-    "/user/data/OrionHEN/assets/icon_xml_about.png";
+    "/user/data/OnionHEN/assets/icon_xml_about.png";
 
 bool toolbox_on(const char* id) {
   return resolve_toolbox_control_value(id) == "1";
@@ -449,14 +449,14 @@ void append_toolbox_payloads_group(ps5ui::Group& g) {
       .group(
           "id_kstuff_opts", "Kstuff",
           [](ps5ui::Group& k) {
-            k.toggle("id_kstuff_autoload", "OrionHEN 启动时自动加载 Kstuff",
+            k.toggle("id_kstuff_autoload", "OnionHEN 启动时自动加载 Kstuff",
                      toolbox_on("id_kstuff_autoload"))
                 .button("id_download_kstuff", "通过 GitHub 替换为最新 Kstuff",
                         std::nullopt,
                         "从 EchoStretch 的 GitHub 仓库下载并安装最新 kstuff，"
-                        "替换 OrionHEN 启动时自动加载的版本")
+                        "替换 OnionHEN 启动时自动加载的版本")
                 .button("id_delete_kstuff", "删除通过 GitHub 安装的 Kstuff",
-                        std::nullopt, "将切换回 OrionHEN 内置的 kstuff");
+                        std::nullopt, "将切换回 OnionHEN 内置的 kstuff");
           },
           "内核补丁组件管理", std::nullopt, "id_kstuff_autoload");
 }
@@ -464,9 +464,9 @@ void append_toolbox_payloads_group(ps5ui::Group& g) {
 void append_toolbox_game_group(ps5ui::Group& g) {
   g.link("id_cheats", "金手指（开发中）", "cheats.xml")
       .link("remote_play", "远程游玩", "remote_play.xml")
-      .toggle("id_custom_game_opts", "OrionHEN 游戏选项",
+      .toggle("id_custom_game_opts", "OnionHEN 游戏选项",
               toolbox_on("id_custom_game_opts"),
-              "在游戏选项菜单中显示 OrionHEN 相关选项（金手指、转储等）")
+              "在游戏选项菜单中显示 OnionHEN 相关选项（金手指、转储等）")
       .group(
           "id_overlay_opts", "游戏覆盖层",
           [](ps5ui::Group& o) {
@@ -500,9 +500,9 @@ void append_toolbox_system_group(ps5ui::Group& g) {
   g.toggle("id_disp_titleids", "在主菜单显示 Title ID",
            toolbox_on("id_disp_titleids"),
            "零售机可用，但仅在工具箱激活时显示")
-      .toggle("id_auto_eject", "OrionHEN 启动时自动弹出光盘",
+      .toggle("id_auto_eject", "OnionHEN 启动时自动弹出光盘",
               toolbox_on("id_auto_eject"), std::nullopt,
-              "OrionHEN 完全启动后自动弹出已插入的光盘，适用于 BD-J 或 LUA "
+              "OnionHEN 完全启动后自动弹出已插入的光盘，适用于 BD-J 或 LUA "
               "漏洞利用",
               std::nullopt, "更改将在下次重启后生效")
       .group(
@@ -526,7 +526,7 @@ void append_toolbox_system_group(ps5ui::Group& g) {
                  toolbox_val("id_rest_1", ""))
                 .toggle(
                     "id_rest_2",
-                    "进入休息模式时自动关闭 OrionHEN 服务守护进程",
+                    "进入休息模式时自动关闭 OnionHEN 服务守护进程",
                     toolbox_on("id_rest_2"),
                     "从休息模式恢复后将重新启动守护进程")
                 .toggle("id_rest_3", "进入休息模式时自动关闭已打开的游戏",
@@ -552,7 +552,7 @@ void append_toolbox_shortcuts_group(ps5ui::Group& g) {
          },
          "从任意位置（含游戏内）打开金手指菜单",
          toolbox_val("id_cheats_shortcut"))
-      .list("id_toolbox_shortcut", "打开 OrionHEN 工具箱",
+      .list("id_toolbox_shortcut", "打开 OnionHEN 工具箱",
             [](ps5ui::ListBuilder& L) {
               L.item("id_toolbox_shortcut_0", "关闭（无快捷键）", "0")
                   .item("id_toolbox_shortcut_1", "按住 L2 + R3", "1")
@@ -584,16 +584,16 @@ void append_toolbox_about_group(ps5ui::Group& g) {
        },
        "喜欢这个项目吗？欢迎捐赠支持")
       .group(
-          "id_orionhen_credits", "OrionHEN 致谢",
+          "id_onionhen_credits", "OnionHEN 致谢",
           [](ps5ui::Group& c) {
-            c.label("id_orionhen_creds_display", "★ OrionHEN Beta 2.5",
+            c.label("id_onionhen_creds_display", "★ OnionHEN Beta 2.5",
                     ps5ui::Style::Center)
                 .label("id_lead_devs", "★ 主要开发者 ★", ps5ui::Style::Center)
                 .label("id_lead_devs_2",
                        "- LM (X @LightningMods_, GitHub @LightningMods, Discord "
                        "@lm_dev)",
                        ps5ui::Style::Center)
-                .label("id_ddkdkd", "★ OrionHEN 贡献者 ★", ps5ui::Style::Center)
+                .label("id_ddkdkd", "★ OnionHEN 贡献者 ★", ps5ui::Style::Center)
                 .label("id_major_line",
                        "Specter - Byepervisor          astrelsky          "
                        "ChendoChap       sleirsgoevy - Kstuff",
@@ -602,7 +602,7 @@ void append_toolbox_about_group(ps5ui::Group& g) {
                        ps5ui::Style::Center)
                 .label("id_99877777", "更多信息、更新或问题请访问 GitHub 仓库",
                        ps5ui::Style::Center)
-                .label("id_99555557", "OrionHEN 项目仓库", ps5ui::Style::Center)
+                .label("id_99555557", "OnionHEN 项目仓库", ps5ui::Style::Center)
                 .label("id_8585858", "特别感谢所有支持者，包括以下人员：",
                        ps5ui::Style::Center)
                 .label("id_60606066",
@@ -651,9 +651,9 @@ void append_toolbox_about_group(ps5ui::Group& g) {
           },
           "致谢与支持者")
       .group(
-          "id_inc_project", "OrionHEN 所包含的项目",
+          "id_inc_project", "OnionHEN 所包含的项目",
           [](ps5ui::Group& p) {
-            p.label("id_project_info", "★ OrionHEN 中使用的开源与闭源项目",
+            p.label("id_project_info", "★ OnionHEN 中使用的开源与闭源项目",
                     ps5ui::Style::Center)
                 .label("id_project_1",
                        "PS5 Payload Dev SDK - "
@@ -690,13 +690,13 @@ void append_toolbox_about_group(ps5ui::Group& g) {
                        "cJSON - https://github.com/DaveGamble/cJSON",
                        ps5ui::Style::Center);
           },
-          "OrionHEN 中使用的项目");
+          "OnionHEN 中使用的项目");
 }
 
 } // namespace
 
 void generate_toolbox_xml(std::string& new_xml) {
-  ps5ui::Page page("id_debug_settings", "★OrionHEN 工具箱");
+  ps5ui::Page page("id_debug_settings", "★OnionHEN 工具箱");
   page.root_focus("id_group_pkg");
 
   page.group(
@@ -725,7 +725,7 @@ void generate_toolbox_xml(std::string& new_xml) {
           [](ps5ui::Group& g) { append_toolbox_debug_group(g); },
           "越狱调试与环境", kIconDebug, "id_debug_jb")
       .group(
-          "id_orionhen_credit_options", "关于",
+          "id_onionhen_credit_options", "关于",
           [](ps5ui::Group& g) { append_toolbox_about_group(g); },
           "致谢、捐赠与项目信息", kIconAbout, std::nullopt,
           ps5ui::Style::Center);

@@ -14,7 +14,7 @@ SCEFunctions sce_functions = {0};
 /*
  * Scoped PTRACE_AUTHID for the inject_elf() window (not DEBUG_AUTHID).
  * Elevate once via set_ucred_to_ptrace(); restore on every exit. No per-call
- * flip inside sys_ptrace (see liborion_elfldr pt.c).
+ * flip inside sys_ptrace (see libonion_elfldr pt.c).
  */
 static int read_self_authid(uint64_t *authid_out)
 {

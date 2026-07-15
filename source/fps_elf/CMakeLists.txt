@@ -23,9 +23,9 @@ message("IS_SUBPROJECT: ${IS_SUBPROJECT}")
 set(D_CWD "${CMAKE_CURRENT_SOURCE_DIR}")
 # Intermediate embed for daemon .incbin (source/daemon/assets/).
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${D_CWD}/../daemon/assets)
-if(DEFINED ORIONHEN_OUT_LIB)
-	set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${ORIONHEN_OUT_LIB})
-	set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${ORIONHEN_OUT_LIB})
+if(DEFINED ONIONHEN_OUT_LIB)
+	set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${ONIONHEN_OUT_LIB})
+	set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${ONIONHEN_OUT_LIB})
 else()
 	set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${D_CWD}/bin)
 	set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${D_CWD}/bin)
@@ -64,16 +64,16 @@ set(CMAKE_CXX_FLAGS "${CMAKE_C_FLAGS} -DDEBUG -gfull -gdwarf-2 -O0 -pedantic -pe
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O0 ")
 
 target_sources(${PROJECT_NAME} PRIVATE ${SrcFiles})
-add_dependencies(${PROJECT_NAME} orion_ipc orion_detour orion_proc)
+add_dependencies(${PROJECT_NAME} onion_ipc onion_detour onion_proc)
 target_include_directories(${PROJECT_NAME} PRIVATE
 	"${D_CWD}/include"
 	"${PROJECT_ROOT}/include"
-	"${PROJECT_ROOT}/liborion_ipc/include"
-	"${PROJECT_ROOT}/liborion_detour/include"
-	"${PROJECT_ROOT}/liborion_proc/include"
+	"${PROJECT_ROOT}/libonion_ipc/include"
+	"${PROJECT_ROOT}/libonion_detour/include"
+	"${PROJECT_ROOT}/libonion_proc/include"
 )
 target_link_directories	(${PROJECT_NAME} PUBLIC "${PROJECT_ROOT}/lib")
-target_link_libraries	(${PROJECT_NAME} PUBLIC orion_detour orion_proc orion_ipc kernel SceGnmDriver)
+target_link_libraries	(${PROJECT_NAME} PUBLIC onion_detour onion_proc onion_ipc kernel SceGnmDriver)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 # Add post-build command

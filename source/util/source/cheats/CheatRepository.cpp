@@ -10,10 +10,10 @@
 #include "cheats/runtime.h"
 
 extern "C" {
-void OrionHEN_log(const char *fmt, ...);
+void OnionHEN_log(const char *fmt, ...);
 }
 
-namespace orion::cheats {
+namespace onion::cheats {
 
 std::string CheatRepository::resolvePath(const game_context_t &game) {
   static const char *exts[] = {"json", "shn", "mc4", "ShnExt"};
@@ -24,9 +24,9 @@ std::string CheatRepository::resolvePath(const game_context_t &game) {
       std::strcmp(game.version, "unknown") == 0) {
     return {};
   }
-  orion_cheat_normalize_version(game.version, version, sizeof(version));
+  onion_cheat_normalize_version(game.version, version, sizeof(version));
   for (const char *ext : exts) {
-    std::snprintf(path, sizeof(path), ORION_CHEATS_DIR "/%s_%s.%s",
+    std::snprintf(path, sizeof(path), ONION_CHEATS_DIR "/%s_%s.%s",
                   game.title_id, version, ext);
     if (fileExists(path)) {
       return path;
@@ -54,17 +54,17 @@ bool CheatRepository::statSignature(const std::string &path,
   return true;
 }
 
-int CheatRepository::loadFile(const std::string &path, orion_cheat_file_t &out) {
+int CheatRepository::loadFile(const std::string &path, onion_cheat_file_t &out) {
   return CheatParserFactory::loadFile(path, out);
 }
 
 void CheatRepository::ensureCheatsDir() {
-  ::mkdir(ORION_DATA_ROOT, 0777);
-  ::mkdir(ORION_CHEATS_DIR, 0777);
+  ::mkdir(ONION_DATA_ROOT, 0777);
+  ::mkdir(ONION_CHEATS_DIR, 0777);
 }
 
 int CheatRepository::flattenInstallTree(const std::string &root) {
-  return orion_cheat_flatten_install_tree(root.c_str());
+  return onion_cheat_flatten_install_tree(root.c_str());
 }
 
-} // namespace orion::cheats
+} // namespace onion::cheats

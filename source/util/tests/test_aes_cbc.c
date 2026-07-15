@@ -55,7 +55,7 @@ static int test_known_changes(void) {
 
 int test_aes_cbc_suite(void) {
   int failures = 0;
-  failures += orion_test_run("aes_cbc.roundtrip", test_roundtrip_block);
-  failures += orion_test_run("aes_cbc.plaintext_diff", test_known_changes);
+  failures += onion_test_run("aes_cbc.roundtrip", test_roundtrip_block);
+  failures += onion_test_run("aes_cbc.plaintext_diff", test_known_changes);
   return failures;
 }

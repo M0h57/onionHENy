@@ -57,9 +57,9 @@ static int test_empty(void) {
 
 int test_base64_suite(void) {
   int failures = 0;
-  failures += orion_test_run("base64.encode_known", test_encode_known);
-  failures += orion_test_run("base64.decode_known", test_decode_known);
-  failures += orion_test_run("base64.roundtrip", test_roundtrip);
-  failures += orion_test_run("base64.empty", test_empty);
+  failures += onion_test_run("base64.encode_known", test_encode_known);
+  failures += onion_test_run("base64.decode_known", test_decode_known);
+  failures += onion_test_run("base64.roundtrip", test_roundtrip);
+  failures += onion_test_run("base64.empty", test_empty);
   return failures;
 }

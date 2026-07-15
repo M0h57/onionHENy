@@ -2,38 +2,38 @@
 #include "test_harness.h"
 
 #include <msg.hpp>
-#include <orion/ipc_server.hpp>
+#include <onion/ipc_server.hpp>
 
 #include <cstring>
 #include <string>
 
 static int test_frame_complete(void) {
-  TEST_ASSERT_TRUE(orion::ipc_frame_is_complete(static_cast<int>(sizeof(IPCMessage))));
-  TEST_ASSERT_TRUE(!orion::ipc_frame_is_complete(0));
-  TEST_ASSERT_TRUE(!orion::ipc_frame_is_complete(4));
+  TEST_ASSERT_TRUE(onion::ipc_frame_is_complete(static_cast<int>(sizeof(IPCMessage))));
+  TEST_ASSERT_TRUE(!onion::ipc_frame_is_complete(0));
+  TEST_ASSERT_TRUE(!onion::ipc_frame_is_complete(4));
   TEST_ASSERT_TRUE(
-      !orion::ipc_frame_is_complete(static_cast<int>(sizeof(IPCMessage)) - 1));
+      !onion::ipc_frame_is_complete(static_cast<int>(sizeof(IPCMessage)) - 1));
   return 0;
 }
 
 static int test_force_nul(void) {
   IPCMessage m{};
   memset(m.msg, 'A', sizeof(m.msg));
-  orion::ipc_message_force_nul(m);
+  onion::ipc_message_force_nul(m);
   TEST_ASSERT_EQ_INT(0, m.msg[sizeof(m.msg) - 1]);
   return 0;
 }
 
 static int test_json_escape_quotes_and_slash(void) {
-  std::string e = orion::ipc_json_escape(R"(a"b\c)");
+  std::string e = onion::ipc_json_escape(R"(a"b\c)");
   TEST_ASSERT_STREQ(R"(a\"b\\c)", e.c_str());
-  std::string nl = orion::ipc_json_escape("x\ny");
+  std::string nl = onion::ipc_json_escape("x\ny");
   TEST_ASSERT_STREQ(R"(x\ny)", nl.c_str());
   return 0;
 }
 
 static int test_format_reply_escapes_var(void) {
-  using orion::ipc_format_reply_body;
+  using onion::ipc_format_reply_body;
   std::string ok = ipc_format_reply_body(false, "Nothing");
   TEST_ASSERT_STREQ(R"({"res":0,"var":"Nothing"})", ok.c_str());
 
@@ -53,16 +53,16 @@ static int test_null_path_policy(void) {
   auto missing = [](const char *p) -> bool { return !p || !*p; };
   TEST_ASSERT_TRUE(missing(nullptr));
   TEST_ASSERT_TRUE(missing(""));
-  TEST_ASSERT_TRUE(!missing("/data/OrionHEN"));
+  TEST_ASSERT_TRUE(!missing("/data/OnionHEN"));
   return 0;
 }
 
 extern "C" int test_ipc_harden_suite(void) {
   int failures = 0;
-  failures += orion_test_run("ipc_frame_complete", test_frame_complete);
-  failures += orion_test_run("ipc_force_nul", test_force_nul);
-  failures += orion_test_run("ipc_json_escape", test_json_escape_quotes_and_slash);
-  failures += orion_test_run("ipc_format_reply_escape", test_format_reply_escapes_var);
-  failures += orion_test_run("ipc_null_path_policy", test_null_path_policy);
+  failures += onion_test_run("ipc_frame_complete", test_frame_complete);
+  failures += onion_test_run("ipc_force_nul", test_force_nul);
+  failures += onion_test_run("ipc_json_escape", test_json_escape_quotes_and_slash);
+  failures += onion_test_run("ipc_format_reply_escape", test_format_reply_escapes_var);
+  failures += onion_test_run("ipc_null_path_policy", test_null_path_policy);
   return failures;
 }

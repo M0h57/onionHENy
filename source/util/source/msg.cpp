@@ -1,5 +1,5 @@
 
-/* Copyright (C) 2025 OrionHEN / LightningMods
+/* Copyright (C) 2025 OnionHEN / LightningMods
 
 This program is free software; you can redistribute it and/or modify it
 under the terms of the GNU General Public License as published by the
@@ -16,7 +16,7 @@ along with this program; see the file COPYING. If not, see
 <http://www.gnu.org/licenses/>.  */
 
 #include "ipc.hpp"
-#include <orion/ipc_server.hpp>
+#include <onion/ipc_server.hpp>
 #include <msg.hpp>
 #include <signal.h>
 #include <stdint.h>
@@ -34,7 +34,7 @@ int sceKernelMprotect(void *addr, size_t len, int prot);
 int sceSystemServiceLoadExec(const char *path, const char *arg);
 extern bool is_handler_enabled;
 }
-#include "../../extern/cJSON/orion_cjson.hpp"
+#include "../../extern/cJSON/onion_cjson.hpp"
 #include "cheats/CheatService.hpp"
 #include "cheats/runtime.h"
 #include <dirent.h>
@@ -44,7 +44,7 @@ extern bool is_handler_enabled;
 #include <memory>
 #include <sfo.hpp>
 #include <sstream>
-#include <orion/platform.h>
+#include <onion/platform.h>
 
 extern pthread_t cmd_server;
 void* runCommandNControlServer(void*);
@@ -75,14 +75,14 @@ struct sockaddr_in networkAdress(uint16_t port) {
 }
 
 void reply(int sender_socket, bool error, std::string out_var = "Nothing") {
-  orion::ipc_reply(sender_socket, BREW_UTIL_RETURN_VALUE, error, out_var);
+  onion::ipc_reply(sender_socket, BREW_UTIL_RETURN_VALUE, error, out_var);
 }
 
 std::vector<uint8_t> readFile(std::string filename) {
   // open the file:
   std::ifstream file(filename, std::ios::binary);
   if (!file.is_open()) {
-    OrionHEN_log("Failed to open %s", filename.c_str());
+    OnionHEN_log("Failed to open %s", filename.c_str());
     return std::vector<uint8_t>();
   }
 
@@ -112,7 +112,7 @@ std::string GetPS5Version(const std::string &jsonpath) {
   try {
     std::ifstream input_file(jsonpath);
     if (!input_file.is_open()) {
-      OrionHEN_log("Failed to open file for reading: %s", jsonpath.c_str());
+      OnionHEN_log("Failed to open file for reading: %s", jsonpath.c_str());
       return "Error Opening Json";
     }
 
@@ -120,16 +120,16 @@ std::string GetPS5Version(const std::string &jsonpath) {
     buffer << input_file.rdbuf();
     input_file.close();
 
-    orion_cjson::Root j(buffer.str());
+    onion_cjson::Root j(buffer.str());
     const char *content_version =
-        j ? orion_cjson::string_item(j.get(), "contentVersion") : nullptr;
+        j ? onion_cjson::string_item(j.get(), "contentVersion") : nullptr;
     if (content_version)
       return std::string(content_version);
 
   } catch (const std::exception &e) {
     // Handle exceptions here, you can log the error or perform other error
     // handling tasks
-    OrionHEN_log("An exception occurred: %s", e.what());
+    OnionHEN_log("An exception occurred: %s", e.what());
     return "Error getting version";
   }
 
@@ -146,16 +146,16 @@ size_t write_callback(void *contents, size_t size, size_t nmemb, void *userp) {
 void handleIPC(clientArgs *client, std::string &inputStr,
                DaemonCommands command);
 
-static void handleIPC_adapt(orion::IpcClientArgs *client, std::string &msg,
+static void handleIPC_adapt(onion::IpcClientArgs *client, std::string &msg,
                             DaemonCommands cmd) {
   handleIPC(client, msg, cmd);
 }
 
 static void ipc_server_log_line(const char *line) {
-  OrionHEN_log("%s", line);
+  OnionHEN_log("%s", line);
 }
 
-static orion::IpcServerOptions g_util_ipc_opts = {
+static onion::IpcServerOptions g_util_ipc_opts = {
     UTIL_IPC_SOC,
     handleIPC_adapt,
     BREW_UTIL_RETURN_VALUE,
@@ -165,6 +165,6 @@ static orion::IpcServerOptions g_util_ipc_opts = {
 
 void *IPC_loop(void *args) {
   (void)args;
-  orion::ipc_server_set_log(ipc_server_log_line);
-  return orion::ipc_server_loop(&g_util_ipc_opts);
+  onion::ipc_server_set_log(ipc_server_log_line);
+  return onion::ipc_server_loop(&g_util_ipc_opts);
 }

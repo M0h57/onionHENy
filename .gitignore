@@ -62,14 +62,14 @@ source/util/source/assets
 source/bootstrapper/source/assets
 
 # First-party static libs (built into source/lib/)
-source/lib/liborion_ipc.a
-source/lib/liborion_settings.a
-source/lib/liborion_detour.a
-source/lib/liborion_proc.a
-source/lib/liborion_ready.a
-source/lib/liborion_platform.a
-source/lib/liborion_plugin.a
-source/lib/liborion_playtime.a
-source/lib/liborion_elfldr.a
-source/lib/liborion_payload.a
+source/lib/libonion_ipc.a
+source/lib/libonion_settings.a
+source/lib/libonion_detour.a
+source/lib/libonion_proc.a
+source/lib/libonion_ready.a
+source/lib/libonion_platform.a
+source/lib/libonion_plugin.a
+source/lib/libonion_playtime.a
+source/lib/libonion_elfldr.a
+source/lib/libonion_payload.a
 /scripts/__pycache__

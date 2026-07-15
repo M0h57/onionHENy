@@ -1,4 +1,4 @@
-/* Copyright (C) 2025 OrionHEN / LightningMods
+/* Copyright (C) 2025 OnionHEN / LightningMods
  *
  * Jailbreak FIFO watcher + util watchdog — extracted from commands.cpp.
  */
@@ -8,14 +8,14 @@
 #include "globalconf.hpp"
 
 #include <hijacker/hijacker.hpp>
-#include <orion/proc_query.h>
-#include <orion/platform.h>
-#include <orion/ready.h>
-#include <orion/settings.hpp>
-#include <orion/hijack_retry.h>
+#include <onion/proc_query.h>
+#include <onion/platform.h>
+#include <onion/ready.h>
+#include <onion/settings.hpp>
+#include <onion/hijack_retry.h>
 #include "globalconf.hpp"
 #include <elfldr_remote.h>
-#include "../../extern/cJSON/orion_cjson.hpp"
+#include "../../extern/cJSON/onion_cjson.hpp"
 
 #include <atomic>
 #include <iomanip>
@@ -76,14 +76,14 @@ void *fifo_and_dumper_thread(void *args) noexcept {
     }
 
     // Restart util if it crashes or exits (normal operation only).
-    if (find_pid("util.elf") < 0 && find_pid("OrionHEN Utility") < 0 &&
+    if (find_pid("util.elf") < 0 && find_pid("OnionHEN Utility") < 0 &&
         retries < kMaxRetries) {
       if (retries == 0)
-        orion_notify(true, "OrionHEN Utility is not running, restarting via 9021...");
+        onion_notify(true, "OnionHEN Utility is not running, restarting via 9021...");
 
       if (++retries >= kMaxRetries) {
-        orion_notify(true,
-                     "OrionHEN Utility services failed to restart — check "
+        onion_notify(true,
+                     "OnionHEN Utility services failed to restart — check "
                      "elfldr :9021");
         continue;
       }
@@ -91,11 +91,11 @@ void *fifo_and_dumper_thread(void *args) noexcept {
       bool ok = elfldr_remote_send_bytes(util_elf_start, util_elf_size);
       if (ok) {
         sleep(2);
-        OrionHEN_log("  Launched util via 9021!");
-        orion_notify(true, "OrionHEN Utility services successfully restarted");
+        OnionHEN_log("  Launched util via 9021!");
+        onion_notify(true, "OnionHEN Utility services successfully restarted");
         retries = 0;
       } else {
-        OrionHEN_log("failed to launch embedded util via 9021, retry: %d",
+        OnionHEN_log("failed to launch embedded util via 9021, retry: %d",
                      retries);
       }
     }
@@ -103,7 +103,7 @@ void *fifo_and_dumper_thread(void *args) noexcept {
     pthread_mutex_lock(&jb_lock);
 
     {
-      const orion::Settings cfg = g_settings.snapshot();
+      const onion::Settings cfg = g_settings.snapshot();
       if (cfg.enable_fan_speed)
         set_fan_threshold(cfg.fan_threshold);
     }
@@ -120,10 +120,10 @@ void *fifo_and_dumper_thread(void *args) noexcept {
      *
      * KNOWN ISSUE: soft-inject works, but arming the GNM-WL detour freezes
      * titles (docs/fps-overlay-known-issues.md). fps_elf ships with
-     * ORION_FPS_ARM_GNM_HOOK=0 so inject is SHM-only until a safe probe
+     * ONION_FPS_ARM_GNM_HOOK=0 so inject is SHM-only until a safe probe
      * exists. Keep calling inject so the pipeline stays exercised.
      */
-    if (orion_ready_is_set(ORION_FLAG_FPS_OVERLAY) &&
+    if (onion_ready_is_set(ONION_FLAG_FPS_OVERLAY) &&
         (tid.rfind("CUSA") != std::string::npos ||
          tid.rfind("SCUS") != std::string::npos ||
          tid.rfind("PPSA") != std::string::npos)) {
@@ -144,7 +144,7 @@ void *fifo_and_dumper_thread(void *args) noexcept {
     for (int i = 0; i <= 50; ++i) {
       std::ostringstream oss;
       oss << std::setw(3) << std::setfill('0') << i;
-      sandbox_dir = sandbox_dir_base + oss.str() + "/download0/orionhen_jailbreak";
+      sandbox_dir = sandbox_dir_base + oss.str() + "/download0/onionhen_jailbreak";
       if (if_exists(sandbox_dir.c_str())) {
         fifo_found = true;
         break;
@@ -157,30 +157,30 @@ void *fifo_and_dumper_thread(void *args) noexcept {
     }
 
     if (!GetFileContents(sandbox_dir.c_str(), &json_str)) {
-      OrionHEN_log("Failed to get command from %s", sandbox_dir.c_str());
+      OnionHEN_log("Failed to get command from %s", sandbox_dir.c_str());
       pthread_mutex_unlock(&jb_lock);
       continue;
     }
 
-    OrionHEN_log("\nfound. %s for %s", json_str, tid.c_str());
-    orion_cjson::Root my_json(json_str);
+    OnionHEN_log("\nfound. %s for %s", json_str, tid.c_str());
+    onion_cjson::Root my_json(json_str);
     if (!my_json) {
       puts("Error parsing JSON");
-      OrionHEN_log("Error parsing JSON");
+      OnionHEN_log("Error parsing JSON");
       pthread_mutex_unlock(&jb_lock);
       continue;
     }
 
-    const char *PID = orion_cjson::string_item(my_json.get(), "PID");
+    const char *PID = onion_cjson::string_item(my_json.get(), "PID");
     if (!PID) {
-      OrionHEN_log("PID is null");
-      orion_notify(true, "Jailbreak failed, PID is null");
+      OnionHEN_log("PID is null");
+      onion_notify(true, "Jailbreak failed, PID is null");
       pthread_mutex_unlock(&jb_lock);
       continue;
     }
 
     int reserved_value = atoi(PID);
-    OrionHEN_log("reserved_value: %d", reserved_value);
+    OnionHEN_log("reserved_value: %d", reserved_value);
 
     int hijack_retries = 0;
     UniquePtr<Hijacker> spawned = nullptr;
@@ -188,21 +188,21 @@ void *fifo_and_dumper_thread(void *args) noexcept {
       spawned = Hijacker::getHijacker(reserved_value);
       if (!spawned) {
         ++hijack_retries;
-        OrionHEN_log("is null for PID %d (attempt %d)", reserved_value,
+        OnionHEN_log("is null for PID %d (attempt %d)", reserved_value,
                      hijack_retries);
-        if (orion_hijack_retry_should_stop(isProcessAlive(reserved_value),
+        if (onion_hijack_retry_should_stop(isProcessAlive(reserved_value),
                                            hijack_retries, 30)) {
-          orion_notify(true, "Jailbreak failed, PID is invaild");
-          OrionHEN_log("Jailbreak failed, PID is invaild");
+          onion_notify(true, "Jailbreak failed, PID is invaild");
+          OnionHEN_log("Jailbreak failed, PID is invaild");
           break;
         }
       }
     } while (spawned == nullptr);
 
     if (spawned) {
-      OrionHEN_log("RIGHT Jailbreak command received: jailbreaking...");
+      OnionHEN_log("RIGHT Jailbreak command received: jailbreaking...");
       if (g_settings.snapshot().debug_app_jb_msg)
-        orion_notify(true, "App (PID %i) has been granted a jailbreak", reserved_value);
+        onion_notify(true, "App (PID %i) has been granted a jailbreak", reserved_value);
 
       spawned->jailbreak(true);
       spawned.release();

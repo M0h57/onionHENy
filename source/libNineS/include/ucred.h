@@ -1,3 +1,3 @@
-/* Compatibility shim — implementation is liborion_proc. */
+/* Compatibility shim — implementation is libonion_proc. */
 #pragma once
-#include <orion/ucred.h>
+#include <onion/ucred.h>

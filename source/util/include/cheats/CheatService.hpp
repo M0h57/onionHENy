@@ -9,7 +9,7 @@
 #include "cheats/runtime.h"
 #include "util_platform.h"
 
-namespace orion::cheats {
+namespace onion::cheats {
 
 /**
  * Facade for IPC and lifecycle. Thread-safe process-wide service.
@@ -52,9 +52,9 @@ private:
   bool has_tracked_game_ = false;
   pid_t tracked_pid_ = 0;
   game_context_t game_{};
-  orion_cheat_file_t file_{};
+  onion_cheat_file_t file_{};
   FileSignature sig_{};
   CheatApplier applier_{};
 };
 
-} // namespace orion::cheats
+} // namespace onion::cheats
