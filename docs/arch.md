@@ -399,7 +399,6 @@ struct IPCMessage {
 | 组件 | 上游 | 角色 |
 |------|------|------|
 | **kstuff-lite** | [EchoStretch/kstuff-lite](https://github.com/EchoStretch/kstuff-lite) | 提供 `kstuff.elf`，同步进 bootstrapper |
-| **elfldr** | [ps5-payload-dev/elfldr](https://github.com/ps5-payload-dev/elfldr) | 源码参考；不嵌入，运行时自备 |
 
 ```bash
 git submodule update --init --recursive
@@ -412,32 +411,27 @@ git submodule update --init --recursive
 |----|------|
 | **7zip-sdk (LZMA)** | unpacker 解压 bootstrapper |
 | **cJSON** | JSON（通知、IPC 载荷等） |
-| **pugixml-1.15** | XML（util 侧） |
-| **pfd_sfo_tools** | PFD/SFO 相关工具源码 |
-| **cheat engine** | 金手指解析/热重载/内存补丁（JSON/SHN/MC4/ShnExt，mdbg+kdirect；无 KCF/WMDW） |
 
-### 5.4 预编译静态库（`source/lib/*.a`）
+金手指解析器使用 `source/util/source/cheats/third_party/` 内直接编译的 AES、base64、miniz、SHA-256 实现。
 
-| 库 | 典型用途 |
-|----|----------|
-| **libcurl** + **mbedtls** / **mbedx509** / **mbedcrypto** + **wolfssl** | HTTPS 下载（PKG、cheats、kstuff 等） |
-| **libminizip** + **libz** + **libzstd** | 压缩/归档 |
-| **libpsl** | Public Suffix List（curl 依赖） |
+### 5.4 预编译静态库
 
-历史上还留有 `libelfldr.a` / `libelfloader.a` 等；当前 spawn 走 remote 9021（`lib/elfldr_remote.c`）。
+| 库 | 用途 |
+|----|------|
+| **libkeystone** (`source/util/lib/`) | ShnExt 汇编 |
+
+C++ runtime 统一由 `PS5_PAYLOAD_SDK/target/lib` 提供。项目不再携带旧 curl/TLS、minizip/zlib/zstd 或 elfldr 静态归档；spawn 走 remote 9021（`lib/elfldr_remote.c`）。
 
 ### 5.5 PS5 系统库 stub（`source/lib/*.so`）
 
-常见链接目标：
+当前链接目标：
 
-- `libkernel` / `libkernel_sys`
+- `libkernel_sys`
 - `SceSystemService` / `SceUserService`
-- `SceNet` / `SceNetCtl`
-- `ScePad` / `SceNotification` / `SceRegMgr`
-- `SceSysmodule` / `SceSysCore` / `SceAppInstUtil`
-- `SceHttp2` / `SceSsl`
-- `SceVideoOut` / `SceGnmDriver`
-- `SceLibcInternal`
+- `SceNetCtl`
+- `SceNotification` / `SceRegMgr`
+- `SceSysCore` / `SceAppInstUtil`
+- `SceGnmDriver`
 
 运行时解析到主机系统模块。
 

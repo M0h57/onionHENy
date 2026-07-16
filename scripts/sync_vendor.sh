@@ -31,8 +31,10 @@ usage() {
 Sync OnionHEN vendor embeds from open-source upstreams.
 
 Submodules (under third_party/):
-  elfldr           https://github.com/ps5-payload-dev/elfldr          (optional external 9021 loader reference)
   kstuff-lite      https://github.com/EchoStretch/kstuff-lite
+
+Runtime-only external dependency:
+  elfldr @ 9021    https://github.com/ps5-payload-dev/elfldr
 
 Removed from OnionHEN (not synced):
   elfldr.elf (9021 service), ps5debug, ps5-app-dumper, Byepervisor/hen.bin
@@ -170,8 +172,6 @@ main() {
     warn "release downloads still work without submodules"
   fi
 
-  # Note: elfldr.elf is no longer vendored. third_party/elfldr is kept only as
-  # an optional source reference for the external 9021 loader.
   sync_kstuff
 
   if [[ -f "${SOURCE}/bootstrapper/assets/kstuff.elf" ]]; then

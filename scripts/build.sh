@@ -4,7 +4,7 @@
 # Phases:
 #   1) configure (prospero-cmake / PS5 payload SDK)
 #   2) build libs + shellui + fps_elf  (shellui/fps land in daemon/assets/)
-#   3) stage vendor blobs (elfldr, kstuff)
+#   3) stage vendor blob (kstuff)
 #   4) build daemon + util
 #   5) build bootstrapper  (-> bin/bootstrapper.elf + .lzma)
 #   6) build unpacker / OnionHEN.elf   (embeds bootstrapper.elf.lzma)
@@ -84,7 +84,8 @@ Third-party (git submodules under third_party/ + release downloads):
   See third_party/README.md and scripts/sync_vendor.sh
 
   kstuff.elf              <- EchoStretch/kstuff-lite
-  third_party/elfldr      <- optional source reference for the external 9021 loader
+
+  External elfldr @ 9021 is required at runtime but is not vendored.
 
   Removed: elfldr.elf (9021), ps5debug, app-dumper, Byepervisor/hen, Discord RPC
 

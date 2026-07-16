@@ -15,7 +15,7 @@ OnionHEN is based on etaHEN’s open-source release. See the [root README](../RE
 | `fps_elf/` | FPS overlay PRX |
 | `unpacker/` | Payload unpacker |
 | `libhijacker/`, `libNineS/`, `libNidResolver/` | Internal static libs |
-| `extern/` | Third-party sources (cJSON, pugixml, 7zip-sdk, …) |
+| `extern/` | Third-party sources used by the build (cJSON, 7zip-sdk) |
 | `include/` | Shared headers |
 | `lib/` | Prebuilt link libraries (static + PS5 stubs) + `backtrace.cpp` |
 | `stubber/` | NID stub generation (Go) |

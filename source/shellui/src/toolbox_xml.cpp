@@ -666,12 +666,9 @@ void append_toolbox_about_group(ps5ui::Group& g) {
                        "cJSON — https://github.com/DaveGamble/cJSON",
                        ps5ui::Style::Center)
                 .label("id_project_8",
-                       "pugixml — https://github.com/zeux/pugixml",
-                       ps5ui::Style::Center)
-                .label("id_project_9",
                        "7-Zip LZMA SDK — https://www.7-zip.org/sdk.html",
                        ps5ui::Style::Center)
-                .label("id_project_10",
+                .label("id_project_9",
                        "miniz / Keystone (cheats engine)",
                        ps5ui::Style::Center);
           },

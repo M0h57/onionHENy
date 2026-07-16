@@ -228,14 +228,12 @@ cheat_engine_runtime
 
 **与 hijacker 的固件号差异**：hijacker `getSystemSwVersion()` 用 `kern.sdk_version` 做偏移表；金手指门控用 Prospero major。二者用途不同，不可混用。
 
-### 6.3 HTTP（`http.c`）
+### 6.3 GitHub 响应解析（`http_github.cpp`）
 
-- `IniliatizeHTTP`：初始化 libcurl。
-- `download_file(url, dst)`：下载到路径。
-- `extract_zip`：minizip 解压。
-- `check_for_new_commit`：对比 GitHub 仓库 commit，控制是否重新下载金手指包。
+- `onion_http_extract_commit_sha`：从 GitHub commit JSON 中提取 SHA。
+- 网络下载、curl/TLS 初始化和 minizip 解压链已移除；本模块只负责解析调用方提供的 JSON。
 
-调用方主要是 **IPC 下载 cheats / kstuff**。
+解析逻辑使用树内 cJSON。
 
 
 ### 6.5 CMD / Toolbox（`cpp_service.cpp`）
@@ -296,7 +294,7 @@ cheat_engine_runtime
 
 #### 下载 flatten
 
-IPC `DOWNLOAD_CHEATS`：zip → staging → `onion_cheat_flatten_install_tree` 把嵌套仓库文件规范成 flat 命名装入 `ONION_CHEATS_DIR`。
+在线 `DOWNLOAD_CHEATS` 命令已保留为 unsupported 兼容槽位。`onion_cheat_flatten_install_tree` 仍用于把本地导入树规范成 flat 命名并装入 `ONION_CHEATS_DIR`。
 
 ---
 
@@ -304,11 +302,10 @@ IPC `DOWNLOAD_CHEATS`：zip → staging → `onion_cheat_flatten_install_tree` �
 
 | 依赖 | 用途 |
 |------|------|
-| libNineS | 链接；dynlib/ptrace 能力与 injector 同源（util 不 include 其 freebsd-helper 到 C++） |
 | libhijacker | 内核原语、偏移（CMD/shellcore 路径） |
-| libcurl + mbedtls | HTTPS 下载 |
-| minizip | 解压 cheats zip |
-| keystone + cxxrt | ShnExt 汇编（`util/lib/`） |
+| libonion_elfldr | ptrace / mmap 注入原语 |
+| keystone | ShnExt 汇编（`util/lib/`）；C++ runtime 由 PS5 SDK 提供 |
+| cJSON | IPC 与 GitHub 响应 JSON 解析 |
 | AES/base64 third_party | MC4 / ShnExt 解密 |
 | miniz / sha256 | ShnExt 解压与密钥派生 |
 
