@@ -17,7 +17,7 @@ extern "C" {
 #include <sys/ioctl.h>
 }
 #include "../../extern/cJSON/onion_cjson.hpp"
-#include "cheats/CheatService.hpp"
+#include "cheats/cheat_service.hpp"
 #include "cheats/runtime.h"
 #include <dirent.h>
 #include <fcntl.h>

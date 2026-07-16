@@ -219,7 +219,7 @@ OnionHEN/
 |------|------|
 | **ipc.hpp** | 仅 `onion/ipc_client`（**不**拉 HookedFuncs） |
 | **shellui_types.hpp** | 枚举 / 插件 / overlay / settings 类型 |
-| **HookedFuncs.hpp** | Mono hooks + UI API（include types） |
+| **hooked_funcs.hpp** | Mono hooks + UI API（include types） |
 | **mono_runtime** | Mono 反射 / 属性读写 / 类查找 |
 | **toolbox_xml** | `generate_*_xml` / `generate_toolbox_xml` 菜单 XML（`ps5ui::Page`） |
 | **settings_ui** | `settings_commit` / SaveSettings 等 UI 侧设置 |

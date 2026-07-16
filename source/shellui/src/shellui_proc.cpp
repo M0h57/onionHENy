@@ -1,9 +1,9 @@
 /* Copyright (C) 2025 OnionHEN / LightningMods
  *
- * Extracted from MonoUtils.cpp for module locality.
+ * Extracted from mono_utils.cpp for module locality.
  */
 
-#include "HookedFuncs.hpp"
+#include "hooked_funcs.hpp"
 #include <onion/proc_query.h>
 #include <onion/platform.h>
 #include "ipc.hpp" // shellui_log + IPC_Client

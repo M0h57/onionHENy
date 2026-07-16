@@ -1,11 +1,11 @@
 /* Copyright (C) 2025 OnionHEN / LightningMods
  *
- * Extracted from MonoUtils.cpp for module locality.
+ * Extracted from mono_utils.cpp for module locality.
  * Dynamic settings pages are built via ps5ui::Page (fluent XML builder).
  */
 
-#include "HookedFuncs.hpp"
-#include "RemotePlay.h"
+#include "hooked_funcs.hpp"
+#include "remote_play.h"
 #include "defs.h"
 #include "external_symbols.hpp"
 #include "ipc.hpp"

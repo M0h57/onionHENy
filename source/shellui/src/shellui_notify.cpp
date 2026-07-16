@@ -3,7 +3,7 @@
  * ShellUI notify(const char *, ...) — no watermark bool (historical UI API).
  */
 
-#include "HookedFuncs.hpp"
+#include "hooked_funcs.hpp"
 #include "ipc.hpp"
 #include <onion/notify.h>
 #include <cstdarg>

@@ -22,11 +22,11 @@
 
 ```text
 onion::cheats
-├── IMemoryBackend.hpp
+├── i_memory_backend.hpp
 │   ├── MdbgMemoryBackend
 │   └── KdirectMemoryBackend
 ├── MemoryBackendFactory
-├── ICheatParser.hpp
+├── i_cheat_parser.hpp
 │   ├── JsonCheatParser
 │   ├── XmlCheatParser          # .shn Trainer XML
 │   ├── Mc4CheatParser          # AES-256-CBC → XML

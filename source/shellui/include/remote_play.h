@@ -15,7 +15,7 @@ along with this program; see the file COPYING. If not, see
 <http://www.gnu.org/licenses/>.  */
 
 #pragma once
-#include "AccountActivator.h"
+#include "account_activator.h"
 #include <pthread.h>
 
 extern void notify(const char* text, ...);

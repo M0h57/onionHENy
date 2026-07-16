@@ -1,7 +1,7 @@
 /* Copyright (C) 2025 OnionHEN / LightningMods — P0 split. */
 
 
-#include "HookedFuncs.hpp"
+#include "hooked_funcs.hpp"
 #include "ipc.hpp"
 #include "external_symbols.hpp"
 #include <onion/platform.h>

@@ -3,8 +3,8 @@
 #include <mutex>
 #include <string>
 
-#include "cheats/CheatApplier.hpp"
-#include "cheats/CheatRepository.hpp"
+#include "cheats/cheat_applier.hpp"
+#include "cheats/cheat_repository.hpp"
 #include "cheats/cheat_engine.h"
 #include "cheats/runtime.h"
 #include "util_platform.h"

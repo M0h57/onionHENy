@@ -8,7 +8,7 @@
  *   EnableThemedTextShadow, UI2.Panel Background*
  */
 
-#include "HookedFuncs.hpp"
+#include "hooked_funcs.hpp"
 #include "external_symbols.hpp"
 #include "ipc.hpp"
 #include <cstdio>

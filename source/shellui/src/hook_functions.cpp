@@ -14,10 +14,10 @@ You should have received a copy of the GNU General Public License
 along with this program; see the file COPYING. If not, see
 <http://www.gnu.org/licenses/>.  */
 
-#include "HookedFuncs.hpp"
+#include "hooked_funcs.hpp"
 #include <onion/platform.h>
-#include "RemotePlay.h"
-#include "Detour.h"
+#include "remote_play.h"
+#include "detour.h"
 #include "ipc.hpp"
 #include <climits>
 #include <msg.hpp>

@@ -115,9 +115,9 @@ Bootstrapper 只 clear util/kstuff/daemon/toolbox，**不清** `util_booted` / `
 | 4 | `libonion_ipc` `ipc_server.cpp` | 单次 `recv` 无组帧/`MSG_WAITALL`；短读 + `std::string(msg)` 可能未保证 NUL → 脏命令/崩溃。 |
 | 5 | `ipc_server.hpp` `ipc_format_reply_body` | `out_var` **未 JSON 转义**；金手指状态、路径含 `"` `\` 时客户端解析失败。 |
 | 6 | `daemon/ipc_handle.cpp` STAT/COPY/DELETE | `string_item` 默认 `nullptr`，缺 key 时 **`stat(NULL)` / `rmtree(NULL)`**（仅 CHMOD 有检查）。 |
-| 7 | `MemoryBackends.cpp` `mapCodeCaveCommon` | `pt_mmap` **无 `MAP_FIXED`** 却要求返回地址 == `page_start` → code cave 回退基本必然失败。 |
+| 7 | `memory_backends.cpp` `mapCodeCaveCommon` | `pt_mmap` **无 `MAP_FIXED`** 却要求返回地址 == `page_start` → code cave 回退基本必然失败。 |
 | 8 | `bootstrapper/elfldr.c:672` | `e_shnum * sizeof(Elf64_Ehdr)` 应为 **`Elf64_Shdr`** → section 表缓冲 undersize / OOB。 |
-| 9 | `libonion_detour/Detour.cpp` | `mprotect` 失败只打日志，仍写 jump → 注入崩溃。 |
+| 9 | `libonion_detour/detour.cpp` | `mprotect` 失败只打日志，仍写 jump → 注入崩溃。 |
 | 10 | NineS `elfldr.c` | `kernel_mprotect` 失败 **不设 error**（bootstrapper 会）；注入「成功」但段权限错误。 |
 | 11 | shellui 多线程共用 `IPC_Client` 单例 | 无 mutex；hook/background/onpress 并发 send/recv → 串包、25s 超时。 |
 | 12 | `util_booted` + rest delay | 冷启动首次 toolbox 被 rest 延迟；用户体感「卡死」。 |

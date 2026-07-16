@@ -9,7 +9,7 @@
 
 /* Do not include defs.h — it declares sceKernelMprotect as a function while
  * external_symbols.hpp / Detour expect a filled function *pointer*. */
-#include "Detour.h"
+#include "detour.h"
 #include "external_symbols.hpp"
 #include <ps5/klog.h>
 

@@ -1,7 +1,7 @@
 /* Copyright (C) 2025 OnionHEN / LightningMods — P0 split. */
 
-#include "HookedFuncs.hpp"
-#include "RemotePlay.h"
+#include "hooked_funcs.hpp"
+#include "remote_play.h"
 #include "ipc.hpp"
 #include "external_symbols.hpp"
 #include "shellui_state.hpp"

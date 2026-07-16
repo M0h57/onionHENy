@@ -1,10 +1,10 @@
 /* Copyright (C) 2025 OnionHEN / LightningMods
- * Extracted from HookFunctions.cpp — hook_onprecreate
+ * Extracted from hook_functions.cpp — hook_onprecreate
  *
  * Value binding is table-driven via resolve_toolbox_control_value → set_Value
  * on SettingElement during SettingPage.OnCreating.
  */
-#include "HookedFuncs.hpp"
+#include "hooked_funcs.hpp"
 #include "external_symbols.hpp"
 #include "ipc.hpp"
 #include "toolbox_values.hpp"

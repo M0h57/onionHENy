@@ -1,9 +1,9 @@
 /* Copyright (C) 2025 OnionHEN / LightningMods
  *
- * Extracted from MonoUtils.cpp for module locality.
+ * Extracted from mono_utils.cpp for module locality.
  */
 
-#include "HookedFuncs.hpp"
+#include "hooked_funcs.hpp"
 #include "external_symbols.hpp"
 #include "defs.h"
 #include "ipc.hpp" // shellui_log

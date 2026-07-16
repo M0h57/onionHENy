@@ -4,7 +4,7 @@
  */
 #include "toolbox_values.hpp"
 
-#include "HookedFuncs.hpp"
+#include "hooked_funcs.hpp"
 #include "external_symbols.hpp"
 #include "shellui_state.hpp"
 

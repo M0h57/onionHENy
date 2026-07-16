@@ -14,8 +14,8 @@ You should have received a copy of the GNU General Public License
 along with this program; see the file COPYING. If not, see
 <http://www.gnu.org/licenses/>.  */
 
-#include "Detour.h"
-#include "HookedFuncs.hpp"
+#include "detour.h"
+#include "hooked_funcs.hpp"
 #include "appinst_types.hpp"
 #include "defs.h"
 #include "external_symbols.hpp"

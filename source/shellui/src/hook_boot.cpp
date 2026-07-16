@@ -1,9 +1,9 @@
 /* Copyright (C) 2025 OnionHEN / LightningMods
- * Extracted from HookFunctions.cpp — hook_boot
+ * Extracted from hook_functions.cpp — hook_boot
  */
-#include "HookedFuncs.hpp"
-#include "RemotePlay.h"
-#include "Detour.h"
+#include "hooked_funcs.hpp"
+#include "remote_play.h"
+#include "detour.h"
 #include "ipc.hpp"
 #include <msg.hpp>
 #include <pthread.h>

@@ -1,11 +1,11 @@
-#include "cheats/CheatRepository.hpp"
+#include "cheats/cheat_repository.hpp"
 
 #include <cstdio>
 #include <cstring>
 #include <sys/stat.h>
 #include <unistd.h>
 
-#include "cheats/ICheatParser.hpp"
+#include "cheats/i_cheat_parser.hpp"
 #include "cheats/cheat_engine.h"
 #include "cheats/runtime.h"
 

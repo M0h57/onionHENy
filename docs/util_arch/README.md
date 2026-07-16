@@ -333,9 +333,9 @@ cheat_engine_runtime
 |--------|------|
 | 守护进程启停 / 主循环 | `source/util/source/main.cpp` |
 | 新 IPC 命令 | `source/include/msg.hpp` + `source/util/source/msg.cpp` |
-| 金手指列表/开关 | `cheats/CheatService.cpp` → `CheatApplier.cpp` |
+| 金手指列表/开关 | `cheats/cheat_service.cpp` → `cheat_applier.cpp` |
 | 新金手指格式 | `ICheatParser` + `CheatParserFactory::createByFormat` |
-| 写内存策略 | `IMemoryBackend.hpp` / `MemoryBackends.cpp` |
+| 写内存策略 | `i_memory_backend.hpp` / `memory_backends.cpp` |
 | 版本/模块/固件 | `util_platform.c` |
 | 9028 协议 | `cpp_service.cpp` |
 | 下载/zip | `http.c` |

@@ -54,11 +54,11 @@ PROD_C_SRCS := \
 	$(REPO_ROOT)/source/libonion_payload/source/payload.c
 
 PROD_CXX_SRCS := \
-	$(UTIL_ROOT)/source/cheats/JsonCheatParser.cpp \
-	$(UTIL_ROOT)/source/cheats/XmlCheatParser.cpp \
-	$(UTIL_ROOT)/source/cheats/Mc4CheatParser.cpp \
-	$(UTIL_ROOT)/source/cheats/ShnExtCheatParser.cpp \
-	$(UTIL_ROOT)/source/cheats/CheatParserFactory.cpp \
+	$(UTIL_ROOT)/source/cheats/json_cheat_parser.cpp \
+	$(UTIL_ROOT)/source/cheats/xml_cheat_parser.cpp \
+	$(UTIL_ROOT)/source/cheats/mc4_cheat_parser.cpp \
+	$(UTIL_ROOT)/source/cheats/shn_ext_cheat_parser.cpp \
+	$(UTIL_ROOT)/source/cheats/cheat_parser_factory.cpp \
 	$(UTIL_ROOT)/source/http_github.cpp \
 	$(REPO_ROOT)/source/extern/cJSON/cJSON.cpp \
 	$(REPO_ROOT)/source/libonion_settings/source/settings.cpp \

@@ -1,10 +1,10 @@
 /* Copyright (C) 2025 OnionHEN / LightningMods — P0 split. */
 
 
-#include "HookedFuncs.hpp"
+#include "hooked_funcs.hpp"
 #include "ipc.hpp"
 #include "external_symbols.hpp"
-#include "Detour.h"
+#include "detour.h"
 #include <onion/settings.hpp>
 #include <onion/fps_shm.h>
 #include <cstring>

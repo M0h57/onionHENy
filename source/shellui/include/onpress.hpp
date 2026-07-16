@@ -6,7 +6,7 @@
 #pragma once
 
 #include "shellui_types.hpp"
-#include "HookedFuncs.hpp"
+#include "hooked_funcs.hpp"
 #include "ipc.hpp"
 #include <onion/platform.h>
 #include <onion/proc_query.h>

@@ -20,7 +20,7 @@ along with this program; see the file COPYING. If not, see
 #include <string>
 #include <vector>
 #include "external_symbols.hpp"
-#include "HookedFuncs.hpp"
+#include "hooked_funcs.hpp"
 
 
 #define USERNAME_ENTITY_NUMBER      0x7800200

@@ -1,10 +1,10 @@
-#include "cheats/CheatApplier.hpp"
+#include "cheats/cheat_applier.hpp"
 
 #include <cstdio>
 #include <cstring>
 #include <vector>
 
-#include "cheats/IMemoryBackend.hpp"
+#include "cheats/i_memory_backend.hpp"
 #include "util_platform.h"
 
 extern "C" {

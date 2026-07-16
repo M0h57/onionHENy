@@ -1,4 +1,4 @@
-#include "cheats/ICheatParser.hpp"
+#include "cheats/i_cheat_parser.hpp"
 
 #include <cstdlib>
 #include <cstring>
@@ -14,7 +14,7 @@ extern "C" void OnionHEN_log(const char *fmt, ...);
 
 namespace onion::cheats {
 
-/* Defined in XmlCheatParser.cpp */
+/* Defined in xml_cheat_parser.cpp */
 int parseXmlBuffer(char *xml, onion_cheat_file_t &out);
 
 namespace {

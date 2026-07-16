@@ -1,15 +1,15 @@
 /* Copyright (C) 2025 OnionHEN / LightningMods
  *
  * Compatibility shim — implementation lives in libonion_detour.
- * Historical Detour.h also pulled C APIs used by prx.cpp.
+ * Historical detour.h also pulled C APIs used by prx.cpp.
  */
 #pragma once
 
-#include <onion/Detour.h>
+#include <onion/detour.h>
 
 extern "C" {
 #include "ucred.h"
-#include "external_symbols.hpp"
+#include "defs.h"
 #include "../lib/libmprotect.h"
 #include <sys/mman.h>
 #include <sys/syscall.h>

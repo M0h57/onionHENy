@@ -15,7 +15,7 @@ along with this program; see the file COPYING. If not, see
 <http://www.gnu.org/licenses/>.  */
 
 #include "ipc.hpp"
-#include "cheats/CheatService.hpp"
+#include "cheats/cheat_service.hpp"
 #include <onion/settings.hpp>
 #include <onion/platform.h>
 #include <onion/ucred.h>

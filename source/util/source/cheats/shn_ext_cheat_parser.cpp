@@ -1,4 +1,4 @@
-#include "cheats/ICheatParser.hpp"
+#include "cheats/i_cheat_parser.hpp"
 
 #include "cheats/cheat_engine_internal.h"
 

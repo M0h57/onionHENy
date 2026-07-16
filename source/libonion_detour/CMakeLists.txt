@@ -27,7 +27,7 @@ include_directories(SYSTEM "${PS5_PAYLOAD_SDK}")
 include_directories(SYSTEM "${PS5_PAYLOAD_SDK}/include")
 
 add_library(${PROJECT_NAME} STATIC
-  source/Detour.cpp
+  source/detour.cpp
   source/hde64.cpp
   source/x64_relocator.cpp
 )

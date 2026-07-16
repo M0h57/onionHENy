@@ -2,7 +2,7 @@
 #include <cstring>
 #include <string>
 
-#include "cheats/ICheatParser.hpp"
+#include "cheats/i_cheat_parser.hpp"
 #include "cheats/cheat_engine.h"
 #include "test_harness.h"
 #include "test_support.h"
