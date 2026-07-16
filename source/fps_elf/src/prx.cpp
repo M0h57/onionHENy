@@ -109,15 +109,15 @@ bool install_gnm_hook() {
     klog_puts("[fps] GNM-WL-link symbol missing");
     return false;
   }
-  void *tramp = DetourFunction(reinterpret_cast<uint64_t>(linked),
-                               (void *)&gnm_wl_hook);
-  if (!tramp) {
+  if (!InstallDetour(reinterpret_cast<uint64_t>(linked),
+                     (void *)&gnm_wl_hook,
+                     reinterpret_cast<void **>(&g_gnm_wl_orig))) {
     klog_printf("[fps] detour FAIL GNM-WL-link @%p\n", linked);
     return false;
   }
-  g_gnm_wl_orig = reinterpret_cast<GnmFlipWorkload_t>(tramp);
   g_hooks_armed.store(1, std::memory_order_relaxed);
-  klog_printf("[fps] detour OK GNM-WL-link @%p tramp=%p\n", linked, tramp);
+  klog_printf("[fps] detour OK GNM-WL-link @%p tramp=%p\n", linked,
+              reinterpret_cast<void *>(g_gnm_wl_orig));
   return true;
 }
 

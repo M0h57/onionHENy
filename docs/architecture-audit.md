@@ -87,7 +87,7 @@ NineS 已避免 per-call authid 翻转；bootstrapper/util attach 仍在翻转�
 
 结果：`Rest_Mode_Delay_Seconds` 会拖慢 **首次** Toolbox 注入，表现为「toolbox 卡很久」。
 
-Bootstrapper 只 clear util/kstuff/daemon/toolbox，**不清** `util_booted` / `fps_overlay` → 同 boot 再跑 HEN 时标志粘滞。
+历史实现只 clear util/kstuff/daemon/toolbox，**不清** `util_booted` / `fps_overlay` → 同 boot 再跑 HEN 时标志粘滞。当前 bootstrapper 会清理 runtime flags；Toolbox 标记则改为持久保存 SceShellUI PID，由 daemon 比较进程实例后自行失效。
 
 ### 2.4 浅模块 / 胖入口
 
@@ -174,16 +174,16 @@ Bootstrapper 只 clear util/kstuff/daemon/toolbox，**不清** `util_booted` / `
    - daemon path 全 null-check；`BREW_UTIL_TEST_CONNECTION`；`BREW_LAST_RET` 记 process last error
    - `IPC_Client` 实例 mutex + full-frame 收发
 
-3. **Ready / Settings 语义收口** — 部分已落地
+3. **Ready / Settings 语义收口** — **已落地（2026-07-16）**
    - rest delay：daemon 冷启动不再因 `util_booted` sleep（`onion/toolbox_timing.h`）
    - Settings store / fan 落盘 / `LoadSettings` 契约 — 见 §2.2
-   - bootstrapper sticky flag clear — 仍待
+   - bootstrapper sticky flag clear；Toolbox ready 改为 PID 绑定并持久化
 
 4. **加深模块（架构债）** — **已落地（2026-07-10）**
    - 单一 `libonion_elfldr`；shellui `onion/platform`；daemon pid → `onion_proc`
 
-5. **补测** — **已落地（2026-07-10）**
-   - `test_ipc_harden` / `test_toolbox_timing` / `test_hijack_retry`
+5. **补测** — **已落地（2026-07-16）**
+   - `test_ipc_harden` / `test_toolbox_timing` / `test_hijack_retry` / `test_toolbox_injection`
 
 ---
 
@@ -195,12 +195,10 @@ Bootstrapper 只 clear util/kstuff/daemon/toolbox，**不清** `util_booted` / `
 
 1. **进程标识混用（appid vs pid）**（FPS suspend 路径）
 2. **Jailbreak retry / null spawn** — 策略已修，实机仍需回归
-3. sticky ready flags（bootstrapper clear）
-3. **IPC 未组帧/未转义 + shellui 并发单连接**
-4. **ready/settings 生命周期与文档不符**
-5. **elfldr/pt/detour 失败未 fail-closed + 三份漂移**
+3. **Toolbox PID 生命周期实机回归** — 覆盖 daemon 重启、重复 HEN 与休息模式后的 ShellUI 换 PID
+4. **Toolbox 多次失败后的恢复策略** — 当前不会主动 kill ShellUI，仍可评估有限重试
 
-建议修复顺序：先做 **#1–#3 高优先级 bug 一批**（行为修正、风险低、用户体感最大），再做 IPC 硬化与 ready 语义。
+建议先完成 #1–#3 的实机回归，再依据现场失败率决定是否增加注入重试。
 
 ---
 

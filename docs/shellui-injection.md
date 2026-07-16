@@ -19,7 +19,22 @@ daemon: cmd_enable_toolbox()          [daemon/source/msg.cpp]
             └─ pt_detach + restore authid
 ```
 
-ShellUI payload then signals readiness via `/system_tmp/toolbox_online` (daemon waits up to ~15s).
+After all required hooks are installed, the ShellUI payload publishes its own
+PID in `/system_tmp/onion_ready/toolbox` (and the legacy
+`/system_tmp/toolbox_online` alias). The daemon waits up to 45 seconds for the
+expected PID, not merely for file existence.
+
+The marker is intentionally retained. Before injecting, the daemon compares
+its value with the current `SceShellUI` PID:
+
+- same PID: that ShellUI process instance is already initialized; skip inject;
+- different/missing PID: clear stale state, inject, then wait for the new PID;
+- ShellUI changes PID during the handshake: reject the acknowledgement.
+
+`ToolboxInjectionCoordinator` serializes this check/inject/wait sequence so
+cold-start and util reinjection requests cannot ptrace the same ShellUI in
+parallel. This follows kstuff-lite's process-instance model while retaining the
+stronger post-hook ready acknowledgement.
 
 kylin-core uses the same `inject_elf()` path for ShellUI overlay injection (`overlay_service.c` → `inject_elf`), plus higher-level retries / kill-respawn / boot-id skip that live outside libNineS.
 
@@ -50,11 +65,11 @@ Ported into `source/libNineS/src/pt.c` and `source/libNineS/src/injector.c` (wit
 
 These live in `kylin-core/src/services/overlay_service.c`, not libNineS:
 
-- Injection file lock (`/system_tmp/...`)
-- Boot-time “already injected” record / skip
 - Multi-attempt inject + kill ShellUI + wait for respawn
 
-Optional follow-up for OnionHEN daemon: add similar retry/respawn around `cmd_enable_toolbox()` if field failure rate stays high.
+OnionHEN now provides in-process injection serialization and PID-bound
+already-injected detection. Optional follow-up: add retry/respawn around
+`cmd_enable_toolbox()` if field failure rate stays high.
 
 ## Upstream files for reference
 

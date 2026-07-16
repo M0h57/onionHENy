@@ -28,6 +28,7 @@ COMMON_FLAGS := -Wall -Wextra -g -O0 -DONION_HOST_TEST=1 -DCBC=1 \
 	-I$(REPO_ROOT)/source/libonion_ipc/include \
 	-I$(REPO_ROOT)/source/libonion_detour/include \
 	-I$(REPO_ROOT)/source/libonion_ready \
+	-I$(REPO_ROOT)/source/daemon/include \
 	-I$(THIRD_PARTY_ROOT)/cjson \
 	-I$(REPO_ROOT)/source/shellui/include \
 	$(KEYSTONE_CFLAGS)
@@ -92,7 +93,9 @@ TEST_CXX_SRCS := \
 	test_toolbox_route.cpp \
 	test_toolbox_helpers.cpp \
 	test_toolbox_i18n.cpp \
+	test_toolbox_injection.cpp \
 	test_http_github.cpp \
+	test_hotpatch.cpp \
 	test_x64_relocator.cpp \
 	test_main.cpp
 
@@ -111,6 +114,7 @@ PROD_CXX_OBJS := $(patsubst $(UTIL_ROOT)/%.cpp,$(BUILD_DIR)/prod/%.o,$(filter $(
 PROD_CXX_OBJS += $(BUILD_DIR)/prod/third_party/cjson.o
 PROD_CXX_OBJS += $(BUILD_DIR)/prod/libonion_settings/settings.o
 PROD_CXX_OBJS += $(BUILD_DIR)/prod/libonion_ipc/ipc_server.o
+PROD_CXX_OBJS += $(BUILD_DIR)/prod/libonion_detour/hotpatch.o
 PROD_CXX_OBJS += $(BUILD_DIR)/prod/libonion_detour/x64_relocator.o
 PROD_CXX_OBJS += $(BUILD_DIR)/prod/shellui/ps5_settings_ui.o
 PROD_CXX_OBJS += $(BUILD_DIR)/prod/shellui/toolbox_route.o
@@ -164,6 +168,10 @@ $(BUILD_DIR)/prod/libonion_ipc/ipc_server.o: $(REPO_ROOT)/source/libonion_ipc/so
 	$(HOST_CXX) $(CXXFLAGS) -c -o $@ $<
 
 $(BUILD_DIR)/prod/libonion_detour/x64_relocator.o: $(REPO_ROOT)/source/libonion_detour/source/x64_relocator.cpp | $(BUILD_DIR)
+	@mkdir -p $(dir $@)
+	$(HOST_CXX) $(CXXFLAGS) -c -o $@ $<
+
+$(BUILD_DIR)/prod/libonion_detour/hotpatch.o: $(REPO_ROOT)/source/libonion_detour/source/hotpatch.cpp | $(BUILD_DIR)
 	@mkdir -p $(dir $@)
 	$(HOST_CXX) $(CXXFLAGS) -c -o $@ $<
 

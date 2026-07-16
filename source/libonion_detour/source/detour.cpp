@@ -15,6 +15,7 @@ along with this program; see the file COPYING. If not, see
 <http://www.gnu.org/licenses/>.  */
 
 #include <onion/detour.h>
+#include <onion/hotpatch.h>
 
 #include <cstdint>
 #include <cstring>
@@ -56,6 +57,13 @@ constexpr size_t kRelocationReadLength =
     HOOK_LENGTH + kMaxX64InstructionLength - 1;
 constexpr uintptr_t kNearAllocationStep = 64u * 1024u * 1024u;
 constexpr unsigned kNearAllocationSteps = 31; /* 1984 MiB < INT32_MAX */
+
+struct alignas(16) AtomicPatchBlock {
+  uint64_t low;
+  uint64_t high;
+};
+
+static_assert(sizeof(AtomicPatchBlock) == ONION_X64_ATOMIC_PATCH_SIZE);
 
 uintptr_t page_align_down(uintptr_t addr) {
   return addr & ~static_cast<uintptr_t>(PAGE_MASK);
@@ -144,17 +152,28 @@ void *alloc_exec_stub(size_t len, uintptr_t near_address) {
   return map_exec_stub(0, len, 0);
 }
 
-} // namespace
+bool compare_exchange_patch(uintptr_t address,
+                            const onion_x64_atomic_patch &patch) {
+  if ((address % alignof(AtomicPatchBlock)) != 0) {
+    return false;
+  }
 
-void WriteJump(uint64_t address, uint64_t destination) {
-  *reinterpret_cast<uint8_t *>(address) = 0xFF;
-  *reinterpret_cast<uint8_t *>(address + 1) = 0x25;
-  *reinterpret_cast<uint8_t *>(address + 2) = 0x00;
-  *reinterpret_cast<uint8_t *>(address + 3) = 0x00;
-  *reinterpret_cast<uint8_t *>(address + 4) = 0x00;
-  *reinterpret_cast<uint8_t *>(address + 5) = 0x00;
-  *reinterpret_cast<uint64_t *>(address + 6) = destination;
+  AtomicPatchBlock expected{};
+  AtomicPatchBlock desired{};
+  std::memcpy(&expected, patch.expected, sizeof(expected));
+  std::memcpy(&desired, patch.desired, sizeof(desired));
+
+  unsigned char exchanged = 0;
+  auto *target = reinterpret_cast<volatile AtomicPatchBlock *>(address);
+  __asm__ volatile("lock; cmpxchg16b %1; sete %0"
+                   : "=q"(exchanged), "+m"(*target), "+a"(expected.low),
+                     "+d"(expected.high)
+                   : "b"(desired.low), "c"(desired.high)
+                   : "cc", "memory");
+  return exchanged != 0;
 }
+
+} // namespace
 
 void ReadMemory(uint64_t address, void *buffer, int length) {
   memcpy(buffer, reinterpret_cast<void *>(address), length);
@@ -168,28 +187,34 @@ void PatchInJump(uint64_t address, void *destination) {
   if (!address || !destination) {
     return;
   }
-  WriteJump(address, reinterpret_cast<uint64_t>(destination));
+  (void)DetourFunction(address, destination);
 }
 
-void *DetourFunction(uint64_t address, void *destination) {
-  if (!address || !destination) {
-    return nullptr;
+bool PrepareDetour(uint64_t address, void *destination, DetourHandle *handle) {
+  if (!address || !destination || !handle) {
+    return false;
   }
 
+  *handle = DetourHandle{};
   shellui_log("Hooking %#02lx => %p", address, destination);
+
+  if ((address % ONION_X64_ATOMIC_PATCH_SIZE) != 0) {
+    shellui_log("PrepareDetour: target is not 16-byte aligned: %#02lx", address);
+    return false;
+  }
 
   const size_t stubLength = ONION_X64_TRAMPOLINE_CAPACITY;
   void *executableAddress = alloc_exec_stub(stubLength, address);
   if (!executableAddress) {
     shellui_log("DetourFunction: failed to allocate executable stub");
-    return nullptr;
+    return false;
   }
 
   /* PS5 xotext is execute-only. Never decode/copy it before this succeeds. */
   if (mprotect_range_rwx(address, kRelocationReadLength) < 0) {
     shellui_log("DetourFunction: failed to mprotect target decoder window");
     munmap(executableAddress, stubLength);
-    return nullptr;
+    return false;
   }
 
   onion_x64_relocate_result relocation{};
@@ -202,14 +227,91 @@ void *DetourFunction(uint64_t address, void *destination) {
                 relocation.error_offset,
                 onion_x64_relocate_error_string(relocation.error));
     munmap(executableAddress, stubLength);
-    return nullptr;
+    return false;
   }
 
-  PatchInJump(address, destination);
+  onion_x64_atomic_patch patch{};
+  if (!onion_x64_build_atomic_patch(
+          address, reinterpret_cast<const uint8_t *>(address),
+          reinterpret_cast<uintptr_t>(destination), &patch)) {
+    shellui_log("PrepareDetour: failed to build atomic patch");
+    munmap(executableAddress, stubLength);
+    return false;
+  }
+
+  handle->target = address;
+  handle->destination = destination;
+  handle->trampoline = executableAddress;
+  handle->trampoline_capacity = stubLength;
+  handle->stolen_size = relocation.source_size;
+  handle->emitted_size = relocation.trampoline_size;
+  handle->patch = patch;
+  handle->prepared = true;
+  return true;
+}
+
+bool CommitDetour(DetourHandle *handle) {
+  if (!handle || !handle->prepared || handle->committed) {
+    return false;
+  }
+
+  if (!compare_exchange_patch(handle->target, handle->patch)) {
+    shellui_log("CommitDetour: target changed or atomic patch failed: %#02lx",
+                handle->target);
+    return false;
+  }
+
+  handle->committed = true;
 
   shellui_log(
       "DetourFunction: target=%#02lx hook=%p trampoline=%p stolen=%zu emitted=%zu",
-      address, destination, executableAddress, relocation.source_size,
-      relocation.trampoline_size);
-  return executableAddress;
+      handle->target, handle->destination, handle->trampoline,
+      handle->stolen_size, handle->emitted_size);
+  return true;
+}
+
+void AbortDetour(DetourHandle *handle) {
+  if (!handle) {
+    return;
+  }
+  if (handle->prepared && !handle->committed && handle->trampoline) {
+    munmap(handle->trampoline, handle->trampoline_capacity);
+  }
+  *handle = DetourHandle{};
+}
+
+bool InstallDetour(uint64_t address, void *destination,
+                   void **original_storage) {
+  DetourHandle handle{};
+  if (!PrepareDetour(address, destination, &handle)) {
+    return false;
+  }
+
+  /* The locked CommitDetour operation publishes this earlier pointer write. */
+  if (original_storage) {
+    std::memcpy(original_storage, &handle.trampoline,
+                sizeof(handle.trampoline));
+  }
+
+  if (!CommitDetour(&handle)) {
+    if (original_storage) {
+      void *null_original = nullptr;
+      std::memcpy(original_storage, &null_original, sizeof(null_original));
+    }
+    AbortDetour(&handle);
+    return false;
+  }
+  return true;
+}
+
+void *DetourFunction(uint64_t address, void *destination) {
+  DetourHandle handle{};
+  if (!PrepareDetour(address, destination, &handle)) {
+    return nullptr;
+  }
+  if (!CommitDetour(&handle)) {
+    AbortDetour(&handle);
+    return nullptr;
+  }
+  return handle.trampoline;
 }

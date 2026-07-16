@@ -16,12 +16,38 @@ along with this program; see the file COPYING. If not, see
 
 #pragma once
 
+#include <onion/hotpatch.h>
+
+#include <cstddef>
 #include <cstdint>
 #include <sys/mman.h>
 #include <unistd.h>
 
 #define HOOK_LENGTH 14
 
+/*
+ * Two-phase detour handle. Prepare builds the trampoline and immutable patch
+ * plan; Commit is the only operation that mutates the target function.
+ */
+struct DetourHandle {
+  uint64_t target = 0;
+  void *destination = nullptr;
+  void *trampoline = nullptr;
+  size_t trampoline_capacity = 0;
+  size_t stolen_size = 0;
+  size_t emitted_size = 0;
+  onion_x64_atomic_patch patch{};
+  bool prepared = false;
+  bool committed = false;
+};
+
+bool PrepareDetour(uint64_t address, void *destination, DetourHandle *handle);
+bool CommitDetour(DetourHandle *handle);
+void AbortDetour(DetourHandle *handle);
+bool InstallDetour(uint64_t address, void *destination,
+                   void **original_storage);
+
+/* Compatibility API for hooks that never call an original function. */
 void PatchInJump(uint64_t address, void *destination);
 void *DetourFunction(uint64_t address, void *destination);
 void WriteMemory(uint64_t address, void *buffer, int length);

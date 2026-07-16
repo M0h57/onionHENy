@@ -638,7 +638,11 @@ static int launch_chain(const OrbisKernelSwVersion &sys_ver) {
   onion_ready_clear(ONION_READY_UTIL);
   onion_ready_clear(ONION_READY_KSTUFF);
   onion_ready_clear(ONION_READY_DAEMON);
-  onion_ready_clear(ONION_READY_TOOLBOX);
+  /*
+   * Keep Toolbox's PID marker across a daemon/re-HEN restart.  A stale marker
+   * is harmless: daemon compares it with the current SceShellUI PID before
+   * deciding whether to inject.
+   */
   /* Runtime flags that must not stick across re-HEN without reboot. */
   onion_ready_clear(ONION_FLAG_UTIL_BOOTED);
   onion_ready_clear(ONION_FLAG_FPS_OVERLAY);

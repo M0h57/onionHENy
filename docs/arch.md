@@ -235,7 +235,7 @@ OnionHEN/
 | `util` | util 在 IPC 线程启动后 | bootstrapper 启动 util 之后 |
 | `kstuff` | bootstrapper 在 mprotect 成功后 | daemon 注入 toolbox 前 |
 | `daemon` | daemon 在 IPC 线程启动后 | bootstrapper 启动 daemon 之后 |
-| `toolbox` | shellui 注入完成后 | daemon `cmd_enable_toolbox`（兼容旧路径 `toolbox_online`） |
+| `toolbox` | shellui 注入完成后，内容为自身 PID | daemon 按当前 SceShellUI PID 判断跳过或重注入（兼容旧路径 `toolbox_online`） |
 | `fps_overlay` | shellui（overlay FPS 开） | daemon 游戏循环触发 fps inject（替代 `/system_tmp/fps_enabled`） |
 | `util_booted` | util 冷启动完成后 | rest-mode / toolbox 延迟路径（替代 `util_first_boot`） |
 
@@ -336,7 +336,8 @@ struct IPCMessage {
 | `/data/OnionHEN/OnionHEN.log` | 日志 |
 | `/data/OnionHEN/payloads/` | payload `.elf`（唯一扩展包格式；启动时 stage 到同目录） |
 | `/system_tmp/OnionHEN_*_service` | Unix IPC socket |
-| `/system_tmp/toolbox_online` | Toolbox 注入就绪信号 |
+| `/system_tmp/onion_ready/toolbox` | Toolbox 已完成 hooks 的 SceShellUI PID；同 PID 跳过重复注入 |
+| `/system_tmp/toolbox_online` | Toolbox PID 就绪信号的兼容别名 |
 
 ---
 

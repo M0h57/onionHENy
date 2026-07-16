@@ -13,6 +13,7 @@ Legacy alias: "toolbox" also checks /system_tmp/toolbox_online (and signals it).
 #include <stdbool.h>
 #include <stdint.h>
 #include <stddef.h>
+#include <sys/types.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -41,11 +42,28 @@ bool onion_ready_clear(const char *name);
 bool onion_ready_is_set(const char *name);
 
 /*
+ * Process-instance readiness.
+ *
+ * A service publishes the PID of the process instance it initialized.  A
+ * consumer can then distinguish a still-running initialized instance from a
+ * replacement process that reused the same service name.  The marker remains
+ * compatible with onion_ready_is_set(); only its contents differ from the
+ * legacy value "1".
+ */
+bool onion_ready_signal_pid(const char *name, pid_t pid);
+bool onion_ready_read_pid(const char *name, pid_t *pid_out);
+bool onion_ready_matches_pid(const char *name, pid_t pid);
+
+/*
  * Poll until marker is set or timeout_ms elapses.
  * poll_ms is the sleep between checks (clamped to >= 50).
  * Returns true if ready, false on timeout or invalid name.
  */
 bool onion_ready_wait(const char *name, int timeout_ms, int poll_ms);
+
+/* Wait until the marker contains exactly the expected process PID. */
+bool onion_ready_wait_pid(const char *name, pid_t pid, int timeout_ms,
+                          int poll_ms);
 
 /* Build absolute path for a name into buf (for logging). */
 bool onion_ready_path(const char *name, char *buf, size_t buflen);

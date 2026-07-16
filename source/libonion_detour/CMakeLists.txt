@@ -29,6 +29,7 @@ include_directories(SYSTEM "${PS5_PAYLOAD_SDK}/include")
 add_library(${PROJECT_NAME} STATIC
   source/detour.cpp
   source/hde64.cpp
+  source/hotpatch.cpp
   source/x64_relocator.cpp
 )
 set_target_properties(${PROJECT_NAME} PROPERTIES OUTPUT_NAME "${PROJECT_NAME}")

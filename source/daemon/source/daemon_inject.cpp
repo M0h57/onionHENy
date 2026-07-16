@@ -2,6 +2,7 @@
 
 #include "daemon_ops.hpp"
 #include "globalconf.hpp"
+#include "toolbox_injection.hpp"
 #include <onion/platform.h>
 #include <onion/proc_query.h>
 #include <onion/ready.h>
@@ -25,6 +26,12 @@ extern uint8_t fps_elf_start[];
 extern const unsigned int fps_elf_size;
 int _sceApplicationGetAppId(int pid, int *appid);
 }
+
+namespace {
+
+onion::ToolboxInjectionCoordinator g_toolbox_injection;
+
+} // namespace
 
 /*
  * NOTE: Do not sceKernelSuspendProcess for FPS inject. GPU CWSR suspend +
@@ -276,6 +283,18 @@ bool cmd_enable_toolbox(){
     char buz[100] = {0};
 
     /*
+     * Fast path for daemon restart / repeated enable requests.  ensure() does
+     * the same check again while holding its mutex, so this unlocked probe is
+     * only an optimization and cannot permit a duplicate injection.
+     */
+    const pid_t observed_pid = static_cast<pid_t>(get_shellui_pid());
+    if (observed_pid > 0 && g_toolbox_injection.is_ready_for(observed_pid)) {
+      OnionHEN_log("Toolbox already active in SceShellUI pid=%d",
+                   static_cast<int>(observed_pid));
+      return true;
+    }
+
+    /*
      * If kstuff is present, wait until mprotect works (patches applied) before
      * we ptrace ShellUI. Injecting while kstuff is still patching ShellUI
      * causes "waiting for toolbox" forever / ShellUI crash.
@@ -316,35 +335,40 @@ bool cmd_enable_toolbox(){
       sleep(1);
     }
 
-    int pid = get_shellui_pid();
-    if (pid < 0) {
+    const onion::ToolboxInjectionOutcome outcome = g_toolbox_injection.ensure(
+        []() -> pid_t { return static_cast<pid_t>(get_shellui_pid()); },
+        [](pid_t pid) -> bool {
+          OnionHEN_log("Injecting toolbox into SceShellUI pid=%d",
+                       static_cast<int>(pid));
+          return Inject_Toolbox(static_cast<int>(pid), shellui_elf_start);
+        },
+        /*timeout_ms=*/45 * 1000, /*poll_ms=*/250);
+
+    switch (outcome.result) {
+    case onion::ToolboxInjectionResult::AlreadyReady:
+      OnionHEN_log("Toolbox already active in SceShellUI pid=%d",
+                   static_cast<int>(outcome.pid));
+      return true;
+    case onion::ToolboxInjectionResult::Injected:
+      OnionHEN_log("Toolbox online for SceShellUI pid=%d (ready protocol)",
+                   static_cast<int>(outcome.pid));
+      return true;
+    case onion::ToolboxInjectionResult::TargetNotFound:
       onion_notify(true, "Failed to get shellui pid");
       return false;
-    }
-    OnionHEN_log("Injecting toolbox into SceShellUI pid=%d", pid);
-
-    /*
-     * A previous ShellUI crash or direct daemon restart can leave either the
-     * modern or legacy toolbox-ready marker behind. Consume only a signal
-     * produced by this injection; otherwise callers may race a not-ready
-     * settings scene while the new module is still installing its hooks.
-     */
-    onion_ready_clear(ONION_READY_TOOLBOX);
-
-    if (!Inject_Toolbox(pid, shellui_elf_start)) {
-      /* Do NOT ForceKill ShellUI — that loops home menu / coredumps */
+    case onion::ToolboxInjectionResult::InjectFailed:
+      /* Do NOT ForceKill ShellUI — that loops home menu / coredumps. */
       onion_notify(true, "Failed to inject toolbox");
       return false;
-    }
-
-    /* Ready protocol: shellui signals ONION_READY_TOOLBOX after inject hooks run */
-    if (!onion_ready_wait(ONION_READY_TOOLBOX, /*timeout_ms=*/45 * 1000,
-                          /*poll_ms=*/250)) {
-      onion_notify(true, "Failed to load the OnionHEN toolbox (timeout, ShellUI left running)");
+    case onion::ToolboxInjectionResult::ReadyTimeout:
+      onion_notify(true,
+                   "Failed to load the OnionHEN toolbox (timeout, ShellUI left running)");
+      return false;
+    case onion::ToolboxInjectionResult::TargetChanged:
+      onion_notify(true,
+                   "SceShellUI restarted while loading the OnionHEN toolbox");
       return false;
     }
-    onion_ready_clear(ONION_READY_TOOLBOX);
-    OnionHEN_log("Toolbox online (ready protocol)");
 
-    return true;
+    return false;
 }

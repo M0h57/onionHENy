@@ -148,15 +148,13 @@ bool install_detour(const char* name, uint64_t target, void* hook, Fn& out_orig,
     return !required;
   }
 
-  void* trampoline = DetourFunction(target, hook);
-  if (!trampoline) {
+  if (!InstallDetour(target, hook, reinterpret_cast<void**>(&out_orig))) {
     shellui_log("Detour failed: %s", name);
     if (required)
       notify("Failed to install hook");
     return !required;
   }
 
-  out_orig = reinterpret_cast<Fn>(trampoline);
   return true;
 }
 
@@ -511,15 +509,12 @@ bool install_mono_hook(const MonoHookSpec& h) {
   }
   shellui_log("Installing mono hook: %s target=%#02lx hook=%p", h.name, addr,
               h.hook);
-  void* tramp = DetourFunction(addr, h.hook);
-  if (!tramp) {
+  if (!InstallDetour(addr, h.hook, h.orig)) {
     shellui_log("Detour failed: %s", h.name);
     if (h.required)
       notify("Failed to install hook");
     return !h.required;
   }
-  if (h.orig)
-    *h.orig = tramp;
   return true;
 }
 
@@ -531,11 +526,9 @@ bool install_optional_diag(const char* tag, MonoImage* image, const char* ns,
     shellui_log("%s not found", tag);
     return false;
   }
-  void* tramp = DetourFunction(addr, hook);
-  if (orig)
-    *orig = tramp;
-  shellui_log(tramp ? "%s hooked" : "%s failed to detour", tag);
-  return tramp != nullptr;
+  const bool installed = InstallDetour(addr, hook, orig);
+  shellui_log(installed ? "%s hooked" : "%s failed to detour", tag);
+  return installed;
 }
 
 bool install_hooks(const ShellImages& img, void* read_fn) {
@@ -562,9 +555,6 @@ bool install_hooks(const ShellImages& img, void* read_fn) {
   // --- Standard mono hooks ---
   // UI3_dec / Settings types use runtime-decoded namespace strings.
   const MonoHookSpec mono_hooks[] = {
-      {"PUI.Application.Update", img.pui, "Sce.PlayStation.PUI", "Application",
-       "Update", 0, reinterpret_cast<void*>(&OnRender_Hook),
-       reinterpret_cast<void**>(&OnRender_orig), false},
       {"OptionMenu.createJson", img.rn_shell, "ReactNative.Modules.ShellUI.HomeUI",
        "OptionMenu", "createJson", 8, reinterpret_cast<void*>(&createJson_hook),
        reinterpret_cast<void**>(&createJson), true},
@@ -700,6 +690,16 @@ bool install_hooks(const ShellImages& img, void* read_fn) {
          reinterpret_cast<void**>(&GetManifestResourceStream_Original), false});
   }
 
+  /*
+   * Arm the per-frame entry point only after every dependency it can observe is
+   * ready. Keeping this last prevents the UI thread from entering Onion code
+   * while the installer is still compiling and committing other Mono hooks.
+   */
+  (void)install_mono_hook(
+      {"PUI.Application.Update", img.pui, "Sce.PlayStation.PUI", "Application",
+       "Update", 0, reinterpret_cast<void*>(&OnRender_Hook),
+       reinterpret_cast<void**>(&OnRender_orig), false});
+
   return true;
 }
 
@@ -727,7 +727,9 @@ void setup_proc_hooks() {
 void run_keep_alive() {
   pthread_t thread_id{};
   scePthreadCreate(&thread_id, nullptr, dialogue_thread, nullptr, "dialogue_thread");
-  onion_ready_signal(ONION_READY_TOOLBOX);
+  // Publish the initialized SceShellUI process instance.  The daemon keeps
+  // this marker so a restart cannot inject a second Toolbox into the same PID.
+  onion_ready_signal_pid(ONION_READY_TOOLBOX, getpid());
 
   while (true) {
     shellui_log("sleeping ....");

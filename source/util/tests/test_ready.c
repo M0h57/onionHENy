@@ -76,6 +76,40 @@ static int test_toolbox_legacy_alias(void) {
   return 0;
 }
 
+static int test_process_instance_marker(void) {
+  const char *name = "host_pid_marker";
+  const pid_t expected = (pid_t)4242;
+  pid_t actual = -1;
+
+  onion_ready_clear(name);
+  TEST_ASSERT_TRUE(onion_ready_signal_pid(name, expected));
+  TEST_ASSERT_TRUE(onion_ready_is_set(name));
+  TEST_ASSERT_TRUE(onion_ready_read_pid(name, &actual));
+  TEST_ASSERT_EQ_INT((int)expected, (int)actual);
+  TEST_ASSERT_TRUE(onion_ready_matches_pid(name, expected));
+  TEST_ASSERT_TRUE(!onion_ready_matches_pid(name, (pid_t)4243));
+  TEST_ASSERT_TRUE(onion_ready_wait_pid(name, expected, 100, 50));
+  TEST_ASSERT_TRUE(!onion_ready_wait_pid(name, (pid_t)4243, 100, 50));
+  onion_ready_clear(name);
+  return 0;
+}
+
+static int test_process_instance_rejects_legacy_value(void) {
+  const char *name = "host_legacy_marker";
+  pid_t actual = -1;
+
+  onion_ready_clear(name);
+  TEST_ASSERT_TRUE(onion_ready_signal(name));
+  TEST_ASSERT_TRUE(onion_ready_is_set(name));
+  TEST_ASSERT_TRUE(onion_ready_read_pid(name, &actual));
+  TEST_ASSERT_EQ_INT(1, (int)actual);
+  TEST_ASSERT_TRUE(!onion_ready_matches_pid(name, (pid_t)4242));
+  TEST_ASSERT_TRUE(!onion_ready_signal_pid(name, (pid_t)0));
+  TEST_ASSERT_TRUE(!onion_ready_read_pid(name, NULL));
+  onion_ready_clear(name);
+  return 0;
+}
+
 int test_ready_suite(void) {
   int failures = 0;
   failures += onion_test_run("ready_signal_wait_clear", test_ready_signal_wait_clear);
@@ -85,5 +119,9 @@ int test_ready_suite(void) {
   failures += onion_test_run("flag_fps_overlay", test_runtime_flag_fps_overlay);
   failures += onion_test_run("flag_util_booted", test_runtime_flag_util_booted);
   failures += onion_test_run("toolbox_legacy_alias", test_toolbox_legacy_alias);
+  failures += onion_test_run("ready_process_instance",
+                             test_process_instance_marker);
+  failures += onion_test_run("ready_process_legacy_value",
+                             test_process_instance_rejects_legacy_value);
   return failures;
 }
