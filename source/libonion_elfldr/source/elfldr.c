@@ -54,6 +54,8 @@ along with this program; see the file COPYING. If not, see
 		     (((x) & PF_W) ? PROT_WRITE : 0) | \
 		     (((x) & PF_X) ? PROT_EXEC  : 0))
 
+#define NID_SCE_KERNEL_DLSYM "LwG8g3niqwA"
+
 
 /**
  * Context structure for the ELF loader.
@@ -296,9 +298,14 @@ elfldr_payload_args(pid_t pid) {
   intptr_t rwpair     = buf + 0x200;
   intptr_t kpipe_addr = kernel_get_proc_file(pid, pipe0);
   intptr_t payloadout = buf + 0x300;
-  intptr_t getpid      = pt_resolve(pid, "HoLVWNanBBc");
+  intptr_t dlsym      = pt_resolve(pid, NID_SCE_KERNEL_DLSYM);
 
-  pt_setlong(pid, args + 0x00, getpid);
+  if(!dlsym) {
+    LOG_PUTS("failed to resolve sceKernelDlsym");
+    return 0;
+  }
+
+  pt_setlong(pid, args + 0x00, dlsym);
   pt_setlong(pid, args + 0x08, rwpipe);
   pt_setlong(pid, args + 0x10, rwpair);
   pt_setlong(pid, args + 0x18, kpipe_addr);
