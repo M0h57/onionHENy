@@ -101,6 +101,9 @@ static MonoString *mono_str_ui(const char *utf8) {
 }
 
 MonoString *GetString_Hook(MonoObject *Instance, MonoString *str) {
+    if (!shellui_hooks_are_ready())
+      return oGetString ? oGetString(Instance, str) : str;
+
     if (!str || !Instance) {
 #if SHELL_DEBUG == 1
       shellui_log("GetString_Hook: Invalid Parameters");
@@ -251,7 +254,7 @@ int ioctl_hook(int fd, unsigned long request, void *argp) {
   const unsigned long  DECRYPT_RNPS_BUNDLE = 0xC0105203; // RNPS request code for ioctl
 
   int ret = __syscall(IOCTL_SYSCALL, fd, request, argp);
-  if (ret == 0 && request == DECRYPT_RNPS_BUNDLE) {
+  if (shellui_hooks_are_ready() && ret == 0 && request == DECRYPT_RNPS_BUNDLE) {
       ioctl_C0105203_args *args = (ioctl_C0105203_args *)argp;
 #if SHELL_DEBUG == 1
       shellui_log("ioctl_hook called with fd: %d, request: 0x%X, argp: %p", fd, request, argp);
@@ -262,6 +265,13 @@ int ioctl_hook(int fd, unsigned long request, void *argp) {
 }
 
 void CallDecrypt(unsigned char* bundleData, int bundleOffset, int bundleSize, int* payloadOffset, int* realPayloadSize) {
+  if (!shellui_hooks_are_ready()) {
+    if (CallDecrypt_orig)
+      CallDecrypt_orig(bundleData, bundleOffset, bundleSize, payloadOffset,
+                       realPayloadSize);
+    return;
+  }
+
 #if SHELL_DEBUG == 1
   shellui_log("CallDecrypt: bundleData: %p, bundleOffset: %d, bundleSize: %d, payloadOffset: %p, realPayloadSize: %p", 
       bundleData, bundleOffset, bundleSize, payloadOffset, realPayloadSize);
@@ -329,6 +339,9 @@ void UpdateImposeStatusFlag_hook(MonoObject* scene, MonoObject* frontActiveScene
 
 // threads → hook_background.cpp
 MonoString * CxmlUri_Hook(MonoObject * Instance, MonoString * uri) {
+
+  if (!shellui_hooks_are_ready())
+    return CxmlUri ? CxmlUri(Instance, uri) : uri;
 
   if (!Instance || !uri) {
     #if SHELL_DEBUG==1 

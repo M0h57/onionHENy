@@ -88,6 +88,9 @@ bool handle_uri_boot_common(MonoString* uri, int opt, MonoString* titleIdForBoot
   }
   
   bool uri_boot_hook(MonoString* uri, int opt, MonoString* titleIdForBootAction) {
+    if (!shellui_hooks_are_ready())
+      return boot_orig ? boot_orig(uri, opt, titleIdForBootAction) : false;
+
     if(handle_uri_boot_common(uri, opt, titleIdForBootAction)) {
       // Toolbox / cheats shortcuts → direct legacy DebugSettingsOldScreen
       return boot_orig(mono_string_new(Root_Domain, kToolboxUri), opt, titleIdForBootAction);
@@ -108,6 +111,9 @@ bool handle_uri_boot_common(MonoString* uri, int opt, MonoString* titleIdForBoot
   }
   
   bool uri_boot_hook_2(MonoString* uri, int opt) {
+    if (!shellui_hooks_are_ready())
+      return boot_orig_2 ? boot_orig_2(uri, opt) : false;
+
     const std::string original_uri = Mono_to_String(uri);
   #if SHELL_DEBUG==1
     shellui_log("uri_boot_hook_2: %s, opt: %i", original_uri.c_str(), opt);
@@ -129,6 +135,9 @@ bool handle_uri_boot_common(MonoString* uri, int opt, MonoString* titleIdForBoot
   }
 
   GamePadData GetData_hook(int deviceIndex) {
+    if (!shellui_hooks_are_ready())
+      return GetData ? GetData(deviceIndex) : GamePadData{};
+
     GamePadData result;
     bool cheas_sc_activated = false;
     bool toolbox_sc_activated = false;
@@ -277,4 +286,3 @@ bool handle_uri_boot_common(MonoString* uri, int opt, MonoString* titleIdForBoot
   
     return result;
   }
-

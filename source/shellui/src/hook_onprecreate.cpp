@@ -62,6 +62,9 @@ bool ensure_set_value_method() {
 } // namespace
 
 int OnPreCreate_Hook(MonoObject *Instance, MonoObject *element) {
+  if (!shellui_hooks_are_ready())
+    return oOnPreCreate ? oOnPreCreate(Instance, element) : 0;
+
   if (!Instance || !element) {
 #if SHELL_DEBUG == 1
     shellui_log("[LM HOOK] OnPreCreate_Hook: args are null");

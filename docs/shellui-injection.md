@@ -36,6 +36,20 @@ cold-start and util reinjection requests cannot ptrace the same ShellUI in
 parallel. This follows kstuff-lite's process-instance model while retaining the
 stronger post-hook ready acknowledgement.
 
+### Live ShellUI hook safety
+
+ShellUI continues handling input after the injector detaches while the payload
+thread is still installing hooks. Two safeguards keep that window safe:
+
+- `TrampolineArena` uses non-fixed mmap hints and page-sized bump allocation;
+  every trampoline has a unique, non-overlapping address within rel32 reach of
+  its target. It never relies on `MAP_FIXED | MAP_EXCL` and fails closed when
+  no suitable mapping exists.
+- hook callbacks remain pass-through while lifecycle state is `Installing`.
+  Only after every detour and shared dependency is ready does the payload
+  publish `Ready` and the PID marker. Controller, navigation, render, registry,
+  capture, and resource hooks therefore call their originals during install.
+
 kylin-core uses the same `inject_elf()` path for ShellUI overlay injection (`overlay_service.c` → `inject_elf`), plus higher-level retries / kill-respawn / boot-id skip that live outside libNineS.
 
 ## Inconsistencies found (OnionHEN vs kylin-core)
@@ -60,6 +74,10 @@ Ported into `source/libNineS/src/pt.c` and `source/libNineS/src/injector.c` (wit
 3. **`waitpid` after stager `pt_continue`** in `pt_call2`  
 4. **Strict validation** of null args, entry/args, mmap, mprotect, copyin  
 5. **Clear `attached`** on successful detach; always restore prior authid  
+6. **Unique trampoline arena** — no fixed mappings or per-hook unmap; explicit
+   overlap registry and rel32 range checks
+7. **Hook lifecycle barrier** — callbacks are pass-through until the complete
+   ShellUI install transaction publishes `Ready`
 
 ## Not ported (higher-level kylin-core only)
 

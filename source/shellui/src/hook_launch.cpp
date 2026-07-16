@@ -17,6 +17,9 @@ void save_appid(int value, const char* filename) {
 }
 bool app_launched = false;
 int LaunchApp(MonoString* titleId, uint64_t* args, int argsSize, LaunchAppParam *param){
+  if (!shellui_hooks_are_ready())
+    return LaunchApp_orig ? LaunchApp_orig(titleId, args, argsSize, param) : -1;
+
 #if 1
    if(!if_exists("/system_tmp/patch_plugin")) {
       #if SHELL_DEBUG == 1
@@ -60,6 +63,15 @@ int LaunchApp(MonoString* titleId, uint64_t* args, int argsSize, LaunchAppParam 
 }
 
 int sceRegMgrGetInt_hook(long regid, int* out_val){
+  if (!shellui_hooks_are_ready()) {
+    int original_ret = 0;
+    if (!__sys_regmgr_call ||
+        __sys_regmgr_call(2, regid, &original_ret, out_val,
+                          SCE_REGMGR_INT_SIZE))
+      return SCE_REGMGR_ERROR_PRM_REGID;
+    return original_ret;
+  }
+
   bool dis_tids = g_settings.display_tids;
 
   if(dis_tids && regid == SCE_REGMGR_ENT_KEY_DEVENV_TOOL_SHELLUI_disp_titleid){
@@ -143,6 +155,13 @@ static std::string extractTIDFromURI(const std::string& url) {
 
 void createJson_hook(MonoObject* inst, MonoObject* array, MonoString* id, MonoString* label, MonoString* actionUrl, MonoString* actionId, MonoString* messageId, MonoObject* subMenu, bool enable) {
 
+    if (!shellui_hooks_are_ready()) {
+        if (createJson)
+            createJson(inst, array, id, label, actionUrl, actionId, messageId,
+                       subMenu, enable);
+        return;
+    }
+
     std::string id_str = Mono_to_String(id);
 
 #if SHELL_DEBUG==1
@@ -178,6 +197,12 @@ void createJson_hook(MonoObject* inst, MonoObject* array, MonoString* id, MonoSt
 }
 
 void Terminate() {
+    if (!shellui_hooks_are_ready()) {
+        if (oTerminate)
+            oTerminate();
+        return;
+    }
+
     shellui_log("******************************\nShellUI is exiting\n*****************************");
     shellui_log("Sending Action");
     IPC_Client& main_ipc = IPC_Client::getInstance(false);

@@ -22,6 +22,7 @@ along with this program; see the file COPYING. If not, see
 #include <cstdlib>
 
 #include <onion/ipc_client.hpp>
+#include <onion/trampoline_arena.hpp>
 #include <onion/x64_relocator.h>
 
 #include <machine/param.h>
@@ -55,8 +56,6 @@ constexpr size_t kMaxX64InstructionLength = 15;
  */
 constexpr size_t kRelocationReadLength =
     HOOK_LENGTH + kMaxX64InstructionLength - 1;
-constexpr uintptr_t kNearAllocationStep = 64u * 1024u * 1024u;
-constexpr unsigned kNearAllocationSteps = 31; /* 1984 MiB < INT32_MAX */
 
 struct alignas(16) AtomicPatchBlock {
   uint64_t low;
@@ -102,55 +101,12 @@ int mprotect_range_rwx(uintptr_t addr, size_t len) {
                       static_cast<size_t>(end - start));
 }
 
-/**
- * Allocate executable stub memory. Do NOT use malloc — heap is not a reliable
- * RX region even after mprotect; jumping there causes SIGILL/SIGSEGV.
- */
-void *map_exec_stub(uintptr_t address, size_t len, int extra_flags) {
-  void *p = mmap(reinterpret_cast<void *>(address), len, kProtRwx,
-                 MAP_PRIVATE | MAP_ANONYMOUS | extra_flags, -1, 0);
-  if (p == MAP_FAILED) {
-    return nullptr;
-  }
-  /* Some firmwares ignore PROT_EXEC on mmap — force with mprotect path. */
-  if (mprotect_rwx(p, len) < 0) {
-    munmap(p, len);
-    return nullptr;
-  }
-  return p;
+bool protect_trampoline_arena(void *address, size_t length) {
+  return mprotect_rwx(address, length) == 0;
 }
 
-void *alloc_exec_stub(size_t len, uintptr_t near_address) {
-  if (len == 0) {
-    return nullptr;
-  }
-
-  /*
-   * RIP-relative memory operands still use a signed disp32 after relocation.
-   * FreeBSD's MAP_EXCL makes MAP_FIXED collision-safe: probe nearby pages
-   * without replacing any existing ShellUI/system mapping.
-   */
-  const uintptr_t base = page_align_down(near_address);
-  for (unsigned step = 1; step <= kNearAllocationSteps; ++step) {
-    const uintptr_t distance =
-        static_cast<uintptr_t>(step) * kNearAllocationStep;
-    if (base <= UINTPTR_MAX - distance) {
-      if (void *p = map_exec_stub(base + distance, len,
-                                  MAP_FIXED | MAP_EXCL)) {
-        return p;
-      }
-    }
-    if (base >= distance) {
-      if (void *p = map_exec_stub(base - distance, len,
-                                  MAP_FIXED | MAP_EXCL)) {
-        return p;
-      }
-    }
-  }
-
-  /* Non-RIP-relative prologues remain relocatable even if no near gap exists. */
-  return map_exec_stub(0, len, 0);
-}
+/* Process-lifetime storage; individual trampoline slots are never unmapped. */
+onion::TrampolineArena g_trampoline_arena(protect_trampoline_arena);
 
 bool compare_exchange_patch(uintptr_t address,
                             const onion_x64_atomic_patch &patch) {
@@ -204,16 +160,20 @@ bool PrepareDetour(uint64_t address, void *destination, DetourHandle *handle) {
   }
 
   const size_t stubLength = ONION_X64_TRAMPOLINE_CAPACITY;
-  void *executableAddress = alloc_exec_stub(stubLength, address);
+  void *executableAddress =
+      g_trampoline_arena.allocate_near(stubLength, address);
   if (!executableAddress) {
-    shellui_log("DetourFunction: failed to allocate executable stub");
+    shellui_log("DetourFunction: no unique near trampoline for %#02lx", address);
+    return false;
+  }
+  if (!g_trampoline_arena.owns(executableAddress)) {
+    shellui_log("DetourFunction: allocator returned an unowned trampoline");
     return false;
   }
 
   /* PS5 xotext is execute-only. Never decode/copy it before this succeeds. */
   if (mprotect_range_rwx(address, kRelocationReadLength) < 0) {
     shellui_log("DetourFunction: failed to mprotect target decoder window");
-    munmap(executableAddress, stubLength);
     return false;
   }
 
@@ -226,7 +186,6 @@ bool PrepareDetour(uint64_t address, void *destination, DetourHandle *handle) {
     shellui_log("DetourFunction: relocation failed at +%zu: %s",
                 relocation.error_offset,
                 onion_x64_relocate_error_string(relocation.error));
-    munmap(executableAddress, stubLength);
     return false;
   }
 
@@ -235,7 +194,6 @@ bool PrepareDetour(uint64_t address, void *destination, DetourHandle *handle) {
           address, reinterpret_cast<const uint8_t *>(address),
           reinterpret_cast<uintptr_t>(destination), &patch)) {
     shellui_log("PrepareDetour: failed to build atomic patch");
-    munmap(executableAddress, stubLength);
     return false;
   }
 
@@ -274,9 +232,7 @@ void AbortDetour(DetourHandle *handle) {
   if (!handle) {
     return;
   }
-  if (handle->prepared && !handle->committed && handle->trampoline) {
-    munmap(handle->trampoline, handle->trampoline_capacity);
-  }
+  /* Arena slots are process-lifetime allocations; never unmap one slot. */
   *handle = DetourHandle{};
 }
 

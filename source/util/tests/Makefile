@@ -94,6 +94,8 @@ TEST_CXX_SRCS := \
 	test_toolbox_helpers.cpp \
 	test_toolbox_i18n.cpp \
 	test_toolbox_injection.cpp \
+	test_trampoline_arena.cpp \
+	test_hook_lifecycle.cpp \
 	test_http_github.cpp \
 	test_hotpatch.cpp \
 	test_x64_relocator.cpp \
@@ -115,7 +117,9 @@ PROD_CXX_OBJS += $(BUILD_DIR)/prod/third_party/cjson.o
 PROD_CXX_OBJS += $(BUILD_DIR)/prod/libonion_settings/settings.o
 PROD_CXX_OBJS += $(BUILD_DIR)/prod/libonion_ipc/ipc_server.o
 PROD_CXX_OBJS += $(BUILD_DIR)/prod/libonion_detour/hotpatch.o
+PROD_CXX_OBJS += $(BUILD_DIR)/prod/libonion_detour/trampoline_arena.o
 PROD_CXX_OBJS += $(BUILD_DIR)/prod/libonion_detour/x64_relocator.o
+PROD_CXX_OBJS += $(BUILD_DIR)/prod/shellui/hook_lifecycle.o
 PROD_CXX_OBJS += $(BUILD_DIR)/prod/shellui/ps5_settings_ui.o
 PROD_CXX_OBJS += $(BUILD_DIR)/prod/shellui/toolbox_route.o
 PROD_CXX_OBJS += $(BUILD_DIR)/prod/shellui/toolbox_i18n.o
@@ -172,6 +176,14 @@ $(BUILD_DIR)/prod/libonion_detour/x64_relocator.o: $(REPO_ROOT)/source/libonion_
 	$(HOST_CXX) $(CXXFLAGS) -c -o $@ $<
 
 $(BUILD_DIR)/prod/libonion_detour/hotpatch.o: $(REPO_ROOT)/source/libonion_detour/source/hotpatch.cpp | $(BUILD_DIR)
+	@mkdir -p $(dir $@)
+	$(HOST_CXX) $(CXXFLAGS) -c -o $@ $<
+
+$(BUILD_DIR)/prod/libonion_detour/trampoline_arena.o: $(REPO_ROOT)/source/libonion_detour/source/trampoline_arena.cpp | $(BUILD_DIR)
+	@mkdir -p $(dir $@)
+	$(HOST_CXX) $(CXXFLAGS) -c -o $@ $<
+
+$(BUILD_DIR)/prod/shellui/hook_lifecycle.o: $(REPO_ROOT)/source/shellui/src/hook_lifecycle.cpp | $(BUILD_DIR)
 	@mkdir -p $(dir $@)
 	$(HOST_CXX) $(CXXFLAGS) -c -o $@ $<
 

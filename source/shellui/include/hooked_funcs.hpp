@@ -6,6 +6,7 @@
  */
 #pragma once
 #include "shellui_types.hpp"
+#include "hook_lifecycle.hpp"
 
 enum GamePadButtons
 	{

@@ -36,6 +36,8 @@ Binary: `source/util/build/host-tests/onion-host-tests`
 | `test_aes_cbc` | AES-256-CBC encrypt/decrypt with MC4 key/IV |
 | `test_hde64` | x86_64 length decode (nop/ret/mov/jmp) |
 | `test_hotpatch` | aligned atomic entry-patch image, absolute jump encoding, preserved tail bytes, invalid input rejection |
+| `test_trampoline_arena` | same-code-page allocations are unique, non-overlapping, and owned by one near arena |
+| `test_hook_lifecycle` | Installing/Ready/Failed callback barrier state |
 | `test_x64_relocator` | relocation-aware trampolines: RIP-relative memory/call, rel8/rel32 call/jmp/jcc, internal targets, safe rejection |
 | `test_http_github` | GitHub commits JSON → `sha` (object + array) |
 | `test_reg_entity` | registry entity-id formula (account slots) |

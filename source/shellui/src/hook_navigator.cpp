@@ -110,6 +110,12 @@ static void navigate_legacy_debug_settings(const char *reason) {
 
 void ReactNavigatorManager_UpdateNavigationState_Hook(MonoObject *instance,
                                                       MonoObject *state) {
+  if (!shellui_hooks_are_ready()) {
+    if (ReactNavigatorManager_UpdateNavigationState_Orig)
+      ReactNavigatorManager_UpdateNavigationState_Orig(instance, state);
+    return;
+  }
+
   std::string state_text = MonoObjectToString(state);
 
   // Back on settings home → next toolbox open must not be debounced as "duplicate".
@@ -141,6 +147,12 @@ void ReactNavigatorManager_UpdateNavigationState_Hook(MonoObject *instance,
 
 void DebugSettings_GetModel_Hook(MonoObject *instance, MonoObject *param,
                                  MonoObject *promise) {
+  if (!shellui_hooks_are_ready()) {
+    if (DebugSettings_GetModel_Orig)
+      DebugSettings_GetModel_Orig(instance, param, promise);
+    return;
+  }
+
   std::string param_text;
   std::string page_id;
 

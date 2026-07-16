@@ -37,6 +37,12 @@ bool CaptureScreen(){
   return false;
 }
 void CaptureScreen_old(MonoObject *inst, int userId, long deviceId, int capType, MonoObject* capInfo){
+  if (!shellui_hooks_are_ready()) {
+    if (CaptureScreen_orig_old)
+      CaptureScreen_orig_old(inst, userId, deviceId, capType, capInfo);
+    return;
+  }
+
 #if SHELL_DEBUG == 1
   shellui_log("CaptureScreen: userId: %d, deviceId: %ld, capType: %d", userId, deviceId, capType);
 #endif
@@ -52,6 +58,12 @@ void CaptureScreen_old(MonoObject *inst, int userId, long deviceId, int capType,
 }
 
 void CaptureScreen_new(MonoObject * inst, int userId, long deviceId, int capType, MonoString* format, MonoObject* capInfo) {
+  if (!shellui_hooks_are_ready()) {
+    if (CaptureScreen_orig_new)
+      CaptureScreen_orig_new(inst, userId, deviceId, capType, format, capInfo);
+    return;
+  }
+
 #if SHELL_DEBUG == 1
   shellui_log("CaptureScreen_new: userId: %d, deviceId: %ld, capType: %d", userId, deviceId, capType);
 #endif
@@ -65,6 +77,12 @@ void CaptureScreen_new(MonoObject * inst, int userId, long deviceId, int capType
 }
 
 void OnShareButton(MonoObject * data) {
+  if (!shellui_hooks_are_ready()) {
+    if (OnShareButton_orig)
+      OnShareButton_orig(data);
+    return;
+  }
+
 #if SHELL_DEBUG == 1
   shellui_log("OnShareButton: data: %p", data);
 #endif
@@ -82,4 +100,3 @@ void OnShareButton(MonoObject * data) {
 
   OnShareButton_orig(data);
 }
-

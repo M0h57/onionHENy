@@ -27,6 +27,11 @@ static MonoDomain *current_mono_domain() {
 }
 
 uint64_t GetManifestResourceStream_Hook(uint64_t inst, MonoString *FileName) {
+  if (!shellui_hooks_are_ready())
+    return GetManifestResourceStream_Original
+               ? GetManifestResourceStream_Original(inst, FileName)
+               : 0;
+
   std::string new_xml_string;
   std::string resourceName = Mono_to_String(FileName);
   MonoDomain *domain = current_mono_domain();

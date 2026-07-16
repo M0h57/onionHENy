@@ -38,6 +38,9 @@ int OnPress_Hook(MonoObject *Instance, MonoObject *element, MonoObject *e) {
       "id_delete_kstuff",
   };
 
+  if (!shellui_hooks_are_ready())
+    return oOnPress ? oOnPress(Instance, element, e) : 0;
+
   if (!Instance || !element) {
 #if SHELL_DEBUG == 1
     shellui_log("[LM HOOK] OnPress_Hook: args are null");

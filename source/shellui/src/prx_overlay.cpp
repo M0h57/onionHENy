@@ -487,6 +487,12 @@ void update_overlay_metrics(unsigned int idle_tid[kCpuCores], int& current_bank)
 } // namespace
 
 void OnRender_Hook(MonoObject* instance) {
+  if (!shellui_hooks_are_ready()) {
+    if (OnRender_orig)
+      OnRender_orig(instance);
+    return;
+  }
+
   static bool inited = false;
   static unsigned int idle_thread_id[kCpuCores] = {};
   static int current_bank = 0;

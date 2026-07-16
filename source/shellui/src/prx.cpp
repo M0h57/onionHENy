@@ -792,8 +792,11 @@ int main(int argc, char const* argv[]) {
     return -1;
 
   shellui_log("Starting hooking...");
-  if (!install_hooks(images))
+  shellui_hooks_begin_install();
+  if (!install_hooks(images)) {
+    shellui_hooks_publish_failed();
     return -1;
+  }
 
   shellui_log("Performing Magic ....");
 
@@ -815,6 +818,7 @@ int main(int argc, char const* argv[]) {
   shellui_log("Performed Magic");
   setup_proc_hooks();
 
+  shellui_hooks_publish_ready();
   hooked = true;
   run_keep_alive();
   return 0;
