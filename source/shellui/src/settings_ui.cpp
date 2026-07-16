@@ -28,18 +28,18 @@ std::atomic<bool> g_display_tids_reload_pending{false};
 
 void apply_overlay_layout() {
   /*
-   * PHU flex banner (phu_overlay.elf):
-   *   Panel X=0, Width = RootWidget full width ("Width=fullscreen"),
+   * Edge strip overlay:
+   *   Panel X=0, Width = RootWidget full width,
    *   Y = 0 (top edge) or screenH - barH (bottom edge),
    *   Height = font_size + 6.
    * Metrics pack L→R and are centered *inside* the full-width strip.
    */
   constexpr float kScreenW = 1920.0f;
   constexpr float kScreenH = 1080.0f;
-  /* PHU: font_size=18, panel height = font + 6. */
+  /* font_size=18, panel height = font + 6. */
   constexpr float kFontH = 18.0f;
   constexpr float kBarExtra = 6.0f;
-  /* PHU labels use PositionType=1 + MarginTop=5 + FitHeightToText=true. */
+  /* Labels: PositionType=1 + MarginTop=5 + FitHeightToText=true. */
   constexpr float kTextTopInset = 5.0f;
   constexpr float w_cpu_avg = 190.0f;
   constexpr float w_cpu_all = 420.0f;
@@ -74,7 +74,7 @@ void apply_overlay_layout() {
        g_settings.overlay_pos == OVERLAY_POS_BOTTOM_RIGHT);
 
   const float bar_h = kFontH + kBarExtra;
-  /* Full-bleed edge strip — PHU: X=0, Width=root width. */
+  /* Full-bleed edge strip: X=0, Width=root width. */
   const float bar_x = 0.0f;
   const float bar_w = kScreenW;
   const float bar_y = bottom ? (kScreenH - bar_h) : 0.0f;

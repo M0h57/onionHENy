@@ -134,7 +134,7 @@ enum Cheats_Shortcut{
 extern onion::Settings g_settings;
 
 /**
- * PHU flex banner layout: full-width edge strip + centered metric segments.
+ * Overlay layout: full-width edge strip + centered metric segments.
  * bar_x/bar_w are always 0 / screen width; bar_y is 0 or (H - bar_h).
  * label_margin_top is relative to each metric cell and used with
  * PositionType=1; labels do not use X/Y.

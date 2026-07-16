@@ -1,9 +1,8 @@
 /* Copyright (C) 2025 OnionHEN / LightningMods — P0 split.
  *
- * PHU-matched horizontal monitor bar (phu_overlay.cfg defaults, r19.72):
+ * Horizontal monitor bar:
  *   font_size=18, font_style=1 (Bold), font_weight=900
- *   color_perf / color_cpu / color_gpu / color_mem / color_net for labels
- *   color_value=FFFFFFFF for all values
+ *   per-metric label colors; values white
  *   bg_color=000000B4 (~70% black Panel)
  *   EnableThemedTextShadow, UI2.Panel Background*
  */
@@ -34,7 +33,6 @@ namespace {
 
 constexpr const char *kBgPanelName = "id_onion_overlay_bg";
 
-/* PHU flex banner font (phu_overlay.cfg §1). */
 constexpr int kFontSize = 18;
 constexpr int kFontStyle = 1;    /* 1 = Bold bit */
 constexpr int kFontWeight = 900; /* CSS black */
@@ -46,8 +44,8 @@ constexpr float kVal1 = 102.0f;
 constexpr float kIpVal = 34.0f;
 
 /*
- * PHU per-group colors (RRGGBBAA → linear 0..1).
- * Labels use group color; all values use color_value white.
+ * Per-group colors (RRGGBBAA → linear 0..1).
+ * Labels use group color; all values use white.
  */
 /* color_cpu  = 66FF66FF — green */
 constexpr float kCpuR = 102.0f / 255.0f, kCpuG = 1.0f, kCpuB = 102.0f / 255.0f;
@@ -65,7 +63,7 @@ constexpr float kSepR = 0.75f, kSepG = 0.75f, kSepB = 0.75f;
 constexpr float kBgR = 0.0f, kBgG = 0.0f, kBgB = 0.0f, kBgA = 180.0f / 255.0f;
 constexpr float kA = 1.0f;
 
-/* PHU uses VerticalAlignment=0 with FitHeightToText=true for bar labels. */
+/* VerticalAlignment=0 with FitHeightToText=true for bar labels. */
 constexpr int kAlignLeft = 0;
 constexpr int kAlignTop = 0;
 constexpr float kInitialLabelWidth = 500.0f;
@@ -181,7 +179,7 @@ MonoObject *create_metric_cell(MonoObject *root, const char *label_name,
   return cell;
 }
 
-/** Prefer live RootWidget.Width (PHU); fall back to layout bar_w (1920). */
+/** Prefer live RootWidget.Width; fall back to layout bar_w (1920). */
 float resolve_panel_width(MonoObject *root) {
   if (!root)
     return g_overlay_layout.bar_w;
@@ -195,8 +193,8 @@ float resolve_panel_width(MonoObject *root) {
 }
 
 /**
- * PHU flex bar: edge-flush full-width Panel
- *   X=0, Y=0 (or bottom), Width=RootWidget width ("fullscreen"),
+ * Edge-flush full-width background Panel
+ *   X=0, Y=0 (or bottom), Width=RootWidget width,
  *   Height=font+6, bg_color=000000B4.
  */
 void ensure_bg_panel(MonoObject *root) {
@@ -236,7 +234,7 @@ void ensure_bg_panel(MonoObject *root) {
 
   Set_Property(panelClass, panel, "Name",
                mono_string_new(Root_Domain, kBgPanelName));
-  /* PHU: X=0, Y=edge, Width=fullscreen root width. */
+  /* X=0, Y=edge, Width=fullscreen root width. */
   Set_Property(panelClass, panel, "X", 0.0f);
   Set_Property(panelClass, panel, "Y", g_overlay_layout.bar_y);
   Set_Property(panelClass, panel, "Width", panel_w);
@@ -288,7 +286,6 @@ void RemoveGameWidget(RemoveWidget widget) {
 }
 
 void CreateGameWidget(CreateWidget widget) {
-  /* PHU: CreateUIFont(size=18, style=1 Bold, weight=900). */
   MonoObject *bar_font = CreateUIFont(kFontSize, kFontStyle, kFontWeight);
   MonoObject *root = find_root_widget();
   if (!root)

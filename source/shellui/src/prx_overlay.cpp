@@ -159,7 +159,6 @@ namespace {
 constexpr int kMaxProcThreads = 3072;
 constexpr int kCpuCores = 8;
 constexpr int kOverlayUpdateIntervalFrames = 60;
-/* PHU flex banner default: font_size=18 (phu_overlay.cfg). */
 constexpr int kOverlayFontSize = 18;
 constexpr int kClockIdRealtime = 4;
 constexpr int kVmSystem = 1;
@@ -215,8 +214,8 @@ void set_label_layout(const char *widget_name, float margin_left,
 }
 
 /**
- * Lay out metrics as comfortable PHU-style slots, centered as a group on the
- * full-width bar. Labels use PHU's PositionType + margins layout.
+ * Lay out metrics as slots centered as a group on the full-width bar.
+ * Labels use PositionType + margins layout.
  * Horizontal: label + value(s) + " | " between items (not after the last).
  *
  * Width is measured from the live text so groups (esp. RAM / IP / all-CPU)
@@ -369,7 +368,7 @@ void init_overlay_once(unsigned int idle_tid[kCpuCores]) {
 
   rootWidget = Get_Property<MonoObject*>(pui_img, "Sce.PlayStation.PUI.UI2", "Scene",
                                          Game, "RootWidget");
-  /* PHU: font_size=18, style=Bold(1), weight=900 */
+  /* style=Bold(1), weight=900 */
   font = CreateUIFont(kOverlayFontSize, 1, 900);
 
   apply_overlay_layout();

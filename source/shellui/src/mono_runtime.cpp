@@ -89,7 +89,7 @@ MonoObject* CreateLabel(const char* name, float x, float y, const char* text, Mo
     Set_Property(labelClass, labelInstance, "FitWidthToText", false);
     Set_Property(labelClass, labelInstance, "FitHeightToText", true);
     Set_Property(labelClass, labelInstance, "NumberOfLines", 1);
-    /* PHU overlay: EnableThemedTextShadow = true for readable HUD text. */
+    /* Readable HUD text on dark bar. */
     Set_Property(labelClass, labelInstance, "EnableThemedTextShadow", true);
 
     return labelInstance;
