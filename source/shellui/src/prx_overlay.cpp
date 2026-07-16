@@ -493,6 +493,9 @@ void OnRender_Hook(MonoObject* instance) {
     return;
   }
 
+  /* UI thread: apply deferred home reload for Display_tids after cold inject. */
+  shellui_poll_display_tids_home_reload();
+
   static bool inited = false;
   static unsigned int idle_thread_id[kCpuCores] = {};
   static int current_bank = 0;

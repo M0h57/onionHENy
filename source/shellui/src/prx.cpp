@@ -804,21 +804,20 @@ int main(int argc, char const* argv[]) {
   set_proc_authid(pid, auth.old_authid);
   auth.release();
 
-  if (g_settings.display_tids) {
-    /*
-     * Do not call ReactApplicationSceneManager.ReloadApp from this injected
-     * worker thread. Bypassing CheckRunningOnMainThread suppresses Mono's
-     * guard but does not make ShellUI Scene/IME transitions thread-safe.
-     * The settings OnPress path performs the refresh later on ShellUI's UI
-     * thread; cold start can wait for the next natural scene refresh.
-     */
-    shellui_log("Display_tids enabled; deferring NPXS40002 scene refresh");
-  }
-
   shellui_log("Performed Magic");
   setup_proc_hooks();
 
   shellui_hooks_publish_ready();
+  /*
+   * Display_tids spoofs RegMgr as soon as hooks are ready, but home already
+   * cached the old value. ReloadApp must run on the UI thread (OnRender), not
+   * this inject worker. Queue a one-shot; no wall-clock delay — the next
+   * OnRender after hooks-ready is the readiness gate (onion_ready TOOLBOX is
+   * only a cross-process marker for the daemon, set later in keep-alive).
+   */
+  if (g_settings.display_tids) {
+    shellui_request_display_tids_home_reload();
+  }
   hooked = true;
   run_keep_alive();
   return 0;

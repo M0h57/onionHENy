@@ -155,6 +155,17 @@ bool SaveSettings();
 void apply_overlay_layout();
 /** Persist g_settings and optionally reload daemon/util settings via IPC. */
 void settings_commit(bool reload_main = false, bool reload_util = false);
+
+/**
+ * After cold inject with Display_tids on, queue a one-shot NPXS40002 ReloadApp
+ * for the next UI-thread poll (OnRender). Never call ReloadRNPSApp from the
+ * inject worker. Not timed — readiness is hooks-ready + UI thread, not
+ * onion_ready files (those are daemon/process handshake only).
+ */
+void shellui_request_display_tids_home_reload(void);
+/** Drain one-shot home reload; call only from UI thread after hooks ready. */
+void shellui_poll_display_tids_home_reload(void);
+
 bool SetVersionString(const char* str);
 int SendShelluiNotify();
 void Terminate();
