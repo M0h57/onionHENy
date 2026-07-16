@@ -283,7 +283,7 @@ shellui / fps_elf / homebrew
         └─► /system_tmp/OnionHEN_util_service  (util,   0x8xxxxxxx)
 
 homebrew (app jailbreak)
-        └─► sandbox FIFO  …/download0/onionhen_jailbreak  (daemon 轮询 + 白名单 TID)
+        └─► sandbox file  …/download0/etahen_jailbreak|onionhen_jailbreak  (daemon 轮询 + 白名单 TID)
 ```
 
 ### 3.1 消息格式
