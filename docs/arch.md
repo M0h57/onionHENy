@@ -44,7 +44,7 @@ OnionHEN 是 PS5 的 All-in-One Homebrew Enabler，基于 **etaHEN**（Lightning
         │               │                 │
         │               └─────────────────┼── 共用 ptrace / ShellUI
         ▼                                 ▼
-  Unix IPC + TCP 9028            fps_elf（游戏 overlay）
+  Unix IPC                       fps_elf（游戏 overlay）
 ```
 
 **启动顺序有意串行化：** util → kstuff → daemon。
@@ -159,11 +159,10 @@ OnionHEN/
 
 | 服务 | 端口 / 入口 | 说明 |
 |------|-------------|------|
-| Legacy CMD | **9028** | 旧版 hijacker 协议（app jailbreak 等） |
 | Cheats | IPC | flat-file cheat engine（flat `TITLE_VERSION.ext` + mdbg/kdirect）；详见 [util_arch](util_arch/) |
 | ShellCore / ShellUI 补丁 | — | 休息模式恢复、toolbox 激活等 |
 
-> **已移除：** FTP（1337）、Klog 网络服务（9081）。  
+> **已移除：** FTP（1337）、Klog 网络服务（9081）、Legacy CMD（9028）。  
 > 注意：代码里仍使用 `ps5/klog.h` 的 `klog_printf` / `klog_puts`，那是内核日志 API，不是 9081 服务。
 
 ### 2.5 `shellui` → `shellui.elf`（Toolbox UI）
@@ -256,7 +255,7 @@ onion::SettingsStore  进程内线程安全真相源（mutex + snapshot/store/up
 g_settings            daemon/util：SettingsStore；shellui：Settings（UI 线程）
 LoadSettings()        统一 bool 契约：刷新 store；缺文件用默认并成功
 mtime 门控            settings_config_newest_mtime — 任一 twin 更新即失效
-运行时原子量          仅 util：g_legacy_cmd_server / g_legacy_cmd_server_exit（热路径）
+运行时原子量          util rest-mode / network 标志等
 OverlayLayout         仅 shellui：由 overlay_pos 派生的像素坐标
 ```
 
@@ -283,9 +282,8 @@ shellui / fps_elf / homebrew
         ├─► /system_tmp/OnionHEN_crit_service  (daemon, 0x9xxxxxxx)
         └─► /system_tmp/OnionHEN_util_service  (util,   0x8xxxxxxx)
 
-homebrew (legacy)
-        └─► TCP 127.0.0.1:9028  (HijackerCommand, magic 0xDEADBEEF)
-              ACTIVE / LAUNCH / PROCLIST / KILL / JAILBREAK …
+homebrew (app jailbreak)
+        └─► sandbox FIFO  …/download0/onionhen_jailbreak  (daemon 轮询 + 白名单 TID)
 ```
 
 ### 3.1 消息格式
@@ -316,11 +314,11 @@ struct IPCMessage {
 - `BREW_UTIL_GET_GAME_VER` / `BREW_UTIL_GET_GAME_CHEAT` / `BREW_UTIL_TOGGLE_CHEAT`
 - `BREW_UTIL_DOWNLOAD_CHEATS`（`RELOAD_CHEATS` 已移除，热重载靠文件签名）
 - `BREW_UTIL_DOWNLOAD_KSTUFF`
-- `BREW_UTIL_TOGGLE_LEGACY_CMD_SERVER`
 - `BREW_UTIL_SHELLUI_ON_STANDBY`
 
 **已废弃但保留序号（兼容旧客户端）：**
 
+- `BREW_UTIL_UNUSED_LEGACY_CMD_SERVER`（原 TOGGLE_LEGACY_CMD_SERVER / TCP 9028 已移除）
 - `BREW_UNUSED_DECRYPT_DIR`（原 DECRYPT_DIR，SELF 目录解密已移除）
 - `BREW_UNUSED_TESTKIT_CHECK`（原 TESTKIT_CHECK；客户端改为本地探测）
 - `BREW_UTIL_UNUSED_FTP`（原 TOGGLE_FTP）
@@ -348,7 +346,7 @@ struct IPCMessage {
 - 提权与分区 remount
 - 阻止系统更新（unmount `/update`）
 - **kstuff**：fself / fpkg 相关内核能力（通常 ≥ 3.00）
-- App jailbreak（IPC / 9028）
+- App jailbreak（daemon 沙盒 FIFO + 白名单 TID）
 - 双守护进程架构（util 可被 daemon 拉起）
 
 ### 4.2 用户界面（Toolbox）
@@ -363,7 +361,6 @@ struct IPCMessage {
 
 ### 4.3 网络服务
 
-- Legacy CMD 9028
 - 外部 ELF 加载依赖 **9021 elfldr**
 
 ### 4.4 扩展
@@ -377,6 +374,7 @@ struct IPCMessage {
 |------|------|
 | 内嵌 9021 elfldr | 运行时自备 |
 | FTP 1337 | 服务与 Toolbox 开关已移除 |
+| Legacy CMD 9028 | util TCP hijacker 协议与 Toolbox 开关已移除；app JB 仅 FIFO |
 | Klog server 9081 | 服务与 Toolbox 开关已移除 |
 | ps5debug / app-dumper | 不再内嵌 |
 | Byepervisor / hen.bin | 1.xx–2.xx HV 路径不打包 |
@@ -466,7 +464,7 @@ C++ runtime 统一由 `PS5_PAYLOAD_SDK/target/lib` 提供。项目不再携带�
    fPKG/fSELF 能力来自 kstuff-lite；可用 `/data/OnionHEN/kstuff.elf` 覆盖。
 
 6. **IPC 协议稳定**  
-   Unix socket + 兼容旧 9028；废弃命令保留序号，便于旧客户端不崩。
+   Unix socket；废弃命令保留序号，便于旧客户端不崩。
 
 ---
 

@@ -61,13 +61,6 @@ void apply_parser(IniParser *parser, Settings *out) {
       atoi_def(ini_parser_get(parser, "Settings.libhijacker_cheats", "0"), 0) != 0;
   out->debug_app_jb_msg =
       atoi_def(ini_parser_get(parser, "Settings.APP_JB_Debug_Msg", "0"), 0) != 0;
-  // Accept both legacy keys for the 9028 server.
-  const char *legacy =
-      ini_parser_get(parser, "Settings.legacy_cmd_server", nullptr);
-  if (!legacy) {
-    legacy = ini_parser_get(parser, "Settings.debug_legacy_cmd_server", "0");
-  }
-  out->legacy_cmd_server = atoi_def(legacy, 0) != 0;
   out->display_tids =
       atoi_def(ini_parser_get(parser, "Settings.Display_tids", "0"), 0) != 0;
   out->onionhen_game_opts =
@@ -139,7 +132,6 @@ std::string settings_serialize(const Settings &in) {
   b += "libhijacker_cheats=" + std::to_string(in.libhijacker_cheats ? 1 : 0) +
        "\n";
   b += "APP_JB_Debug_Msg=" + std::to_string(in.debug_app_jb_msg ? 1 : 0) + "\n";
-  b += "legacy_cmd_server=" + std::to_string(in.legacy_cmd_server ? 1 : 0) + "\n";
   b += "Display_tids=" + std::to_string(in.display_tids ? 1 : 0) + "\n";
   b += "OnionHEN_Game_Options=" +
        std::to_string(in.onionhen_game_opts ? 1 : 0) + "\n";

@@ -46,8 +46,6 @@ extern bool is_handler_enabled;
 #include <sstream>
 #include <onion/platform.h>
 
-extern pthread_t cmd_server;
-void* runCommandNControlServer(void*);
 // pop -Winfinite-recursion error for this func for clang
 #define MB(x) ((size_t)(x) << 20)
 #define READ_SIZE 0x1024

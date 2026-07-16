@@ -102,8 +102,6 @@ extern onion::SettingsStore g_settings;
 bool LoadSettings();
 } /* extern "C++" */
 #endif
-extern atomic_bool g_legacy_cmd_server;
-extern atomic_bool g_legacy_cmd_server_exit;
 /*================ SETTINGS ==============*/
 /* Payload load helpers (shared onion_payload). */
 #include <onion/payload.h>
@@ -111,22 +109,6 @@ extern atomic_bool g_legacy_cmd_server_exit;
 /* load_payload: see extern "C" block below */
 
 extern atomic_bool g_running;
-/*============ Back up JB server ==============*/
-enum Commands
-{
-	INVALID_CMD = -1,
-	ACTIVE_CMD = 0,
-	LAUNCH_CMD,
-	PROCLIST_CMD,
-	KILL_CMD,
-	KILL_APP_CMD,
-	JAILBREAK_CMD,
-	REMOUNT_FOLDER_CMD,
-	ONIONHEN_VER_CMD,
-	PATCH_LNC_DEBUG_CMD,
-	TEST_CMD,
-	SYMLINK_CMD,
-};
 
 typedef struct
 {
@@ -154,7 +136,6 @@ bool copyFile(const char *source, const char *destination);
 
 int32_t sceKernelSendNotificationRequest(int32_t device, OrbisNotificationRequest *req, size_t size, int32_t blocking);
 
-/*============ Back up JB server ==============*/
 /* Always C linkage (impl in common_utils.c) regardless of include context. */
 #ifdef __cplusplus
 extern "C" {

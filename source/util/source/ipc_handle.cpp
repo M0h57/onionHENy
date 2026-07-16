@@ -30,13 +30,8 @@ extern "C" {
 #include <string>
 #include <vector>
 
-extern pthread_t cmd_server;
-void* runCommandNControlServer(void*);
 extern atomic_bool no_network_rest_mode_action, real_rest_mode_detected;
 extern bool is_handler_enabled;
-// g_settings from common_utils.h; concurrent CMD flags:
-extern atomic_bool g_legacy_cmd_server;
-extern atomic_bool g_legacy_cmd_server_exit;
 
 void reply(int sender_socket, bool error, std::string out_var = "Nothing");
 extern "C" {
@@ -251,22 +246,10 @@ void handleIPC(clientArgs *client, std::string &inputStr,
     OnionHEN_log("RELOAD_CHEATS: unsupported (hot-reload only)");
     reply(sender_app, true);
     break;
-  case BREW_UTIL_TOGGLE_LEGACY_CMD_SERVER: {
-    bool turn_on = onion_cjson::bool_item(my_json.get(), "toggle");
-    OnionHEN_log("Legacy Command Server toggle: %d", turn_on);
-    if (turn_on) {
-      onion_notify(true, "Legacy Command Server Enabled");
-      g_legacy_cmd_server = true;
-      g_legacy_cmd_server_exit = true;
-    } else {
-	  // dont exit server because its used to detect rest mode too 
-      // just stop handling commands
-      g_legacy_cmd_server = false;
-      onion_notify(true, "Legacy Command Server Disabled");
-    }
-    reply(sender_app, false);
-	break;
-  }
+  case BREW_UTIL_UNUSED_LEGACY_CMD_SERVER:
+    OnionHEN_log("LEGACY_CMD_SERVER: unsupported (TCP 9028 removed)");
+    reply(sender_app, true);
+    break;
   case BREW_KILL_DAEMON:{
     is_handler_enabled = false;
     exit(1337);

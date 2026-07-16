@@ -55,7 +55,7 @@ enum DaemonCommands : unsigned int {
   BREW_UTIL_UNUSED_DOWNLOAD_CHEATS, // was DOWNLOAD_CHEATS (online repo download removed)
   BREW_UTIL_UNUSED_RELOAD_CHEATS, // was RELOAD_CHEATS (index cache removed; file-sig hot-reload)
   BREW_UTIL_UNUSED_DOWNLOAD_KSTUFF, // was DOWNLOAD_KSTUFF (online kstuff download removed)
-  BREW_UTIL_TOGGLE_LEGACY_CMD_SERVER,
+  BREW_UTIL_UNUSED_LEGACY_CMD_SERVER, // was TOGGLE_LEGACY_CMD_SERVER (TCP 9028 removed)
   BREW_UTIL_UNUSED_2,
   BREW_UTIL_UNUSED_3,
 

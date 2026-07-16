@@ -58,7 +58,6 @@ struct Settings {
   // --- Cheats / debug ---
   bool libhijacker_cheats = false;
   bool debug_app_jb_msg = false;
-  bool legacy_cmd_server = false; // util 9028
 
   // --- Disc / UI ---
   bool display_tids = false;

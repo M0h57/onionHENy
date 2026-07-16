@@ -122,9 +122,6 @@ constexpr Entry kTable[] = {
   // Debug
   {"debug.jb", "应用越狱通知", "App jailbreak notifications"},
   {"debug.jb.sub", "在越狱应用时显示通知", "Show a notification when jailing an app"},
-  {"debug.legacy_cmd", "旧版越狱命令服务器", "Legacy jailbreak command server"},
-  {"debug.legacy_cmd.sub", "需要网络；应用可通过 Socket 请求越狱",
-   "Requires network; apps can request jailbreak over a socket"},
   {"debug.np_env", "NP 环境", "NP environment"},
   {"debug.np_env.confirm", "系统将重启以应用此设置。", "The system will reboot to apply this setting."},
   {"debug.np_env.confirm_phrase", "确定,取消", "OK,Cancel"},

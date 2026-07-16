@@ -53,7 +53,7 @@ OnionHEN 致力于为已破解的 PS5 系统提供实用、可维护的自制程
 - **游戏 Overlay** — 可配置 FPS、CPU、GPU、RAM、温度、占用率和网络信息
 - **金手指引擎** — 支持本地 JSON、SHN、MC4 和 ShnExt 文件及运行时开关
 - **主机工具** — Rest Mode、Remote Play、外置硬盘、Title ID、风扇、快捷键和游戏选项
-- **App Jailbreak IPC** — 为兼容的自制程序提供可选本地命令服务
+- **App Jailbreak** — 白名单自制程序可通过 daemon 沙盒 FIFO 请求提权
 - **高可用运行时** — critical 与 utility 守护进程分离，主守护进程可自动拉起 utility
 - **统一配置** — Toolbox 和守护进程共享同一套带版本号的 `config.ini` schema
 
@@ -195,7 +195,6 @@ OnionHEN 通过以下两个运行时视图创建并共享同一套配置 schema�
 | `Rest_Mode_Delay_Seconds` | `0` | 唤醒后延迟重新注入 ShellUI |
 | `libhijacker_cheats` | `0` | 启用 libhijacker 金手指路径 |
 | `APP_JB_Debug_Msg` | `0` | 显示 app jailbreak 调试通知 |
-| `legacy_cmd_server` | `0` | 启用 9028 端口本地命令服务 |
 | `Display_tids` | `0` | 在主界面显示 Title ID |
 | `OnionHEN_Game_Options` | `1` | 启用自定义游戏选项 |
 | `enable_fan_speed` | `0` | 启用风扇温度阈值控制 |

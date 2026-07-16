@@ -30,8 +30,8 @@
                                     └──────┬───────┘
            ┌───────────────────────────────┼───────────────────────────────┐
            ▼                               ▼                               ▼
-    ShellUI / fps_elf               TCP CMD                    游戏进程
-    (Unix socket 客户端)            9028              mdbg|kdirect 写内存
+    ShellUI / fps_elf                                          游戏进程
+    (Unix socket 客户端)                               mdbg|kdirect 写内存
 ```
 
 **典型客户端**：`shellui.elf`、`fps_elf` 通过 `IPC_Client(util_daemon=true)` 连 util socket。
@@ -64,18 +64,13 @@ main()
         │    → sleep / 探测 rest mode              │
         │    → 可选 patch_checker()（工具箱 reinject） │
         │                                           │
-        ├─ pthread_create(cmd_server)      # Legacy CMD :9028
-        ├─ LoadSettings() 再刷一次
-        ├─ 金手指：ensure_dir + state_create
-        ├─ pthread_join(cmd_server)        # 阻塞；CMD 退出则重启外围
-        └─ usleep(SLEEP_PERIOD) → 回到循环 ────────┘
+        └─ sleep → 回到循环 ───────────────────────┘
 ```
 
 要点：
 
 - **IPC 线程先于主循环启动**，且不随 rest/网络重启销毁。
-- **CMD 服务器**在主循环里 `join`：网络恢复 / rest 后会整段重拉 CMD + 金手指初始化。
-- 金手指 **service 状态**挂在全局 `g_cheat_service`，主循环里只做 ensure_dir / create，不反复 destroy。
+- 金手指 **service 状态**在冷启动后 `ensureDir` 一次；主循环只做 rest/网络探测。
 
 ---
 
@@ -89,7 +84,7 @@ source/util/
 │   ├── common_utils.c           # OnionHEN_log / notify / ptrace attach / 通用工具
 │   ├── faulthandler.c           # 信号与崩溃落盘
 │   ├── http.c                   # curl 下载、zip 解压、cheats commit 检查
-│   ├── cpp_service.cpp          # IP 线程、CMD:9028、Toolbox/shellcore 修补
+│   ├── cpp_service.cpp          # IP 线程
 │   ├── util_platform.c          # 共享平台：固件/版本/模块/读文件
 │   └── cheats/                  # 金手指领域（C++ 编排 + 解析 + C 适配）
 │       ├── CheatService / Repository / Applier
@@ -110,13 +105,14 @@ source/util/
 | Logging / notify | `common_utils.c` | 几乎全部 |
 | Platform | `util_platform.c` | cheats、可被其它业务复用 |
 | HTTP | `http.c` | msg（下载 cheats/kstuff） |
-| CMD / Toolbox | `cpp_service.cpp` | main 循环、IPC legacy toggle |
+| IP poll | `cpp_service.cpp` | main 启动 |
+| Toolbox reinject | `util_toolbox.cpp` | rest/网络路径 |
 | Cheats | `cheats/*` | msg IPC |
 
 **依赖原则（目标态）**：
 
 ```text
-main ──► msg / CMD / cheats(init)
+main ──► msg / cheats(init) / ip_thread
 msg  ──► CheatService / http / common_utils
 CheatService ──► Repository / ParserFactory / Applier ──► util_platform + pt/mdbg/kernel
 ```
@@ -129,11 +125,10 @@ CheatService ──► Repository / ParserFactory / Applier ──► util_platf
 
 | 线程 | 创建位置 | 生命周期 | 作用 |
 |------|----------|----------|------|
-| main | `main` | 进程 | 主循环、join CMD |
+| main | `main` | 进程 | 主循环、rest/网络探测 |
 | IPC accept | `IPC_loop` | 常驻 | accept Unix 连接 |
 | IPC client | `ipc_client`（每连接一个，detach） | 连接级 | 读 `IPCMessage` → `handleIPC` |
 | IP poll | `start_ip_thread` | 常驻 | 刷新本机 IP 字符串 |
-| Legacy CMD | `runCommandNControlServer` | 随主循环 | TCP 9028 hijacker 协议 |
 
 故障：`faulthandler` 触发 `cleanup` → cleanup → `exit`。
 
@@ -169,7 +164,7 @@ struct IPCMessage {
 | `RELOAD_CHEATS` | **已移除**（枚举占位 `UNUSED_RELOAD_CHEATS`） | 列表/开关靠文件签名热重载，无索引重建 |
 | `DOWNLOAD_KSTUFF` | 下载 kstuff.elf | `http` |
 | `LAUNCH_PAYLOAD` | 加载 payload `.elf` | `load_payload` → `onion_payload_load`（9021） |
-| `TOGGLE_LEGACY_CMD_SERVER` | 开关 9028 处理 | `global_conf.legacy_cmd_server` |
+| `UNUSED_LEGACY_CMD_SERVER` | 已移除（原 TCP 9028） | 固定失败 |
 | `LAUNCH_ELFLDR` | 已移除 | 固定失败 |
 | `UNUSED_FTP` / `UNUSED_KLOG` | 已移除 | 固定失败 |
 | `BREW_KILL_DAEMON` / `BREW_RELOAD_SETTINGS` | 杀进程 / 重载 ini | main 侧状态 |
@@ -236,11 +231,10 @@ cheat_engine_runtime
 解析逻辑使用树内 cJSON。
 
 
-### 6.5 CMD / Toolbox（`cpp_service.cpp`）
+### 6.5 IP / Toolbox reinject
 
-- **`runCommandNControlServer`**：TCP **9028**，legacy hijacker 风格 `Command` 分发（越狱类命令等）；受 `legacy_cmd_server` 开关影响是否处理业务。
-- **`patch_checker` / `enable_toolbox`**：与 Toolbox 注入、ShellCore 相关修补（部分路径已裁剪）。
-- **`start_ip_thread`**：维护全局 IP 字符串，供 notify 文案使用。
+- **`start_ip_thread`**（`cpp_service.cpp`）：维护全局 IP 字符串，供 notify 文案使用。
+- **`patch_checker` / `enable_toolbox`**（`util_toolbox.cpp`）：与 Toolbox 注入、ShellCore 相关修补。
 
 ### 6.6 金手指（C++：`onion::cheats`）
 
@@ -302,7 +296,7 @@ cheat_engine_runtime
 
 | 依赖 | 用途 |
 |------|------|
-| libhijacker | 内核原语、偏移（CMD/shellcore 路径） |
+| libhijacker | 内核原语、偏移（shellcore / 注入路径） |
 | libonion_elfldr | ptrace / mmap 注入原语 |
 | keystone | ShnExt 汇编（`third_party/keystone/`）；C++ runtime 由 PS5 SDK 提供 |
 | cJSON | IPC 与 GitHub 响应 JSON 解析 |
@@ -315,7 +309,7 @@ cheat_engine_runtime
 
 | 路径 | 用途 |
 |------|------|
-| `/data/OnionHEN/config.ini` | toolbox、legacy CMD 等 |
+| `/data/OnionHEN/config.ini` | toolbox、rest mode 等 |
 | `/data/OnionHEN/cheats/` | 金手指 flat 文件 |
 | `/data/OnionHEN/cheats_staging/` | 下载解压临时区 |
 | `/user/data/OnionHEN/<tid>_cheats` | ShellUI 消费的列表 JSON |
@@ -323,7 +317,7 @@ cheat_engine_runtime
 | `/data/OnionHEN/kstuff.elf` | 下载的 kstuff |
 | `ONION_FLAG_UTIL_BOOTED` | util 是否已完成过冷启动（typed ready flag） |
 
-`LoadSettings` 读取的主要键（节选）：`legacy_cmd_server`、`Rest_Mode_Delay_Seconds`、`Util_rest_kill`。
+`LoadSettings` 读取的主要键（节选）：`Rest_Mode_Delay_Seconds`、`Util_rest_kill`、`APP_JB_Debug_Msg`。
 
 ---
 
@@ -337,7 +331,7 @@ cheat_engine_runtime
 | 新金手指格式 | `ICheatParser` + `CheatParserFactory::createByFormat` |
 | 写内存策略 | `i_memory_backend.hpp` / `memory_backends.cpp` |
 | 版本/模块/固件 | `util_platform.c` |
-| 9028 协议 | `cpp_service.cpp` |
+| IP 线程 | `cpp_service.cpp` |
 | 下载/zip | `http.c` |
 | 日志 | `common_utils.c` → `OnionHEN_log` |
 

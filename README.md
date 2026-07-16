@@ -54,7 +54,7 @@ OnionHEN focuses on a practical, maintainable homebrew environment for exploited
 - **Game overlay** — configurable FPS, CPU, GPU, RAM, temperature, usage, and network information
 - **Cheat engine** — local JSON, SHN, MC4, and ShnExt files with runtime toggle support
 - **Console tools** — Rest Mode controls, Remote Play options, external HDD tools, title IDs, fan settings, shortcuts, and game options
-- **App jailbreak IPC** — optional local command server for compatible homebrew applications
+- **App jailbreak** — whitelist homebrew can request privilege escape via daemon sandbox FIFO
 - **Resilient runtime** — critical and utility daemons are separated; the main daemon can restart the utility daemon
 - **Centralized configuration** — Toolbox and daemon settings share one versioned `config.ini` schema
 
@@ -199,7 +199,6 @@ Most settings can be changed directly from the Toolbox.
 | `Rest_Mode_Delay_Seconds` | `0` | Delay ShellUI reinjection after resume |
 | `libhijacker_cheats` | `0` | Enable the libhijacker cheat path |
 | `APP_JB_Debug_Msg` | `0` | Show app-jailbreak debug notifications |
-| `legacy_cmd_server` | `0` | Enable the local command server on port 9028 |
 | `Display_tids` | `0` | Display title IDs in the home UI |
 | `OnionHEN_Game_Options` | `1` | Enable custom game options |
 | `enable_fan_speed` | `0` | Enable fan-threshold control |

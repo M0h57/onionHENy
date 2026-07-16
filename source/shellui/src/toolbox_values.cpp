@@ -59,8 +59,6 @@ const ExactValueEntry kExactValues[] = {
      +[]() -> std::string { return int_str(g_settings.ui_lang); }},
     {"id_debug_jb",
      +[]() -> std::string { return bool_str(g_settings.debug_app_jb_msg); }},
-    {"id_debug_legacy_cmd",
-     +[]() -> std::string { return bool_str(g_settings.legacy_cmd_server); }},
     {"id_custom_game_opts",
      +[]() -> std::string { return bool_str(g_settings.onionhen_game_opts); }},
     {"id_overlay_change_pos",

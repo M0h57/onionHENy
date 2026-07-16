@@ -38,8 +38,6 @@ typedef struct app_info {
     char     unknown2[0x3c];
 } app_info_t;
 
-pthread_t cmd_server = 0;
-
 extern "C" {
 
     #include "faulthandler.h"
@@ -56,10 +54,7 @@ extern "C" {
 extern bool is_handler_enabled;
 
 onion::SettingsStore g_settings;
-atomic_bool g_legacy_cmd_server = false;
-atomic_bool g_legacy_cmd_server_exit = false;
 void start_ip_thread(void);
-void* runCommandNControlServer(void*);
 void patch_checker(bool rest_resume);
 void* IPC_loop(void* args);
 bool shellui_patch(void);
@@ -89,7 +84,6 @@ bool LoadSettings() {
     }
 
     g_settings.store(s);
-    g_legacy_cmd_server = s.legacy_cmd_server;
     /* Missing file is not an error — defaults were applied. */
     return true;
 }
@@ -123,8 +117,6 @@ int main(void) {
     /* pt_* / code-cave require PTRACE_AUTHID (not DEBUG_AUTHID). */
     set_ucred_to_ptrace();
 
-	g_legacy_cmd_server_exit = false;
-
     unlink("/data/OnionHEN/OnionHEN_util_daemon.log");
     unlink("/data/OnionHEN/OnionHEN_util_crash.log");
 
@@ -145,8 +137,11 @@ int main(void) {
     /* Mark that util completed cold start (typed flag; replaces util_first_boot file). */
     onion_ready_signal(ONION_FLAG_UTIL_BOOTED);
 
+    OnionHEN_log("Initializing cheat engine...");
+    onion::cheats::CheatService::instance().ensureDir();
+
     for (;;) {
-        // for rest mode we wait til we can restart everything
+        // Rest Mode: wait until network is back, then reinject toolbox if needed.
         if (get_ip_address(&tmp_buf[0]) < 0) {
             sleep(1);
 
@@ -166,19 +161,8 @@ int main(void) {
             continue;
         }
         no_network_rest_mode_action = false;
-
-        pthread_create(&cmd_server, NULL, runCommandNControlServer, NULL);
-        OnionHEN_log("loading settings...");
-        LoadSettings();
-        OnionHEN_log("done loading settings...");
-
-        OnionHEN_log("Initializing cheat engine...");
-        onion::cheats::CheatService::instance().ensureDir();
-
-        pthread_join(cmd_server, NULL);
-
-        usleep(SLEEP_PERIOD);
+        sleep(1);
     }
-    
+
     return 0;
 }

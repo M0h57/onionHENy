@@ -27,7 +27,7 @@ bootstrapper.elf ──9021──► util.elf ──► kstuff.elf ──► dae
 |----|------|------|
 | 启动链 | unpacker → bootstrapper | 解压、内存发送、顺序拉起 |
 | Critical | daemon | Toolbox/FPS 注入、FS IPC、util 看门狗 |
-| Utility | util | 金手指、下载、9028、重业务 |
+| Utility | util | 金手指、下载、重业务 |
 | UI | shellui / fps_elf | Mono 注入 / overlay |
 | 共享库 | `libonion_{ipc,settings,proc,platform,ready,detour,payload}` | 协议/配置/进程/平台叶子能力 |
 | 注入原语 | libhijacker / libNineS / libNidResolver | 劫持、ptrace ELF 注入、NID |
@@ -110,8 +110,8 @@ NineS 已避免 per-call authid 翻转；bootstrapper/util attach 仍在翻转�
 | # | 位置 | 问题 |
 |---|------|------|
 | 1 | `daemon_inject.cpp` `cmd_enable_fps` / `_new` | **`SuspendApp(appid)` 把 appid 当 pid**。注释已写清 “APP PID NOT TO BE CONFUSED WITH APPID”，却在解析 pid 前 suspend；`_new` 甚至 **suspend 错 id、resume 对 pid**。可致停错进程或挂起失败。 |
-| 2 | `util/cpp_service.cpp` ~141；`daemon_jailbreak.cpp` ~164 | Jailbreak 重试条件 **`isProcessAlive` 逻辑反了**：进程存活时立刻 break（日志却写 “process died”）；应 `!isProcessAlive`。首次 `getHijacker` 失败即放弃，存活目标几乎无法重试。 |
-| 3 | 同上 `cpp_service` 循环后 | `spawned->jailbreak(true)` **无空指针检查**；失败路径仍 notify “granted jailbreak”。 |
+| 2 | `daemon_jailbreak.cpp` ~164 | Jailbreak 重试条件 **`isProcessAlive` 逻辑反了**：进程存活时立刻 break（日志却写 “process died”）；应 `!isProcessAlive`。首次 `getHijacker` 失败即放弃，存活目标几乎无法重试。 |
+| 3 | 同上 jailbreak 成功路径 | `spawned->jailbreak(true)` **无空指针检查**；失败路径仍 notify “granted jailbreak”。 |
 | 4 | `libonion_ipc` `ipc_server.cpp` | 单次 `recv` 无组帧/`MSG_WAITALL`；短读 + `std::string(msg)` 可能未保证 NUL → 脏命令/崩溃。 |
 | 5 | `ipc_server.hpp` `ipc_format_reply_body` | `out_var` **未 JSON 转义**；金手指状态、路径含 `"` `\` 时客户端解析失败。 |
 | 6 | `daemon/ipc_handle.cpp` STAT/COPY/DELETE | `string_item` 默认 `nullptr`，缺 key 时 **`stat(NULL)` / `rmtree(NULL)`**（仅 CHMOD 有检查）。 |
@@ -156,7 +156,7 @@ NineS 已避免 per-call authid 翻转；bootstrapper/util attach 仍在翻转�
 | 仓库布局列不全 | 缺少整组 `libonion_*` |
 | 「IPC 协议稳定」 | 线格式稳定；转义/组帧/空 path **不稳** |
 | util 可崩溃恢复 | 有 9021 重启，但 5 次后静默放弃 |
-| Runtime atomics 仅 legacy_cmd | settings/fan/`is_handler_enabled` 不是 |
+| Runtime atomics 描述过时 | settings/fan/`is_handler_enabled` 与 rest-mode 标志并存 |
 
 ---
 
