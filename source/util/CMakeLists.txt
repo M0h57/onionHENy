@@ -33,7 +33,6 @@ set(D_SRC ${D_CWD}/source)
 
 include_directories	(SYSTEM "${PS5_PAYLOAD_SDK}")
 include_directories	(SYSTEM "${PS5_PAYLOAD_SDK}/include")
-include_directories (SYSTEM "${D_CWD}/../libelfloader/include")
 
 add_executable(${PROJECT_NAME})
 set_target_properties(${PROJECT_NAME} PROPERTIES OUTPUT_NAME "${PROJECT_NAME}.elf")
@@ -87,9 +86,8 @@ target_compile_definitions(${PROJECT_NAME} PRIVATE CBC=1)
 target_link_directories(${PROJECT_NAME} PUBLIC
   "${PROJECT_ROOT}/lib"
   "${D_CWD}/lib"
-  "${D_CWD}/lib/keystone_cxxrt"
 )
-add_dependencies(${PROJECT_NAME} hijacker NineS onion_settings onion_ipc onion_proc onion_platform onion_payload onion_ready onion_elfldr)
+add_dependencies(${PROJECT_NAME} hijacker onion_settings onion_ipc onion_proc onion_platform onion_payload onion_ready onion_elfldr)
 # keystone: ShnExt ASM only
 target_link_libraries(${PROJECT_NAME} PUBLIC
     onion_ipc
@@ -100,22 +98,11 @@ target_link_libraries(${PROJECT_NAME} PUBLIC
     onion_ready
     onion_elfldr
     keystone
-    c++
-    c++abi
-    unwind
     hijacker
-    SceLibcInternal
     SceSystemService
-    SceNet
-    SceSysmodule
     SceUserService
     SceNetCtl
-    SceSysCore
-    ScePad
-    SceVideoOut
     kernel_sys
-    NineS
-    z
 )
 
 set_source_files_properties(

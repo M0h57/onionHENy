@@ -75,7 +75,7 @@ target_include_directories(${PROJECT_NAME} PRIVATE
 	"${PROJECT_ROOT}/include"
 )
 target_link_directories	(${PROJECT_NAME} PUBLIC "${PROJECT_ROOT}/lib")
-target_link_libraries	(${PROJECT_NAME} PUBLIC onion_detour onion_proc onion_platform onion_ipc onion_settings onion_ready hijacker ScePad SceRegMgr SceSystemService SceNet SceSysmodule SceUserService SceNetCtl SceSysCore kernel_sys SceAppInstUtil)
+target_link_libraries	(${PROJECT_NAME} PUBLIC onion_detour onion_proc onion_platform onion_ipc onion_settings onion_ready SceRegMgr SceSystemService SceUserService SceNetCtl SceAppInstUtil)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 # Add post-build command
@@ -83,4 +83,3 @@ add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
     COMMAND ${CMAKE_OBJCOPY} --remove-section .debug_info --remove-section .debug_abbrev --remove-section .debug_line --remove-section .debug_str --remove-section .debug_loc --remove-section .debug_aranges --remove-section .debug_ranges --remove-section .debug_pubnames --remove-section .debug_pubtypes --remove-section .debug_frame --strip-unneeded $<TARGET_FILE:${PROJECT_NAME}>
     COMMENT "Stripping debugging information from ${PROJECT_NAME}.elf"
 )
-

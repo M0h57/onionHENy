@@ -64,7 +64,7 @@ set(CMAKE_CXX_FLAGS "${CMAKE_C_FLAGS} -DDEBUG -gfull -gdwarf-2 -O0 -pedantic -pe
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O0 ")
 
 target_sources(${PROJECT_NAME} PRIVATE ${SrcFiles})
-add_dependencies(${PROJECT_NAME} onion_ipc onion_detour onion_proc)
+add_dependencies(${PROJECT_NAME} onion_ipc onion_detour)
 target_include_directories(${PROJECT_NAME} PRIVATE
 	"${D_CWD}/include"
 	"${PROJECT_ROOT}/include"
@@ -73,7 +73,7 @@ target_include_directories(${PROJECT_NAME} PRIVATE
 	"${PROJECT_ROOT}/libonion_proc/include"
 )
 target_link_directories	(${PROJECT_NAME} PUBLIC "${PROJECT_ROOT}/lib")
-target_link_libraries	(${PROJECT_NAME} PUBLIC onion_detour onion_proc onion_ipc kernel SceGnmDriver)
+target_link_libraries	(${PROJECT_NAME} PUBLIC onion_detour onion_ipc SceGnmDriver)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 # Add post-build command
@@ -81,4 +81,3 @@ add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
     COMMAND ${CMAKE_OBJCOPY} --remove-section .debug_info --remove-section .debug_abbrev --remove-section .debug_line --remove-section .debug_str --remove-section .debug_loc --remove-section .debug_aranges --remove-section .debug_ranges --remove-section .debug_pubnames --remove-section .debug_pubtypes --remove-section .debug_frame --strip-unneeded $<TARGET_FILE:${PROJECT_NAME}>
     COMMENT "Stripping debugging information from ${PROJECT_NAME}.elf"
 )
-

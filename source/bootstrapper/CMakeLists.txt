@@ -92,7 +92,7 @@ target_include_directories(${PROJECT_NAME} PRIVATE
 )
 target_link_directories	(${PROJECT_NAME} PUBLIC "${PROJECT_ROOT}/lib")
 target_sources(${PROJECT_NAME} PRIVATE "${PROJECT_ROOT}/lib/elfldr_remote.c")
-target_link_libraries	(${PROJECT_NAME} PUBLIC onion_proc onion_platform onion_payload onion_ready onion_elfldr NineS SceSystemService SceUserService kernel_sys SceNotification SceNet)
+target_link_libraries	(${PROJECT_NAME} PUBLIC onion_proc onion_platform onion_payload onion_ready onion_elfldr SceNotification)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 add_dependencies(${PROJECT_NAME} daemon util shellui onion_proc onion_platform onion_payload onion_ready onion_elfldr)
 

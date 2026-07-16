@@ -35,7 +35,6 @@ set(D_SRC ${D_CWD}/source)
 # Headers
 include_directories	(SYSTEM "${PS5_PAYLOAD_SDK}")
 include_directories	(SYSTEM "${PS5_PAYLOAD_SDK}/include")
-include_directories (SYSTEM "${D_CWD}/../libelfloader/include")
 
 add_executable(${PROJECT_NAME})
 set_target_properties(${PROJECT_NAME} PROPERTIES OUTPUT_NAME "${PROJECT_NAME}.elf")
@@ -88,7 +87,7 @@ target_include_directories(${PROJECT_NAME} PRIVATE
 target_link_directories	(${PROJECT_NAME} PUBLIC "${PROJECT_ROOT}/lib")
 add_dependencies(${PROJECT_NAME} util NineS shellui hijacker onion_settings onion_ipc onion_proc onion_platform onion_ready onion_playtime onion_elfldr)
 # Restarts the embedded util bytes via external 9021 elfldr.
-target_link_libraries	(${PROJECT_NAME} PUBLIC onion_ipc onion_settings onion_proc onion_platform onion_ready onion_playtime onion_elfldr hijacker ScePad SceSystemService SceNotification SceNet SceRegMgr SceSysmodule SceUserService SceNetCtl SceSysCore kernel_sys NineS)
+target_link_libraries	(${PROJECT_NAME} PUBLIC onion_ipc onion_settings onion_proc onion_platform onion_ready onion_playtime onion_elfldr hijacker SceSystemService SceNotification SceUserService SceNetCtl SceSysCore kernel_sys NineS)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 # Add post-build command
 add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
