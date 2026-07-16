@@ -8,6 +8,12 @@
 </p>
 
 <p align="center">
+  <a href="README_ZH.md">简体中文</a>
+  ·
+  <b>English</b>
+</p>
+
+<p align="center">
   <b><a href="#features">Features</a></b>
   ·
   <b><a href="#run">Run</a></b>
