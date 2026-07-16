@@ -24,7 +24,6 @@ void apply_overlay_layout() {
   constexpr float kBarExtra = 6.0f;
   /* PHU labels use PositionType=1 + MarginTop=5 + FitHeightToText=true. */
   constexpr float kTextTopInset = 5.0f;
-  constexpr float w_fps = 120.0f;
   constexpr float w_cpu_avg = 190.0f;
   constexpr float w_cpu_all = 420.0f;
   constexpr float w_gpu = 190.0f;
@@ -33,7 +32,6 @@ void apply_overlay_layout() {
   constexpr float kGap = 28.0f; /* roomy group gap (not packed) */
   constexpr float kOffscreen = -4096.0f;
 
-  const bool show_fps = g_settings.overlay_fps;
   const bool show_cpu = g_settings.overlay_cpu || g_ui.all_cpu_usage;
   const bool show_gpu = g_settings.overlay_gpu;
   const bool show_ram = g_settings.overlay_ram;
@@ -49,7 +47,6 @@ void apply_overlay_layout() {
       content_w += kGap;
     content_w += w;
   };
-  acc(show_fps, w_fps);
   acc(show_cpu, w_cpu);
   acc(show_gpu, w_gpu);
   acc(show_ram, w_ram);
@@ -83,8 +80,6 @@ void apply_overlay_layout() {
     x += w + kGap;
   };
 
-  place(g_overlay_layout.overlay_fps_x, g_overlay_layout.overlay_fps_y,
-        show_fps, w_fps);
   place(g_overlay_layout.overlay_cpu_x, g_overlay_layout.overlay_cpu_y,
         show_cpu, w_cpu);
   place(g_overlay_layout.overlay_gpu_x, g_overlay_layout.overlay_gpu_y,
@@ -107,9 +102,8 @@ bool LoadSettings()
 
   // Process-local store (UI thread); twin disk paths via settings_load/save.
   g_settings = s;
-  if (g_settings.overlay_fps) {
-    onion_ready_signal(ONION_FLAG_FPS_OVERLAY);
-  }
+  /* Clear stale fps_overlay marker left by older shellui builds. */
+  onion_ready_clear(ONION_FLAG_FPS_OVERLAY);
   apply_overlay_layout();
   /* Always true once defaults-or-file applied (prx boot requires success). */
   return true;

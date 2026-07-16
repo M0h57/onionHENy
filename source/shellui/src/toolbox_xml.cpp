@@ -485,9 +485,6 @@ void append_toolbox_game_group(ps5ui::Group& g) {
                    },
                    toolbox_i18n::tr("overlay.pos.sub"),
                    toolbox_val("id_overlay_change_pos"))
-                .toggle("id_overlay_fps", toolbox_i18n::tr("overlay.fps"),
-                        toolbox_on("id_overlay_fps"), std::nullopt,
-                        toolbox_i18n::tr("overlay.fps.desc"))
                 .toggle("id_overlay_gpu", toolbox_i18n::tr("overlay.gpu"),
                         toolbox_on("id_overlay_gpu"), std::nullopt,
                         toolbox_i18n::tr("overlay.gpu.desc"))

@@ -4,16 +4,11 @@
 #include "hooked_funcs.hpp"
 #include "ipc.hpp"
 #include "external_symbols.hpp"
-#include "detour.h"
 #include <onion/settings.hpp>
-#include <onion/fps_shm.h>
 #include <cstring>
 #include <cstdio>
 #include <cstdlib>
-#include <fcntl.h>
-#include <unistd.h>
 #include <vector>
-#include <string>
 
 extern void (*OnRender_orig)(MonoObject* instance);
 extern MonoObject* rootWidget;
@@ -157,141 +152,6 @@ void calc_usage(unsigned int idle_tid[8], thread_usages* cur, thread_usages* pre
         usage_out[i] = (1.0f - Idle_Usage) * 100.0f;
     }
 }
-extern bool app_launched;
-
-
-class AtomicString {
-    mutable std::mutex mtx;
-    std::string value;
-
-public:
-    void store(const std::string& str) {
-        std::lock_guard<std::mutex> lock(mtx);
-        value = str;
-    }
-
-    std::string load() const {
-        std::lock_guard<std::mutex> lock(mtx);
-        return value;
-    }
-};
-
-void* search_bytes(const void* haystack, size_t haystack_len,
-    const void* needle, size_t needle_len){
-
-    if (needle_len == 0 || needle_len > haystack_len) {
-        return NULL;
-
-    }
-
-    const unsigned char* h = (const unsigned char*)haystack;
-    const unsigned char* n = (const unsigned char*)needle;
-
-
-    for (size_t i = 0; i <= haystack_len - needle_len; i++) {
-        if (memcmp(&h[i], n, needle_len) == 0) {
-            return (void*)&h[i];
-
-        }
-    }
-
-    return NULL;
-
-}
-void ShellHexDump(const void* data, size_t size) {
-    const unsigned char* byteData = static_cast<const unsigned char*>(data);
-    char line[256];
-    
-    for (size_t i = 0; i < size; i += 16) {
-        int pos = 0;
-        
-        // Offset
-        pos += snprintf(line + pos, sizeof(line) - pos, "%08zx  ", i);
-        
-        // Hex bytes
-        for (size_t j = 0; j < 16; ++j) {
-            if (i + j < size) {
-                pos += snprintf(line + pos, sizeof(line) - pos, "%02x ", 
-                                byteData[i + j]);
-            } else {
-                pos += snprintf(line + pos, sizeof(line) - pos, "   ");
-            }
-        }
-        
-        pos += snprintf(line + pos, sizeof(line) - pos, " ");
-        
-        // ASCII representation
-        for (size_t j = 0; j < 16; ++j) {
-            if (i + j < size) {
-                unsigned char c = byteData[i + j];
-                pos += snprintf(line + pos, sizeof(line) - pos, "%c", 
-                                isprint(c) ? c : '.');
-            }
-        }
-        
-        shellui_log(line);
-    }
-}
-AtomicString fps_string;
-ssize_t(*read_orig)(int fd, void *buf, size_t count) = nullptr;
-
-/** Publish a sample into the SHM file (ShellUI is privileged; can create). */
-static void publish_fps_shm(float fps, const char *api_name) {
-  if (onion_fps_shm_ensure() != 0)
-    return;
-  int n = 0;
-  const char *const *paths = onion_fps_shm_paths(&n);
-  onion_fps_shm_t blk{};
-  blk.magic = ONION_FPS_SHM_MAGIC;
-  blk.version = ONION_FPS_SHM_VERSION;
-  blk.fps = fps;
-  blk.hooks_armed = 1;
-  blk.flags = 1;
-  std::snprintf(blk.api_name, sizeof(blk.api_name), "%s",
-                api_name ? api_name : "scrape");
-  for (int i = 0; i < n; ++i) {
-    int fd = open(paths[i], O_RDWR);
-    if (fd < 0)
-      continue;
-    (void)pwrite(fd, &blk, sizeof(blk), 0);
-    close(fd);
-  }
-}
-
-ssize_t read_hook(int fd, void* buf, size_t count) {
-    ssize_t ret = read_orig(fd, buf, count);
-   // shellui_log("read_hook called: fd=%d, count=%zu, ret=%zd", fd, count, ret);
-    if (count == 65536) {
-        void* found = search_bytes(buf, 100, "FPS", 3);
-        if (found) {
-            const char* fps_ptr = (const char*)found;
-
-            // Skip "FPS" and any separators (: = space etc)
-            fps_ptr += 3; // Skip "FPS"
-            while (*fps_ptr && !isdigit(*fps_ptr)) {
-                fps_ptr++;
-            }
-
-            // Extract the number
-            std::string fps_value;
-            while (*fps_ptr && (isdigit(*fps_ptr) || *fps_ptr == '.')) {
-                fps_value += *fps_ptr;
-                fps_ptr++;
-            }
-
-            if (!fps_value.empty()) {
-                fps_string.store(fps_value);
-                /* Classic Onion scrape → SHM so the overlay has one channel. */
-                float v = 0.f;
-                if (std::sscanf(fps_value.c_str(), "%f", &v) == 1 && v > 0.f)
-                  publish_fps_shm(v, "notify-scrape");
-            }
-            return -1;
-        }
-    }
-    return ret;
-}
-
 int get_ip_address(char* ip_address);
 
 namespace {
@@ -354,43 +214,21 @@ void set_label_layout(const char *widget_name, float margin_left,
   Set_Property(label_cls, label, "NumberOfLines", 1);
 }
 
-/** Read FPS sample written by fps_elf (file pre-created by daemon/shellui). */
-bool read_fps_shm(float &out_fps, char *api_out, size_t api_sz,
-                  uint32_t *hooks_out) {
-  int n = 0;
-  const char *const *paths = onion_fps_shm_paths(&n);
-  for (int i = 0; i < n; ++i) {
-    int fd = open(paths[i], O_RDONLY);
-    if (fd < 0)
-      continue;
-    onion_fps_shm_t blk{};
-    const ssize_t nr = pread(fd, &blk, sizeof(blk), 0);
-    close(fd);
-    if (nr != (ssize_t)sizeof(blk))
-      continue;
-    if (blk.magic != ONION_FPS_SHM_MAGIC || blk.version != ONION_FPS_SHM_VERSION)
-      continue;
-    out_fps = blk.fps;
-    if (api_out && api_sz)
-      std::snprintf(api_out, api_sz, "%s", blk.api_name);
-    if (hooks_out)
-      *hooks_out = blk.hooks_armed;
-    return true;
-  }
-  return false;
-}
-
 /**
  * Lay out metrics as comfortable PHU-style slots, centered as a group on the
  * full-width bar. Labels use PHU's PositionType + margins layout.
  * Horizontal: label + value(s) + " | " between items (not after the last).
+ *
+ * Width is measured from the live text so groups (esp. RAM / IP / all-CPU)
+ * expand instead of wrapping when every metric is enabled.
  */
-void layout_bar_labels(const char *fps_val, const char *cpu_temp,
-                       const char *cpu_usage, const char *gpu_temp,
-                       const char *gpu_usage, const char *ram_str,
-                       const char *ip_str) {
+void layout_bar_labels(const char *cpu_temp, const char *cpu_usage,
+                       const char *gpu_temp, const char *gpu_usage,
+                       const char *ram_str, const char *ip_str) {
   constexpr float kScreenW = 1920.0f;
-  constexpr float kCharW = 10.0f;
+  /* Bold 18pt is wider than a monospaced 10px estimate; keep headroom so
+   * labels never wrap under FitHeightToText. */
+  constexpr float kCharW = 12.0f;
   constexpr float kPairGap = 8.0f;   /* label → first value */
   constexpr float kValGap = 10.0f;   /* value → value (temp / usage) */
   constexpr float kSepGap = 10.0f;   /* last value → "|" */
@@ -401,7 +239,7 @@ void layout_bar_labels(const char *fps_val, const char *cpu_temp,
     const char *id;
     const char *text;
     float width;
-    bool is_label; /* group title (FPS/CPU/…) */
+    bool is_label; /* group title (CPU/GPU/…) */
     bool is_sep;   /* trailing pipe after an item */
   };
   std::vector<Piece> pieces;
@@ -410,9 +248,9 @@ void layout_bar_labels(const char *fps_val, const char *cpu_temp,
   auto text_w = [](const char *s) -> float {
     if (!s || !s[0])
       return 0.f;
-    /* Min width so short tags ("FPS") do not collapse; pad a little. */
-    const float raw = static_cast<float>(std::strlen(s)) * kCharW + 4.f;
-    return raw < 28.f ? 28.f : raw;
+    /* Min width so short tags ("CPU") do not collapse; pad a little. */
+    const float raw = static_cast<float>(std::strlen(s)) * kCharW + 6.f;
+    return raw < 32.f ? 32.f : raw;
   };
 
   struct GroupSpec {
@@ -424,12 +262,9 @@ void layout_bar_labels(const char *fps_val, const char *cpu_temp,
     const char *v1;
     const char *id_sep;
   };
-  GroupSpec groups[5];
+  GroupSpec groups[4];
   int ng = 0;
 
-  if (g_settings.overlay_fps && fps_val)
-    groups[ng++] = {"id_fps_label", "FPS", "id_fps_value", fps_val, nullptr,
-                    nullptr, "id_fps_sep"};
   if ((g_settings.overlay_cpu || g_ui.all_cpu_usage) && cpu_temp)
     groups[ng++] = {"id_cpu_label",
                     "CPU",
@@ -496,8 +331,7 @@ void layout_bar_labels(const char *fps_val, const char *cpu_temp,
   const float margin_top = g_overlay_layout.label_margin_top;
 
   static const char *kAll[] = {
-      "id_fps_label",        "id_fps_value",       "id_fps_sep",
-      "id_cpu_label",        "id_cpu_temp_value",   "id_cpu_usage_value",
+      "id_cpu_label",        "id_cpu_temp_value",  "id_cpu_usage_value",
       "id_cpu_sep",          "id_gpu_label",       "id_gpu_temp_value",
       "id_gpu_usage_value",  "id_gpu_sep",         "id_ram_label",
       "id_ram_value",        "id_ram_sep",         "id_ip_label",
@@ -531,7 +365,6 @@ void discover_idle_thread_ids(unsigned int idle_tid[kCpuCores]) {
 }
 
 void init_overlay_once(unsigned int idle_tid[kCpuCores]) {
-  fps_string.store("LOADING");
   discover_idle_thread_ids(idle_tid);
 
   rootWidget = Get_Property<MonoObject*>(pui_img, "Sce.PlayStation.PUI.UI2", "Scene",
@@ -539,12 +372,7 @@ void init_overlay_once(unsigned int idle_tid[kCpuCores]) {
   /* PHU: font_size=18, style=Bold(1), weight=900 */
   font = CreateUIFont(kOverlayFontSize, 1, 900);
 
-  if (g_settings.overlay_fps)
-    (void)onion_fps_shm_ensure();
-
   apply_overlay_layout();
-  if (g_settings.overlay_fps)
-    CreateGameWidget(CREATE_FPS_OVERLAY);
   if (g_settings.overlay_cpu || g_ui.all_cpu_usage)
     CreateGameWidget(CREATE_CPU_OVERLAY);
   if (g_settings.overlay_gpu)
@@ -556,7 +384,6 @@ void init_overlay_once(unsigned int idle_tid[kCpuCores]) {
 
   /* First paint: center placeholders on the full-width bar. */
   layout_bar_labels(
-      g_settings.overlay_fps ? "--.-" : nullptr,
       (g_settings.overlay_cpu || g_ui.all_cpu_usage) ? "--C" : nullptr,
       (g_settings.overlay_cpu || g_ui.all_cpu_usage) ? "--%" : nullptr,
       g_settings.overlay_gpu ? "--C" : nullptr,
@@ -565,14 +392,19 @@ void init_overlay_once(unsigned int idle_tid[kCpuCores]) {
       g_settings.overlay_ip ? "---.---.---.---" : nullptr);
 }
 
-/** Sample CPU into Usage[]; formats CPU_USAGE. Returns false if sampling skipped. */
+/** Sample CPU into Usage[]; formats CPU_USAGE. Returns false if sampling skipped/failed. */
 bool sample_cpu_usage(unsigned int idle_tid[kCpuCores], int& current_bank,
                       char* cpu_usage, size_t cpu_usage_sz) {
   if (!g_settings.overlay_cpu && !g_ui.all_cpu_usage)
     return false;
 
-  // Legacy path: retry until a dual-bank sample succeeds.
-  while (true) {
+  /*
+   * Dual-bank sample: first successful GetCpuUsage seeds the other bank; the
+   * next one can compute a delta. Bound retries so a stuck/failing CPU probe
+   * cannot block RAM/GPU/IP updates on the same render tick.
+   */
+  constexpr int kMaxAttempts = 4;
+  for (int attempt = 0; attempt < kMaxAttempts; ++attempt) {
     gThread_Data[current_bank].Thread_Count = kMaxProcThreads;
     if (sceKernelGetCpuUsage(
             reinterpret_cast<Proc_Stats*>(&gThread_Data[current_bank].Threads),
@@ -603,6 +435,8 @@ bool sample_cpu_usage(unsigned int idle_tid[kCpuCores], int& current_bank,
     }
     return true;
   }
+  snprintf(cpu_usage, cpu_usage_sz, "--%%");
+  return false;
 }
 
 void update_overlay_metrics(unsigned int idle_tid[kCpuCores], int& current_bank) {
@@ -612,7 +446,6 @@ void update_overlay_metrics(unsigned int idle_tid[kCpuCores], int& current_bank)
   char cpu_usage[120] = {};
   char ram_str[32] = {};
   char ip_address[64] = {};
-  char fps_buf[32] = {};
 
   sample_cpu_usage(idle_tid, current_bank, cpu_usage, sizeof(cpu_usage));
 
@@ -641,45 +474,8 @@ void update_overlay_metrics(unsigned int idle_tid[kCpuCores], int& current_bank)
     snprintf(cpu_temp, sizeof(cpu_temp), "%dC", cpu_t);
   }
 
-  if (g_settings.overlay_fps) {
-    float shm_fps = 0.f;
-    char api[32] = {};
-    uint32_t hooks = 0;
-    static float s_last_good = 0.f;
-
-    /*
-     * Single display channel: SHM.
-     * Writers: fps_elf (GNM flip count) and/or ShellUI notify-scrape.
-     */
-    if (read_fps_shm(shm_fps, api, sizeof(api), &hooks)) {
-      if (shm_fps > 0.05f) {
-        s_last_good = shm_fps;
-        snprintf(fps_buf, sizeof(fps_buf), "%.1f", shm_fps);
-      } else if (s_last_good > 0.05f) {
-        /* Hold last sample between 2 Hz publish ticks. */
-        snprintf(fps_buf, sizeof(fps_buf), "%.1f", s_last_good);
-      } else {
-        /* Waiting for first sample (deferred GNM hook or scrape). */
-        snprintf(fps_buf, sizeof(fps_buf), "...");
-      }
-    } else {
-      /* Fallback: in-process scrape string if SHM not ready yet. */
-      const std::string scraped = fps_string.load();
-      float v = 0.f;
-      if (!scraped.empty() && scraped != "LOADING" &&
-          std::sscanf(scraped.c_str(), "%f", &v) == 1 && v > 0.f) {
-        s_last_good = v;
-        snprintf(fps_buf, sizeof(fps_buf), "%.1f", v);
-        publish_fps_shm(v, "notify-scrape");
-      } else {
-        snprintf(fps_buf, sizeof(fps_buf), "--.-");
-      }
-    }
-  }
-
   /* Re-center the whole metric run on the full-width edge bar every tick. */
   layout_bar_labels(
-      g_settings.overlay_fps ? fps_buf : nullptr,
       (g_settings.overlay_cpu || g_ui.all_cpu_usage) ? cpu_temp : nullptr,
       (g_settings.overlay_cpu || g_ui.all_cpu_usage) ? cpu_usage : nullptr,
       g_settings.overlay_gpu ? gpu_temp : nullptr,

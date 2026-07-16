@@ -159,7 +159,6 @@ export PS5_PAYLOAD_SDK=/path/to/ps5-payload-sdk
 | `build/bin/daemon.elf` | Critical daemon |
 | `build/bin/util.elf` | Utility daemon |
 | `build/bin/shellui.elf` | Toolbox 注入 payload |
-| `build/bin/fps_elf.elf` | 游戏 overlay payload |
 | `build/lib/*.a` | 第一方静态库 |
 
 所有生成文件都位于 `build/`；下载的输入缓存在 `.cache/dependencies/`。
@@ -202,7 +201,7 @@ OnionHEN 通过以下两个运行时视图创建并共享同一套配置 schema�
 | `enable_fan_speed` | `0` | 启用风扇温度阈值控制 |
 | `fan_threshold` | `77` | 风扇温度阈值 |
 | `overlay_ram` / `overlay_cpu` / `overlay_gpu` | `1` | 启用资源 overlay 字段 |
-| `overlay_fps` / `overlay_ip` | `0` | 启用 FPS 和 IP overlay 字段 |
+| `overlay_ip` | `0` | 启用 IP overlay 字段 |
 | `Overlay_pos` | `0` | Overlay 位置：左上、右上、左下或右下 |
 | `Cheats_shortcut_opt` / `Toolbox_shortcut_opt` | `0` | 手柄快捷键模式 |
 | `ui_lang` | `0` | Toolbox 语言：`0` 简体中文，`1` English |
@@ -242,7 +241,6 @@ OnionHEN 通过以下两个运行时视图创建并共享同一套配置 schema�
 │   ├── daemon/                Critical daemon 与 Toolbox 注入
 │   ├── util/                  Utility daemon、IPC 与金手指引擎
 │   ├── shellui/               Toolbox 与 ShellUI hooks
-│   ├── fps_elf/               游戏 overlay payload
 │   ├── unpacker/              最终 OnionHEN payload wrapper
 │   ├── libonion_*/            第一方共享库
 │   ├── common/                共享底层实现

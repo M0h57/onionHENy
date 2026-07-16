@@ -39,7 +39,6 @@ enum RemoveWidget {
     REMOVE_GPU_OVERLAY,
     REMOVE_CPU_OVERLAY,
     REMOVE_RAM_OVERLAY,
-    REMOVE_FPS_OVERLAY,
     REMOVE_IP_OVERLAY,
     REMOVE_ALL_OVERLAYS,
 };
@@ -48,7 +47,6 @@ enum CreateWidget {
     CREATE_GPU_OVERLAY,
     CREATE_CPU_OVERLAY,
     CREATE_RAM_OVERLAY,
-    CREATE_FPS_OVERLAY,
     CREATE_IP_OVERLAY,
     CREATE_ALL_OVERLAYS,
 };
@@ -146,8 +144,6 @@ struct OverlayLayout {
     float bar_w = 1920.0f;
     float bar_h = 24.0f;
     float label_margin_top = 5.0f;
-    float overlay_fps_x = 24.0f;
-    float overlay_fps_y = 12.0f;
     float overlay_cpu_x = 160.0f;
     float overlay_cpu_y = 12.0f;
     float overlay_gpu_x = 360.0f;

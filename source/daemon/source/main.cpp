@@ -305,6 +305,9 @@ int main() {
 
   LoadSettings();
 
+  /* Drop any stale FPS-overlay ready flag from older builds/configs. */
+  onion_ready_clear(ONION_FLAG_FPS_OVERLAY);
+
   /* libonion_proc big-app / name lookups used by get_game_pid / inject paths. */
   onion_proc_set_sce_hooks(
       [](int pid, char *name) -> int {

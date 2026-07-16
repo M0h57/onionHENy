@@ -10,7 +10,6 @@
 #include <hijacker/hijacker.hpp>
 #include <onion/proc_query.h>
 #include <onion/platform.h>
-#include <onion/ready.h>
 #include <onion/settings.hpp>
 #include <onion/hijack_retry.h>
 #include "globalconf.hpp"
@@ -29,8 +28,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-
-extern bool is_800;
 
 extern "C" {
 extern uint8_t util_elf_start[];
@@ -113,25 +110,7 @@ void *fifo_and_dumper_thread(void *args) noexcept {
       pthread_mutex_unlock(&jb_lock);
       continue;
     }
-
-    /*
-     * FPS probe inject (CUSA/SCUS BC + PPSA). FW>=8 uses fps_elf inject;
-     * older FW uses HookGame + fps.prx.
-     *
-     * KNOWN ISSUE: soft-inject works, but arming the GNM-WL detour freezes
-     * titles (docs/fps-overlay-known-issues.md). fps_elf ships with
-     * ONION_FPS_ARM_GNM_HOOK=0 so inject is SHM-only until a safe probe
-     * exists. Keep calling inject so the pipeline stays exercised.
-     */
-    if (onion_ready_is_set(ONION_FLAG_FPS_OVERLAY) &&
-        (tid.rfind("CUSA") != std::string::npos ||
-         tid.rfind("SCUS") != std::string::npos ||
-         tid.rfind("PPSA") != std::string::npos)) {
-      if (is_800)
-        cmd_enable_fps_new(bappid);
-      else
-        cmd_enable_fps(bappid);
-    }
+    (void)bappid;
 
     if (!is_whitelisted_app(tid)) {
       pthread_mutex_unlock(&jb_lock);

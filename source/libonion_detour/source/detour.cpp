@@ -29,7 +29,7 @@ along with this program; see the file COPYING. If not, see
 #include <ps5/kernel.h>
 
 /*
- * Host (shellui / fps_elf) exports sceKernelMprotect as a *function pointer*
+ * Host (shellui) exports sceKernelMprotect as a *function pointer*
  * filled by dlsym — not as a real code symbol. Declaring it as
  *   extern "C" int sceKernelMprotect(...);
  * makes the linker resolve CALL to the data object (.bss). Executing the

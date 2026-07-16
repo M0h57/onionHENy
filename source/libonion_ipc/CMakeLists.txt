@@ -1,5 +1,5 @@
 ###################################################################################################
-# OnionHEN shared IPC client (injectee-side: shellui / fps_elf)
+# OnionHEN shared IPC client (injectee-side: shellui)
 ###################################################################################################
 
 cmake_minimum_required(VERSION 3.20)
@@ -49,7 +49,7 @@ target_include_directories(${PROJECT_NAME}
   PRIVATE "${ONIONHEN_THIRD_PARTY_DIR}/cjson"
 )
 
-# cJSON symbols are provided by the final link unit (shellui / fps_elf already
+# cJSON symbols are provided by the final link unit (shellui already
 # compile third_party/cjson into the ELF). Keep them unresolved here.
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)

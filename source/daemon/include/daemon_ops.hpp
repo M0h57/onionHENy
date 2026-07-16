@@ -53,8 +53,6 @@ bool set_fan_threshold(int temp);
 [[noreturn]] void cmd_shutdown_onion_stack(void);
 
 bool cmd_enable_toolbox();
-bool cmd_enable_fps(int appid);
-bool cmd_enable_fps_new(int appid);
 
 void *IPC_loop(void *args);
 /** LAN TCP :9048 — PC can trigger BREW_SHUTDOWN_STACK without Unix socket. */

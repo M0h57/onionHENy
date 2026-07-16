@@ -74,11 +74,10 @@ endif()
 set_source_files_properties(
 	${D_SRC}/embeddded_payloads.c
 	PROPERTIES OBJECT_DEPENDS
-		"${ONIONHEN_OUT_BIN}/shellui.elf;${ONIONHEN_OUT_BIN}/fps_elf.elf;${_onion_util_elf}"
+		"${ONIONHEN_OUT_BIN}/shellui.elf;${_onion_util_elf}"
 )
 target_compile_definitions(${PROJECT_NAME} PRIVATE
 	ONIONHEN_SHELLUI_ELF="${ONIONHEN_OUT_BIN}/shellui.elf"
-	ONIONHEN_FPS_ELF="${ONIONHEN_OUT_BIN}/fps_elf.elf"
 	ONIONHEN_UTIL_ELF="${_onion_util_elf}"
 )
 target_include_directories(${PROJECT_NAME} PRIVATE

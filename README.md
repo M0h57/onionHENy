@@ -161,7 +161,6 @@ Run `./scripts/build.sh --help` for the complete option list.
 | `build/bin/daemon.elf` | Critical daemon |
 | `build/bin/util.elf` | Utility daemon |
 | `build/bin/shellui.elf` | Toolbox injection payload |
-| `build/bin/fps_elf.elf` | Game overlay payload |
 | `build/lib/*.a` | First-party static libraries |
 
 All generated files stay under `build/`; downloaded inputs are cached under `.cache/dependencies/`.
@@ -206,7 +205,7 @@ Most settings can be changed directly from the Toolbox.
 | `enable_fan_speed` | `0` | Enable fan-threshold control |
 | `fan_threshold` | `77` | Fan temperature threshold |
 | `overlay_ram` / `overlay_cpu` / `overlay_gpu` | `1` | Enable resource overlay fields |
-| `overlay_fps` / `overlay_ip` | `0` | Enable FPS and IP overlay fields |
+| `overlay_ip` | `0` | Enable IP overlay field |
 | `Overlay_pos` | `0` | Overlay corner: top-left, top-right, bottom-left, or bottom-right |
 | `Cheats_shortcut_opt` / `Toolbox_shortcut_opt` | `0` | Controller shortcut modes |
 | `ui_lang` | `0` | Toolbox language: `0` Simplified Chinese, `1` English |
@@ -246,7 +245,6 @@ Most settings can be changed directly from the Toolbox.
 │   ├── daemon/                Critical daemon and Toolbox injection
 │   ├── util/                  Utility daemon, IPC, and cheat engine
 │   ├── shellui/               Toolbox and ShellUI hooks
-│   ├── fps_elf/               Game overlay payload
 │   ├── unpacker/              Final OnionHEN payload wrapper
 │   ├── libonion_*/            Shared first-party libraries
 │   ├── common/                Shared low-level implementations

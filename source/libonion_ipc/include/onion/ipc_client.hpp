@@ -32,7 +32,7 @@ along with this program; see the file COPYING. If not, see
 //   - JSON string fields are built with cJSON (escape-safe).
 // ---------------------------------------------------------------------------
 
-// Legacy free loggers used by shellui / fps_elf (Detour, Mono, hooks).
+// Legacy free loggers used by shellui (Detour, Mono, hooks).
 // Both forward to the same klog sink.
 // Note: no printf format attribute — existing call sites pass typed pointers
 // with %p under -Wformat-pedantic / -Werror (historical header-only logger).

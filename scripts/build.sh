@@ -3,7 +3,7 @@
 #
 # Phases:
 #   1) configure (prospero-cmake / PS5 payload SDK)
-#   2) build libs + shellui + fps_elf
+#   2) build libs + shellui
 #   3) stage external dependency blob (kstuff)
 #   4) build daemon + util
 #   5) build bootstrapper  (-> bin/bootstrapper.elf + .lzma)
@@ -95,7 +95,6 @@ Built-in outputs (under <repo>/build/):
   build/bin/*.elf           final ELFs (util, daemon, bootstrapper, OnionHEN, …)
   build/lib/*.a             first-party static libs
   build/bin/shellui.elf     daemon embed input
-  build/bin/fps_elf.elf     daemon embed input
 EOF
 }
 
@@ -290,25 +289,22 @@ main() {
   fi
 
   # Phase 1 — libraries + injectables (all outputs stay under build/bin)
-  log "Phase 1/5: libraries + shellui + fps_elf"
+  log "Phase 1/5: libraries + shellui"
   build_targets \
     NidResolver \
     hijacker \
     NineS \
-    shellui \
-    fps_elf
+    shellui
 
-  # shellui.elf / fps_elf.elf are daemon embed inputs.
-  for f in shellui.elf fps_elf.elf; do
-    if [[ -f "${BIN}/${f}" ]]; then
-      ok "built ${f}"
-    else
-      die "expected ${BIN}/${f} after phase 1"
-    fi
-  done
+  # shellui.elf is a daemon embed input.
+  if [[ -f "${BIN}/shellui.elf" ]]; then
+    ok "built shellui.elf"
+  else
+    die "expected ${BIN}/shellui.elf after phase 1"
+  fi
 
   # Phase 2 — external embeds required by daemon/util/bootstrapper
-  # (can also run earlier; after phase1 so shellui/fps already filled)
+  # (can also run earlier; after phase1 so shellui already filled)
   log "Phase 2/5: stage external embeds"
   stage_dependencies
 

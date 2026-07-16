@@ -77,9 +77,6 @@ along with this program; see the file COPYING. If not, see
  extern uint8_t kstuff_start[];
  extern const unsigned int kstuff_size;
 
- extern uint8_t fps_prx_start[];
- extern const unsigned int fps_prx_size;
-
  }
 
  /******************************************************************************
@@ -281,32 +278,6 @@ static void cleanup(void);
   void write_embedded_assets() {
     mkdir("/data/OnionHEN/", 0777);
     mkdir("/data/OnionHEN/assets/", 0777);
-#if 0
-    int fd = open("/system_ex/common_ex/lib/shell.prx", O_WRONLY | O_CREAT | O_TRUNC, 0666);
-    if (fd == -1) {
-        perror("open failed");
-        return;
-    }
-    if (write(fd, &shellui_prx_start, shellui_prx_size) == -1) {
-        perror("write failed");
-        return;
-    }
-    close(fd);
-#endif
-#if 0
-   /// if (!if_exists("/data/OnionHEN/fps.prx")) {
-        int fd = open("/data/OnionHEN/fps.prx", O_WRONLY | O_CREAT | O_TRUNC, 0777);
-        if (fd == -1) {
-            perror("open failed");
-            return;
-        }
-        if (write(fd, &fps_prx_start, fps_prx_size) == -1) {
-            perror("write failed");
-        }
-        close(fd);
-  //  }
-#endif
-
     /*
      * Always overwrite branding icons so asset updates take effect on re-HEN.
      * (Previously gated on !if_exists — first deploy stuck forever.)

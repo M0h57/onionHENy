@@ -27,8 +27,6 @@ const ExactValueEntry kExactValues[] = {
     {"id_lm_test", +[]() -> std::string { return "0"; }},
     {"id_overlay_gpu",
      +[]() -> std::string { return bool_str(g_settings.overlay_gpu); }},
-    {"id_overlay_fps",
-     +[]() -> std::string { return bool_str(g_settings.overlay_fps); }},
     {"id_overlay_ip",
      +[]() -> std::string { return bool_str(g_settings.overlay_ip); }},
     {"id_all_cpu_usage",

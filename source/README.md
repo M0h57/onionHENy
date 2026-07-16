@@ -12,7 +12,6 @@ OnionHEN is based on etaHEN’s open-source release. See the [root README](../RE
 | `daemon/` | Main daemon |
 | `util/` | Utility daemon (cheats, IPC, …) |
 | `shellui/` | Toolbox / ShellUI hooks |
-| `fps_elf/` | FPS overlay PRX |
 | `unpacker/` | Payload unpacker |
 | `libhijacker/`, `libNineS/`, `libNidResolver/` | Internal static libs |
 | `include/` | Shared headers |

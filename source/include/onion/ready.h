@@ -30,7 +30,7 @@ extern "C" {
 /*
  * Runtime flags (same storage as ready markers; typed names replace ad-hoc
  * /system_tmp flag files).
- *   fps_overlay  — shellui wants FPS inject when a CUSA/SCUS game is running
+ *   fps_overlay  — legacy only; cleared on boot (FPS inject removed)
  *   util_booted  — util finished at least one full start (mid-session restart detect)
  */
 #define ONION_FLAG_FPS_OVERLAY "fps_overlay"

@@ -68,11 +68,10 @@ struct Settings {
   bool enable_fan_speed = false;
   int fan_threshold = 77;
 
-  // --- Overlay (fps_elf / shellui) ---
+  // --- Overlay (shellui) ---
   bool overlay_ram = true;
   bool overlay_cpu = true;
   bool overlay_gpu = true;
-  bool overlay_fps = false;
   bool overlay_ip = false;
   int overlay_pos = 0; // 0 TL, 1 TR, 2 BL, 3 BR
 

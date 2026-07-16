@@ -49,8 +49,6 @@ constexpr float kIpVal = 34.0f;
  * PHU per-group colors (RRGGBBAA → linear 0..1).
  * Labels use group color; all values use color_value white.
  */
-/* color_perf = FFE600FF — FPS yellow */
-constexpr float kPerfR = 1.0f, kPerfG = 230.0f / 255.0f, kPerfB = 0.0f;
 /* color_cpu  = 66FF66FF — green */
 constexpr float kCpuR = 102.0f / 255.0f, kCpuG = 1.0f, kCpuB = 102.0f / 255.0f;
 /* color_gpu  = B366FFFF — purple */
@@ -81,14 +79,6 @@ void push_label(std::vector<WidgetConfig> &out, const char *id, float x, float y
 void append_sep(std::vector<WidgetConfig> &out, const char *id, float x,
                 float y) {
   push_label(out, id, x, y, "|", kSepR, kSepG, kSepB);
-}
-
-void append_fps(std::vector<WidgetConfig> &out) {
-  const float x = g_overlay_layout.overlay_fps_x;
-  const float y = g_overlay_layout.overlay_fps_y;
-  push_label(out, "id_fps_label", x + kLbl, y, "FPS", kPerfR, kPerfG, kPerfB);
-  push_label(out, "id_fps_value", x + kVal0, y, "--.-", kValR, kValG, kValB);
-  append_sep(out, "id_fps_sep", x + kVal0 + 56.0f, y);
 }
 
 void append_cpu(std::vector<WidgetConfig> &out) {
@@ -132,7 +122,6 @@ const std::vector<const char *> kAllOverlayNames = {
     "id_cpu_label",      "id_cpu_temp_value",  "id_cpu_usage_value",
     "id_cpu_sep",
     "id_ram_label",      "id_ram_value",       "id_ram_sep",
-    "id_fps_label",      "id_fps_value",       "id_fps_sep",
     "id_ip_label",       "id_ip_value",        "id_ip_sep",
 };
 
@@ -216,8 +205,8 @@ void ensure_bg_panel(MonoObject *root) {
 
   /* Hide strip when nothing is enabled (bar_h still set; content empty). */
   const bool any =
-      g_settings.overlay_fps || g_settings.overlay_cpu || g_ui.all_cpu_usage ||
-      g_settings.overlay_gpu || g_settings.overlay_ram || g_settings.overlay_ip;
+      g_settings.overlay_cpu || g_ui.all_cpu_usage || g_settings.overlay_gpu ||
+      g_settings.overlay_ram || g_settings.overlay_ip;
   if (!any)
     return;
 
@@ -289,9 +278,6 @@ void RemoveGameWidget(RemoveWidget widget) {
   case REMOVE_RAM_OVERLAY:
     removeWidgets({"id_ram_label", "id_ram_value", "id_ram_sep"});
     break;
-  case REMOVE_FPS_OVERLAY:
-    removeWidgets({"id_fps_label", "id_fps_value", "id_fps_sep"});
-    break;
   case REMOVE_IP_OVERLAY:
     removeWidgets({"id_ip_label", "id_ip_value", "id_ip_sep"});
     break;
@@ -321,14 +307,10 @@ void CreateGameWidget(CreateWidget widget) {
   case CREATE_RAM_OVERLAY:
     append_ram(configs);
     break;
-  case CREATE_FPS_OVERLAY:
-    append_fps(configs);
-    break;
   case CREATE_IP_OVERLAY:
     append_ip(configs);
     break;
   case CREATE_ALL_OVERLAYS:
-    append_fps(configs);
     append_cpu(configs);
     append_gpu(configs);
     append_ram(configs);

@@ -35,7 +35,7 @@ typedef int32_t (*onion_notify_rich_send_fn)(int32_t user_id, bool is_logged,
 /**
  * Install the send implementation for this process.
  * - util/daemon/bootstrapper: pass the real linked sceKernelSendNotificationRequest
- * - shellui/fps_elf: pass a trampoline that calls through the dlsym'd pointer
+ * - shellui: pass a trampoline that calls through the dlsym'd pointer
  * Must be called before any onion_notify / notify().
  */
 void onion_notify_set_send(onion_notify_send_fn fn);

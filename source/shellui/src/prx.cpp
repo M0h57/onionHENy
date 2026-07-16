@@ -88,8 +88,6 @@ void OnRender_Hook(MonoObject* instance);
 void* dialogue_thread(void* arg);
 int KillAppWithReason_Hook(int appId, int reason);
 
-extern ssize_t (*read_orig)(int fd, void* buf, size_t count);
-extern ssize_t read_hook(int fd, void* buf, size_t count);
 extern int (*sceAppInstUtilInstallByPackage_orig)(MetaInfo* arg1,
                                                   SceAppInstallPkgInfo* pkg_info,
                                                   PlayGoInfo* arg2);
@@ -196,12 +194,10 @@ MonoImage* require_dll(const char* name) {
 // Phase 1: native dynlib symbols
 // ---------------------------------------------------------------------------
 
-bool resolve_native_symbols(pid_t pid, void*& out_read,
-                            void*& out_sceAppInstUtilInstallByPackage) {
+bool resolve_native_symbols(pid_t pid, void*& out_sceAppInstUtilInstallByPackage) {
   // Locals required by KERNEL_DLSYM (writes into a named variable).
   static int (*sceAppInstUtilInstallByPackage)(MetaInfo*, SceAppInstallPkgInfo*,
                                                PlayGoInfo*) = nullptr;
-  static ssize_t (*read)(int, void*, size_t) = nullptr;
 
   int appinstaller = get_module_handle(pid, "libSceAppInstUtil.sprx");
   KERNEL_DLSYM(appinstaller, sceAppInstUtilInstallByPackage);
@@ -217,8 +213,6 @@ bool resolve_native_symbols(pid_t pid, void*& out_read,
   KERNEL_DLSYM(libkernelsys, sceKernelGetProsperoSystemSwVersion);
   KERNEL_DLSYM(libkernelsys, sceKernelGetAppInfo);
   KERNEL_DLSYM(libkernelsys, sceKernelGetProcessName);
-  KERNEL_DLSYM(libkernelsys, read);
-  out_read = reinterpret_cast<void*>(read);
 
   /* libonion_platform must not CALL sceKernelSendNotificationRequest by name —
    * here that symbol is a dlsym'd *function pointer*. Register a trampoline. */
@@ -531,7 +525,7 @@ bool install_optional_diag(const char* tag, MonoImage* image, const char* ns,
   return installed;
 }
 
-bool install_hooks(const ShellImages& img, void* read_fn) {
+bool install_hooks(const ShellImages& img) {
   char probe[kMprotectProbeSize];
   has_hv_bypass = (sceKernelMprotect(probe, sizeof(probe), kProtRwx) == 0);
   shellui_log("has_hv_bypass=%d (mprotect for detours)", has_hv_bypass ? 1 : 0);
@@ -547,9 +541,6 @@ bool install_hooks(const ShellImages& img, void* read_fn) {
                              reinterpret_cast<void*>(sceRegMgrGetInt),
                              reinterpret_cast<void*>(&sceRegMgrGetInt_hook),
                              sceRegMgrGetInt, true))
-    return false;
-  if (!install_detour_native("read", read_fn, reinterpret_cast<void*>(&read_hook),
-                             read_orig, true))
     return false;
 
   // --- Standard mono hooks ---
@@ -753,11 +744,10 @@ int main(int argc, char const* argv[]) {
   const pid_t pid = getpid();
   AuthIdGuard auth(pid, set_ucred_to_ptrace());
 
-  void* read_fn = nullptr;
   void* appinst_fn = nullptr;
   (void)appinst_fn;
 
-  if (!resolve_native_symbols(pid, read_fn, appinst_fn))
+  if (!resolve_native_symbols(pid, appinst_fn))
     return -1;
 
   shellui_log("Starting ShellUI Module ....");
@@ -802,7 +792,7 @@ int main(int argc, char const* argv[]) {
     return -1;
 
   shellui_log("Starting hooking...");
-  if (!install_hooks(images, read_fn))
+  if (!install_hooks(images))
     return -1;
 
   shellui_log("Performing Magic ....");

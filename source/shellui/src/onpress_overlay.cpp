@@ -1,7 +1,5 @@
 /* Copyright (C) 2025 OnionHEN / LightningMods — OnPress overlay domain */
 #include "onpress.hpp"
-#include <onion/ready.h>
-#include <onion/fps_shm.h>
 #include <cstdlib>
 #include <unistd.h>
 
@@ -12,8 +10,6 @@ void CreateGameWidget(CreateWidget widget);
 static void rebuild_overlay_bar() {
   RemoveGameWidget(REMOVE_ALL_OVERLAYS);
   apply_overlay_layout();
-  if (g_settings.overlay_fps)
-    CreateGameWidget(CREATE_FPS_OVERLAY);
   if (g_settings.overlay_cpu || g_ui.all_cpu_usage)
     CreateGameWidget(CREATE_CPU_OVERLAY);
   if (g_settings.overlay_gpu)
@@ -24,18 +20,11 @@ static void rebuild_overlay_bar() {
     CreateGameWidget(CREATE_IP_OVERLAY);
 }
 
-static OnPressResult toggle_overlay_flag(OnPressContext &ctx, bool &flag,
-                                         bool fps_special = false) {
+static OnPressResult toggle_overlay_flag(OnPressContext &ctx, bool &flag) {
   if (atoi(ctx.value.c_str()) == flag) {
     return OnPressResult::EarlyReturn;
   }
   flag = !flag;
-  if (fps_special) {
-    if (flag)
-      onion_ready_signal(ONION_FLAG_FPS_OVERLAY);
-    else
-      onion_ready_clear(ONION_FLAG_FPS_OVERLAY);
-  }
   rebuild_overlay_bar();
   return OnPressResult::Handled;
 }
@@ -59,14 +48,6 @@ static OnPressResult id_overlay_cpu(OnPressContext &ctx) {
 
 static OnPressResult id_overlay_ram(OnPressContext &ctx) {
   return toggle_overlay_flag(ctx, g_settings.overlay_ram);
-}
-
-static OnPressResult id_overlay_fps(OnPressContext &ctx) {
-  OnPressResult r = toggle_overlay_flag(ctx, g_settings.overlay_fps, true);
-  /* Privileged: pre-create SHM so the next game inject can open it. */
-  if (g_settings.overlay_fps)
-    (void)onion_fps_shm_ensure();
-  return r;
 }
 
 static OnPressResult id_overlay_ip(OnPressContext &ctx) {
@@ -99,7 +80,6 @@ static const OnPressExactEntry kExact[] = {
     {"id_overlay_gpu", id_overlay_gpu},
     {"id_overlay_cpu", id_overlay_cpu},
     {"id_overlay_ram", id_overlay_ram},
-    {"id_overlay_fps", id_overlay_fps},
     {"id_overlay_ip", id_overlay_ip},
     {"id_all_cpu_usage", id_all_cpu_usage},
     {"id_overlay_change_pos", id_overlay_change_pos},
