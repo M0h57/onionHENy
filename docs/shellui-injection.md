@@ -78,6 +78,13 @@ Ported into `source/libNineS/src/pt.c` and `source/libNineS/src/injector.c` (wit
    overlap registry and rel32 range checks
 7. **Hook lifecycle barrier** — callbacks are pass-through until the complete
    ShellUI install transaction publishes `Ready`
+8. **Private stack for remote pt_call / pt_call2 / pt_syscall** — hijacked
+   ShellUI threads keep a private ABI-aligned window below the interrupted
+   frame (`rsp % 16 == 8`, clear of the 128-byte red zone). Single-step
+   return detection compares against that entry rsp, not the original frame
+   rsp (which would keep stepping into the garbage return target). This
+   addresses mid-inject Mono SIGSEGV in `SwapBuffers` / `GetIntNative` with
+   "instruction pointer is NULL" before any toolbox hook log appears.
 
 ## Not ported (higher-level kylin-core only)
 

@@ -16,6 +16,7 @@ along with this program; see the file COPYING. If not, see
 
 #include <errno.h>
 #include <stdarg.h>
+#include <stdint.h>
 #include <string.h>
 #include <stdio.h>
 #include <unistd.h>
@@ -30,6 +31,24 @@ along with this program; see the file COPYING. If not, see
 #include <ps5/klog.h>
 
 #include <onion/pt.h>
+
+
+/*
+ * Private stack window for PT_SETREGS "calls".
+ *
+ * Hijacking a live ShellUI thread mid-frame (often SwapBuffers / Mono JIT)
+ * must not reuse that frame's RSP:
+ *   - x86-64 SysV red zone is [rsp-128, rsp); callee pushes would corrupt it
+ *   - ABI requires rsp % 16 == 8 at function entry (as if a CALL just ran)
+ *
+ * Subtract 0x108 from the 16-byte-aligned interrupted rsp:
+ *   0x108 > 128 (clears red zone) and is 8 mod 16 (correct entry alignment).
+ * bak_reg is always restored after the remote work completes.
+ */
+static uintptr_t
+pt_private_entry_rsp(uintptr_t interrupted_rsp) {
+  return (interrupted_rsp & ~(uintptr_t)0xf) - (uintptr_t)0x108;
+}
 
 
 static int
@@ -212,6 +231,7 @@ long
 pt_call(pid_t pid, intptr_t addr, ...) {
   struct reg jmp_reg;
   struct reg bak_reg;
+  uintptr_t entry_rsp;
   va_list ap;
 
   if(pt_getregs(pid, &bak_reg)) {
@@ -222,15 +242,14 @@ pt_call(pid_t pid, intptr_t addr, ...) {
   jmp_reg.r_rip = addr;
 
   /*
-   * PT_SETREGS changes RIP without performing a CALL.  Consequently the
-   * stager would otherwise inherit an arbitrary interrupted stack alignment
-   * (and no synthetic return slot), violating the x86-64 ABI at its first
-   * pthread_create call.  Under controller load this frequently lands on a
-   * different alignment and manifests later as PMalloc metadata corruption.
-   * Keep the original stack for restoration, but enter the stager with a
-   * private, ABI-aligned window below it (rsp % 16 == 8 at function entry).
+   * Keep the original stack for restoration, but enter the remote function
+   * on a private ABI-aligned window below it.  Compare single-step return
+   * detection against entry_rsp (not bak_reg.r_rsp): after `ret`, rsp becomes
+   * entry_rsp+8, which is still <= bak_reg.r_rsp when entry_rsp is lowered —
+   * using bak_reg would keep stepping into the garbage return target.
    */
-  jmp_reg.r_rsp = (bak_reg.r_rsp & ~(uintptr_t)0xf) - 0x108;
+  entry_rsp = pt_private_entry_rsp((uintptr_t)bak_reg.r_rsp);
+  jmp_reg.r_rsp = entry_rsp;
 
   va_start(ap, addr);
   jmp_reg.r_rdi = va_arg(ap, uint64_t);
@@ -245,8 +264,8 @@ pt_call(pid_t pid, intptr_t addr, ...) {
     return -1;
   }
 
-  // single step until the function returns
-  while(jmp_reg.r_rsp <= bak_reg.r_rsp) {
+  /* Single-step until the remote function's final `ret` raises rsp past entry. */
+  while((uintptr_t)jmp_reg.r_rsp <= entry_rsp) {
     if(pt_step(pid)) {
       return -1;
     }
@@ -268,6 +287,7 @@ pt_call2(pid_t pid, intptr_t addr, ...)
 {
   struct reg jmp_reg;
   struct reg bak_reg;
+  uintptr_t entry_rsp;
   va_list ap;
 
   if(pt_getregs(pid, &bak_reg)) {
@@ -276,6 +296,15 @@ pt_call2(pid_t pid, intptr_t addr, ...)
 
   memcpy(&jmp_reg, &bak_reg, sizeof(jmp_reg));
   jmp_reg.r_rip = addr;
+
+  /*
+   * Stager path (pthread_create + int3).  Same private stack rules as pt_call:
+   * the interrupted ShellUI frame (often SceShellUIMain mid-SwapBuffers) must
+   * not share rsp with the stager or its red zone is clobbered before bak_reg
+   * is restored.
+   */
+  entry_rsp = pt_private_entry_rsp((uintptr_t)bak_reg.r_rsp);
+  jmp_reg.r_rsp = entry_rsp;
 
   va_start(ap, addr);
   jmp_reg.r_rdi = va_arg(ap, uint64_t);
@@ -335,6 +364,7 @@ pt_syscall(pid_t pid, int sysno, ...) {
   intptr_t addr = pt_resolve(pid, "HoLVWNanBBc");
   struct reg jmp_reg;
   struct reg bak_reg;
+  uintptr_t entry_rsp;
   va_list ap;
 
   if(!addr) {
@@ -351,6 +381,15 @@ pt_syscall(pid_t pid, int sysno, ...) {
   jmp_reg.r_rip = addr;
   jmp_reg.r_rax = sysno;
 
+  /*
+   * elfldr_load issues many remote mmap/mprotect/msync calls via this path
+   * while SceShellUIMain may be stopped inside SwapBuffers.  Reusing that
+   * rsp clobbers the red zone and yields Mono "instruction pointer is NULL"
+   * crashes on resume — before any ShellUI payload hook runs.
+   */
+  entry_rsp = pt_private_entry_rsp((uintptr_t)bak_reg.r_rsp);
+  jmp_reg.r_rsp = entry_rsp;
+
   va_start(ap, sysno);
   jmp_reg.r_rdi = va_arg(ap, uint64_t);
   jmp_reg.r_rsi = va_arg(ap, uint64_t);
@@ -364,8 +403,8 @@ pt_syscall(pid_t pid, int sysno, ...) {
     return -1;
   }
 
-  // single step until the function returns
-  while(jmp_reg.r_rsp <= bak_reg.r_rsp) {
+  /* Single-step until the syscall stub's final `ret` raises rsp past entry. */
+  while((uintptr_t)jmp_reg.r_rsp <= entry_rsp) {
     if(pt_step(pid)) {
       return -1;
     }

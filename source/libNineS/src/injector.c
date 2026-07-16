@@ -138,6 +138,7 @@ int inject_elf(struct proc* proc, void* elf)
     init_remote_function_pointers(proc->pid);
 
     klog_printf("[+] Loading ELF on %d...[+]\n", proc->pid);
+    /* Crash window: remote mmap/mprotect via pt_syscall while ShellUI is stopped. */
     intptr_t entry = elfldr_load(proc->pid, (uint8_t*) elf);
 
     if (entry <= 0)
@@ -146,7 +147,9 @@ int inject_elf(struct proc* proc, void* elf)
         status = false;
         goto detach;
     }
+    klog_printf("[+] elfldr_load ok entry=%#lx\n", (unsigned long)entry);
 
+    klog_printf("[+] Allocating payload args on %d...[+]\n", proc->pid);
     intptr_t args = elfldr_payload_args(proc->pid);
     klog_printf("[+] ELF entrypoint: %#02lx [+]\n[+] Payload Args: %#02lx [+]\n", entry, args);
     if (args <= 0)
