@@ -95,12 +95,12 @@ source/util/
 │       ├── CheatService / Repository / Applier
 │       ├── ICheatParser + Factory (json/shn/mc4)
 │       ├── ShnExt adapter + C crypto/utils/flatten
-│       └── third_party/         # AES/base64、miniz、sha256
+│       └── （第三方实现已集中到仓库根目录 third_party/cheat_support）
 ├── include/
 │   ├── common_utils.h / ipc.hpp / pt.h / sfo.hpp / ...
 │   ├── util_platform.h
 │   └── cheats/                  # 金手指公共/内部头
-└── lib/                         # keystone（ShnExt 汇编）
+└── （keystone 已集中到仓库根目录 third_party/keystone）
 ```
 
 | 模块 | 文件 | 依赖方向（被谁用） |
@@ -304,7 +304,7 @@ cheat_engine_runtime
 |------|------|
 | libhijacker | 内核原语、偏移（CMD/shellcore 路径） |
 | libonion_elfldr | ptrace / mmap 注入原语 |
-| keystone | ShnExt 汇编（`util/lib/`）；C++ runtime 由 PS5 SDK 提供 |
+| keystone | ShnExt 汇编（`third_party/keystone/`）；C++ runtime 由 PS5 SDK 提供 |
 | cJSON | IPC 与 GitHub 响应 JSON 解析 |
 | AES/base64 third_party | MC4 / ShnExt 解密 |
 | miniz / sha256 | ShnExt 解压与密钥派生 |

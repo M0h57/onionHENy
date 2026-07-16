@@ -34,7 +34,7 @@ along with this program; see the file COPYING. If not, see
 #include <sys/stat.h>
 #include <sys/types.h>
 
-#include "../../extern/7zip-sdk/C/LzmaLib.h"
+#include "LzmaLib.h"
 #include <elf.h>
 #include <unistd.h>
 
@@ -81,14 +81,20 @@ void notify(const char *text, ...) {
   sceKernelSendNotificationRequest(0, &req, sizeof(req), 0);
 }
 
+#ifndef ONIONHEN_BOOTSTRAPPER_LZMA
+#define ONIONHEN_BOOTSTRAPPER_LZMA "../../bin/bootstrapper.elf.lzma"
+#endif
+#ifndef ONIONHEN_BOOTSTRAPPER_SIZE
+#define ONIONHEN_BOOTSTRAPPER_SIZE "../../bin/bootstrapper.elf.lzma.size"
+#endif
+
 __asm__(".intel_syntax noprefix\n"
         ".section .data\n"
         ".global onionhen_compressed\n"
         ".type   onionhen_compressed, @object\n"
         ".align  16\n"
         "onionhen_compressed:\n"
-        /* source/bin → build/bin (symlink); same layout as other embeds */
-        ".incbin \"../../bin/bootstrapper.elf.lzma\"\n"
+        ".incbin \"" ONIONHEN_BOOTSTRAPPER_LZMA "\"\n"
         "onionhen_compressed_end:\n"
         ".global onionhen_compressed_size\n"
         ".type  onionhen_compressed_size, @object\n"
@@ -99,7 +105,7 @@ __asm__(".intel_syntax noprefix\n"
         ".type   onionhen_decompressed_size, @object\n"
         ".align  16\n"
         "onionhen_decompressed_size:\n"
-        ".incbin \"../../bin/bootstrapper.elf.lzma.size\"\n");
+        ".incbin \"" ONIONHEN_BOOTSTRAPPER_SIZE "\"\n");
 
 extern uint32_t onionhen_compressed_size;
 extern uint8_t onionhen_compressed[];

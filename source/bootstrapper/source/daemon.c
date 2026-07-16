@@ -1,10 +1,20 @@
+#ifndef ONIONHEN_DAEMON_ELF
+#define ONIONHEN_DAEMON_ELF "../../bin/daemon.elf"
+#endif
+#ifndef ONIONHEN_UTIL_ELF
+#define ONIONHEN_UTIL_ELF "../../bin/util.elf"
+#endif
+#ifndef ONIONHEN_KSTUFF_ELF
+#define ONIONHEN_KSTUFF_ELF "../assets/kstuff.elf"
+#endif
+
 __asm__(".intel_syntax noprefix\n"
         ".section .data\n"
         ".global daemon_start\n"
         ".type   daemon_start, @object\n"
         ".align  16\n"
         "daemon_start:\n"
-        ".incbin \"../../bin/daemon.elf\"\n"
+        ".incbin \"" ONIONHEN_DAEMON_ELF "\"\n"
         "daemon_end:\n"
         ".global daemon_size\n"
         ".type   daemon_size, @object\n"
@@ -16,7 +26,7 @@ __asm__(".intel_syntax noprefix\n"
         ".type   util_start, @object\n"
         ".align  16\n"
         "util_start:\n"
-        ".incbin \"../../bin/util.elf\"\n"
+        ".incbin \"" ONIONHEN_UTIL_ELF "\"\n"
         "util_end:\n"
         ".global util_size\n"
         ".type   util_size, @object\n"
@@ -136,7 +146,7 @@ __asm__(".intel_syntax noprefix\n"
     ".type   kstuff_start, @object\n"
     ".align  16\n"
     "kstuff_start:\n"
-    ".incbin \"../assets/kstuff.elf\"\n"
+    ".incbin \"" ONIONHEN_KSTUFF_ELF "\"\n"
     "kstuff_end:\n"
     ".global kstuff_size\n"
     ".type  kstuff_size, @object\n"

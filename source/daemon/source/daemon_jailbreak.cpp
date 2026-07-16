@@ -15,7 +15,7 @@
 #include <onion/hijack_retry.h>
 #include "globalconf.hpp"
 #include <elfldr_remote.h>
-#include "../../extern/cJSON/onion_cjson.hpp"
+#include "onion_cjson.hpp"
 
 #include <atomic>
 #include <iomanip>

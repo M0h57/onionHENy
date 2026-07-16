@@ -6,7 +6,7 @@
 #include "ipc.hpp"
 #include <onion/platform.h>
 #include <onion/settings.hpp>
-#include "../../extern/cJSON/onion_cjson.hpp"
+#include "onion_cjson.hpp"
 #include "globalconf.hpp"
 #include <msg.hpp>
 #include <atomic>
@@ -328,4 +328,3 @@ void handleIPC(clientArgs *client, std::string &inputStr,
     break;
   }
 }
-

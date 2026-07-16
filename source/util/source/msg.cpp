@@ -34,7 +34,7 @@ int sceKernelMprotect(void *addr, size_t len, int prot);
 int sceSystemServiceLoadExec(const char *path, const char *arg);
 extern bool is_handler_enabled;
 }
-#include "../../extern/cJSON/onion_cjson.hpp"
+#include "onion_cjson.hpp"
 #include "cheats/cheat_service.hpp"
 #include "cheats/runtime.h"
 #include <dirent.h>

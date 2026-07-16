@@ -6,13 +6,14 @@
 
 UTIL_ROOT := $(abspath ..)
 REPO_ROOT := $(abspath $(UTIL_ROOT)/../..)
+THIRD_PARTY_ROOT := $(REPO_ROOT)/third_party
 BUILD_DIR := $(UTIL_ROOT)/build/host-tests
 BIN := $(BUILD_DIR)/onion-host-tests
 
 HOST_CC ?= cc
 HOST_CXX ?= c++
 KEYSTONE_PREFIX ?= /opt/homebrew
-KEYSTONE_CFLAGS := -I$(KEYSTONE_PREFIX)/include
+KEYSTONE_CFLAGS := -I$(THIRD_PARTY_ROOT)/keystone/include
 KEYSTONE_LDFLAGS := -L$(KEYSTONE_PREFIX)/lib -lkeystone
 
 COMMON_FLAGS := -Wall -Wextra -g -O0 -DONION_HOST_TEST=1 -DCBC=1 \
@@ -27,7 +28,7 @@ COMMON_FLAGS := -Wall -Wextra -g -O0 -DONION_HOST_TEST=1 -DCBC=1 \
 	-I$(REPO_ROOT)/source/libonion_ipc/include \
 	-I$(REPO_ROOT)/source/libonion_detour/include \
 	-I$(REPO_ROOT)/source/libonion_ready \
-	-I$(REPO_ROOT)/source/extern/cJSON \
+	-I$(THIRD_PARTY_ROOT)/cjson \
 	-I$(REPO_ROOT)/source/shellui/include \
 	$(KEYSTONE_CFLAGS)
 
@@ -43,10 +44,6 @@ PROD_C_SRCS := \
 	$(UTIL_ROOT)/source/cheats/cheat_engine_utils.c \
 	$(UTIL_ROOT)/source/cheats/cheat_engine_parser_shnext.c \
 	$(UTIL_ROOT)/source/cheats/cheat_flatten.c \
-	$(UTIL_ROOT)/source/cheats/third_party/aes.c \
-	$(UTIL_ROOT)/source/cheats/third_party/base64.c \
-	$(UTIL_ROOT)/source/cheats/third_party/miniz.c \
-	$(UTIL_ROOT)/source/cheats/third_party/sha256.c \
 	$(REPO_ROOT)/source/libonion_platform/source/fs.c \
 	$(REPO_ROOT)/source/libonion_platform/source/log.c \
 	$(REPO_ROOT)/source/libonion_platform/source/notify.c \
@@ -60,7 +57,7 @@ PROD_CXX_SRCS := \
 	$(UTIL_ROOT)/source/cheats/shn_ext_cheat_parser.cpp \
 	$(UTIL_ROOT)/source/cheats/cheat_parser_factory.cpp \
 	$(UTIL_ROOT)/source/http_github.cpp \
-	$(REPO_ROOT)/source/extern/cJSON/cJSON.cpp \
+	$(THIRD_PARTY_ROOT)/cjson/cJSON.cpp \
 	$(REPO_ROOT)/source/libonion_settings/source/settings.cpp \
 	$(REPO_ROOT)/source/libonion_ipc/source/ipc_server.cpp \
 	$(REPO_ROOT)/source/shellui/src/ps5_settings_ui.cpp \
@@ -107,8 +104,11 @@ PROD_C_OBJS += $(BUILD_DIR)/prod/libonion_ready/ready.o
 PROD_C_OBJS += $(BUILD_DIR)/prod/libonion_payload/payload.o
 PROD_C_OBJS += $(BUILD_DIR)/prod/libonion_detour/hde64.o
 
+CHEAT_SUPPORT_SRCS := $(wildcard $(THIRD_PARTY_ROOT)/cheat_support/*.c)
+CHEAT_SUPPORT_OBJS := $(patsubst $(THIRD_PARTY_ROOT)/cheat_support/%.c,$(BUILD_DIR)/prod/third_party/cheat_support/%.o,$(CHEAT_SUPPORT_SRCS))
+
 PROD_CXX_OBJS := $(patsubst $(UTIL_ROOT)/%.cpp,$(BUILD_DIR)/prod/%.o,$(filter $(UTIL_ROOT)/%,$(PROD_CXX_SRCS)))
-PROD_CXX_OBJS += $(BUILD_DIR)/prod/extern/cJSON.o
+PROD_CXX_OBJS += $(BUILD_DIR)/prod/third_party/cjson.o
 PROD_CXX_OBJS += $(BUILD_DIR)/prod/libonion_settings/settings.o
 PROD_CXX_OBJS += $(BUILD_DIR)/prod/libonion_ipc/ipc_server.o
 PROD_CXX_OBJS += $(BUILD_DIR)/prod/libonion_detour/x64_relocator.o
@@ -119,7 +119,7 @@ PROD_CXX_OBJS += $(BUILD_DIR)/prod/shellui/toolbox_i18n.o
 TEST_C_OBJS := $(patsubst %.c,$(BUILD_DIR)/tests/%.o,$(TEST_C_SRCS))
 TEST_CXX_OBJS := $(patsubst %.cpp,$(BUILD_DIR)/tests/%.o,$(TEST_CXX_SRCS))
 
-ALL_OBJS := $(PROD_C_OBJS) $(PROD_CXX_OBJS) $(TEST_C_OBJS) $(TEST_CXX_OBJS)
+ALL_OBJS := $(PROD_C_OBJS) $(CHEAT_SUPPORT_OBJS) $(PROD_CXX_OBJS) $(TEST_C_OBJS) $(TEST_CXX_OBJS)
 
 # Soften third_party noise
 THIRD_PARTY_FLAGS := -Wno-error -Wno-unused-function -Wno-sign-compare \
@@ -135,7 +135,7 @@ test: $(BIN)
 $(BIN): $(ALL_OBJS) | $(BUILD_DIR)
 	$(HOST_CXX) -o $@ $^ $(LDFLAGS)
 
-$(BUILD_DIR)/prod/source/cheats/third_party/%.o: $(UTIL_ROOT)/source/cheats/third_party/%.c | $(BUILD_DIR)
+$(BUILD_DIR)/prod/third_party/cheat_support/%.o: $(THIRD_PARTY_ROOT)/cheat_support/%.c | $(BUILD_DIR)
 	@mkdir -p $(dir $@)
 	$(HOST_CC) $(CFLAGS) $(THIRD_PARTY_FLAGS) -c -o $@ $<
 
@@ -151,7 +151,7 @@ $(BUILD_DIR)/prod/%.o: $(UTIL_ROOT)/%.cpp | $(BUILD_DIR)
 	@mkdir -p $(dir $@)
 	$(HOST_CXX) $(CXXFLAGS) -c -o $@ $<
 
-$(BUILD_DIR)/prod/extern/cJSON.o: $(REPO_ROOT)/source/extern/cJSON/cJSON.cpp | $(BUILD_DIR)
+$(BUILD_DIR)/prod/third_party/cjson.o: $(THIRD_PARTY_ROOT)/cjson/cJSON.cpp | $(BUILD_DIR)
 	@mkdir -p $(dir $@)
 	$(HOST_CXX) $(CXXFLAGS) $(THIRD_PARTY_FLAGS) -c -o $@ $<
 

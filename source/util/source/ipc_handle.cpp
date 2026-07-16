@@ -16,7 +16,7 @@ extern "C" {
 #include <sys/un.h>
 #include <sys/ioctl.h>
 }
-#include "../../extern/cJSON/onion_cjson.hpp"
+#include "onion_cjson.hpp"
 #include "cheats/cheat_service.hpp"
 #include "cheats/runtime.h"
 #include <dirent.h>
@@ -286,4 +286,3 @@ void handleIPC(clientArgs *client, std::string &inputStr,
     break;
   }
 }
-

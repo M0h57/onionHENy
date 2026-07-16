@@ -100,10 +100,12 @@ OnionHEN/
 │   ├── unpacker/     # 最终 OnionHEN.elf
 │   ├── libhijacker/ libNineS/ libNidResolver/
 │   ├── libonion_*    # 共享：ipc/settings/proc/platform/ready/detour/payload/elfldr
-│   ├── extern/       # 第三方源码
-│   ├── include/ lib/ # 公共头文件与预编译库
-│   └── vendor/       # 同步后的 kstuff 等
-└── third_party/      # git submodules（elfldr、kstuff-lite）
+│   ├── common/       # 项目共享的底层实现
+│   ├── include/      # 公共头文件
+│   └── platform/ps5/stubs/ # PS5 系统库链接 stub
+├── third_party/      # 外部源码、预编译依赖与 git submodule
+├── tools/            # NID stub 等仓库侧生成工具
+└── .cache/           # 下载缓存（如 kstuff.elf，不提交）
 ```
 
 ---
@@ -263,7 +265,7 @@ OverlayLayout         仅 shellui：由 overlay_pos 派生的像素坐标
 | 脚本 | 用途 |
 |------|------|
 | `build.sh` | 一键构建流水线 |
-| `sync_vendor.sh` | 同步 kstuff 等 vendor |
+| `sync_dependencies.sh` | 同步 kstuff 等外部依赖 |
 | `send_elf.py` / `send_payload.ps1` | 网络发送 ELF |
 | `launch.py` | IPC 控制应用 |
 | `shutdown_onion.py` / `kill_daemon.py` | 从 PC 关栈：util → 重启 ShellUI → daemon 退出；**不杀 kstuff**（TCP **9048**） |
@@ -394,7 +396,7 @@ struct IPCMessage {
 | **elfldr @ 9021** | 运行时必需，不随 OnionHEN 打包 |
 | Kernel exploit | 如 IPV6 等，用于先获得代码执行 |
 
-### 5.2 Git Submodules（`third_party/`）
+### 5.2 第三方依赖（`third_party/`）
 
 | 组件 | 上游 | 角色 |
 |------|------|------|
@@ -402,27 +404,27 @@ struct IPCMessage {
 
 ```bash
 git submodule update --init --recursive
-./scripts/sync_vendor.sh
+./scripts/sync_dependencies.sh
 ```
 
-### 5.3 树内第三方源码（`source/extern/`）
+### 5.3 树内第三方源码
 
 | 库 | 用途 |
 |----|------|
 | **7zip-sdk (LZMA)** | unpacker 解压 bootstrapper |
 | **cJSON** | JSON（通知、IPC 载荷等） |
 
-金手指解析器使用 `source/util/source/cheats/third_party/` 内直接编译的 AES、base64、miniz、SHA-256 实现。
+金手指解析器使用 `third_party/cheat_support/` 内直接编译的 AES、base64、miniz、SHA-256 实现。
 
 ### 5.4 预编译静态库
 
 | 库 | 用途 |
 |----|------|
-| **libkeystone** (`source/util/lib/`) | ShnExt 汇编 |
+| **libkeystone** (`third_party/keystone/`) | ShnExt 汇编 |
 
-C++ runtime 统一由 `PS5_PAYLOAD_SDK/target/lib` 提供。项目不再携带旧 curl/TLS、minizip/zlib/zstd 或 elfldr 静态归档；spawn 走 remote 9021（`lib/elfldr_remote.c`）。
+C++ runtime 统一由 `PS5_PAYLOAD_SDK/target/lib` 提供。项目不再携带旧 curl/TLS、minizip/zlib/zstd 或 elfldr 静态归档；spawn 走 remote 9021（`common/elfldr_remote.c`）。
 
-### 5.5 PS5 系统库 stub（`source/lib/*.so`）
+### 5.5 PS5 系统库 stub（`source/platform/ps5/stubs/*.so`）
 
 当前链接目标：
 
@@ -439,7 +441,7 @@ C++ runtime 统一由 `PS5_PAYLOAD_SDK/target/lib` 提供。项目不再携带�
 
 | 工具 | 用途 |
 |------|------|
-| **Go stubber**（`source/stubber/`） | NID stub 生成 |
+| **Go stubber**（`tools/stubber/`） | NID stub 生成 |
 | **Python3** | 构建辅助脚本（如 `encryptver.py`） |
 | **lzma / xz** | bootstrapper 打包 |
 

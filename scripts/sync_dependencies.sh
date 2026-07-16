@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Sync / build third-party embeds for OnionHEN.
+# Sync / build external dependencies for OnionHEN.
 #
 # Remaining embeds: kstuff.elf
 # Removed: elfldr.elf (9021 service), ps5debug, ps5-app-dumper, Byepervisor/hen.bin
@@ -7,9 +7,8 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-SOURCE="${ROOT}/source"
 TP="${ROOT}/third_party"
-VENDOR="${ONIONHEN_VENDOR:-${SOURCE}/vendor}"
+CACHE="${ONIONHEN_CACHE_DIR:-${ROOT}/.cache/dependencies}"
 
 PS5_PAYLOAD_SDK="${PS5_PAYLOAD_SDK:-}"
 FROM_SOURCE=0
@@ -28,7 +27,7 @@ die()  { printf '\033[1;31m[error]\033[0m %s\n' "$*" >&2; exit 1; }
 
 usage() {
   cat <<EOF
-Sync OnionHEN vendor embeds from open-source upstreams.
+Sync OnionHEN external dependencies from open-source upstreams.
 
 Submodules (under third_party/):
   kstuff-lite      https://github.com/EchoStretch/kstuff-lite
@@ -115,7 +114,7 @@ kstuff_looks_cached() {
 }
 
 sync_kstuff() {
-  local dest="${SOURCE}/bootstrapper/assets/kstuff.elf"
+  local dest="${CACHE}/kstuff.elf"
 
   # Default path: reuse local blob so every build.sh does not re-hit GitHub.
   if [[ "${FORCE_DOWNLOAD}" -eq 0 && "${FROM_SOURCE}" -eq 0 ]] &&
@@ -157,13 +156,11 @@ sync_kstuff() {
 }
 
 main() {
-  log "OnionHEN vendor sync"
+  log "OnionHEN dependency sync"
   echo "  third_party = ${TP}"
+  echo "  cache       = ${CACHE}"
 
-  mkdir -p \
-    "${SOURCE}/daemon/assets" \
-    "${SOURCE}/bootstrapper/assets" \
-    "${VENDOR}"
+  mkdir -p "${CACHE}"
 
   if [[ "${INIT_SUBMODULES}" -eq 1 ]]; then
     init_submodules
@@ -174,17 +171,8 @@ main() {
 
   sync_kstuff
 
-  if [[ -f "${SOURCE}/bootstrapper/assets/kstuff.elf" ]]; then
-    cp -f "${SOURCE}/bootstrapper/assets/kstuff.elf" "${VENDOR}/kstuff.elf"
-  fi
-
-  # Drop leftover 9021 blob if present from older trees
-  rm -f "${SOURCE}/util/assets/elfldr.elf" "${VENDOR}/elfldr.elf"
-
-  log "Vendor sync done"
-  ls -lah \
-    "${SOURCE}/bootstrapper/assets/kstuff.elf" \
-    2>/dev/null || true
+  log "Dependency sync done"
+  ls -lah "${CACHE}/kstuff.elf" 2>/dev/null || true
 }
 
 main

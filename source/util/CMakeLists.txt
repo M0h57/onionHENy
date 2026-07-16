@@ -56,13 +56,13 @@ file(GLOB SrcFiles
   ${D_SRC}/*.cpp
   ${D_SRC}/cheats/*.c
   ${D_SRC}/cheats/*.cpp
-  ${D_SRC}/cheats/third_party/*.c
+  ${ONIONHEN_THIRD_PARTY_DIR}/cheat_support/*.c
   ${D_SRC}/../include/*.h
   ${D_SRC}/../include/*.hpp
   ${D_SRC}/*.s
-  ${D_SRC}/../../extern/cJSON/*.cpp
-  ${D_SRC}/../../extern/cJSON/*.hpp
-  ${D_SRC}/../../lib/backtrace.cpp
+  ${ONIONHEN_THIRD_PARTY_DIR}/cjson/*.cpp
+  ${ONIONHEN_THIRD_PARTY_DIR}/cjson/*.hpp
+  ${ONIONHEN_COMMON_DIR}/backtrace.cpp
 )
 
 set(CMAKE_C_FLAGS "--target=x86_64-sie-ps5 -DPPR -DPS5 -DPS5_FW_VERSION=${V_FW} ")
@@ -70,9 +70,11 @@ set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-keyword-macro -fPIC -fPIE -march=znver2
 set(CMAKE_CXX_FLAGS "${CMAKE_C_FLAGS} -DDEBUG -gfull -gdwarf-2 -O0 -pedantic -pedantic-errors")
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O0")
 
-target_sources(${PROJECT_NAME} PRIVATE ${SrcFiles} "${PROJECT_ROOT}/lib/elfldr_remote.c")
+target_sources(${PROJECT_NAME} PRIVATE ${SrcFiles} "${ONIONHEN_COMMON_DIR}/elfldr_remote.c")
 target_include_directories(${PROJECT_NAME} PRIVATE
   "${D_CWD}/include"
+  "${ONIONHEN_THIRD_PARTY_DIR}/cjson"
+  "${ONIONHEN_THIRD_PARTY_DIR}/keystone/include"
   "${PROJECT_ROOT}/libonion_settings/include"
   "${PROJECT_ROOT}/libonion_ipc/include"
   "${PROJECT_ROOT}/libonion_proc/include"
@@ -84,8 +86,8 @@ target_include_directories(${PROJECT_NAME} PRIVATE
 # CBC for MC4 / ShnExt AES; no KCF/WMDW
 target_compile_definitions(${PROJECT_NAME} PRIVATE CBC=1)
 target_link_directories(${PROJECT_NAME} PUBLIC
-  "${PROJECT_ROOT}/lib"
-  "${D_CWD}/lib"
+  "${ONIONHEN_PS5_STUB_DIR}"
+  "${ONIONHEN_THIRD_PARTY_DIR}/keystone/lib"
 )
 add_dependencies(${PROJECT_NAME} hijacker onion_settings onion_ipc onion_proc onion_platform onion_payload onion_ready onion_elfldr)
 # keystone: ShnExt ASM only
@@ -106,10 +108,10 @@ target_link_libraries(${PROJECT_NAME} PUBLIC
 )
 
 set_source_files_properties(
-  ${D_SRC}/cheats/third_party/aes.c
-  ${D_SRC}/cheats/third_party/base64.c
-  ${D_SRC}/cheats/third_party/miniz.c
-  ${D_SRC}/cheats/third_party/sha256.c
+  ${ONIONHEN_THIRD_PARTY_DIR}/cheat_support/aes.c
+  ${ONIONHEN_THIRD_PARTY_DIR}/cheat_support/base64.c
+  ${ONIONHEN_THIRD_PARTY_DIR}/cheat_support/miniz.c
+  ${ONIONHEN_THIRD_PARTY_DIR}/cheat_support/sha256.c
   PROPERTIES COMPILE_FLAGS "-Wno-error -Wno-unused-function -Wno-sign-compare -Wno-unused-parameter"
 )
 file(GLOB CHEAT_ENGINE_SRCS ${D_SRC}/cheats/*.c)

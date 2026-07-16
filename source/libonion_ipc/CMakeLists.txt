@@ -46,10 +46,10 @@ set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -g0 -O2")
 target_include_directories(${PROJECT_NAME}
   PUBLIC  "${D_CWD}/include"
   PRIVATE "${D_CWD}/../include"
-  PRIVATE "${D_CWD}/../extern/cJSON"
+  PRIVATE "${ONIONHEN_THIRD_PARTY_DIR}/cjson"
 )
 
 # cJSON symbols are provided by the final link unit (shellui / fps_elf already
-# compile extern/cJSON into the ELF). Keep them unresolved here.
+# compile third_party/cjson into the ELF). Keep them unresolved here.
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)

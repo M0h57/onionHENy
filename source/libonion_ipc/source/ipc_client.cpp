@@ -26,7 +26,7 @@ along with this program; see the file COPYING. If not, see
 #include <sys/un.h>
 #include <unistd.h>
 
-#include "../../extern/cJSON/onion_cjson.hpp"
+#include "onion_cjson.hpp"
 
 extern "C" {
 #include <ps5/klog.h>
@@ -502,4 +502,3 @@ bool IPC_Client::EnableToolbox() {
   }
   return true;
 }
-

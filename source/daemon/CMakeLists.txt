@@ -56,14 +56,14 @@ target_compile_options(${PROJECT_NAME} PUBLIC
 message("========== build: ${PROJECT_NAME} ==========")
 
 
-file(GLOB SrcFiles ${D_SRC}/*.c ${D_SRC}/*.cpp ${D_SRC}/../include/*.h ${D_SRC}/../include/*.hpp ${D_SRC}/*.s ${D_SRC}/../../extern/cJSON/*.cpp ${D_SRC}/../../extern/cJSON/*.hpp ${D_SRC}/../../lib/backtrace.cpp)
+file(GLOB SrcFiles ${D_SRC}/*.c ${D_SRC}/*.cpp ${D_SRC}/../include/*.h ${D_SRC}/../include/*.hpp ${D_SRC}/*.s ${ONIONHEN_THIRD_PARTY_DIR}/cjson/*.cpp ${ONIONHEN_THIRD_PARTY_DIR}/cjson/*.hpp ${ONIONHEN_COMMON_DIR}/backtrace.cpp)
 
 set(CMAKE_C_FLAGS "--target=x86_64-sie-ps5 -DPPR -DPS5 -DPS5_FW_VERSION=${V_FW} ")
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-keyword-macro -fPIC -fPIE -march=znver2 -Wall -Werror -fstack-protector-all")
 set(CMAKE_CXX_FLAGS "${CMAKE_C_FLAGS} -DDEBUG -gfull -gdwarf-2 -O0 -pedantic -pedantic-errors")
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O0 ")
 
-target_sources(${PROJECT_NAME} PRIVATE ${SrcFiles} "${PROJECT_ROOT}/lib/elfldr_remote.c")
+target_sources(${PROJECT_NAME} PRIVATE ${SrcFiles} "${ONIONHEN_COMMON_DIR}/elfldr_remote.c")
 # .incbin in embeddded_payloads.c is invisible to the compiler dependency scanner.
 # Without OBJECT_DEPENDS, embedded payload rebuilds do not re-embed into daemon.elf.
 if(DEFINED ONIONHEN_OUT_BIN)
@@ -74,17 +74,23 @@ endif()
 set_source_files_properties(
 	${D_SRC}/embeddded_payloads.c
 	PROPERTIES OBJECT_DEPENDS
-		"${D_CWD}/assets/shellui.elf;${D_CWD}/assets/fps_elf.elf;${_onion_util_elf}"
+		"${ONIONHEN_OUT_BIN}/shellui.elf;${ONIONHEN_OUT_BIN}/fps_elf.elf;${_onion_util_elf}"
+)
+target_compile_definitions(${PROJECT_NAME} PRIVATE
+	ONIONHEN_SHELLUI_ELF="${ONIONHEN_OUT_BIN}/shellui.elf"
+	ONIONHEN_FPS_ELF="${ONIONHEN_OUT_BIN}/fps_elf.elf"
+	ONIONHEN_UTIL_ELF="${_onion_util_elf}"
 )
 target_include_directories(${PROJECT_NAME} PRIVATE
 	"${D_CWD}/include"
+	"${ONIONHEN_THIRD_PARTY_DIR}/cjson"
 	"${PROJECT_ROOT}/libonion_settings/include"
 	"${PROJECT_ROOT}/libonion_ipc/include"
 	"${PROJECT_ROOT}/libonion_proc/include"
 	"${PROJECT_ROOT}/libonion_platform/include"
 	"${PROJECT_ROOT}/include"
 )
-target_link_directories	(${PROJECT_NAME} PUBLIC "${PROJECT_ROOT}/lib")
+target_link_directories	(${PROJECT_NAME} PUBLIC "${ONIONHEN_PS5_STUB_DIR}")
 add_dependencies(${PROJECT_NAME} util NineS shellui hijacker onion_settings onion_ipc onion_proc onion_platform onion_ready onion_elfldr)
 # Restarts the embedded util bytes via external 9021 elfldr.
 target_link_libraries	(${PROJECT_NAME} PUBLIC onion_ipc onion_settings onion_proc onion_platform onion_ready onion_elfldr hijacker SceSystemService SceNotification SceUserService SceNetCtl SceSysCore kernel_sys NineS)

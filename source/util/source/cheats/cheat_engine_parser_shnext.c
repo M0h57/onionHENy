@@ -4,7 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "cJSON.h"
+#include "cJSON.hpp"
 #include "keystone/keystone.h"
 #include "miniz.h"
 #include "mc4/base64.h"

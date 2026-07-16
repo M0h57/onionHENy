@@ -21,8 +21,11 @@ endif()
 message("IS_SUBPROJECT: ${IS_SUBPROJECT}")
 
 set(D_CWD "${CMAKE_CURRENT_SOURCE_DIR}")
-# Intermediate embed for daemon .incbin (source/daemon/assets/).
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${D_CWD}/../daemon/assets)
+if(DEFINED ONIONHEN_OUT_BIN)
+	set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${ONIONHEN_OUT_BIN})
+else()
+	set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${D_CWD}/../bin)
+endif()
 if(DEFINED ONIONHEN_OUT_LIB)
 	set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${ONIONHEN_OUT_LIB})
 	set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${ONIONHEN_OUT_LIB})
@@ -56,7 +59,7 @@ target_compile_options(${PROJECT_NAME} PUBLIC
 message("========== build: ${PROJECT_NAME} ==========")
 
 
-file(GLOB SrcFiles ${D_SRC}/*.c ${D_SRC}/*.cpp ${D_SRC}/../include/*.h ${D_SRC}/../include/*.hpp ${D_SRC}/*.s ${D_SRC}/../../extern/cJSON/*.cpp ${D_SRC}/../../extern/cJSON/*.hpp ${D_SRC}/../../lib/backtrace.cpp)
+file(GLOB SrcFiles ${D_SRC}/*.c ${D_SRC}/*.cpp ${D_SRC}/../include/*.h ${D_SRC}/../include/*.hpp ${D_SRC}/*.s ${ONIONHEN_THIRD_PARTY_DIR}/cjson/*.cpp ${ONIONHEN_THIRD_PARTY_DIR}/cjson/*.hpp ${ONIONHEN_COMMON_DIR}/backtrace.cpp)
 
 set(CMAKE_C_FLAGS "--target=x86_64-sie-ps5 -DPPR -DPS5 -DPS5_FW_VERSION=${V_FW} ")
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-nested-anon-types -Wno-gnu-anonymous-struct -Wno-zero-length-array -Wno-keyword-macro -fPIC -fPIE -march=znver2 -Wall -Werror -fstack-protector-all")
@@ -67,6 +70,7 @@ target_sources(${PROJECT_NAME} PRIVATE ${SrcFiles})
 add_dependencies(${PROJECT_NAME} onion_ipc onion_settings onion_detour onion_proc onion_platform onion_ready)
 target_include_directories(${PROJECT_NAME} PRIVATE
 	"${D_CWD}/include"
+	"${ONIONHEN_THIRD_PARTY_DIR}/cjson"
 	"${PROJECT_ROOT}/libonion_ipc/include"
 	"${PROJECT_ROOT}/libonion_settings/include"
 	"${PROJECT_ROOT}/libonion_detour/include"
@@ -74,7 +78,7 @@ target_include_directories(${PROJECT_NAME} PRIVATE
 	"${PROJECT_ROOT}/libonion_platform/include"
 	"${PROJECT_ROOT}/include"
 )
-target_link_directories	(${PROJECT_NAME} PUBLIC "${PROJECT_ROOT}/lib")
+target_link_directories	(${PROJECT_NAME} PUBLIC "${ONIONHEN_PS5_STUB_DIR}")
 target_link_libraries	(${PROJECT_NAME} PUBLIC onion_detour onion_proc onion_platform onion_ipc onion_settings onion_ready SceRegMgr SceSystemService SceUserService SceNetCtl SceAppInstUtil)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 

@@ -58,7 +58,7 @@ message("========== build: ${PROJECT_NAME} ==========")
 
 # Byepervisor removed from OnionHEN — bootstrapper sources only.
 # pt.c / elfldr.c live in libonion_elfldr (raise_privileges + inject primitives).
-file(GLOB SrcFiles ${D_SRC}/*.c ${D_SRC}/*.cpp ${D_SRC}/../include/*.h ${D_SRC}/../include/*.hpp ${D_SRC}/*.s ${D_SRC}/../../extern/cJSON/*.cpp ${D_SRC}/../../extern/cJSON/*.hpp ${D_SRC}/../../lib/backtrace.cpp)
+file(GLOB SrcFiles ${D_SRC}/*.c ${D_SRC}/*.cpp ${D_SRC}/../include/*.h ${D_SRC}/../include/*.hpp ${D_SRC}/*.s ${ONIONHEN_COMMON_DIR}/backtrace.cpp)
 list(FILTER SrcFiles EXCLUDE REGEX ".*/(pt|elfldr)\\.c$")
 
 set(CMAKE_C_FLAGS "--target=x86_64-sie-ps5 -DPPR -DPS5 -DPS5_FW_VERSION=${V_FW} ")
@@ -79,7 +79,12 @@ endif()
 set_source_files_properties(
 	${D_SRC}/daemon.c
 	PROPERTIES OBJECT_DEPENDS
-		"${_onion_daemon_elf};${_onion_util_elf};${D_CWD}/assets/kstuff.elf;${D_CWD}/assets/onionhen_sicon.png;${D_CWD}/assets/icon_xml_package.png;${D_CWD}/assets/icon_xml_plugins.png;${D_CWD}/assets/icon_xml_game.png;${D_CWD}/assets/icon_xml_network.png;${D_CWD}/assets/icon_xml_settings.png;${D_CWD}/assets/icon_xml_shortcuts.png;${D_CWD}/assets/icon_xml_debug.png;${D_CWD}/assets/icon_xml_about.png"
+		"${_onion_daemon_elf};${_onion_util_elf};${ONIONHEN_KSTUFF_ELF};${D_CWD}/assets/onionhen_sicon.png;${D_CWD}/assets/icon_xml_package.png;${D_CWD}/assets/icon_xml_plugins.png;${D_CWD}/assets/icon_xml_game.png;${D_CWD}/assets/icon_xml_network.png;${D_CWD}/assets/icon_xml_settings.png;${D_CWD}/assets/icon_xml_shortcuts.png;${D_CWD}/assets/icon_xml_debug.png;${D_CWD}/assets/icon_xml_about.png"
+)
+target_compile_definitions(${PROJECT_NAME} PRIVATE
+	ONIONHEN_DAEMON_ELF="${_onion_daemon_elf}"
+	ONIONHEN_UTIL_ELF="${_onion_util_elf}"
+	ONIONHEN_KSTUFF_ELF="${ONIONHEN_KSTUFF_ELF}"
 )
 # elfldr_raise_privileges from libonion_elfldr; launches go via 9021 (elfldr_remote.c).
 target_include_directories(${PROJECT_NAME} PRIVATE
@@ -90,8 +95,8 @@ target_include_directories(${PROJECT_NAME} PRIVATE
 	"${PROJECT_ROOT}/libonion_elfldr/include"
 	"${PROJECT_ROOT}/include"
 )
-target_link_directories	(${PROJECT_NAME} PUBLIC "${PROJECT_ROOT}/lib")
-target_sources(${PROJECT_NAME} PRIVATE "${PROJECT_ROOT}/lib/elfldr_remote.c")
+target_link_directories	(${PROJECT_NAME} PUBLIC "${ONIONHEN_PS5_STUB_DIR}")
+target_sources(${PROJECT_NAME} PRIVATE "${ONIONHEN_COMMON_DIR}/elfldr_remote.c")
 target_link_libraries	(${PROJECT_NAME} PUBLIC onion_proc onion_platform onion_payload onion_ready onion_elfldr SceNotification)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 add_dependencies(${PROJECT_NAME} daemon util shellui onion_proc onion_platform onion_payload onion_ready onion_elfldr)

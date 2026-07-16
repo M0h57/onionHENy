@@ -10,7 +10,7 @@
 extern "C" {
 #include "ucred.h"
 #include "defs.h"
-#include "../lib/libmprotect.h"
+#include <ps5/libmprotect.h>
 #include <sys/mman.h>
 #include <sys/syscall.h>
 #include <unistd.h>

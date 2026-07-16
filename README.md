@@ -75,7 +75,7 @@ export PS5_PAYLOAD_SDK=/path/to/ps5-payload-sdk
 
 ./scripts/build.sh
 # or only fetch embeds:
-# ./scripts/sync_vendor.sh
+# ./scripts/sync_dependencies.sh
 
 # dry-run compile without real vendor blobs:
 # ./scripts/build.sh --stub-missing

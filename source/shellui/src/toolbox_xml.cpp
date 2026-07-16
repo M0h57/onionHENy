@@ -12,7 +12,7 @@
 #include "ps5_settings_ui.hpp"
 #include "toolbox_i18n.hpp"
 #include "toolbox_values.hpp"
-#include "../../extern/cJSON/onion_cjson.hpp"
+#include "onion_cjson.hpp"
 
 #define PIN_CODE_SIZE 30
 #define ACCOUNT_ID_BASE64_SIZE 16

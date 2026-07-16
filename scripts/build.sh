@@ -3,8 +3,8 @@
 #
 # Phases:
 #   1) configure (prospero-cmake / PS5 payload SDK)
-#   2) build libs + shellui + fps_elf  (shellui/fps land in daemon/assets/)
-#   3) stage vendor blob (kstuff)
+#   2) build libs + shellui + fps_elf
+#   3) stage external dependency blob (kstuff)
 #   4) build daemon + util
 #   5) build bootstrapper  (-> bin/bootstrapper.elf + .lzma)
 #   6) build unpacker / OnionHEN.elf   (embeds bootstrapper.elf.lzma)
@@ -14,7 +14,7 @@
 #   ./scripts/build.sh              # cleans previous outputs first
 #   ./scripts/build.sh --clean      # same as default; kept for compatibility
 #   ./scripts/build.sh --fw 0x3000000 --jobs 8
-#   ./scripts/build.sh --stub-missing   # compile-only placeholders for missing vendor ELFs
+#   ./scripts/build.sh --stub-missing   # compile-only placeholders for missing external ELFs
 #
 set -euo pipefail
 
@@ -22,7 +22,7 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 SOURCE="${ROOT}/source"
 # CMake binary dir + final ELFs/libs: <repo>/build/{bin,lib}/
 BUILD="${BUILD_DIR:-${ROOT}/build}"
-VENDOR="${ONIONHEN_VENDOR:-${SOURCE}/vendor}"
+CACHE="${ONIONHEN_CACHE_DIR:-${ROOT}/.cache/dependencies}"
 BIN="${BUILD}/bin"
 
 PS5_PAYLOAD_SDK="${PS5_PAYLOAD_SDK:-${PS5SDK:-}}"
@@ -32,8 +32,8 @@ JOBS="${JOBS:-}"
 CONFIGURE_ONLY=0
 STUB_MISSING=0
 SKIP_UNPACKER=0
-SKIP_VENDOR_SYNC=0
-FORCE_VENDOR_SYNC=0
+SKIP_DEPENDENCY_SYNC=0
+FORCE_DEPENDENCY_SYNC=0
 INIT_SUBMODULES=0
 
 # Auto job count
@@ -65,23 +65,25 @@ Options:
   --jobs <n>           Parallel build jobs (default: ${JOBS})
   --build-type <t>     Debug|Release (default: ${BUILD_TYPE})
   --build-dir <path>   CMake binary dir (default: <repo>/build)
-  --vendor <path>      Vendor blob directory (default: source/vendor)
-  --stub-missing       Create tiny placeholder ELFs if vendor blobs missing
+  --cache-dir <path>   Download cache directory (default: <repo>/.cache/dependencies)
+  --stub-missing       Create tiny placeholder ELFs if external blobs are missing
                        (links, but NOT for real hardware)
   --skip-unpacker      Stop after bootstrapper (no OnionHEN.elf unpacker)
-  --skip-vendor-sync   Do not call scripts/sync_vendor.sh
-  --force-vendor-sync  Re-download kstuff even if already cached
+  --skip-dependency-sync
+                       Do not call scripts/sync_dependencies.sh
+  --force-dependency-sync
+                       Re-download kstuff even if already cached
   --init-submodules    git submodule update --init before sync
   -h, --help           This help
 
 Environment:
   PS5_PAYLOAD_SDK   Path to ps5-payload-sdk (required)
-  ONIONHEN_VENDOR   Override vendor directory
+  ONIONHEN_CACHE_DIR Override dependency cache directory
   BUILD_DIR         Override build directory
   V_FW              Same as --fw
 
 Third-party (git submodules under third_party/ + release downloads):
-  See third_party/README.md and scripts/sync_vendor.sh
+  See third_party/README.md and scripts/sync_dependencies.sh
 
   kstuff.elf              <- EchoStretch/kstuff-lite
 
@@ -92,8 +94,8 @@ Third-party (git submodules under third_party/ + release downloads):
 Built-in outputs (under <repo>/build/):
   build/bin/*.elf           final ELFs (util, daemon, bootstrapper, OnionHEN, …)
   build/lib/*.a             first-party static libs
-  source/daemon/assets/     shellui.elf / fps_elf.elf (daemon embeds only)
-  source/bin                symlink → build/bin (for .incbin paths)
+  build/bin/shellui.elf     daemon embed input
+  build/bin/fps_elf.elf     daemon embed input
 EOF
 }
 
@@ -105,11 +107,11 @@ while [[ $# -gt 0 ]]; do
     --jobs) JOBS="$2"; shift 2 ;;
     --build-type) BUILD_TYPE="$2"; shift 2 ;;
     --build-dir) BUILD="$2"; shift 2 ;;
-    --vendor) VENDOR="$2"; shift 2 ;;
+    --cache-dir) CACHE="$2"; shift 2 ;;
     --stub-missing) STUB_MISSING=1; shift ;;
     --skip-unpacker) SKIP_UNPACKER=1; shift ;;
-    --skip-vendor-sync) SKIP_VENDOR_SYNC=1; shift ;;
-    --force-vendor-sync) FORCE_VENDOR_SYNC=1; shift ;;
+    --skip-dependency-sync) SKIP_DEPENDENCY_SYNC=1; shift ;;
+    --force-dependency-sync) FORCE_DEPENDENCY_SYNC=1; shift ;;
     --init-submodules) INIT_SUBMODULES=1; shift ;;
     -h|--help) usage; exit 0 ;;
     *) die "Unknown option: $1 (see --help)" ;;
@@ -202,55 +204,25 @@ Install a full SDK, or from SDK source tree run:
 CMAKE=("${PS5_PAYLOAD_SDK}/bin/prospero-cmake")
 
 # ---------------------------------------------------------------------------
-# .incbin path helpers
-#
-# Clang/LLVM typically resolves .incbin relative to the including source file.
-# Embeds use "assets/..." from daemon/source, util/source, bootstrapper/source
-# while real files live in <module>/assets. Symlink once so both layouts work.
+# External dependency staging (submodules + GitHub releases)
 # ---------------------------------------------------------------------------
-ensure_incbin_links() {
-  log "Ensuring .incbin path symlinks"
-  mkdir -p \
-    "${SOURCE}/daemon/assets" \
-    "${SOURCE}/util/assets" \
-    "${SOURCE}/bootstrapper/assets" \
-    "${BIN}"
-
-  # daemon/source/assets -> ../assets
-  if [[ ! -e "${SOURCE}/daemon/source/assets" ]]; then
-    ln -sfn ../assets "${SOURCE}/daemon/source/assets"
-  fi
-  # util/source/assets -> ../assets
-  if [[ ! -e "${SOURCE}/util/source/assets" ]]; then
-    ln -sfn ../assets "${SOURCE}/util/source/assets"
-  fi
-  # bootstrapper/source/assets -> ../assets
-  if [[ ! -e "${SOURCE}/bootstrapper/source/assets" ]]; then
-    ln -sfn ../assets "${SOURCE}/bootstrapper/source/assets"
-  fi
-  # source/bin → build/bin is created by CMake configure (for .incbin ../../bin/…).
-  ok "incbin symlinks ready"
-}
-
-# ---------------------------------------------------------------------------
-# Vendor staging (submodules + GitHub releases via scripts/sync_vendor.sh)
-# ---------------------------------------------------------------------------
-stage_vendor() {
-  if [[ "${SKIP_VENDOR_SYNC}" -eq 1 ]]; then
-    warn "skipping vendor sync (--skip-vendor-sync)"
+stage_dependencies() {
+  if [[ "${SKIP_DEPENDENCY_SYNC}" -eq 1 ]]; then
+    warn "skipping dependency sync (--skip-dependency-sync)"
     return 0
   fi
 
   log "Syncing third-party embeds (submodules / GitHub releases)"
   local args=()
   [[ "${STUB_MISSING}" -eq 1 ]] && args+=(--stub-missing)
-  [[ "${FORCE_VENDOR_SYNC}" -eq 1 ]] && args+=(--force)
+  [[ "${FORCE_DEPENDENCY_SYNC}" -eq 1 ]] && args+=(--force)
   [[ "${INIT_SUBMODULES}" -eq 1 ]] && args+=(--init-submodules)
 
-  if [[ ! -x "${ROOT}/scripts/sync_vendor.sh" ]]; then
-    die "missing ${ROOT}/scripts/sync_vendor.sh"
+  if [[ ! -x "${ROOT}/scripts/sync_dependencies.sh" ]]; then
+    die "missing ${ROOT}/scripts/sync_dependencies.sh"
   fi
-  "${ROOT}/scripts/sync_vendor.sh" "${args[@]+"${args[@]}"}"
+  ONIONHEN_CACHE_DIR="${CACHE}" \
+    "${ROOT}/scripts/sync_dependencies.sh" "${args[@]+"${args[@]}"}"
 }
 
 # ---------------------------------------------------------------------------
@@ -267,28 +239,10 @@ clean_build_artifacts() {
 
   rm -rf "${BUILD}"
 
-  # Legacy in-tree bin (real dir or symlink); CMake will recreate the symlink.
+  # Legacy in-tree bin (real dir or symlink).
   rm -rf "${SOURCE}/bin"
   # Legacy in-tree cmake tree
   rm -rf "${SOURCE}/build"
-
-  rm -f \
-    "${SOURCE}/daemon/assets/shellui.elf" \
-    "${SOURCE}/daemon/assets/fps_elf.elf"
-
-  # First-party .a used to land in source/lib; strip leftovers so link uses build/lib.
-  rm -f \
-    "${SOURCE}/lib/libNidResolver.a" \
-    "${SOURCE}/lib/libNineS.a" \
-    "${SOURCE}/lib/libhijacker.a" \
-    "${SOURCE}/lib/libonion_detour.a" \
-    "${SOURCE}/lib/libonion_elfldr.a" \
-    "${SOURCE}/lib/libonion_ipc.a" \
-    "${SOURCE}/lib/libonion_platform.a" \
-    "${SOURCE}/lib/libonion_payload.a" \
-    "${SOURCE}/lib/libonion_proc.a" \
-    "${SOURCE}/lib/libonion_ready.a" \
-    "${SOURCE}/lib/libonion_settings.a"
 
   ok "old build outputs removed"
 }
@@ -302,6 +256,7 @@ configure() {
     -G Ninja \
     -DCMAKE_BUILD_TYPE="${BUILD_TYPE}" \
     -DV_FW="${V_FW}" \
+    -DONIONHEN_KSTUFF_ELF="${CACHE}/kstuff.elf" \
     -DPS5_PAYLOAD_SDK="${PS5_PAYLOAD_SDK}"
   ok "configured -> ${BUILD}"
 }
@@ -320,13 +275,12 @@ main() {
   echo "  ROOT     = ${ROOT}"
   echo "  SDK      = ${PS5_PAYLOAD_SDK}"
   echo "  BUILD    = ${BUILD}"
-  echo "  VENDOR   = ${VENDOR}"
+  echo "  CACHE    = ${CACHE}"
   echo "  V_FW     = ${V_FW}"
   echo "  TYPE     = ${BUILD_TYPE}"
   echo "  JOBS     = ${JOBS}"
 
   clean_build_artifacts
-  ensure_incbin_links
   ensure_sdk_libcxx
   configure
 
@@ -335,7 +289,7 @@ main() {
     exit 0
   fi
 
-  # Phase 1 — libraries + injectables (CMake writes shellui/fps into daemon/assets)
+  # Phase 1 — libraries + injectables (all outputs stay under build/bin)
   log "Phase 1/5: libraries + shellui + fps_elf"
   build_targets \
     NidResolver \
@@ -344,25 +298,19 @@ main() {
     shellui \
     fps_elf
 
-  # shellui.elf / fps_elf.elf should now be in daemon/assets
+  # shellui.elf / fps_elf.elf are daemon embed inputs.
   for f in shellui.elf fps_elf.elf; do
-    if [[ -f "${SOURCE}/daemon/assets/${f}" ]]; then
+    if [[ -f "${BIN}/${f}" ]]; then
       ok "built ${f}"
     else
-      # Sometimes outputs land only under bin/ — normalize
-      if [[ -f "${BIN}/${f}" ]]; then
-        cp -f "${BIN}/${f}" "${SOURCE}/daemon/assets/${f}"
-        ok "copied ${f} from bin/ -> daemon/assets/"
-      else
-        die "expected ${SOURCE}/daemon/assets/${f} after phase 1"
-      fi
+      die "expected ${BIN}/${f} after phase 1"
     fi
   done
 
-  # Phase 2 — vendor embeds required by daemon/util/bootstrapper
+  # Phase 2 — external embeds required by daemon/util/bootstrapper
   # (can also run earlier; after phase1 so shellui/fps already filled)
-  log "Phase 2/5: stage vendor embeds"
-  stage_vendor
+  log "Phase 2/5: stage external embeds"
+  stage_dependencies
 
   # Phase 3 — daemons
   log "Phase 3/5: util + daemon"
@@ -444,9 +392,6 @@ main() {
   echo
   echo "Artifacts in ${BIN}:"
   ls -lah "${BIN}" 2>/dev/null || true
-  echo
-  echo "Daemon embeds in ${SOURCE}/daemon/assets:"
-  ls -lah "${SOURCE}/daemon/assets" 2>/dev/null || true
   echo
   ok "done"
 }

@@ -15,10 +15,14 @@ OnionHEN is based on etaHEN’s open-source release. See the [root README](../RE
 | `fps_elf/` | FPS overlay PRX |
 | `unpacker/` | Payload unpacker |
 | `libhijacker/`, `libNineS/`, `libNidResolver/` | Internal static libs |
-| `extern/` | Third-party sources used by the build (cJSON, 7zip-sdk) |
 | `include/` | Shared headers |
-| `lib/` | Prebuilt link libraries (static + PS5 stubs) + `backtrace.cpp` |
-| `stubber/` | NID stub generation (Go) |
+| `common/` | Shared low-level implementations |
+| `platform/ps5/stubs/` | PS5 system-library link stubs |
+
+External source and prebuilt dependencies live in the repository-level
+[`third_party/`](../third_party/) directory. Downloaded dependency blobs are
+cached under `.cache/dependencies/`; they are never stored in `source/`.
+Repository-side generators and build helpers live in [`../tools/`](../tools/).
 
 ## Build
 
@@ -31,8 +35,9 @@ export PS5_PAYLOAD_SDK=/path/to/ps5-payload-sdk
 ./scripts/build.sh
 ```
 
-Stages vendor embeds, then shellui → daemon/util → bootstrapper → unpacker.  
-See `vendor/README.md` and `./scripts/build.sh --help`.
+Stages external embeds, then shellui → daemon/util → bootstrapper → unpacker.
+See [`../third_party/README.md`](../third_party/README.md) and
+`./scripts/build.sh --help`.
 
 Manual CMake:
 

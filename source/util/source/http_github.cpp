@@ -2,7 +2,7 @@
 
 #include "http_github.h"
 
-#include "../../extern/cJSON/cJSON.hpp"
+#include "cJSON.hpp"
 
 #include <cstring>
 

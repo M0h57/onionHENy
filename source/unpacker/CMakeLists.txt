@@ -59,14 +59,15 @@ message("========== build: ${PROJECT_NAME} ==========")
 
 
 
-set(LZMA_LIB ${D_SRC}/../../extern/7zip-sdk/C/LzmaLib.c ${D_SRC}/../../extern/7zip-sdk/C/Alloc.c 
-				${D_SRC}/../../extern/7zip-sdk/C/LzmaEnc.c 
-				${D_SRC}/../../extern/7zip-sdk/C/LzFind.c
-				${D_SRC}/../../extern/7zip-sdk/C/LzFindMt.c
-				${D_SRC}/../../extern/7zip-sdk/C/CpuArch.c
-				${D_SRC}/../../extern/7zip-sdk/C/LzmaDec.c
-				${D_SRC}/../../extern/7zip-sdk/C/Threads.c
-				${D_SRC}/../../extern/7zip-sdk/C/LzFindOpt.c)
+set(LZMA_ROOT "${ONIONHEN_THIRD_PARTY_DIR}/7zip_sdk/C")
+set(LZMA_LIB ${LZMA_ROOT}/LzmaLib.c ${LZMA_ROOT}/Alloc.c
+				${LZMA_ROOT}/LzmaEnc.c
+				${LZMA_ROOT}/LzFind.c
+				${LZMA_ROOT}/LzFindMt.c
+				${LZMA_ROOT}/CpuArch.c
+				${LZMA_ROOT}/LzmaDec.c
+				${LZMA_ROOT}/Threads.c
+				${LZMA_ROOT}/LzFindOpt.c)
 
 # main.c only — dead local pt/elfldr clones removed (spawn is remote 9021).
 set(SrcFiles ${D_SRC}/main.c ${LZMA_LIB})
@@ -77,7 +78,11 @@ set(CMAKE_CXX_FLAGS "${CMAKE_C_FLAGS} -DDEBUG -O0")
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O0")
 
 target_sources(${PROJECT_NAME} PRIVATE ${SrcFiles})
-target_include_directories(${PROJECT_NAME} PRIVATE "${D_CWD}/include")
+target_include_directories(${PROJECT_NAME} PRIVATE "${D_CWD}/include" "${LZMA_ROOT}")
+target_compile_definitions(${PROJECT_NAME} PRIVATE
+	ONIONHEN_BOOTSTRAPPER_LZMA="${ONIONHEN_OUT_BIN}/bootstrapper.elf.lzma"
+	ONIONHEN_BOOTSTRAPPER_SIZE="${ONIONHEN_OUT_BIN}/bootstrapper.elf.lzma.size"
+)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 add_dependencies(${PROJECT_NAME} bootstrapper)
 
