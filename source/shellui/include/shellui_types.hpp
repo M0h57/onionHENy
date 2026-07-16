@@ -101,7 +101,8 @@ struct GameEntry {
     std::string id;
 };
 
-// games_list / g_all_cpu_usage: see shellui_state.hpp (ToolboxUiState)
+// games_list: see shellui_state.hpp (ToolboxUiState)
+// all_cpu_usage: Settings.all_cpu_usage (config.ini)
 enum Cheats_Shortcut{
     CHEATS_SC_OFF = 0,
     R3_L3,
@@ -154,4 +155,3 @@ struct OverlayLayout {
     float overlay_ip_y = 12.0f;
 };
 extern OverlayLayout g_overlay_layout;
-// g_all_cpu_usage → shellui_state.hpp

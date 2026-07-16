@@ -39,8 +39,6 @@ struct ToolboxUiState {
 
   std::string remote_play_info;
 
-  bool all_cpu_usage = false;
-
   void apply_route_flags(const toolbox::RouteFlags &f) {
     is_payloads = f.is_payloads;
     is_su_menu = f.is_su_menu;

@@ -87,6 +87,7 @@ static int test_full_schema_roundtrip(void) {
   in.overlay_cpu = false;
   in.overlay_gpu = false;
   in.overlay_ip = true;
+  in.all_cpu_usage = true;
   in.overlay_pos = 3;
   in.cheats_shortcut_opt = 4;
   in.toolbox_shortcut_opt = 2;
@@ -108,6 +109,7 @@ static int test_full_schema_roundtrip(void) {
   TEST_ASSERT_TRUE(out.overlay_cpu == in.overlay_cpu);
   TEST_ASSERT_TRUE(out.overlay_gpu == in.overlay_gpu);
   TEST_ASSERT_TRUE(out.overlay_ip == in.overlay_ip);
+  TEST_ASSERT_TRUE(out.all_cpu_usage == in.all_cpu_usage);
   TEST_ASSERT_EQ_INT(in.overlay_pos, out.overlay_pos);
   TEST_ASSERT_EQ_INT(in.cheats_shortcut_opt, out.cheats_shortcut_opt);
   TEST_ASSERT_EQ_INT(in.toolbox_shortcut_opt, out.toolbox_shortcut_opt);
@@ -137,10 +139,12 @@ static int test_partial_ini_keeps_defaults(void) {
 static int test_serialize_contains_overlay_keys(void) {
   onion::Settings s{};
   s.overlay_ip = true;
+  s.all_cpu_usage = true;
   s.overlay_pos = 2;
   std::string text = onion::settings_serialize(s);
   TEST_ASSERT_TRUE(text.find("overlay_fps=") == std::string::npos);
   TEST_ASSERT_TRUE(text.find("overlay_ip=1") != std::string::npos);
+  TEST_ASSERT_TRUE(text.find("all_cpu_usage=1") != std::string::npos);
   TEST_ASSERT_TRUE(text.find("Overlay_pos=2") != std::string::npos);
   return 0;
 }

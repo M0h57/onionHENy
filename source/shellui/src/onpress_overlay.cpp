@@ -10,7 +10,7 @@ void CreateGameWidget(CreateWidget widget);
 static void rebuild_overlay_bar() {
   RemoveGameWidget(REMOVE_ALL_OVERLAYS);
   apply_overlay_layout();
-  if (g_settings.overlay_cpu || g_ui.all_cpu_usage)
+  if (g_settings.overlay_cpu || g_settings.all_cpu_usage)
     CreateGameWidget(CREATE_CPU_OVERLAY);
   if (g_settings.overlay_gpu)
     CreateGameWidget(CREATE_GPU_OVERLAY);
@@ -37,7 +37,7 @@ static OnPressResult id_overlay_cpu(OnPressContext &ctx) {
   if (atoi(ctx.value.c_str()) == g_settings.overlay_cpu) {
     return OnPressResult::EarlyReturn;
   }
-  if (!atoi(ctx.value.c_str()) && g_ui.all_cpu_usage) {
+  if (!atoi(ctx.value.c_str()) && g_settings.all_cpu_usage) {
     notify("To disable CPU overlay, please disable the All CPU usage option first");
     return OnPressResult::EarlyReturn;
   }
@@ -55,14 +55,15 @@ static OnPressResult id_overlay_ip(OnPressContext &ctx) {
 }
 
 static OnPressResult id_all_cpu_usage(OnPressContext &ctx) {
-  if (g_ui.all_cpu_usage == atoi(ctx.value.c_str())) {
+  if (g_settings.all_cpu_usage == atoi(ctx.value.c_str())) {
     return OnPressResult::EarlyReturn;
   }
   if (!g_settings.overlay_cpu) {
     notify("To change CPU overlay mode, please enable the CPU overlay first");
     return OnPressResult::EarlyReturn;
   }
-  g_ui.all_cpu_usage = !g_ui.all_cpu_usage;
+  /* Persisted via settings_commit → Settings.all_cpu_usage in config.ini. */
+  g_settings.all_cpu_usage = !g_settings.all_cpu_usage;
   rebuild_overlay_bar();
   return OnPressResult::Handled;
 }

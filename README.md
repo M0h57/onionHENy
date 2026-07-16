@@ -205,6 +205,7 @@ Most settings can be changed directly from the Toolbox.
 | `fan_threshold` | `77` | Fan temperature threshold |
 | `overlay_ram` / `overlay_cpu` / `overlay_gpu` | `1` | Enable resource overlay fields |
 | `overlay_ip` | `0` | Enable IP overlay field |
+| `all_cpu_usage` | `0` | Per-core CPU usage on the overlay (requires CPU overlay) |
 | `Overlay_pos` | `0` | Overlay corner: top-left, top-right, bottom-left, or bottom-right |
 | `Cheats_shortcut_opt` / `Toolbox_shortcut_opt` | `0` | Controller shortcut modes |
 | `ui_lang` | `0` | Toolbox language: `0` Simplified Chinese, `1` English |

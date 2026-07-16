@@ -78,6 +78,8 @@ void apply_parser(IniParser *parser, Settings *out) {
       atoi_def(ini_parser_get(parser, "Settings.overlay_gpu", "1"), 1) != 0;
   out->overlay_ip =
       atoi_def(ini_parser_get(parser, "Settings.overlay_ip", "0"), 0) != 0;
+  out->all_cpu_usage =
+      atoi_def(ini_parser_get(parser, "Settings.all_cpu_usage", "0"), 0) != 0;
   out->overlay_pos =
       atoi_def(ini_parser_get(parser, "Settings.Overlay_pos", "0"), 0);
   out->cheats_shortcut_opt =
@@ -141,6 +143,7 @@ std::string settings_serialize(const Settings &in) {
   b += "overlay_cpu=" + std::to_string(in.overlay_cpu ? 1 : 0) + "\n";
   b += "overlay_gpu=" + std::to_string(in.overlay_gpu ? 1 : 0) + "\n";
   b += "overlay_ip=" + std::to_string(in.overlay_ip ? 1 : 0) + "\n";
+  b += "all_cpu_usage=" + std::to_string(in.all_cpu_usage ? 1 : 0) + "\n";
   b += "Overlay_pos=" + std::to_string(in.overlay_pos) + "\n";
   b += "Cheats_shortcut_opt=" + std::to_string(in.cheats_shortcut_opt) + "\n";
   b += "Toolbox_shortcut_opt=" + std::to_string(in.toolbox_shortcut_opt) + "\n";

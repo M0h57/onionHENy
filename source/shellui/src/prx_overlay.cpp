@@ -265,7 +265,7 @@ void layout_bar_labels(const char *cpu_temp, const char *cpu_usage,
   GroupSpec groups[4];
   int ng = 0;
 
-  if ((g_settings.overlay_cpu || g_ui.all_cpu_usage) && cpu_temp)
+  if ((g_settings.overlay_cpu || g_settings.all_cpu_usage) && cpu_temp)
     groups[ng++] = {"id_cpu_label",
                     "CPU",
                     "id_cpu_temp_value",
@@ -373,7 +373,7 @@ void init_overlay_once(unsigned int idle_tid[kCpuCores]) {
   font = CreateUIFont(kOverlayFontSize, 1, 900);
 
   apply_overlay_layout();
-  if (g_settings.overlay_cpu || g_ui.all_cpu_usage)
+  if (g_settings.overlay_cpu || g_settings.all_cpu_usage)
     CreateGameWidget(CREATE_CPU_OVERLAY);
   if (g_settings.overlay_gpu)
     CreateGameWidget(CREATE_GPU_OVERLAY);
@@ -384,8 +384,8 @@ void init_overlay_once(unsigned int idle_tid[kCpuCores]) {
 
   /* First paint: center placeholders on the full-width bar. */
   layout_bar_labels(
-      (g_settings.overlay_cpu || g_ui.all_cpu_usage) ? "--C" : nullptr,
-      (g_settings.overlay_cpu || g_ui.all_cpu_usage) ? "--%" : nullptr,
+      (g_settings.overlay_cpu || g_settings.all_cpu_usage) ? "--C" : nullptr,
+      (g_settings.overlay_cpu || g_settings.all_cpu_usage) ? "--%" : nullptr,
       g_settings.overlay_gpu ? "--C" : nullptr,
       g_settings.overlay_gpu ? "--%" : nullptr,
       g_settings.overlay_ram ? "---- MB" : nullptr,
@@ -395,7 +395,7 @@ void init_overlay_once(unsigned int idle_tid[kCpuCores]) {
 /** Sample CPU into Usage[]; formats CPU_USAGE. Returns false if sampling skipped/failed. */
 bool sample_cpu_usage(unsigned int idle_tid[kCpuCores], int& current_bank,
                       char* cpu_usage, size_t cpu_usage_sz) {
-  if (!g_settings.overlay_cpu && !g_ui.all_cpu_usage)
+  if (!g_settings.overlay_cpu && !g_settings.all_cpu_usage)
     return false;
 
   /*
@@ -421,7 +421,7 @@ bool sample_cpu_usage(unsigned int idle_tid[kCpuCores], int& current_bank,
     calc_usage(idle_tid, &gThread_Data[!current_bank], &gThread_Data[current_bank],
                Usage);
 
-    if (g_ui.all_cpu_usage) {
+    if (g_settings.all_cpu_usage) {
       snprintf(cpu_usage, cpu_usage_sz,
                "%2.0f%% %2.0f%% %2.0f%% %2.0f%% %2.0f%% %2.0f%% %2.0f%% %2.0f%%",
                Usage[0], Usage[1], Usage[2], Usage[3], Usage[4], Usage[5], Usage[6],
@@ -468,7 +468,7 @@ void update_overlay_metrics(unsigned int idle_tid[kCpuCores], int& current_bank)
   if (g_settings.overlay_ip)
     get_ip_address(ip_address);
 
-  if (g_settings.overlay_cpu || g_ui.all_cpu_usage) {
+  if (g_settings.overlay_cpu || g_settings.all_cpu_usage) {
     int cpu_t = 0;
     sceKernelGetCpuTemperature(&cpu_t);
     snprintf(cpu_temp, sizeof(cpu_temp), "%dC", cpu_t);
@@ -476,8 +476,8 @@ void update_overlay_metrics(unsigned int idle_tid[kCpuCores], int& current_bank)
 
   /* Re-center the whole metric run on the full-width edge bar every tick. */
   layout_bar_labels(
-      (g_settings.overlay_cpu || g_ui.all_cpu_usage) ? cpu_temp : nullptr,
-      (g_settings.overlay_cpu || g_ui.all_cpu_usage) ? cpu_usage : nullptr,
+      (g_settings.overlay_cpu || g_settings.all_cpu_usage) ? cpu_temp : nullptr,
+      (g_settings.overlay_cpu || g_settings.all_cpu_usage) ? cpu_usage : nullptr,
       g_settings.overlay_gpu ? gpu_temp : nullptr,
       g_settings.overlay_gpu ? gpu_usage : nullptr,
       g_settings.overlay_ram ? ram_str : nullptr,

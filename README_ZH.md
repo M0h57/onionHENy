@@ -201,6 +201,7 @@ OnionHEN 通过以下两个运行时视图创建并共享同一套配置 schema�
 | `fan_threshold` | `77` | 风扇温度阈值 |
 | `overlay_ram` / `overlay_cpu` / `overlay_gpu` | `1` | 启用资源 overlay 字段 |
 | `overlay_ip` | `0` | 启用 IP overlay 字段 |
+| `all_cpu_usage` | `0` | Overlay 显示全部 CPU 核心占用（需先开 CPU overlay） |
 | `Overlay_pos` | `0` | Overlay 位置：左上、右上、左下或右下 |
 | `Cheats_shortcut_opt` / `Toolbox_shortcut_opt` | `0` | 手柄快捷键模式 |
 | `ui_lang` | `0` | Toolbox 语言：`0` 简体中文，`1` English |
