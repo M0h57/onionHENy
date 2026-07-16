@@ -36,6 +36,8 @@ along with this program; see the file COPYING. If not, see
 
 #include "LzmaLib.h"
 #include <elf.h>
+#define ONION_NOTIFY_NO_LEGACY_MACRO
+#include <onion/notify.h>
 #include <unistd.h>
 
 #define LZMA_CLI_HEADER_SIZE 13
@@ -61,10 +63,19 @@ typedef struct {
 int sceKernelSendNotificationRequest(int32_t device,
                                      OrbisNotificationRequest *req, size_t size,
                                      int32_t blocking);
+int sceNotificationSend(int userId, bool isLogged, const char *payload);
+
+static void notify_starting(void) {
+  onion_notify_rich("OnionHEN", "OnionHEN is starting...",
+                    "/user/data/OnionHEN/onionhen.png", "download",
+                    "588193128");
+}
 
 void notify(const char *text, ...) {
   OrbisNotificationRequest req;
   va_list args;
+
+  memset(&req, 0, sizeof(req));
 
   // Process args
   va_start(args, text);
@@ -165,11 +176,14 @@ bool send_to_elfldr(const void* buffer, size_t buffer_size) {
 }
 
 int main() {
+  onion_notify_set_rich_send(sceNotificationSend);
 
   if (onionhen_compressed_size <= 0) {
     printf("Invalid OnionHEN payload! unable to unpack it!");
     return 0;
   }
+
+  notify_starting();
 
   size_t decompress_size = atoi((char *)onionhen_decompressed_size);
   // printf("Decompressed size: %zu bytes\nCompressed: %d\n", size,

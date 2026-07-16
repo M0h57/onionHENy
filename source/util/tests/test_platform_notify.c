@@ -4,6 +4,8 @@
 #include <onion/notify.h>
 
 #include <stdarg.h>
+#include <stdbool.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -36,10 +38,35 @@ static int test_notify_send_noop(void) {
   return 0;
 }
 
+static char g_rich_payload[4096];
+
+static int32_t capture_rich_notify(int32_t user_id, bool is_logged,
+                                   const char *payload) {
+  TEST_ASSERT_TRUE(user_id == 0xFE);
+  TEST_ASSERT_TRUE(is_logged);
+  snprintf(g_rich_payload, sizeof(g_rich_payload), "%s",
+           payload ? payload : "");
+  return 0;
+}
+
+static int test_notify_rich_formats_payload(void) {
+  g_rich_payload[0] = '\0';
+  onion_notify_set_rich_send(capture_rich_notify);
+  onion_notify_rich("Title", "Sub \"quoted\"", "/icon.png", "download", "42");
+  TEST_ASSERT_TRUE(strstr(g_rich_payload, "InteractiveToastTemplateB") != NULL);
+  TEST_ASSERT_TRUE(strstr(g_rich_payload, "\"body\": \"Title\"") != NULL);
+  TEST_ASSERT_TRUE(strstr(g_rich_payload, "Sub \\\"quoted\\\"") != NULL);
+  TEST_ASSERT_TRUE(strstr(g_rich_payload, "\"localNotificationId\": \"42\"") !=
+                   NULL);
+  return 0;
+}
+
 int test_platform_notify_suite(void) {
   int failures = 0;
   failures += onion_test_run("notify_format_prefix", test_notify_format_prefix);
   failures += onion_test_run("notify_format_truncates", test_notify_format_truncates);
   failures += onion_test_run("notify_send_noop", test_notify_send_noop);
+  failures +=
+      onion_test_run("notify_rich_formats_payload", test_notify_rich_formats_payload);
   return failures;
 }

@@ -36,8 +36,71 @@ _Static_assert(sizeof(OrbisNotificationRequest) == 0xC30,
                "OrbisNotificationRequest must be 0xC30");
 
 static onion_notify_send_fn g_send = NULL;
+static onion_notify_rich_send_fn g_rich_send = NULL;
 
 void onion_notify_set_send(onion_notify_send_fn fn) { g_send = fn; }
+
+void onion_notify_set_rich_send(onion_notify_rich_send_fn fn) {
+  g_rich_send = fn;
+}
+
+static void json_escape(char *out, size_t out_sz, const char *in) {
+  size_t j = 0;
+
+  if (out_sz == 0) {
+    return;
+  }
+  if (!in) {
+    in = "";
+  }
+
+  for (size_t i = 0; in[i] && j + 1 < out_sz; i++) {
+    const unsigned char c = (unsigned char)in[i];
+    const char *esc = NULL;
+
+    switch (c) {
+    case '\\':
+      esc = "\\\\";
+      break;
+    case '"':
+      esc = "\\\"";
+      break;
+    case '\b':
+      esc = "\\b";
+      break;
+    case '\f':
+      esc = "\\f";
+      break;
+    case '\n':
+      esc = "\\n";
+      break;
+    case '\r':
+      esc = "\\r";
+      break;
+    case '\t':
+      esc = "\\t";
+      break;
+    }
+
+    if (esc) {
+      const size_t len = strlen(esc);
+      if (j + len >= out_sz) {
+        break;
+      }
+      memcpy(out + j, esc, len);
+      j += len;
+    } else if (c < 0x20) {
+      if (j + 6 >= out_sz) {
+        break;
+      }
+      snprintf(out + j, out_sz - j, "\\u%04x", (unsigned int)c);
+      j += 6;
+    } else {
+      out[j++] = (char)c;
+    }
+  }
+  out[j] = '\0';
+}
 
 void onion_notify_format(char *out, size_t out_sz, int show_watermark,
                          const char *fmt, va_list ap) {
@@ -74,4 +137,81 @@ void onion_notify(int show_watermark, const char *fmt, ...) {
   va_start(args, fmt);
   onion_notify_v(show_watermark, fmt, args);
   va_end(args);
+}
+
+void onion_notify_rich(const char *message, const char *sub_message,
+                       const char *icon_url, const char *preview_icon,
+                       const char *notification_id) {
+  char msg[512];
+  char sub[512];
+  char icon[1024];
+  char preview[64];
+  char id[64];
+  char payload[4096];
+  int rc;
+
+  json_escape(msg, sizeof(msg), message ? message : "OnionHEN");
+  json_escape(sub, sizeof(sub), sub_message ? sub_message : "");
+  json_escape(icon, sizeof(icon),
+              icon_url ? icon_url : "/user/data/OnionHEN/onionhen.png");
+  json_escape(preview, sizeof(preview),
+              preview_icon ? preview_icon : "download");
+  json_escape(id, sizeof(id), notification_id ? notification_id : "588193127");
+
+  rc = snprintf(
+      payload, sizeof(payload),
+      "{\n"
+      "  \"rawData\": {\n"
+      "    \"viewTemplateType\": \"InteractiveToastTemplateB\",\n"
+      "    \"channelType\": \"Downloads\",\n"
+      "    \"useCaseId\": \"IDC\",\n"
+      "    \"toastOverwriteType\": \"No\",\n"
+      "    \"isImmediate\": true,\n"
+      "    \"priority\": 100,\n"
+      "    \"viewData\": {\n"
+      "      \"icon\": {\n"
+      "        \"type\": \"Url\",\n"
+      "        \"parameters\": {\n"
+      "          \"url\": \"%s\"\n"
+      "        }\n"
+      "      },\n"
+      "      \"message\": {\n"
+      "        \"body\": \"%s\"\n"
+      "      },\n"
+      "      \"subMessage\": {\n"
+      "        \"body\": \"%s\"\n"
+      "      }\n"
+      "    },\n"
+      "    \"platformViews\": {\n"
+      "      \"previewDisabled\": {\n"
+      "        \"viewData\": {\n"
+      "          \"icon\": {\n"
+      "            \"type\": \"Predefined\",\n"
+      "            \"parameters\": {\n"
+      "              \"icon\": \"%s\"\n"
+      "            }\n"
+      "          },\n"
+      "          \"message\": {\n"
+      "            \"body\": \"%s\"\n"
+      "          }\n"
+      "        }\n"
+      "      }\n"
+      "    }\n"
+      "  },\n"
+      "  \"createdDateTime\": \"2025-12-14T03:14:51.473Z\",\n"
+      "  \"localNotificationId\": \"%s\"\n"
+      "}",
+      icon, msg, sub, preview, sub[0] ? sub : msg, id);
+  if (rc < 0 || (size_t)rc >= sizeof(payload)) {
+    OnionHEN_log("Rich notify: payload too large");
+    return;
+  }
+
+  OnionHEN_log("Rich notify: %s%s%s", msg, sub[0] ? " - " : "", sub);
+
+  if (!g_rich_send) {
+    OnionHEN_log("Rich notify: send fn not registered");
+    return;
+  }
+  (void)g_rich_send(0xFE, true, payload);
 }

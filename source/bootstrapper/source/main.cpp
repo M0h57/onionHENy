@@ -80,63 +80,8 @@ along with this program; see the file COPYING. If not, see
  extern uint8_t fps_prx_start[];
  extern const unsigned int fps_prx_size;
 
-int sceNotificationSend(int userId, bool isLogged, const char* payload);
  }
 
- 
-const char json_payload[] =
-     "{\n"
-     "  \"rawData\": {\n"
-     "    \"viewTemplateType\": \"InteractiveToastTemplateB\",\n"
-     "    \"channelType\": \"Downloads\",\n"
-     "    \"useCaseId\": \"IDC\",\n"
-     "    \"toastOverwriteType\": \"No\",\n"
-     "    \"isImmediate\": true,\n"
-     "    \"priority\": 100,\n"
-     "    \"viewData\": {\n"
-     "      \"icon\": {\n"
-     "        \"type\": \"Url\",\n"
-     "        \"parameters\": {\n"
-     "          \"url\": \"/user/data/OnionHEN/onionhen.png\"\n"
-     "        }\n"
-     "      },\n"
-     "      \"message\": {\n"
-     "        \"body\": \"OnionHEN is starting...\"\n"
-     "      },\n"
-     "      \"subMessage\": {\n"
-     "        \"body\": \"Please Wait For The Welcome Message\"\n"
-     "      },\n"
-     "      \"actions\": [\n"
-     "        {\n"
-     "          \"actionName\": \"Go to Debug Settings\",\n"
-     "          \"actionType\": \"DeepLink\",\n"
-     "          \"defaultFocus\": true,\n"
-     "          \"parameters\": {\n"
-     "            \"actionUrl\": \"pssettings:play?function=debug_settings_old\"\n"
-     "          }\n"
-     "        }\n"
-     "      ]\n"
-     "    },\n"
-     "    \"platformViews\": {\n"
-     "      \"previewDisabled\": {\n"
-     "        \"viewData\": {\n"
-     "          \"icon\": {\n"
-     "            \"type\": \"Predefined\",\n"
-     "            \"parameters\": {\n"
-     "              \"icon\": \"download\"\n"
-     "            }\n"
-     "          },\n"
-     "          \"message\": {\n"
-     "            \"body\": \"OnionHEN is starting...\"\n"
-     "          }\n"
-     "        }\n"
-     "      }\n"
-     "    }\n"
-     "  },\n"
-     "  \"createdDateTime\": \"2025-12-14T03:14:51.473Z\",\n"
-     "  \"localNotificationId\": \"588193127\"\n"
-     "}";
- 
  /******************************************************************************
   * Macros and Constants
   ******************************************************************************/
@@ -762,7 +707,6 @@ static int launch_chain(const OrbisKernelSwVersion &sys_ver) {
                         /*poll_ms=*/200))
     klog_puts("daemon ready timeout — continuing");
 
-  sceNotificationSend(0xFE, true, &json_payload[0]);
   return 0;
 }
 

@@ -78,13 +78,19 @@ set(CMAKE_CXX_FLAGS "${CMAKE_C_FLAGS} -DDEBUG -O0")
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O0")
 
 target_sources(${PROJECT_NAME} PRIVATE ${SrcFiles})
-target_include_directories(${PROJECT_NAME} PRIVATE "${D_CWD}/include" "${LZMA_ROOT}")
+target_include_directories(${PROJECT_NAME} PRIVATE
+	"${D_CWD}/include"
+	"${LZMA_ROOT}"
+	"${PROJECT_ROOT}/libonion_platform/include"
+)
+target_link_directories(${PROJECT_NAME} PUBLIC "${ONIONHEN_PS5_STUB_DIR}")
+target_link_libraries(${PROJECT_NAME} PUBLIC onion_platform SceNotification)
 target_compile_definitions(${PROJECT_NAME} PRIVATE
 	ONIONHEN_BOOTSTRAPPER_LZMA="${ONIONHEN_OUT_BIN}/bootstrapper.elf.lzma"
 	ONIONHEN_BOOTSTRAPPER_SIZE="${ONIONHEN_OUT_BIN}/bootstrapper.elf.lzma.size"
 )
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
-add_dependencies(${PROJECT_NAME} bootstrapper)
+add_dependencies(${PROJECT_NAME} bootstrapper onion_platform)
 
 # Add post-build command
 add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD

@@ -80,10 +80,19 @@ int32_t sceKernelSendNotificationRequest(int32_t device, void *req, size_t size,
   return 0;
 }
 
+int32_t sceNotificationSend(int32_t user_id, bool is_logged,
+                            const char *payload) {
+  (void)user_id;
+  (void)is_logged;
+  (void)payload;
+  return 0;
+}
+
 /* Bind platform notify to the host stub (constructor runs before tests). */
 #include <onion/notify.h>
 __attribute__((constructor)) static void host_bind_notify_send(void) {
   onion_notify_set_send(sceKernelSendNotificationRequest);
+  onion_notify_set_rich_send(sceNotificationSend);
 }
 
 /* Fallback logger if a TU is compiled without libonion_platform log.c.
