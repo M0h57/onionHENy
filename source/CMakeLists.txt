@@ -53,7 +53,6 @@ add_subdirectory(libonion_ipc)
 add_subdirectory(libonion_settings)
 add_subdirectory(libonion_detour)
 add_subdirectory(libonion_ready)
-add_subdirectory(libonion_playtime)
 # Shared ptrace + ELF inject (authid elevated once at inject entry, not per syscall).
 add_subdirectory(libonion_elfldr)
 add_subdirectory(libNineS)

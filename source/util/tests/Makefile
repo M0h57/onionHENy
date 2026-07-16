@@ -51,8 +51,7 @@ PROD_C_SRCS := \
 	$(REPO_ROOT)/source/libonion_platform/source/log.c \
 	$(REPO_ROOT)/source/libonion_platform/source/notify.c \
 	$(REPO_ROOT)/source/libonion_ready/source/ready.c \
-	$(REPO_ROOT)/source/libonion_payload/source/payload.c \
-	$(REPO_ROOT)/source/libonion_playtime/source/playtime.c
+	$(REPO_ROOT)/source/libonion_payload/source/payload.c
 
 PROD_CXX_SRCS := \
 	$(UTIL_ROOT)/source/cheats/JsonCheatParser.cpp \
@@ -79,7 +78,6 @@ TEST_C_SRCS := \
 	test_hde64.c \
 	test_reg_entity.c \
 	test_account_id_b64.c \
-	test_playtime.c \
 	test_ready.c \
 	test_platform_fs.c \
 	test_platform_log.c \
@@ -108,7 +106,6 @@ PROD_C_OBJS += $(BUILD_DIR)/prod/libonion_platform/notify.o
 PROD_C_OBJS += $(BUILD_DIR)/prod/libonion_ready/ready.o
 PROD_C_OBJS += $(BUILD_DIR)/prod/libonion_payload/payload.o
 PROD_C_OBJS += $(BUILD_DIR)/prod/libonion_detour/hde64.o
-PROD_C_OBJS += $(BUILD_DIR)/prod/libonion_playtime/playtime.o
 
 PROD_CXX_OBJS := $(patsubst $(UTIL_ROOT)/%.cpp,$(BUILD_DIR)/prod/%.o,$(filter $(UTIL_ROOT)/%,$(PROD_CXX_SRCS)))
 PROD_CXX_OBJS += $(BUILD_DIR)/prod/extern/cJSON.o
@@ -205,10 +202,6 @@ $(BUILD_DIR)/prod/libonion_payload/payload.o: $(REPO_ROOT)/source/libonion_paylo
 $(BUILD_DIR)/prod/libonion_detour/hde64.o: $(REPO_ROOT)/source/libonion_detour/source/hde64.cpp | $(BUILD_DIR)
 	@mkdir -p $(dir $@)
 	$(HOST_CXX) $(CXXFLAGS) -c -o $@ $<
-
-$(BUILD_DIR)/prod/libonion_playtime/playtime.o: $(REPO_ROOT)/source/libonion_playtime/source/playtime.c | $(BUILD_DIR)
-	@mkdir -p $(dir $@)
-	$(HOST_CC) $(CFLAGS) -c -o $@ $<
 
 $(BUILD_DIR)/tests/%.o: %.c | $(BUILD_DIR)
 	@mkdir -p $(dir $@)

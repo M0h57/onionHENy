@@ -130,7 +130,7 @@ bool enable_toolbox();
 void sig_handler(int signo);
 int elfldr_raise_privileges(pid_t pid);
 extern void makenewapp();
-// Play_time_thread / fifo_and_dumper_thread / get_ip_address / IPC_loop: daemon_ops.hpp
+// fifo_and_dumper_thread / get_ip_address / IPC_loop: daemon_ops.hpp
 extern bool is_handler_enabled;
 
 namespace {
@@ -198,9 +198,8 @@ void install_crash_handlers() {
     sigaction(i, &action, nullptr);
 }
 
-void start_worker_threads(pthread_t* fifo_thr, pthread_t* pt_thr, pthread_t* msg_thr) {
+void start_worker_threads(pthread_t* fifo_thr, pthread_t* msg_thr) {
   pthread_create(fifo_thr, nullptr, fifo_and_dumper_thread, nullptr);
-  pthread_create(pt_thr, nullptr, Play_time_thread, nullptr);
   pthread_create(msg_thr, nullptr, IPC_loop, nullptr);
   pthread_t ctrl_thr = nullptr;
   pthread_create(&ctrl_thr, nullptr, control_tcp_loop, nullptr);
@@ -281,7 +280,6 @@ int main() {
 
   char buz[255];
   pthread_t fifo_thr = nullptr;
-  pthread_t pt_thr = nullptr;
   pthread_t msg_thr = nullptr;
 
   sceNetCtlInit();
@@ -318,7 +316,7 @@ int main() {
       []() -> int { return sceSystemServiceGetAppIdOfRunningBigApp(); });
 
   get_ip_address(&buz[0]);
-  start_worker_threads(&fifo_thr, &pt_thr, &msg_thr);
+  start_worker_threads(&fifo_thr, &msg_thr);
   onion_ready_signal(ONION_READY_DAEMON);
 
   OnionHEN_log("is toolbox only: %s | ver: %x", toolbox_only ? "Yes" : "No",

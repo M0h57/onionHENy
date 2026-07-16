@@ -69,5 +69,4 @@ bool isUserLoggedIn();
 bool Open_Utility_Elf(const char *path, uint8_t **buffer);
 
 /* ---- background threads ---- */
-void *Play_time_thread(void *args) noexcept;       // daemon_playtime.cpp
 void *fifo_and_dumper_thread(void *args) noexcept; // daemon_jailbreak.cpp

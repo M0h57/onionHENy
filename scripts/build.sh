@@ -285,7 +285,6 @@ clean_build_artifacts() {
     "${SOURCE}/lib/libonion_elfldr.a" \
     "${SOURCE}/lib/libonion_ipc.a" \
     "${SOURCE}/lib/libonion_platform.a" \
-    "${SOURCE}/lib/libonion_playtime.a" \
     "${SOURCE}/lib/libonion_payload.a" \
     "${SOURCE}/lib/libonion_proc.a" \
     "${SOURCE}/lib/libonion_ready.a" \

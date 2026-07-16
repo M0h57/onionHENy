@@ -99,7 +99,7 @@ OnionHEN/
 │   ├── fps_elf/      # 游戏 overlay
 │   ├── unpacker/     # 最终 OnionHEN.elf
 │   ├── libhijacker/ libNineS/ libNidResolver/
-│   ├── libonion_*    # 共享：ipc/settings/proc/platform/ready/detour/payload/playtime/elfldr
+│   ├── libonion_*    # 共享：ipc/settings/proc/platform/ready/detour/payload/elfldr
 │   ├── extern/       # 第三方源码
 │   ├── include/ lib/ # 公共头文件与预编译库
 │   └── vendor/       # 同步后的 kstuff 等

@@ -39,7 +39,6 @@ Binary: `source/util/build/host-tests/onion-host-tests`
 | `test_http_github` | GitHub commits JSON → `sha` (object + array) |
 | `test_reg_entity` | registry entity-id formula (account slots) |
 | `test_account_id_b64` | uint64 account id → base64 |
-| `test_playtime` | binary playtime store (TID10 + u64) |
 | `test_toolbox_helpers` | UI path rewrite + payload .elf basename filter |
 | `test_settings` | full schema serialize/round-trip, partial INI defaults, legacy keys |
 | `test_ready` | ready markers, path builder, name rejection, **fps_overlay / util_booted** flags, toolbox legacy alias |

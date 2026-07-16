@@ -11,7 +11,6 @@ extern "C" int test_x64_relocator_suite(void);
 extern "C" int test_http_github_suite(void);
 extern "C" int test_reg_entity_suite(void);
 extern "C" int test_account_id_b64_suite(void);
-extern "C" int test_playtime_suite(void);
 extern "C" int test_settings_suite(void);
 extern "C" int test_ready_suite(void);
 extern "C" int test_platform_fs_suite(void);
@@ -40,7 +39,6 @@ int main() {
   failures += test_http_github_suite();
   failures += test_reg_entity_suite();
   failures += test_account_id_b64_suite();
-  failures += test_playtime_suite();
   failures += test_settings_suite();
   failures += test_ready_suite();
   failures += test_platform_fs_suite();

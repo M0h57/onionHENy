@@ -29,7 +29,7 @@ bootstrapper.elf ──9021──► util.elf ──► kstuff.elf ──► dae
 | Critical | daemon | Toolbox/FPS 注入、FS IPC、util 看门狗 |
 | Utility | util | 金手指、下载、9028、重业务 |
 | UI | shellui / fps_elf | Mono 注入 / overlay |
-| 共享库 | `libonion_{ipc,settings,proc,platform,ready,detour,payload,playtime}` | 协议/配置/进程/平台叶子能力 |
+| 共享库 | `libonion_{ipc,settings,proc,platform,ready,detour,payload}` | 协议/配置/进程/平台叶子能力 |
 | 注入原语 | libhijacker / libNineS / libNidResolver | 劫持、ptrace ELF 注入、NID |
 
 **依赖方向（目标态，大体已落地）：**

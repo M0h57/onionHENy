@@ -69,7 +69,6 @@ source/lib/libonion_proc.a
 source/lib/libonion_ready.a
 source/lib/libonion_platform.a
 source/lib/libonion_plugin.a
-source/lib/libonion_playtime.a
 source/lib/libonion_elfldr.a
 source/lib/libonion_payload.a
 /scripts/__pycache__
