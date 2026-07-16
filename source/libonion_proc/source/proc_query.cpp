@@ -99,6 +99,73 @@ extern "C" pid_t onion_find_pid_substr(const char *substr) {
   return scan_kinfo(substr, /*substr=*/true);
 }
 
+extern "C" size_t onion_collect_pids(const char *const *names, size_t nnames,
+                                     pid_t *out, size_t max_out) {
+  if (!names || nnames == 0 || !out || max_out == 0) {
+    return 0;
+  }
+
+  int mib[4] = {CTL_KERN, KERN_PROC, KERN_PROC_PROC, 0};
+  size_t buf_size = 0;
+  if (sysctl(mib, 4, nullptr, &buf_size, nullptr, 0)) {
+    return 0;
+  }
+  void *buf = malloc(buf_size);
+  if (!buf) {
+    return 0;
+  }
+  if (sysctl(mib, 4, buf, &buf_size, nullptr, 0)) {
+    free(buf);
+    return 0;
+  }
+
+  size_t count = 0;
+  for (char *ptr = static_cast<char *>(buf);
+       ptr < static_cast<char *>(buf) + buf_size && count < max_out;) {
+    auto *ki = reinterpret_cast<struct kinfo_proc *>(ptr);
+    if (ki->ki_structsize <= 0) {
+      break;
+    }
+    ptr += ki->ki_structsize;
+
+    if (ki->ki_pid <= 1) {
+      continue;
+    }
+
+    const char *comm = ki->ki_comm;
+    const char *td = ki->ki_tdname;
+    bool match = false;
+    for (size_t i = 0; i < nnames && !match; ++i) {
+      if (!names[i] || !names[i][0]) {
+        continue;
+      }
+      if (comm && strcmp(comm, names[i]) == 0) {
+        match = true;
+      } else if (td && td[0] && strcmp(td, names[i]) == 0) {
+        match = true;
+      }
+    }
+    if (!match) {
+      continue;
+    }
+
+    /* Dedup if both comm and td matched somehow across scans. */
+    bool seen = false;
+    for (size_t j = 0; j < count; ++j) {
+      if (out[j] == ki->ki_pid) {
+        seen = true;
+        break;
+      }
+    }
+    if (!seen) {
+      out[count++] = ki->ki_pid;
+    }
+  }
+
+  free(buf);
+  return count;
+}
+
 extern "C" bool onion_proc_is_alive(pid_t pid) {
   if (pid <= 0) {
     return false;

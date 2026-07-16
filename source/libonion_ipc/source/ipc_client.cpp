@@ -355,6 +355,11 @@ void IPC_Client::ForceKillPID(int pid) {
   if (!require_crit("ForceKillPID")) {
     return;
   }
+  /* Never ask daemon to kill 0/1 — TerminateProcess(1) stalls ShellUI ~25s. */
+  if (pid <= 1) {
+    shellui_log("ForceKillPID: refusing invalid/system pid=%d", pid);
+    return;
+  }
   std::string ipc_msg;
   cJSON *j = cJSON_CreateObject();
   cJSON_AddNumberToObject(j, "pid", pid);

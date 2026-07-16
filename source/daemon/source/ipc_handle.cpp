@@ -293,8 +293,9 @@ void handleIPC(clientArgs *client, std::string &inputStr,
   }
   case BREW_FORCE_KILL_PID: {
     int pid = onion_cjson::int_item(my_json.get(), "pid");
-    if (pid < 0) {
-      OnionHEN_log("Invalid PID: %d", pid);
+    /* <=1: invalid / system; never TerminateProcess(1) (hangs ShellUI IPC). */
+    if (pid <= 1) {
+      OnionHEN_log("Invalid/system PID for FORCE_KILL: %d", pid);
       reply(sender_app, true);
       break;
     }

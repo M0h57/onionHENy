@@ -84,12 +84,142 @@ void onion_payload_write_pid_file(const char *pid_path, pid_t pid) {
   close(f);
 }
 
+/*
+ * elfldr process-name rules (see elfldr_remote.h):
+ *   - raw bytes on :9021  → often "payload.elf"
+ *   - file:/path URI      → basename (e.g. web-file-mgr-v0.8.elf)
+ * Orbis ki_comm is only COMMLEN (19) chars — long basenames truncate.
+ *
+ * Kill path must prefer the PID recorded at launch (PID file). Name-only
+ * lookup is ambiguous for "payload.elf" when several homebrews run.
+ */
+
+#ifndef COMMLEN
+#define COMMLEN 19
+#endif
+
+#define PAYLOAD_PID_SNAP_MAX 64
+
+/** Build the set of ki_comm strings this launch may appear under. */
+static size_t onion_payload_candidate_names(const char *title_id, char *elf_name,
+                                            size_t elf_name_sz, char *trunc_name,
+                                            size_t trunc_sz,
+                                            const char **names, size_t max_names) {
+  size_t n = 0;
+  if (!title_id || !title_id[0] || !names || max_names == 0)
+    return 0;
+
+  /* Most common for tools that never thr_set_name. */
+  if (n < max_names)
+    names[n++] = "payload.elf";
+
+  if (elf_name && elf_name_sz > 0) {
+    snprintf(elf_name, elf_name_sz, "%s.elf", title_id);
+    if (n < max_names)
+      names[n++] = elf_name;
+
+    /* Truncated form when basename > COMMLEN (ki_comm hard limit). */
+    if (trunc_name && trunc_sz > 0 && strlen(elf_name) > (size_t)COMMLEN) {
+      size_t copy = (size_t)COMMLEN;
+      if (copy >= trunc_sz)
+        copy = trunc_sz - 1;
+      memcpy(trunc_name, elf_name, copy);
+      trunc_name[copy] = '\0';
+      if (n < max_names)
+        names[n++] = trunc_name;
+    }
+  }
+
+  if (n < max_names)
+    names[n++] = title_id;
+
+  return n;
+}
+
+static bool onion_payload_pid_in_list(pid_t pid, const pid_t *list, size_t n) {
+  for (size_t i = 0; i < n; ++i) {
+    if (list[i] == pid)
+      return true;
+  }
+  return false;
+}
+
+/**
+ * Name-based resolve for kill fallback only.
+ * Prefer title-specific names; avoid bare "payload.elf" (ambiguous).
+ */
+static pid_t onion_payload_resolve_pid_by_title(const char *title_id) {
+  if (!title_id || !title_id[0])
+    return -1;
+
+  char nbuf[64];
+  char trunc[COMMLEN + 1];
+  snprintf(nbuf, sizeof(nbuf), "%s.elf", title_id);
+
+  pid_t pid = find_pid(nbuf);
+  if (pid <= 1 && strlen(nbuf) > (size_t)COMMLEN) {
+    memcpy(trunc, nbuf, COMMLEN);
+    trunc[COMMLEN] = '\0';
+    pid = find_pid(trunc);
+  }
+  if (pid <= 1)
+    pid = find_pid(title_id);
+  if (pid <= 1)
+    pid = onion_find_pid_substr(title_id);
+  if (pid <= 1)
+    return -1;
+  return pid;
+}
+
+/**
+ * After 9021 accept: find a NEW pid among candidate names that was not in
+ * @before. Picks the highest new pid (typically the most recently created).
+ */
+static pid_t onion_payload_find_new_pid(const char *title_id,
+                                        const pid_t *before, size_t n_before) {
+  char elf_name[64];
+  char trunc_name[COMMLEN + 1];
+  const char *names[8];
+  const size_t nnames = onion_payload_candidate_names(
+      title_id, elf_name, sizeof(elf_name), trunc_name, sizeof(trunc_name),
+      names, sizeof(names) / sizeof(names[0]));
+
+  pid_t after[PAYLOAD_PID_SNAP_MAX];
+  const size_t n_after =
+      onion_collect_pids(names, nnames, after, PAYLOAD_PID_SNAP_MAX);
+
+  pid_t best = -1;
+  for (size_t i = 0; i < n_after; ++i) {
+    if (after[i] <= 1)
+      continue;
+    if (onion_payload_pid_in_list(after[i], before, n_before))
+      continue;
+    if (after[i] > best)
+      best = after[i];
+  }
+  return best;
+}
+
 void onion_payload_stop_by_title(const char *title_id) {
   char pid_path[256];
   onion_payload_pid_path(pid_path, sizeof(pid_path), title_id);
 
+  /* Primary: kill the pid we recorded at launch. */
   pid_t pid = onion_payload_read_pid_file(pid_path);
-  if (pid > 0) {
+  /* PID 0/1 are never valid payload targets (legacy wrote 1 as "unknown"). */
+  if (pid <= 1) {
+    if (pid == 1) {
+      OnionHEN_log("Ignoring bogus payload PID 1 for %s (legacy fallback)",
+                   title_id);
+      unlink(pid_path);
+    }
+    pid = -1;
+  } else if (!onion_proc_is_alive(pid)) {
+    OnionHEN_log("Stale payload PID file for %s (pid=%d dead), removing",
+                 title_id, (int)pid);
+    unlink(pid_path);
+    pid = -1;
+  } else {
     char name[32];
     if (sceKernelGetProcessName(pid, name) < 0) {
       OnionHEN_log("Stale payload PID file detected for %s, removing", title_id);
@@ -98,11 +228,17 @@ void onion_payload_stop_by_title(const char *title_id) {
     }
   }
 
-  if (pid > 0) {
-    OnionHEN_log("killing pid %d (payload: %s)", pid, title_id);
+  /* Secondary: title-specific process name only (not generic payload.elf). */
+  if (pid <= 1)
+    pid = onion_payload_resolve_pid_by_title(title_id);
+
+  if (pid > 1) {
+    OnionHEN_log("killing pid %d (payload: %s)", (int)pid, title_id);
     if (kill(pid, SIGKILL) != 0)
-      OnionHEN_log("kill(%d) failed: %s", pid, strerror(errno));
+      OnionHEN_log("kill(%d) failed: %s", (int)pid, strerror(errno));
     unlink(pid_path);
+  } else {
+    OnionHEN_log("stop_by_title: no live pid for %s", title_id);
   }
 }
 
@@ -126,25 +262,59 @@ pid_t onion_payload_launch_9021(const char *title_id, const uint8_t *elf,
   snprintf(epath, sizeof(epath), "/data/OnionHEN/payloads/%s.elf", title_id);
   OnionHEN_log("loading payload via 9021 key=%s path=%s", title_id, epath);
 
+  /*
+   * Snapshot candidate pids BEFORE launch so we can attribute a new
+   * "payload.elf" (or basename) process to this launch, even when several
+   * homebrews share the same ki_comm.
+   */
+  char elf_name[64];
+  char trunc_name[COMMLEN + 1];
+  const char *names[8];
+  const size_t nnames = onion_payload_candidate_names(
+      title_id, elf_name, sizeof(elf_name), trunc_name, sizeof(trunc_name),
+      names, sizeof(names) / sizeof(names[0]));
+
+  pid_t before[PAYLOAD_PID_SNAP_MAX];
+  const size_t n_before =
+      onion_collect_pids(names, nnames, before, PAYLOAD_PID_SNAP_MAX);
+  OnionHEN_log("  pre-launch snapshot: %zu candidate pid(s) "
+               "(names include payload.elf / %s)",
+               n_before, elf_name);
+
   if (!elfldr_remote_write_and_launch(epath, elf, elf_sz)) {
     OnionHEN_log("  Failed 9021 launch for %s", title_id);
     return -1;
   }
 
-  sleep(2);
+  /*
+   * Poll for a NEW pid among candidates. Never invent pid=1.
+   *
+   * Return codes:
+   *   >1  real payload pid (caller writes PID file)
+   *    0  9021 accepted ELF but process not observed
+   *   -1  hard failure
+   */
+  pid_t pid = -1;
+  for (int attempt = 0; attempt < 25; ++attempt) {
+    usleep(200 * 1000); /* 200ms × 25 ≈ 5s max */
+    pid = onion_payload_find_new_pid(title_id, before, n_before);
+    if (pid > 1)
+      break;
+  }
 
-  char nbuf[64];
-  snprintf(nbuf, sizeof(nbuf), "%s.elf", title_id);
-  pid_t pid = find_pid(nbuf);
-  if (pid < 0)
-    pid = find_pid(title_id);
-  if (pid < 0)
-    pid = onion_find_pid_substr(title_id);
-  if (pid < 0)
-    pid = 1;
+  if (pid > 1) {
+    char pname[32] = {0};
+    if (sceKernelGetProcessName(pid, pname) == 0)
+      OnionHEN_log("  Launched via 9021 (pid=%d name=%s)", (int)pid, pname);
+    else
+      OnionHEN_log("  Launched via 9021 (pid=%d)", (int)pid);
+    return pid;
+  }
 
-  OnionHEN_log("  Launched via 9021 (pid=%d)", (int)pid);
-  return pid;
+  OnionHEN_log("  Launched via 9021 but new PID not observed for %s "
+               "(no PID file; stop will try title name only)",
+               title_id);
+  return 0;
 }
 
 uint8_t *onion_payload_read_file(const char *path, size_t *out_size) {
@@ -235,8 +405,13 @@ bool onion_payload_load(const char *path, const char *filename,
   onion_payload_stop_by_title(key);
   const pid_t pid = onion_payload_launch_9021(key, buf, size);
   free(buf);
-  onion_payload_write_pid_file(pid_path, pid);
+  /* Only persist real pids; never write 0/1 (legacy wrote 1 → ForceKill hang). */
+  if (pid > 1)
+    onion_payload_write_pid_file(pid_path, pid);
+  else
+    onion_payload_write_pid_file(pid_path, -1);
   if (local.always_succeed_after_launch)
     return true;
+  /* 0 = 9021 launch ok but pid unknown; >1 = full success; -1 = fail. */
   return pid >= 0;
 }

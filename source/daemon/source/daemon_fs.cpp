@@ -247,14 +247,21 @@ int get_game_pid() {
 }
 
 void ForceKillProc(int pid) {
-  if (pid < 0) {
-    OnionHEN_log("Invalid PID: %d", pid);
+  /* PID 0/1 are kernel/init-class; never target them (payload path once
+   * stored pid=1 as "unknown" and ShellUI hung on TerminateProcess(1)). */
+  if (pid <= 1) {
+    OnionHEN_log("ForceKillProc: refusing invalid/system pid=%d", pid);
+    return;
+  }
+  if (pid == getpid()) {
+    OnionHEN_log("ForceKillProc: refusing self pid=%d", pid);
     return;
   }
 
   #define DECID_AUTH_ID 0x4800000000000022 // required for killing with sceKernelTerminateProcess / sys_proc_term  syscall
   uintptr_t authid = set_proc_authid(getpid(), DECID_AUTH_ID);
 
+  OnionHEN_log("Terminating pid=%d", pid);
   int ret = 0;
   if (sceKernelTerminateProcess(pid, &ret) != 0) {
     OnionHEN_log("sceKernelTerminateProcess(%d) failed ret=%d — SIGKILL fallback",

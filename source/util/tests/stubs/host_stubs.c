@@ -51,6 +51,20 @@ pid_t onion_find_pid_substr(const char *substr) {
   return -1;
 }
 
+size_t onion_collect_pids(const char *const *names, size_t nnames, pid_t *out,
+                          size_t max_out) {
+  (void)names;
+  (void)nnames;
+  (void)out;
+  (void)max_out;
+  return 0;
+}
+
+bool onion_proc_is_alive(pid_t pid) {
+  (void)pid;
+  return false;
+}
+
 int sceKernelGetProcessName(int pid, char *name) {
   (void)pid;
   if (name)

@@ -31,8 +31,16 @@ void onion_payload_stop_by_title(const char *title_id);
 
 /**
  * Stage ELF under /data/OnionHEN/payloads/<key>.elf and launch via 9021.
- * On success returns pid (>=0). If process name is not observed, returns 1.
- * On failure returns -1.
+ *
+ * Records the real process by snapshot-diff of candidate ki_comm names
+ * (payload.elf, <key>.elf, truncated basename, <key>) so homebrew that never
+ * thr_set_name still gets a correct PID file for later kill.
+ *
+ * Returns:
+ *   >1  observed payload pid (write to /system_tmp/<key>.PID)
+ *    0  9021 accepted the ELF but no new pid observed (do not write 0/1)
+ *   -1  hard failure (send/stage failed)
+ * Never returns 1 as a "success" sentinel (that caused ForceKill of system pid 1).
  */
 pid_t onion_payload_launch_9021(const char *title_id, const uint8_t *elf,
                                size_t elf_sz);
