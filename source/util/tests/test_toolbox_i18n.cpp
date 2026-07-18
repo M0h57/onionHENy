@@ -11,14 +11,19 @@ using namespace toolbox_i18n;
 static int test_default_zh(void) {
   set_lang(Lang::ZhHans);
   TEST_ASSERT_TRUE(std::strcmp(tr("root.title"), "★OnionHEN 工具箱") == 0);
-  TEST_ASSERT_TRUE(std::strcmp(tr("group.pkg"), "软件包安装") == 0);
+  TEST_ASSERT_TRUE(std::strcmp(tr("group.pkg"), "内容安装与管理") == 0);
+  TEST_ASSERT_TRUE(std::strcmp(tr("group.display"), "监控与显示") == 0);
+  TEST_ASSERT_TRUE(std::strcmp(tr("group.preferences"), "操作偏好") == 0);
   return 0;
 }
 
 static int test_en(void) {
   set_lang(Lang::En);
   TEST_ASSERT_TRUE(std::strcmp(tr("root.title"), "★OnionHEN Toolbox") == 0);
-  TEST_ASSERT_TRUE(std::strcmp(tr("group.pkg"), "Package Install") == 0);
+  TEST_ASSERT_TRUE(std::strcmp(tr("group.pkg"), "Content Install & Management") == 0);
+  TEST_ASSERT_TRUE(std::strcmp(tr("group.connection"),
+                               "Account, Connection & Remote Play") == 0);
+  TEST_ASSERT_TRUE(std::strcmp(tr("group.preferences"), "Preferences") == 0);
   TEST_ASSERT_TRUE(std::strcmp(tr("sc.off"), "Off (no shortcut)") == 0);
   return 0;
 }

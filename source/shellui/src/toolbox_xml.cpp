@@ -427,6 +427,10 @@ constexpr const char* kIconPkg =
 constexpr const char* kIconPlugins =
     "/user/data/OnionHEN/assets/icon_xml_plugins.png";
 constexpr const char* kIconGame = "/user/data/OnionHEN/assets/icon_xml_game.png";
+constexpr const char* kIconMonitor =
+    "/user/data/OnionHEN/assets/icon_xml_monitor.png";
+constexpr const char* kIconAccount =
+    "/user/data/OnionHEN/assets/icon_xml_account.png";
 constexpr const char* kIconSettings =
     "/user/data/OnionHEN/assets/icon_xml_settings.png";
 constexpr const char* kIconShortcuts =
@@ -468,64 +472,63 @@ void append_toolbox_payloads_group(ps5ui::Group& g) {
 
 void append_toolbox_game_group(ps5ui::Group& g) {
   g.link("id_cheats", toolbox_i18n::tr("cheats.link"), "cheats.xml")
-      .link("remote_play", toolbox_i18n::tr("remote_play.link"),
-            "remote_play.xml")
       .toggle("id_custom_game_opts", toolbox_i18n::tr("game_opts.toggle"),
               toolbox_on("id_custom_game_opts"),
-              toolbox_i18n::tr("game_opts.toggle.sub"))
-      .group(
-          "id_overlay_opts", toolbox_i18n::tr("overlay.group"),
-          [](ps5ui::Group& o) {
-            o.list("id_overlay_change_pos", toolbox_i18n::tr("overlay.pos"),
-                   [](ps5ui::ListBuilder& L) {
-                     L.item("id_overlay_pos_1",
-                            toolbox_i18n::tr("overlay.pos.top"), "0")
-                         .item("id_overlay_pos_3",
-                               toolbox_i18n::tr("overlay.pos.bottom"), "2");
-                   },
-                   toolbox_i18n::tr("overlay.pos.sub"),
-                   toolbox_val("id_overlay_change_pos"))
-                .toggle("id_overlay_gpu", toolbox_i18n::tr("overlay.gpu"),
-                        toolbox_on("id_overlay_gpu"), std::nullopt,
-                        toolbox_i18n::tr("overlay.gpu.desc"))
-                .toggle("id_overlay_cpu", toolbox_i18n::tr("overlay.cpu"),
-                        toolbox_on("id_overlay_cpu"), std::nullopt,
-                        toolbox_i18n::tr("overlay.cpu.desc"))
-                .toggle("id_all_cpu_usage", toolbox_i18n::tr("overlay.cpu_all"),
-                        toolbox_on("id_all_cpu_usage"), std::nullopt,
-                        toolbox_i18n::tr("overlay.cpu_all.desc"))
-                .toggle("id_overlay_ram", toolbox_i18n::tr("overlay.ram"),
-                        toolbox_on("id_overlay_ram"), std::nullopt,
-                        toolbox_i18n::tr("overlay.ram.desc"))
-                .toggle("id_overlay_ip", toolbox_i18n::tr("overlay.ip"),
-                        toolbox_on("id_overlay_ip"), std::nullopt,
-                        toolbox_i18n::tr("overlay.ip.desc"));
-          },
-          toolbox_i18n::tr("overlay.group.sub"), std::nullopt,
-          "id_overlay_change_pos");
+              toolbox_i18n::tr("game_opts.toggle.sub"));
+}
+
+void append_toolbox_display_group(ps5ui::Group& g) {
+  g.group(
+       "id_overlay_opts", toolbox_i18n::tr("overlay.group"),
+       [](ps5ui::Group& o) {
+         o.list("id_overlay_change_pos", toolbox_i18n::tr("overlay.pos"),
+                [](ps5ui::ListBuilder& L) {
+                  L.item("id_overlay_pos_1",
+                         toolbox_i18n::tr("overlay.pos.top"), "0")
+                      .item("id_overlay_pos_3",
+                            toolbox_i18n::tr("overlay.pos.bottom"), "2");
+                },
+                toolbox_i18n::tr("overlay.pos.sub"),
+                toolbox_val("id_overlay_change_pos"))
+             .toggle("id_overlay_gpu", toolbox_i18n::tr("overlay.gpu"),
+                     toolbox_on("id_overlay_gpu"), std::nullopt,
+                     toolbox_i18n::tr("overlay.gpu.desc"))
+             .toggle("id_overlay_cpu", toolbox_i18n::tr("overlay.cpu"),
+                     toolbox_on("id_overlay_cpu"), std::nullopt,
+                     toolbox_i18n::tr("overlay.cpu.desc"))
+             .toggle("id_all_cpu_usage", toolbox_i18n::tr("overlay.cpu_all"),
+                     toolbox_on("id_all_cpu_usage"), std::nullopt,
+                     toolbox_i18n::tr("overlay.cpu_all.desc"))
+             .toggle("id_overlay_ram", toolbox_i18n::tr("overlay.ram"),
+                     toolbox_on("id_overlay_ram"), std::nullopt,
+                     toolbox_i18n::tr("overlay.ram.desc"))
+             .toggle("id_overlay_ip", toolbox_i18n::tr("overlay.ip"),
+                     toolbox_on("id_overlay_ip"), std::nullopt,
+                     toolbox_i18n::tr("overlay.ip.desc"));
+       },
+       toolbox_i18n::tr("overlay.group.sub"), std::nullopt,
+       "id_overlay_change_pos")
+      .toggle("id_disp_titleids", toolbox_i18n::tr("disp_tids"),
+              toolbox_on("id_disp_titleids"), toolbox_i18n::tr("disp_tids.sub"));
+}
+
+void append_toolbox_connection_group(ps5ui::Group& g) {
+  g.link("remote_play", toolbox_i18n::tr("remote_play.link"),
+         "remote_play.xml");
 }
 
 void append_toolbox_system_group(ps5ui::Group& g) {
-  g.list("id_ui_lang", toolbox_i18n::tr("lang.list"),
-         [](ps5ui::ListBuilder& L) {
-           L.item("id_ui_lang_system", toolbox_i18n::tr("lang.system"), "0")
-               .item("id_ui_lang_zh", toolbox_i18n::tr("lang.zh"), "1")
-               .item("id_ui_lang_en", toolbox_i18n::tr("lang.en"), "2");
-         },
-         toolbox_i18n::tr("lang.list.sub"), toolbox_val("id_ui_lang", "0"))
-      .toggle("id_disp_titleids", toolbox_i18n::tr("disp_tids"),
-              toolbox_on("id_disp_titleids"), toolbox_i18n::tr("disp_tids.sub"))
-      .group(
-          "id_group_fan", toolbox_i18n::tr("fan.group"),
-          [](ps5ui::Group& f) {
-            f.toggle("id_enable_fan_speed", toolbox_i18n::tr("fan.enable"),
-                     toolbox_on("id_enable_fan_speed"))
-                .text_field("id_fan_speed", toolbox_i18n::tr("fan.threshold"),
-                            toolbox_i18n::tr("fan.threshold.sub"), "number", "2",
-                            "2", std::nullopt, std::nullopt, std::nullopt,
-                            toolbox_val("id_fan_speed", ""));
-          },
-          std::nullopt, std::nullopt, "id_enable_fan_speed")
+  g.group(
+       "id_group_fan", toolbox_i18n::tr("fan.group"),
+       [](ps5ui::Group& f) {
+         f.toggle("id_enable_fan_speed", toolbox_i18n::tr("fan.enable"),
+                  toolbox_on("id_enable_fan_speed"))
+             .text_field("id_fan_speed", toolbox_i18n::tr("fan.threshold"),
+                         toolbox_i18n::tr("fan.threshold.sub"), "number", "2",
+                         "2", std::nullopt, std::nullopt, std::nullopt,
+                         toolbox_val("id_fan_speed", ""));
+       },
+       std::nullopt, std::nullopt, "id_enable_fan_speed")
       .group(
           "id_rest_mode", toolbox_i18n::tr("rest.group"),
           [](ps5ui::Group& r) {
@@ -547,19 +550,29 @@ void append_toolbox_system_group(ps5ui::Group& g) {
             "DebugSettings/data/debug_settings_licenseactivation.xml");
 }
 
-void append_toolbox_shortcuts_group(ps5ui::Group& g) {
-  g.list("id_cheats_shortcut", toolbox_i18n::tr("sc.cheats"),
+void append_toolbox_preferences_group(ps5ui::Group& g) {
+  g.list("id_ui_lang", toolbox_i18n::tr("lang.list"),
          [](ps5ui::ListBuilder& L) {
-           L.item("id_cheats_shortcut_0", toolbox_i18n::tr("sc.off"), "0")
-               .item("id_cheats_shortcut_1", toolbox_i18n::tr("sc.r3_l3"), "1")
-               .item("id_cheats_shortcut_2", toolbox_i18n::tr("sc.l2_tri"), "2")
-               .item("id_cheats_shortcut_3",
-                     toolbox_i18n::tr("sc.long_options"), "3")
-               .item("id_cheats_shortcut_4", toolbox_i18n::tr("sc.long_share"),
-                     "4")
-               .item("id_cheats_shortcut_5", toolbox_i18n::tr("sc.share"), "5");
+           L.item("id_ui_lang_system", toolbox_i18n::tr("lang.system"), "0")
+               .item("id_ui_lang_zh", toolbox_i18n::tr("lang.zh"), "1")
+               .item("id_ui_lang_en", toolbox_i18n::tr("lang.en"), "2");
          },
-         toolbox_i18n::tr("sc.cheats.sub"), toolbox_val("id_cheats_shortcut"))
+         toolbox_i18n::tr("lang.list.sub"), toolbox_val("id_ui_lang", "0"))
+      .list("id_cheats_shortcut", toolbox_i18n::tr("sc.cheats"),
+            [](ps5ui::ListBuilder& L) {
+              L.item("id_cheats_shortcut_0", toolbox_i18n::tr("sc.off"), "0")
+                  .item("id_cheats_shortcut_1", toolbox_i18n::tr("sc.r3_l3"),
+                        "1")
+                  .item("id_cheats_shortcut_2", toolbox_i18n::tr("sc.l2_tri"),
+                        "2")
+                  .item("id_cheats_shortcut_3",
+                        toolbox_i18n::tr("sc.long_options"), "3")
+                  .item("id_cheats_shortcut_4",
+                        toolbox_i18n::tr("sc.long_share"), "4")
+                  .item("id_cheats_shortcut_5", toolbox_i18n::tr("sc.share"),
+                        "5");
+            },
+            toolbox_i18n::tr("sc.cheats.sub"), toolbox_val("id_cheats_shortcut"))
       .list("id_toolbox_shortcut", toolbox_i18n::tr("sc.toolbox"),
             [](ps5ui::ListBuilder& L) {
               L.item("id_toolbox_shortcut_0", toolbox_i18n::tr("sc.off"), "0")
@@ -691,14 +704,25 @@ void generate_toolbox_xml(std::string& new_xml) {
           [](ps5ui::Group& g) { append_toolbox_game_group(g); },
           toolbox_i18n::tr("group.game.sub"), kIconGame, "id_cheats")
       .group(
+          "id_group_display", toolbox_i18n::tr("group.display"),
+          [](ps5ui::Group& g) { append_toolbox_display_group(g); },
+          toolbox_i18n::tr("group.display.sub"), kIconMonitor,
+          "id_overlay_opts")
+      .group(
+          "id_group_connection", toolbox_i18n::tr("group.connection"),
+          [](ps5ui::Group& g) { append_toolbox_connection_group(g); },
+          toolbox_i18n::tr("group.connection.sub"), kIconAccount,
+          "remote_play")
+      .group(
           "id_group_system", toolbox_i18n::tr("group.system"),
           [](ps5ui::Group& g) { append_toolbox_system_group(g); },
-          toolbox_i18n::tr("group.system.sub"), kIconSettings, "id_ui_lang")
+          toolbox_i18n::tr("group.system.sub"), kIconSettings,
+          "id_group_fan")
       .group(
-          "id_utils", toolbox_i18n::tr("group.shortcuts"),
-          [](ps5ui::Group& g) { append_toolbox_shortcuts_group(g); },
-          toolbox_i18n::tr("group.shortcuts.sub"), kIconShortcuts,
-          "id_cheats_shortcut")
+          "id_group_preferences", toolbox_i18n::tr("group.preferences"),
+          [](ps5ui::Group& g) { append_toolbox_preferences_group(g); },
+          toolbox_i18n::tr("group.preferences.sub"), kIconShortcuts,
+          "id_ui_lang")
       .group(
           "id_group_debug", toolbox_i18n::tr("group.debug"),
           [](ps5ui::Group& g) { append_toolbox_debug_group(g); },

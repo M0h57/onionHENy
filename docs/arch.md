@@ -175,12 +175,14 @@ OnionHEN/
 
 主要菜单能力：
 
-- 软件包安装（系统 PkgInstaller UI）
-- 插件与内核（插件 ELF、kstuff 管理）
-- 游戏功能（金手指引擎、Remote Play、overlay）
-- 系统设置（Title ID、风扇、休息模式、外置 HDD、BD 激活）
-- 启动与快捷键
-- 调试 / 关于
+- 内容安装与管理（系统 PkgInstaller UI、附加内容管理）
+- Payload 与内核组件（Payload ELF、kstuff 管理）
+- 游戏辅助（金手指引擎、OnionHEN 游戏选项）
+- 监控与显示（游戏 overlay、Title ID）
+- 账号、连接与远程游玩
+- 系统与硬件（风扇、休息模式、外置 HDD、BD 激活）
+- 操作偏好（工具箱语言、手柄快捷键）
+- 高级调试 / 关于
 
 注入路径详见 [shellui-injection.md](shellui-injection.md)。
 
@@ -356,11 +358,11 @@ struct IPCMessage {
 ### 4.2 用户界面（Toolbox）
 
 - Debug Settings 替代菜单
-- Rest Mode / Remote Play / 插件与 payload 管理
-- 外置 HDD、kstuff 菜单
-- 游戏选项、Title ID、手柄快捷键
-- Blu-ray 激活、BD-J/Lua exploit 自动弹碟
-- 游戏 overlay
+- 内容安装与管理、Payload 与内核组件
+- 游戏辅助、监控与显示
+- 账号、连接与远程游玩
+- 系统与硬件、操作偏好
+- 高级调试、关于与支持
 - 金手指（flat 文件 + mdbg/kdirect）
 
 ### 4.3 网络服务

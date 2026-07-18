@@ -219,12 +219,12 @@ static int test_toolbox_like_skeleton(void) {
       Page("id_debug_settings", "★OnionHEN 工具箱")
           .root_focus("id_group_pkg")
           .group(
-              "id_group_pkg", "软件包安装",
+              "id_group_pkg", "内容安装与管理",
               [](Group& g) {
                 g.link("id_game_package_installer", "软件包安装器",
                        "PkgInstaller/data/pkginstaller.xml");
               },
-              "安装 PKG 与附加内容",
+              "安装 PKG 与管理附加内容",
               "/user/data/OnionHEN/assets/icon_xml_package.png",
               "id_game_package_installer")
           .build();
