@@ -163,7 +163,7 @@ struct IPCMessage {
 | `DOWNLOAD_CHEATS` | 下仓库 zip → staging → flatten | `http` + `CheatService::flattenInstallTree` |
 | `RELOAD_CHEATS` | **已移除**（枚举占位 `UNUSED_RELOAD_CHEATS`） | 列表/开关靠文件签名热重载，无索引重建 |
 | `DOWNLOAD_KSTUFF` | 下载 kstuff.elf | `http` |
-| `LAUNCH_PAYLOAD` | 加载 payload `.elf` | `load_payload` → `onion_payload_load`（9021） |
+| `LAUNCH_PAYLOAD` | 加载 payload `.elf` | `load_payload` → `onion_payload_load`（9020 优先，9021 fallback） |
 | `UNUSED_LEGACY_CMD_SERVER` | 已移除（原 TCP 9028） | 固定失败 |
 | `LAUNCH_ELFLDR` | 已移除 | 固定失败 |
 | `UNUSED_FTP` / `UNUSED_KLOG` | 已移除 | 固定失败 |
@@ -297,7 +297,7 @@ cheat_engine_runtime
 | 依赖 | 用途 |
 |------|------|
 | libhijacker | 内核原语、偏移（shellcore / 注入路径） |
-| libonion_elfldr | ptrace / mmap 注入原语 |
+| libonion_elfldr | ptrace / mmap 注入原语；内置 9020 loader 复用其 spawn/read 实现 |
 | keystone | ShnExt 汇编（`third_party/keystone/`）；C++ runtime 由 PS5 SDK 提供 |
 | cJSON | IPC 与 GitHub 响应 JSON 解析 |
 | AES/base64 third_party | MC4 / ShnExt 解密 |

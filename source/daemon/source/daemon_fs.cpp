@@ -295,7 +295,7 @@ static void kill_all_by_comm_substr(const char *const *names, size_t nnames) {
         continue;
       any = true;
       OnionHEN_log("shutdown: killing pid=%d (match \"%s\")", (int)p, names[i]);
-      /* ELF daemons (util via 9021) often ignore TerminateProcess — SIGKILL first. */
+      /* ELF daemons often ignore TerminateProcess — SIGKILL first. */
       if (kill(p, SIGKILL) != 0) {
         OnionHEN_log("shutdown: SIGKILL pid=%d failed: %s", (int)p,
                      strerror(errno));
@@ -338,7 +338,7 @@ static void shutdown_restart_shellui(void) {
 
   /*
    * Order matters: arm stack-shutdown first so the util watchdog will not
-   * 9021-relaunch util after we kill it. Then stop IPC, then kill util.
+   * relaunch util after we kill it. Then stop IPC, then kill util.
    */
   g_stack_shutting_down.store(true, std::memory_order_release);
   is_handler_enabled = false;
@@ -392,4 +392,3 @@ bool set_fan_threshold(int THRESHOLDTEMP) {
     //OnionHEN_log("Fan speed set to %d%% THRESHOLDTEMP", THRESHOLDTEMP);
     return true;
 }
-

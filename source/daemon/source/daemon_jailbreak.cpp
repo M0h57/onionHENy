@@ -202,24 +202,35 @@ void *fifo_and_dumper_thread(void *args) noexcept {
     if (find_pid("util.elf") < 0 && find_pid("OnionHEN Utility") < 0 &&
         retries < kMaxRetries) {
       if (retries == 0)
-        onion_notify(true, "OnionHEN Utility is not running, restarting via 9021...");
+        onion_notify(true, "OnionHEN Utility is not running, restarting...");
 
       if (++retries >= kMaxRetries) {
         onion_notify(true,
                      "OnionHEN Utility services failed to restart — check "
-                     "elfldr :9021");
+                     "elfldr :9020/9021");
         usleep(kIdleUsleep);
         continue;
       }
 
-      bool ok = elfldr_remote_send_bytes(util_elf_start, util_elf_size);
+      bool ok = false;
+      uint16_t launch_port = ELFLDR_REMOTE_PORT;
+      if (elfldr_remote_onion_available()) {
+        launch_port = ONION_ELFLDR_PORT;
+        ok = elfldr_remote_send_bytes_to(ONION_ELFLDR_PORT, util_elf_start,
+                                         util_elf_size);
+      }
+      if (!ok) {
+        launch_port = ELFLDR_REMOTE_PORT;
+        ok = elfldr_remote_send_bytes_to(ELFLDR_REMOTE_PORT, util_elf_start,
+                                         util_elf_size);
+      }
       if (ok) {
         sleep(2);
-        OnionHEN_log("  Launched util via 9021!");
+        OnionHEN_log("  Launched util via elfldr :%u!", launch_port);
         onion_notify(true, "OnionHEN Utility services successfully restarted");
         retries = 0;
       } else {
-        OnionHEN_log("failed to launch embedded util via 9021, retry: %d",
+        OnionHEN_log("failed to launch embedded util via elfldr, retry: %d",
                      retries);
       }
     }

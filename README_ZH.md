@@ -57,7 +57,9 @@ OnionHEN 致力于为已破解的 PS5 系统提供实用、可维护的自制程
 - **高可用运行时** — critical 与 utility 守护进程分离，主守护进程可自动拉起 utility
 - **统一配置** — Toolbox 和守护进程共享同一套带版本号的 `config.ini` schema
 
-OnionHEN 不内置内核 exploit，也不内置运行时 `elfldr` 服务。
+OnionHEN 不内置内核 exploit。它仍然需要外部 **9021** `elfldr` 完成首跳
+bootstrap，随后会启动自己的内置私有 **9020** loader，用于运行时 ELF 与用户
+payload 加载。
 
 <br>
 
@@ -66,7 +68,7 @@ OnionHEN 不内置内核 exploit，也不内置运行时 `elfldr` 服务。
 ### 运行要求
 
 1. 一台运行兼容内核 exploit 的 PS5
-2. 一个监听 **9021** 端口的外部 [PS5 `elfldr`](https://github.com/ps5-payload-dev/elfldr)
+2. 一个监听 **9021** 端口、用于首跳 bootstrap 的外部 [PS5 `elfldr`](https://github.com/ps5-payload-dev/elfldr)
 3. 需要 fSELF / fPKG 功能时，准备与固件兼容的 `kstuff`
 
 > [!IMPORTANT]
@@ -80,10 +82,11 @@ OnionHEN 不内置内核 exploit，也不内置运行时 `elfldr` 服务。
 3. 等待 utility daemon、`kstuff` 和 main daemon 依次启动。
 4. 打开 PS5 设置区域访问 OnionHEN Toolbox。
 
-运行时启动顺序经过有意串行化：
+运行时启动顺序经过有意串行化。bootstrap 之后，OnionHEN 会优先使用内置
+`onion_elfldr.elf` 的 **9020** 端口，并保留 **9021** 作为兼容 fallback。
 
 ```text
-OnionHEN.elf → bootstrapper → util.elf → kstuff.elf → daemon.elf → Toolbox
+OnionHEN.elf → bootstrapper → onion_elfldr.elf (:9020) → util.elf → kstuff.elf → daemon.elf → Toolbox
 ```
 
 ### Payload
@@ -257,7 +260,7 @@ OnionHEN 通过以下两个运行时视图创建并共享同一套配置 schema�
 
 # 故障排查
 
-1. 加载 OnionHEN 前确认运行时 `elfldr` 服务可通过 **9021** 端口访问。
+1. 加载 OnionHEN 前确认外部首跳 `elfldr` 服务可通过 **9021** 端口访问。
 2. 确认 payload 使用完整 PS5 Payload SDK 为目标固件构建。
 3. Toolbox 没有出现时，请等待串行的 `util → kstuff → daemon` 启动链并检查日志。
 4. 完整构建无法获取 `kstuff.elf` 时，重试 `./scripts/sync_dependencies.sh` 或初始化 submodule。

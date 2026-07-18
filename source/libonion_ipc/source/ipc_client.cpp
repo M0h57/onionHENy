@@ -473,7 +473,8 @@ void IPC_Client::Reload_Daemon_Settings() {
 }
 
 bool IPC_Client::Launch_Elfldr() {
-  shellui_log("Launch_Elfldr: unsupported (9021 service removed)");
+  shellui_log("Launch_Elfldr: unsupported "
+              "(embedded 9020 is bootstrapper-managed)");
   return false;
 }
 

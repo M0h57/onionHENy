@@ -1,6 +1,6 @@
 /* Copyright (C) 2025 OnionHEN / LightningMods
  *
- * Payload ELF load helpers (PID files + elfldr :9021).
+ * Payload ELF load helpers (PID files + elfldr socket).
  * OnionHEN only supports bare .elf payloads (no .plugin packages).
  */
 #pragma once
@@ -30,7 +30,8 @@ void onion_payload_write_pid_file(const char *pid_path, pid_t pid);
 void onion_payload_stop_by_title(const char *title_id);
 
 /**
- * Stage ELF under /data/OnionHEN/payloads/<key>.elf and launch via 9021.
+ * Stage ELF under /data/OnionHEN/payloads/<key>.elf and launch via OnionHEN's
+ * private 9020 elfldr, falling back to the external 9021 loader.
  *
  * Records the real process by snapshot-diff of candidate ki_comm names
  * (payload.elf, <key>.elf, truncated basename, <key>) so homebrew that never
@@ -38,12 +39,16 @@ void onion_payload_stop_by_title(const char *title_id);
  *
  * Returns:
  *   >1  observed payload pid (write to /system_tmp/<key>.PID)
- *    0  9021 accepted the ELF but no new pid observed (do not write 0/1)
+ *    0  loader accepted the ELF but no new pid observed (do not write 0/1)
  *   -1  hard failure (send/stage failed)
  * Never returns 1 as a "success" sentinel (that caused ForceKill of system pid 1).
  */
+pid_t onion_payload_launch_elfldr(const char *title_id, const uint8_t *elf,
+                                  size_t elf_sz);
+
+/** Backward-compatible API name; now prefers 9020 and falls back to 9021. */
 pid_t onion_payload_launch_9021(const char *title_id, const uint8_t *elf,
-                               size_t elf_sz);
+                                size_t elf_sz);
 
 /** malloc'd file contents; caller free(). NULL on error. */
 uint8_t *onion_payload_read_file(const char *path, size_t *out_size);

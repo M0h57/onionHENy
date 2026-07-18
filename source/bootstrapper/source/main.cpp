@@ -210,6 +210,8 @@ along with this program; see the file COPYING. If not, see
  extern uint8_t daemon_start[];
  extern uint8_t util_start[];
  extern const unsigned int util_size;
+ extern uint8_t onion_elfldr_start[];
+ extern const unsigned int onion_elfldr_size;
  extern uint8_t sicon_start[];
  extern const unsigned int sicon_size;
 
@@ -552,8 +554,9 @@ void free_payload_files(char **plugin_files) {
 
 /*=================== Launch pipeline (phased) =========================*/
 /*
- * Policy: NO local spawn.
- * 1) launch_chain — send embedded util/kstuff/daemon bytes to elfldr :9021
+ * Policy: bootstrap through external 9021, then prefer OnionHEN's private
+ * embedded elfldr on 9020 for runtime payload launches.
+ * 1) launch_chain — send embedded util/kstuff/daemon bytes to elfldr
  * 2) load_autostart_payloads — payloads .elf with .auto_start (skip *elfldr*)
  */
 
@@ -566,12 +569,64 @@ static void kill_by_name(const char *a, const char *b) {
   }
 }
 
+static uint16_t g_payload_loader_port = ELFLDR_REMOTE_PORT;
+
+static bool loader_available(uint16_t port) {
+  return port == ONION_ELFLDR_PORT ? elfldr_remote_onion_available()
+                                   : elfldr_remote_available_on(port);
+}
+
+static bool wait_onion_loader(int timeout_ms) {
+  const int poll_ms = 200;
+  for (int waited = 0; waited < timeout_ms; waited += poll_ms) {
+    if (elfldr_remote_onion_available())
+      return true;
+    usleep(poll_ms * 1000);
+  }
+  return false;
+}
+
+static bool ensure_embedded_elfldr_9020(void) {
+  if (elfldr_remote_onion_available()) {
+    klog_puts("embedded elfldr :9020 already available");
+    return true;
+  }
+
+  klog_printf("Starting embedded elfldr on %u via external %u ...\n",
+              ONION_ELFLDR_PORT, ELFLDR_REMOTE_PORT);
+  if (!elfldr_remote_send_bytes_to(ELFLDR_REMOTE_PORT, onion_elfldr_start,
+                                   onion_elfldr_size)) {
+    klog_puts("  embedded elfldr launch send failed");
+    return false;
+  }
+
+  if (wait_onion_loader(10000)) {
+    klog_puts("  embedded elfldr :9020 ready");
+    return true;
+  }
+
+  klog_puts("  embedded elfldr :9020 did not become ready");
+  return false;
+}
+
 static bool launch_blob(const uint8_t *elf, size_t size, const char *label,
                         const char *wait_name) {
-  klog_printf("9021 memory ELF: %s (%zu bytes)\n", label, size);
-  if (!elfldr_remote_send_bytes(elf, size)) {
-    klog_printf("  send FAILED %s\n", label);
-    return false;
+  if (g_payload_loader_port != ELFLDR_REMOTE_PORT &&
+      !loader_available(g_payload_loader_port)) {
+    g_payload_loader_port = ELFLDR_REMOTE_PORT;
+  }
+  klog_printf("%u memory ELF: %s (%zu bytes)\n", g_payload_loader_port, label,
+              size);
+  if (!elfldr_remote_send_bytes_to(g_payload_loader_port, elf, size)) {
+    if (g_payload_loader_port != ELFLDR_REMOTE_PORT &&
+        elfldr_remote_send_bytes_to(ELFLDR_REMOTE_PORT, elf, size)) {
+      klog_printf("  send via %u failed; fallback %u accepted %s\n",
+                  g_payload_loader_port, ELFLDR_REMOTE_PORT, label);
+      g_payload_loader_port = ELFLDR_REMOTE_PORT;
+    } else {
+      klog_printf("  send FAILED %s\n", label);
+      return false;
+    }
   }
   for (int i = 0; i < 30; i++) {
     if (wait_name && onion_find_pid_substr(wait_name) > 0) {
@@ -585,7 +640,7 @@ static bool launch_blob(const uint8_t *elf, size_t size, const char *label,
 }
 
 /**
- * Launch util → kstuff → daemon via elfldr :9021 (serialized).
+ * Launch util → kstuff → daemon via the selected elfldr port (serialized).
  * Soft-fails kstuff; hard-fails missing elfldr / util / daemon.
  * Returns 0 or -2.
  */
@@ -597,14 +652,17 @@ static int launch_chain(const OrbisKernelSwVersion &sys_ver) {
     notify("Start elfldr on 9021 first, then re-run OnionHEN.");
     return -2;
   }
-  klog_puts("elfldr :9021 OK - launching embedded ELFs (serialized)");
+  g_payload_loader_port =
+      ensure_embedded_elfldr_9020() ? ONION_ELFLDR_PORT : ELFLDR_REMOTE_PORT;
+  klog_printf("payload loader port: %u\n", g_payload_loader_port);
+  klog_puts("launching embedded ELFs (serialized)");
   sleep(3); /* settle after remount/unmount */
 
   /*
    * Order: util → kstuff → daemon
    * (daemon injects toolbox; kstuff must patch ShellUI first)
    */
-  klog_puts("Starting util via 9021 ...");
+  klog_printf("Starting util via %u ...\n", g_payload_loader_port);
   kill_by_name("util.elf", "OnionHEN Utility");
   onion_ready_clear(ONION_READY_UTIL);
   onion_ready_clear(ONION_READY_KSTUFF);
@@ -619,7 +677,7 @@ static int launch_chain(const OrbisKernelSwVersion &sys_ver) {
   onion_ready_clear(ONION_FLAG_FPS_OVERLAY);
 
   if (!launch_blob(util_start, util_size, "util", "util.elf")) {
-    notify("failed to launch util via elfldr :9021");
+    notify("failed to launch util via elfldr");
     return -2;
   }
   if (!onion_ready_wait(ONION_READY_UTIL, /*timeout_ms=*/15000, /*poll_ms=*/200))
@@ -636,7 +694,8 @@ static int launch_chain(const OrbisKernelSwVersion &sys_ver) {
       klog_puts("kstuff already running / mprotect OK — skip launch");
       onion_ready_signal(ONION_READY_KSTUFF);
     } else {
-      klog_puts("Loading kstuff via 9021 (before daemon/toolbox) ...");
+      klog_printf("Loading kstuff via %u (before daemon/toolbox) ...\n",
+                  g_payload_loader_port);
       uint8_t *override_elf = nullptr;
       size_t override_size = 0;
       if (if_exists("/data/OnionHEN/kstuff.elf"))
@@ -664,18 +723,19 @@ static int launch_chain(const OrbisKernelSwVersion &sys_ver) {
           sleep(1); /* brief settle for ShellUI trophy patches */
         }
       } else {
-        notify("Failed to load kstuff via 9021, continuing");
+        notify("Failed to load kstuff via elfldr, continuing");
       }
     }
   } else {
     onion_ready_signal(ONION_READY_KSTUFF);
   }
 
-  klog_puts("Starting daemon via 9021 (toolbox inject) ...");
+  klog_printf("Starting daemon via %u (toolbox inject) ...\n",
+              g_payload_loader_port);
   kill_by_name("daemon.elf", "OnionHEN Critical");
   onion_ready_clear(ONION_READY_DAEMON);
   if (!launch_blob(daemon_start, daemon_size, "daemon", "daemon.elf")) {
-    notify("failed to launch daemon via elfldr :9021");
+    notify("failed to launch daemon via elfldr");
     return -2;
   }
   if (!onion_ready_wait(ONION_READY_DAEMON, /*timeout_ms=*/20000,

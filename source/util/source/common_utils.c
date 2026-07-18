@@ -47,7 +47,7 @@ atomic_bool not_connected = false;
 #define SCE_NET_CTL_ERROR_NOT_CONNECTED 0x80412108
 #define SCE_NET_CTL_ERROR_NOT_AVAIL 0x80412109
 
-/* OnionHEN: no local spawn — payloads launch via external elfldr :9021.
+/* OnionHEN: payloads launch via the selected elfldr socket (9020, then 9021).
  * ptrace attach/mmap: libonion_elfldr (pt_attach / pt_mmap). Authid is raised
  * once in util main via set_ucred_to_ptrace(), not flipped per ptrace call.
  */

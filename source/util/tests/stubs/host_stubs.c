@@ -15,7 +15,22 @@
 
 /* --- libonion_payload / elfldr_remote (device-only launch path) --- */
 
+bool elfldr_remote_available_on(uint16_t port) {
+  (void)port;
+  return false;
+}
+
+bool elfldr_remote_onion_available(void) { return false; }
+
 bool elfldr_remote_available(void) { return false; }
+
+bool elfldr_remote_send_bytes_to(uint16_t port, const uint8_t *elf,
+                                 size_t size) {
+  (void)port;
+  (void)elf;
+  (void)size;
+  return false;
+}
 
 bool elfldr_remote_send_bytes(const uint8_t *elf, size_t size) {
   (void)elf;
@@ -23,9 +38,35 @@ bool elfldr_remote_send_bytes(const uint8_t *elf, size_t size) {
   return false;
 }
 
+bool elfldr_remote_send_file_uri_to(uint16_t port, const char *abs_path) {
+  (void)port;
+  (void)abs_path;
+  return false;
+}
+
 bool elfldr_remote_send_file_uri(const char *abs_path) {
   (void)abs_path;
   return false;
+}
+
+bool elfldr_remote_write_and_launch_to(uint16_t port, const char *abs_path,
+                                       const uint8_t *elf, size_t size) {
+  (void)port;
+  (void)abs_path;
+  (void)elf;
+  (void)size;
+  return false;
+}
+
+pid_t elfldr_remote_write_and_launch_get_pid(uint16_t port,
+                                             const char *abs_path,
+                                             const uint8_t *elf,
+                                             size_t size) {
+  (void)port;
+  (void)abs_path;
+  (void)elf;
+  (void)size;
+  return -1;
 }
 
 bool elfldr_remote_write_and_launch(const char *abs_path, const uint8_t *elf,

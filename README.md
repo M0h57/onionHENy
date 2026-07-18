@@ -58,7 +58,9 @@ OnionHEN focuses on a practical, maintainable homebrew environment for exploited
 - **Resilient runtime** — critical and utility daemons are separated; the main daemon can restart the utility daemon
 - **Centralized configuration** — Toolbox and daemon settings share one versioned `config.ini` schema
 
-OnionHEN intentionally does not bundle a kernel exploit or the runtime `elfldr` service.
+OnionHEN intentionally does not bundle a kernel exploit. It still needs an
+external `elfldr` on **9021** for the initial bootstrap, then starts its own
+private embedded loader on **9020** for runtime ELF and user payload launches.
 
 <br>
 
@@ -67,7 +69,7 @@ OnionHEN intentionally does not bundle a kernel exploit or the runtime `elfldr` 
 ### Requirements
 
 1. A PS5 running a compatible kernel exploit
-2. An external [PS5 `elfldr`](https://github.com/ps5-payload-dev/elfldr) listening on port **9021**
+2. An external [PS5 `elfldr`](https://github.com/ps5-payload-dev/elfldr) listening on port **9021** for the initial bootstrap
 3. A firmware-compatible `kstuff` build when fSELF / fPKG functionality is required
 
 > [!IMPORTANT]
@@ -81,10 +83,12 @@ OnionHEN intentionally does not bundle a kernel exploit or the runtime `elfldr` 
 3. Wait for the utility daemon, `kstuff`, and main daemon to start in sequence.
 4. Open the PS5 settings area to access the OnionHEN Toolbox.
 
-The runtime launch order is deliberately serialized:
+The runtime launch order is deliberately serialized. After bootstrap, OnionHEN
+prefers its embedded `onion_elfldr.elf` on **9020** and keeps **9021** as a
+compatibility fallback.
 
 ```text
-OnionHEN.elf → bootstrapper → util.elf → kstuff.elf → daemon.elf → Toolbox
+OnionHEN.elf → bootstrapper → onion_elfldr.elf (:9020) → util.elf → kstuff.elf → daemon.elf → Toolbox
 ```
 
 ### Payloads
@@ -261,7 +265,7 @@ See [the architecture document](docs/arch.md) for the complete module and IPC ma
 
 # Troubleshooting
 
-1. Confirm the runtime `elfldr` service is reachable on port **9021** before loading OnionHEN.
+1. Confirm the external bootstrap `elfldr` service is reachable on port **9021** before loading OnionHEN.
 2. Confirm the payload was built for the intended firmware and with a complete PS5 payload SDK.
 3. If the Toolbox does not appear, wait for the serialized `util → kstuff → daemon` launch chain and inspect the logs.
 4. If a full build cannot obtain `kstuff.elf`, retry `./scripts/sync_dependencies.sh` or initialize the submodule.

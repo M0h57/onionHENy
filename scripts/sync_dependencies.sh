@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 # Sync / build external dependencies for OnionHEN.
 #
-# Remaining embeds: kstuff.elf
-# Removed: elfldr.elf (9021 service), ps5debug, ps5-app-dumper, Byepervisor/hen.bin
+# Remaining external embeds: kstuff.elf
+# Built from source: onion_elfldr.elf (private 9020 runtime loader)
+# Removed: external elfldr.elf (9021 service), ps5debug, ps5-app-dumper, Byepervisor/hen.bin
 #
 set -euo pipefail
 
@@ -34,9 +35,11 @@ Submodules (under third_party/):
 
 Runtime-only external dependency:
   elfldr @ 9021    https://github.com/ps5-payload-dev/elfldr
+                  Required only for initial bootstrap; OnionHEN starts
+                  onion_elfldr.elf @ 9020 for runtime launches.
 
 Removed from OnionHEN (not synced):
-  elfldr.elf (9021 service), ps5debug, ps5-app-dumper, Byepervisor/hen.bin
+  external elfldr.elf (9021 service), ps5debug, ps5-app-dumper, Byepervisor/hen.bin
 
 Options:
   --init-submodules   git submodule update --init --recursive

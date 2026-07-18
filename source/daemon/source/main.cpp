@@ -270,7 +270,7 @@ void sig_handler(int signo) {
 bool is_800 = false;
 
 int main() {
-  /* Raw 9021 uploads default to "payload.elf"; publish our stable name. */
+  /* Raw elfldr uploads default to "payload.elf"; publish our stable name. */
   (void)syscall(SYS_thr_set_name, -1, "daemon.elf");
 
   onion_log_configure("OnionHEN", "/data/OnionHEN/OnionHEN.log");

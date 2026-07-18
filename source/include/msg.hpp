@@ -59,7 +59,7 @@ enum DaemonCommands : unsigned int {
   BREW_UTIL_UNUSED_2,
   BREW_UTIL_UNUSED_3,
 
-  // Legacy: 9021 elfldr auto-launch removed (command kept for IPC compatibility)
+  // Legacy: manual elfldr launch removed (embedded 9020 is bootstrapper-managed)
   BREW_UTIL_LAUNCH_ELFLDR = 0xE1F1D8u,
   BREW_RELOAD_SETTINGS = 0xC0FFEEu,
 

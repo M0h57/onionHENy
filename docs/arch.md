@@ -9,7 +9,7 @@ OnionHEN 是 PS5 的 All-in-One Homebrew Enabler，基于 **etaHEN**（Lightning
 | 许可证 | GPLv3 |
 | 构建 | CMake + Ninja + `PS5_PAYLOAD_SDK`（clang） |
 
-**运行时前置条件：** 必须先有 **外部 elfldr（端口 9021）**。OnionHEN 不再内嵌 9021 服务，只通过它启动子 ELF。
+**运行时前置条件：** 必须先有 **外部 elfldr（端口 9021）** 完成首跳。bootstrapper 启动后会拉起 OnionHEN 自己的私有 **9020** `onion_elfldr.elf`，后续运行时 ELF / 用户 payload 优先走 9020，失败时回退 9021。
 
 ---
 
@@ -29,8 +29,9 @@ OnionHEN 是 PS5 的 All-in-One Homebrew Enabler，基于 **etaHEN**（Lightning
         │  1. 提权 (elfldr_raise_privileges)
         │  2. remount /system、/system_ex
         │  3. unmount /update（阻止系统更新）
-        │  4. 将内嵌 ELF 字节经 9021 顺序启动：util → kstuff → daemon
-        │  5. 加载 /data/OnionHEN/payloads/ 下 .elf
+        │  4. 经 9021 启动内嵌 onion_elfldr.elf（监听 9020）
+        │  5. 将内嵌 ELF 字节经 9020 顺序启动：util → kstuff → daemon
+        │  6. 加载 /data/OnionHEN/payloads/ 下 .elf
         ▼
 ┌───────────────┬────────────────┬──────────────────┐
 │  util.elf     │  kstuff.elf    │  daemon.elf      │
@@ -122,17 +123,18 @@ OnionHEN/
 ### 2.2 `bootstrapper` → `bootstrapper.elf`（再压成 `.lzma`）
 
 - 提权、分区 remount、阻止更新
-- 以 `.incbin` 嵌入 `daemon.elf`、`util.elf`、`kstuff.elf` 与图标资源
-- 将内嵌 ELF 直接从内存发送给 9021，不释放 util / daemon / kstuff 到磁盘
+- 以 `.incbin` 嵌入 `onion_elfldr.elf`、`daemon.elf`、`util.elf`、`kstuff.elf` 与图标资源
+- 先用外部 9021 启动内置 `onion_elfldr.elf`，再优先通过 9020 启动 util / daemon / kstuff
 - 扫描并加载插件目录
 - 可选日志端口 **9088**
 
 关键启动策略：
 
-1. 检查 `127.0.0.1:9021` 上的 elfldr
-2. 顺序发送原始 ELF 字节：util → kstuff → daemon
-3. 各子 ELF 启动后把主线程名设为稳定进程名（`util.elf` / `kstuff.elf` / `daemon.elf`）
-4. 加载 `/data/OnionHEN/payloads/` 下带 `.auto_start` 的 `.elf`
+1. 检查 `127.0.0.1:9021` 上的外部 elfldr（首跳必需）
+2. 启动内置 `onion_elfldr.elf`，并通过握手确认 `127.0.0.1:9020`
+3. 顺序发送原始 ELF 字节：util → kstuff → daemon（9020 优先，9021 fallback）
+4. 各子 ELF 启动后把主线程名设为稳定进程名（`util.elf` / `kstuff.elf` / `daemon.elf`）
+5. 加载 `/data/OnionHEN/payloads/` 下带 `.auto_start` 的 `.elf`
 
 可用 `/data/OnionHEN/no_kstuff` 或 `/mnt/usb0/no_kstuff` 跳过 kstuff。
 
@@ -192,7 +194,7 @@ OnionHEN/
 | 库 | 作用 |
 |----|------|
 | **libhijacker** | 进程劫持、kernel R/W、spawner、调试、通知；依赖 NidResolver |
-| **libonion_elfldr** | **唯一** ptrace/`pt_*` + inject 侧 `elfldr_load` / `elfldr_payload_args` / `elfldr_raise_privileges`；**authid 不在每条 ptrace 上翻转**（由 inject 入口一次提权） |
+| **libonion_elfldr** | **唯一** ptrace/`pt_*` + inject 侧 `elfldr_load` / `elfldr_payload_args` / 内置 loader 侧 `elfldr_spawn` / `elfldr_read` / `elfldr_raise_privileges`；**authid 不在每条 ptrace 上翻转**（由 inject 入口一次提权） |
 | **libNineS** | 进程注入编排（`inject_elf` / stager）；**pt/elfldr 实现来自 libonion_elfldr** |
 | **libNidResolver** | PS5 模块 NID 解析（SHA1 等） |
 | **libonion_ipc** | **客户端**（injectee 双单例）+ **服务端传输环**（`ipc_server`：listen/accept/loop/reply）；daemon/util/shellui/fps 共用 |
@@ -323,7 +325,7 @@ struct IPCMessage {
 - `BREW_UNUSED_TESTKIT_CHECK`（原 TESTKIT_CHECK；客户端改为本地探测）
 - `BREW_UTIL_UNUSED_FTP`（原 TOGGLE_FTP）
 - `BREW_UTIL_UNUSED_KLOG`（原 TOGGLE_KLOG）
-- `BREW_UTIL_LAUNCH_ELFLDR`（9021 服务不再内嵌）
+- `BREW_UTIL_LAUNCH_ELFLDR`（旧手动启动命令；内置 9020 由 bootstrapper 管理）
 
 ### 3.3 运行时路径
 
@@ -361,7 +363,7 @@ struct IPCMessage {
 
 ### 4.3 网络服务
 
-- 外部 ELF 加载依赖 **9021 elfldr**
+- 首跳依赖外部 **9021 elfldr**；运行时 ELF / payload 优先使用内置 **9020 onion_elfldr**
 
 ### 4.4 扩展
 
@@ -372,7 +374,7 @@ struct IPCMessage {
 
 | 能力 | 说明 |
 |------|------|
-| 内嵌 9021 elfldr | 运行时自备 |
+| 内嵌 9021 elfldr | 改为内置私有 9020 loader；9021 只作为外部首跳 / fallback |
 | FTP 1337 | 服务与 Toolbox 开关已移除 |
 | Legacy CMD 9028 | util TCP hijacker 协议与 Toolbox 开关已移除；app JB 仅 FIFO |
 | Klog server 9081 | 服务与 Toolbox 开关已移除 |
@@ -392,7 +394,8 @@ struct IPCMessage {
 |------|------|
 | **ps5-payload-sdk** (`PS5_PAYLOAD_SDK`) | Prospero 工具链、`prospero-cmake`、系统头文件 |
 | **clang** | 目标 `x86_64-sie-ps5` |
-| **elfldr @ 9021** | 运行时必需，不随 OnionHEN 打包 |
+| **elfldr @ 9021** | 首跳必需，不随 OnionHEN 打包 |
+| **onion_elfldr @ 9020** | OnionHEN 内置私有运行时 loader；由 bootstrapper 拉起 |
 | Kernel exploit | 如 IPV6 等，用于先获得代码执行 |
 
 ### 5.2 第三方依赖（`third_party/`）
@@ -421,7 +424,7 @@ git submodule update --init --recursive
 |----|------|
 | **libkeystone** (`third_party/keystone/`) | ShnExt 汇编 |
 
-C++ runtime 统一由 `PS5_PAYLOAD_SDK/target/lib` 提供。项目不再携带旧 curl/TLS、minizip/zlib/zstd 或 elfldr 静态归档；spawn 走 remote 9021（`common/elfldr_remote.c`）。
+C++ runtime 统一由 `PS5_PAYLOAD_SDK/target/lib` 提供。项目不再携带旧 curl/TLS、minizip/zlib/zstd 或外部 9021 服务镜像；spawn 通过 `common/elfldr_remote.c` 走内置 9020，必要时回退 9021。
 
 ### 5.5 PS5 系统库 stub（`source/platform/ps5/stubs/*.so`）
 
@@ -454,8 +457,8 @@ C++ runtime 统一由 `PS5_PAYLOAD_SDK/target/lib` 提供。项目不再携带�
 2. **双守护进程**  
    critical（注入/监视）与 util（网络/IO）分离，util 可崩溃恢复。
 
-3. **外部 elfldr 边界清晰**  
-   spawn 统一走 9021，减小维护面与打包体积。
+3. **elfldr 边界清晰**
+   外部 9021 只负责首跳；运行时使用内置 9020，并通过握手避免误用其它占端口服务。
 
 4. **UI = 进程注入**  
    Toolbox 不是独立 App，而是 ptrace 注入 ShellUI 的 Mono 代码。

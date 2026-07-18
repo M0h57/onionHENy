@@ -4,6 +4,9 @@
 #ifndef ONIONHEN_UTIL_ELF
 #define ONIONHEN_UTIL_ELF "../../bin/util.elf"
 #endif
+#ifndef ONIONHEN_ELFLDR_ELF
+#define ONIONHEN_ELFLDR_ELF "../../bin/onion_elfldr.elf"
+#endif
 #ifndef ONIONHEN_KSTUFF_ELF
 #define ONIONHEN_KSTUFF_ELF "../assets/kstuff.elf"
 #endif
@@ -33,6 +36,18 @@ __asm__(".intel_syntax noprefix\n"
         ".align  4\n"
         "util_size:\n"
         ".int    util_end - util_start\n"
+
+        ".global onion_elfldr_start\n"
+        ".type   onion_elfldr_start, @object\n"
+        ".align  16\n"
+        "onion_elfldr_start:\n"
+        ".incbin \"" ONIONHEN_ELFLDR_ELF "\"\n"
+        "onion_elfldr_end:\n"
+        ".global onion_elfldr_size\n"
+        ".type   onion_elfldr_size, @object\n"
+        ".align  4\n"
+        "onion_elfldr_size:\n"
+        ".int    onion_elfldr_end - onion_elfldr_start\n"
 
         ".global sicon_start\n"
         ".type   sicon_start, @object\n"

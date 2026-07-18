@@ -18,7 +18,7 @@ extern bool is_handler_enabled;
 
 /**
  * Full stack teardown in progress (BREW_SHUTDOWN_STACK / TCP SHUTDOWN).
- * Util watchdog must not 9021-relaunch util once this is true.
+ * Util watchdog must not relaunch util once this is true.
  * One-way: set true, never cleared (process exits).
  */
 extern std::atomic_bool g_stack_shutting_down;

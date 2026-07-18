@@ -94,9 +94,10 @@ Third-party (git submodules under third_party/ + release downloads):
 
   kstuff.elf              <- EchoStretch/kstuff-lite
 
-  External elfldr @ 9021 is required at runtime but is not vendored.
+  External elfldr @ 9021 is required for initial bootstrap but is not vendored.
+  OnionHEN embeds its private runtime loader as onion_elfldr.elf @ 9020.
 
-  Removed: elfldr.elf (9021), ps5debug, app-dumper, Byepervisor/hen, Discord RPC
+  Removed: external elfldr.elf (9021), ps5debug, app-dumper, Byepervisor/hen, Discord RPC
 
 Built-in outputs (under <repo>/build/):
   build/bin/*.elf           final ELFs (util, daemon, bootstrapper, OnionHEN, …)

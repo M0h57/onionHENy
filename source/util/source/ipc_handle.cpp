@@ -229,8 +229,8 @@ void handleIPC(clientArgs *client, std::string &inputStr,
     break;
   }
   case BREW_UTIL_LAUNCH_ELFLDR:
-    /* 9021 elfldr service removed from OnionHEN — not bundled. */
-    OnionHEN_log("BREW_UTIL_LAUNCH_ELFLDR: unsupported (no 9021 service)");
+    /* Manual elfldr launch removed; embedded 9020 is bootstrapper-managed. */
+    OnionHEN_log("BREW_UTIL_LAUNCH_ELFLDR: unsupported (bootstrapper-managed)");
     reply(sender_app, true);
     break;
   case BREW_UTIL_UNUSED_DOWNLOAD_CHEATS:

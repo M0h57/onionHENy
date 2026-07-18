@@ -89,7 +89,7 @@ bool LoadSettings() {
 }
 
 int main(void) {
-    /* Raw 9021 uploads default to "payload.elf"; publish our stable name. */
+    /* Raw elfldr uploads default to "payload.elf"; publish our stable name. */
     (void)syscall(SYS_thr_set_name, -1, "util.elf");
 
     pthread_t ipc_server = 0;

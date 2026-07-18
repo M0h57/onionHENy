@@ -1,4 +1,4 @@
-/* Host unit tests for libonion_payload payload helpers (no elfldr/9021). */
+/* Host unit tests for libonion_payload payload helpers (no elfldr socket). */
 #include "test_harness.h"
 #include "test_support.h"
 

@@ -72,21 +72,24 @@ target_sources(${PROJECT_NAME} PRIVATE ${SrcFiles})
 if(DEFINED ONIONHEN_OUT_BIN)
 	set(_onion_daemon_elf "${ONIONHEN_OUT_BIN}/daemon.elf")
 	set(_onion_util_elf "${ONIONHEN_OUT_BIN}/util.elf")
+	set(_onion_elfldr_elf "${ONIONHEN_OUT_BIN}/onion_elfldr.elf")
 else()
 	set(_onion_daemon_elf "${PROJECT_ROOT}/bin/daemon.elf")
 	set(_onion_util_elf "${PROJECT_ROOT}/bin/util.elf")
+	set(_onion_elfldr_elf "${PROJECT_ROOT}/bin/onion_elfldr.elf")
 endif()
 set_source_files_properties(
 	${D_SRC}/daemon.c
 	PROPERTIES OBJECT_DEPENDS
-		"${_onion_daemon_elf};${_onion_util_elf};${ONIONHEN_KSTUFF_ELF};${D_CWD}/assets/onionhen_sicon.png;${D_CWD}/assets/icon_xml_package.png;${D_CWD}/assets/icon_xml_plugins.png;${D_CWD}/assets/icon_xml_game.png;${D_CWD}/assets/icon_xml_network.png;${D_CWD}/assets/icon_xml_settings.png;${D_CWD}/assets/icon_xml_shortcuts.png;${D_CWD}/assets/icon_xml_debug.png;${D_CWD}/assets/icon_xml_about.png"
+		"${_onion_daemon_elf};${_onion_util_elf};${_onion_elfldr_elf};${ONIONHEN_KSTUFF_ELF};${D_CWD}/assets/onionhen_sicon.png;${D_CWD}/assets/icon_xml_package.png;${D_CWD}/assets/icon_xml_plugins.png;${D_CWD}/assets/icon_xml_game.png;${D_CWD}/assets/icon_xml_network.png;${D_CWD}/assets/icon_xml_settings.png;${D_CWD}/assets/icon_xml_shortcuts.png;${D_CWD}/assets/icon_xml_debug.png;${D_CWD}/assets/icon_xml_about.png"
 )
 target_compile_definitions(${PROJECT_NAME} PRIVATE
 	ONIONHEN_DAEMON_ELF="${_onion_daemon_elf}"
 	ONIONHEN_UTIL_ELF="${_onion_util_elf}"
+	ONIONHEN_ELFLDR_ELF="${_onion_elfldr_elf}"
 	ONIONHEN_KSTUFF_ELF="${ONIONHEN_KSTUFF_ELF}"
 )
-# elfldr_raise_privileges from libonion_elfldr; launches go via 9021 (elfldr_remote.c).
+# elfldr_raise_privileges from libonion_elfldr; launches go via elfldr_remote.c.
 target_include_directories(${PROJECT_NAME} PRIVATE
 	"${D_CWD}/include"
 	"${PROJECT_ROOT}/libonion_proc/include"
@@ -99,7 +102,7 @@ target_link_directories	(${PROJECT_NAME} PUBLIC "${ONIONHEN_PS5_STUB_DIR}")
 target_sources(${PROJECT_NAME} PRIVATE "${ONIONHEN_COMMON_DIR}/elfldr_remote.c")
 target_link_libraries	(${PROJECT_NAME} PUBLIC onion_proc onion_platform onion_payload onion_ready onion_elfldr SceNotification)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
-add_dependencies(${PROJECT_NAME} daemon util shellui onion_proc onion_platform onion_payload onion_ready onion_elfldr)
+add_dependencies(${PROJECT_NAME} daemon util shellui onion_elfldr_server onion_proc onion_platform onion_payload onion_ready onion_elfldr)
 
 # Copy bootstrapper.elf as test.elf before processing
 add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD

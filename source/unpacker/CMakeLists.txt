@@ -69,7 +69,7 @@ set(LZMA_LIB ${LZMA_ROOT}/LzmaLib.c ${LZMA_ROOT}/Alloc.c
 				${LZMA_ROOT}/Threads.c
 				${LZMA_ROOT}/LzFindOpt.c)
 
-# main.c only — dead local pt/elfldr clones removed (spawn is remote 9021).
+# main.c only — initial bootstrap is sent to external elfldr 9021.
 set(SrcFiles ${D_SRC}/main.c ${LZMA_LIB})
 
 set(CMAKE_C_FLAGS "--target=x86_64-sie-ps5 -DPPR -DPS5 -DPS5_FW_VERSION=${V_FW} ")
@@ -78,6 +78,11 @@ set(CMAKE_CXX_FLAGS "${CMAKE_C_FLAGS} -DDEBUG -O0")
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O0")
 
 target_sources(${PROJECT_NAME} PRIVATE ${SrcFiles})
+set_source_files_properties(
+	${D_SRC}/main.c
+	PROPERTIES OBJECT_DEPENDS
+		"${ONIONHEN_OUT_BIN}/bootstrapper.elf.lzma;${ONIONHEN_OUT_BIN}/bootstrapper.elf.lzma.size"
+)
 target_include_directories(${PROJECT_NAME} PRIVATE
 	"${D_CWD}/include"
 	"${LZMA_ROOT}"

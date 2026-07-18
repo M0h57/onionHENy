@@ -43,7 +43,7 @@ bool cmd_enable_toolbox(){
      * If kstuff is present, wait until mprotect works (patches applied) before
      * we ptrace ShellUI. Injecting while kstuff is still patching ShellUI
      * causes "waiting for toolbox" forever / ShellUI crash.
-     * (Race seen when daemon+kstuff launched close together via 9021.)
+     * (Race seen when daemon+kstuff launched close together via elfldr.)
      * Note: we do NOT pause/resume kstuff — other tools may own that; only wait for
      * mprotect readiness.
      */

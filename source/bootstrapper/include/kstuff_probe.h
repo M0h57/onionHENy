@@ -12,7 +12,7 @@ extern "C" {
 
 /**
  * True if a kstuff process is running, or if userland mprotect already
- * succeeds (kernel patches active). Used to skip a second 9021 load.
+ * succeeds (kernel patches active). Used to skip a second elfldr load.
  */
 bool kstuff_already_running(void);
 
