@@ -33,6 +33,15 @@ static constexpr const char kToolboxUriSimple[] =
     "pssettings:play?function=debug_settings_old";
 static constexpr const char kHomeTopNavUri[] = "OnionHEN?NavUI";
 
+static bool is_home_top_nav_uri(const std::string &uri) {
+  const size_t uri_len = strlen(kHomeTopNavUri);
+  if (uri.size() < uri_len || uri.compare(0, uri_len, kHomeTopNavUri) != 0) {
+    return false;
+  }
+  return std::all_of(uri.begin() + uri_len, uri.end(),
+                     [](char c) { return c == ' '; });
+}
+
 /** Rewrite function=debug_settings → function=debug_settings_old (idempotent for _old). */
 std::string rewrite_debug_settings_to_old(const std::string &uri) {
   static constexpr const char kNeedle[] = "function=debug_settings";
@@ -84,7 +93,7 @@ bool handle_uri_boot_common(MonoString* uri, int opt, MonoString* titleIdForBoot
         
         return true; // Signal to redirect
     }
-    else if (uri_string == kHomeTopNavUri) {
+    else if (is_home_top_nav_uri(uri_string)) {
 #if SHELL_DEBUG==1
       shellui_log("HomeUI top-nav OnionHEN URI detected");
 #endif

@@ -37,14 +37,17 @@ constexpr unsigned char kRnpsMagic[] = {'R', 'N', 'P', 'S',
 
 constexpr size_t kRnpsPayloadOffsetField = 0x1c;
 constexpr size_t kRnpsFallbackPayloadOffset = 0xb20;
+constexpr size_t kHbcVersionOffset = 0x08;
+constexpr size_t kHbcSourceHashOffset = 0x0c;
+constexpr size_t kHbcSourceHashSize = 20;
 constexpr size_t kHbcFileLengthOffset = 0x20;
 constexpr size_t kHbcFooterSha1Size = 20;
-constexpr size_t kSupportedHomeUiHbcFileLength = 0x1b2cc8;
 constexpr const char *kOnionHenTopNavIconPath =
     "/system_ex/vsh_asset/onionhen.png";
 
 std::atomic<bool> g_homeui_top_nav_reload_pending{false};
 std::atomic<bool> g_logged_non_homeui_skip{false};
+std::atomic<bool> g_logged_unsupported_homeui_skip{false};
 void (*g_react_button_set_icon_source_orig)(MonoObject *instance,
                                             MonoObject *source) = nullptr;
 void (*g_react_button_set_inverted_icon_source)(MonoObject *instance,
@@ -60,8 +63,56 @@ struct BytePatch {
   const char *name;
   size_t offset;
   const unsigned char *expected;
+  const unsigned char *alternate_expected;
+  const unsigned char *second_alternate_expected;
   const unsigned char *replacement;
   size_t size;
+};
+
+struct HomeUiPatchOffsets {
+  size_t title_id;
+  size_t app_error_event_trigger;
+  size_t navigate_to_home;
+  size_t home_icon_order;
+  size_t fps_factory;
+  size_t download_error_string;
+  size_t custom_icon_value;
+  size_t custom_icon_uri;
+  size_t top_nav_link_uri;
+  size_t custom_title_value;
+  size_t fps_body;
+};
+
+struct HomeUiPatchProfile {
+  const char *name;
+  uint32_t hbc_version;
+  size_t file_length;
+  unsigned char source_hash[kHbcSourceHashSize];
+  HomeUiPatchOffsets offsets;
+};
+
+static const HomeUiPatchProfile kHomeUiPatchProfiles[] = {
+    {
+        "11.6 NPXS40002 HomeUI",
+        89,
+        0x1b2cc8,
+        {0xf3, 0x21, 0xf8, 0x3f, 0x91, 0x43, 0x03,
+         0x5f, 0x5d, 0x97, 0xee, 0x5a, 0xd9, 0x8c,
+         0xeb, 0x75, 0x13, 0x3c, 0x89, 0x0e},
+        {
+            0x450f2,
+            0x443fb,
+            0x53b3e,
+            0xbcf40,
+            0x175cbd,
+            0x3a01f,
+            0xc0451,
+            0x533ed,
+            0x49cd3,
+            0xc0455,
+            0x1760b3,
+        },
+    },
 };
 
 static bool range_contains(size_t size, size_t offset, size_t len) {
@@ -147,6 +198,15 @@ static bool read_hbc_file_length(const HbcView &hbc, size_t *file_length) {
   return true;
 }
 
+static bool read_hbc_version(const HbcView &hbc, uint32_t *version) {
+  if (!range_contains(hbc.size, kHbcVersionOffset, sizeof(uint32_t))) {
+    return false;
+  }
+
+  *version = read_u32le(hbc.data + kHbcVersionOffset);
+  return true;
+}
+
 static bool hbc_bytes_at(const HbcView &hbc, size_t offset,
                          const char *expected) {
   const size_t len = strlen(expected);
@@ -155,11 +215,72 @@ static bool hbc_bytes_at(const HbcView &hbc, size_t offset,
                      reinterpret_cast<const unsigned char *>(expected), len);
 }
 
-static bool is_supported_homeui_hbc(const HbcView &hbc, size_t file_length) {
-  return file_length == kSupportedHomeUiHbcFileLength &&
-         hbc_bytes_at(hbc, 0x450f2, "NPXS40002") &&
-         hbc_bytes_at(hbc, 0x443fb, "ApplicationErrorEventTrigger") &&
-         hbc_bytes_at(hbc, 0x53b3e, "pshomeui:navigateToHome");
+static bool hbc_source_hash_matches(const HbcView &hbc,
+                                    const unsigned char *source_hash) {
+  return range_contains(hbc.size, kHbcSourceHashOffset, kHbcSourceHashSize) &&
+         bytes_equal(hbc.data + kHbcSourceHashOffset, source_hash,
+                     kHbcSourceHashSize);
+}
+
+static void format_hbc_source_hash(const HbcView &hbc, char *out,
+                                   size_t out_size) {
+  static const char kHex[] = "0123456789abcdef";
+  if (!out || out_size == 0) {
+    return;
+  }
+
+  out[0] = '\0';
+  if (out_size < kHbcSourceHashSize * 2 + 1 ||
+      !range_contains(hbc.size, kHbcSourceHashOffset, kHbcSourceHashSize)) {
+    return;
+  }
+
+  const unsigned char *hash = hbc.data + kHbcSourceHashOffset;
+  for (size_t i = 0; i < kHbcSourceHashSize; ++i) {
+    out[i * 2] = kHex[hash[i] >> 4];
+    out[i * 2 + 1] = kHex[hash[i] & 0x0f];
+  }
+  out[kHbcSourceHashSize * 2] = '\0';
+}
+
+static bool validate_homeui_profile_markers(const HbcView &hbc,
+                                            const HomeUiPatchProfile &profile) {
+  return hbc_bytes_at(hbc, profile.offsets.title_id, "NPXS40002") &&
+         hbc_bytes_at(hbc, profile.offsets.app_error_event_trigger,
+                      "ApplicationErrorEventTrigger") &&
+         hbc_bytes_at(hbc, profile.offsets.navigate_to_home,
+                      "pshomeui:navigateToHome");
+}
+
+static const HomeUiPatchProfile *
+find_homeui_patch_profile(const HbcView &hbc, size_t file_length,
+                          uint32_t hbc_version) {
+  for (size_t i = 0;
+       i < sizeof(kHomeUiPatchProfiles) / sizeof(kHomeUiPatchProfiles[0]);
+       ++i) {
+    const HomeUiPatchProfile &profile = kHomeUiPatchProfiles[i];
+    if (file_length == profile.file_length &&
+        hbc_version == profile.hbc_version &&
+        hbc_source_hash_matches(hbc, profile.source_hash) &&
+        validate_homeui_profile_markers(hbc, profile)) {
+      return &profile;
+    }
+  }
+
+  return nullptr;
+}
+
+static bool looks_like_profiled_homeui(const HbcView &hbc) {
+  for (size_t i = 0;
+       i < sizeof(kHomeUiPatchProfiles) / sizeof(kHomeUiPatchProfiles[0]);
+       ++i) {
+    const HomeUiPatchProfile &profile = kHomeUiPatchProfiles[i];
+    if (validate_homeui_profile_markers(hbc, profile)) {
+      return true;
+    }
+  }
+
+  return false;
 }
 
 static bool validate_patch(const HbcView &hbc, const BytePatch &patch,
@@ -178,7 +299,11 @@ static bool validate_patch(const HbcView &hbc, const BytePatch &patch,
     return true;
   }
 
-  if (bytes_equal(current, patch.expected, patch.size)) {
+  if (bytes_equal(current, patch.expected, patch.size) ||
+      (patch.alternate_expected &&
+       bytes_equal(current, patch.alternate_expected, patch.size)) ||
+      (patch.second_alternate_expected &&
+       bytes_equal(current, patch.second_alternate_expected, patch.size))) {
     *already_applied = false;
     return true;
   }
@@ -191,7 +316,8 @@ static bool validate_patch(const HbcView &hbc, const BytePatch &patch,
 }
 
 static void apply_patch(const HbcView &hbc, const BytePatch &patch) {
-  if (bytes_equal(hbc.data + patch.offset, patch.expected, patch.size)) {
+  const unsigned char *current = hbc.data + patch.offset;
+  if (!bytes_equal(current, patch.replacement, patch.size)) {
     memcpy(hbc.data + patch.offset, patch.replacement, patch.size);
   }
 }
@@ -318,12 +444,35 @@ void patch_homeui_top_nav(unsigned char *buffer, int *size_ptr,
     return;
   }
 
-  if (!is_supported_homeui_hbc(hbc, hbc_file_length)) {
+  uint32_t hbc_version = 0;
+  if (!read_hbc_version(hbc, &hbc_version)) {
 #if SHELL_DEBUG == 1
-    if (!g_logged_non_homeui_skip.exchange(true, std::memory_order_relaxed)) {
-      shellui_log("homeui_top_nav_patch: skip non-NPXS40002 HBC "
-                  "(hbc_base=0x%llx hbc_file_length=0x%llx)",
-                  (unsigned long long)hbc.base_offset,
+    shellui_log("homeui_top_nav_patch: invalid HBC version at base+0x%llx",
+                (unsigned long long)hbc.base_offset);
+#endif
+    return;
+  }
+
+  const HomeUiPatchProfile *profile =
+      find_homeui_patch_profile(hbc, hbc_file_length, hbc_version);
+  if (!profile) {
+#if SHELL_DEBUG == 1
+    if (looks_like_profiled_homeui(hbc)) {
+      if (!g_logged_unsupported_homeui_skip.exchange(
+              true, std::memory_order_relaxed)) {
+        char source_hash[kHbcSourceHashSize * 2 + 1];
+        format_hbc_source_hash(hbc, source_hash, sizeof(source_hash));
+        shellui_log("homeui_top_nav_patch: unsupported HomeUI HBC "
+                    "(hbc_base=0x%llx version=%u file_length=0x%llx "
+                    "source_hash=%s)",
+                    (unsigned long long)hbc.base_offset, hbc_version,
+                    (unsigned long long)hbc_file_length, source_hash);
+      }
+    } else if (!g_logged_non_homeui_skip.exchange(true,
+                                                   std::memory_order_relaxed)) {
+      shellui_log("homeui_top_nav_patch: skip non-HomeUI HBC "
+                  "(hbc_base=0x%llx version=%u file_length=0x%llx)",
+                  (unsigned long long)hbc.base_offset, hbc_version,
                   (unsigned long long)hbc_file_length);
     }
 #endif
@@ -331,45 +480,57 @@ void patch_homeui_top_nav(unsigned char *buffer, int *size_ptr,
   }
 
 #if SHELL_DEBUG == 1
-  shellui_log("homeui_top_nav_patch: HBC candidate hbc_base=0x%llx "
-              "hbc_file_length=0x%llx size=%d capacity=%d",
+  shellui_log("homeui_top_nav_patch: matched profile '%s' hbc_base=0x%llx "
+              "version=%u hbc_file_length=0x%llx size=%d capacity=%d",
+              profile->name,
               (unsigned long long)hbc.base_offset,
-              (unsigned long long)hbc_file_length, *size_ptr, buffer_capacity);
+              hbc_version, (unsigned long long)hbc_file_length, *size_ptr,
+              buffer_capacity);
 #endif
 
   static const unsigned char kOldIconOrder[] = {
       0x54, 0xfa, 0x1a, 0x5e, 0x1b, 0x0d, 0x15, 0x1b, 0x16};
+  static const unsigned char kLegacyAliasedIconOrder[] = {
+      0x54, 0x5e, 0x1b, 0xfa, 0x1a, 0x0d, 0x15, 0x1b, 0x16};
+  static const unsigned char kLegacyHiddenIconOrder[] = {
+      0x54, 0x5e, 0x1b, 0xdc, 0x15, 0x0d, 0x15, 0x1b, 0x16};
   static const unsigned char kNewIconOrder[] = {
       0x54, 0x5e, 0x1b, 0xfa, 0x1a, 0x0d, 0x15, 0x1b, 0x16};
 
   static const unsigned char kOriginalFpsFactory[] = {0x62, 0x01, 0x01,
                                                       0xaf, 0x1d};
-  static const unsigned char kOnionHenIconFactory[] = {
+  static const unsigned char kLegacyAliasedFpsFactory[] = {
       0x62, 0x01, 0x01, 0xad, 0x1d};
 
   /*
-   * The visible Settings slot also uses Function #7590. Patching #7590's
-   * iconId would turn both Settings and the inserted slot into OnionHEN. Route
-   * the reused Fps slot to the hidden ApplicationErrorEventTrigger icon-button,
-   * then repurpose that hidden component as the OnionHEN top-nav button:
+   * The visible Settings slot uses Function #7590, so patching its iconId would
+   * turn both Settings and the inserted slot into OnionHEN. Instead, keep the
+   * normal top-nav component names and make the dormant Fps slot render the
+   * OnionHEN button:
    *
    *   object icon value: download_error -> /system_ex/vsh_asset/onionhen.png
-   *   object title:      Trigger AppError -> spaces
+   *   object title:      Trigger AppError -> empty string
    *
-   * Its original AppError callback is replaced with HomeUI's existing
-   * useInteractivePress hook. The link uses a same-length private URI
-   * (the old download_error string content -> OnionHEN?NavUI), which
-   * hook_boot.cpp routes to the Debug Settings legacy host.
+   * The Fps body is replaced with a short icon-button body that uses HomeUI's
+   * existing useInteractivePress hook. Keep the stock download_error icon id
+   * string intact; the link uses the private Trigger AppError string slot as a
+   * padded OnionHEN?NavUI URI, which hook_boot.cpp routes to the Debug Settings
+   * legacy host.
    *
    * ReactButtonShadowNode_SetIconSource_Hook mirrors this same ImageSource into
    * invertedIcon so the focused state has an image too.
+   *
+   * Older test builds aliased Fps to ApplicationErrorEventTrigger or inserted
+   * ApplicationErrorEventTrigger directly. Accept and repair those in-memory
+   * shapes, but keep Fps on its original export so profile modal rendering sees
+   * the expected HomeUI module shape.
    */
   static const unsigned char kOldCustomIconValue[] = {0xba, 0x01};
   static const unsigned char kNewCustomIconValue[] = {0x47, 0x0f};
-  static const unsigned char kOldTopNavPressUri[] = {
-      'd', 'o', 'w', 'n', 'l', 'o', 'a', 'd', '_', 'e', 'r', 'r', 'o', 'r'};
-  static const unsigned char kNewTopNavPressUri[] = {
+  static const unsigned char kLegacyTopNavPressUri[] = {
       'O', 'n', 'i', 'o', 'n', 'H', 'E', 'N', '?', 'N', 'a', 'v', 'U', 'I'};
+  static const unsigned char kStockDownloadErrorString[] = {
+      'd', 'o', 'w', 'n', 'l', 'o', 'a', 'd', '_', 'e', 'r', 'r', 'o', 'r'};
   static const unsigned char kOldCustomIconUri[] = {
       'h', 'o', 'm', 'e', 'u', 'i', ' ', 'A', 'p', 'p', 'l',
       'i', 'c', 'a', 't', 'i', 'o', 'n', 'E', 'r', 'r', 'o',
@@ -378,21 +539,18 @@ void patch_homeui_top_nav(unsigned char *buffer, int *size_ptr,
       '/', 's', 'y', 's', 't', 'e', 'm', '_', 'e', 'x', '/',
       'v', 's', 'h', '_', 'a', 's', 's', 'e', 't', '/', 'o',
       'n', 'i', 'o', 'n', 'h', 'e', 'n', '.', 'p', 'n', 'g'};
-  static const unsigned char kOldCustomTitle[] = {
+  static const unsigned char kOldTopNavLinkUri[] = {
       'T', 'r', 'i', 'g', 'g', 'e', 'r', ' ',
       'A', 'p', 'p', 'E', 'r', 'r', 'o', 'r'};
-  static const unsigned char kNewCustomTitle[] = {
+  static const unsigned char kLegacyBlankTopNavLinkUri[] = {
       ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ',
       ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' '};
-  static const unsigned char kOldAppErrorTriggerBody[] = {
-      0x32, 0x04, 0x29, 0x00, 0x00, 0x2e, 0x01, 0x00, 0x06, 0x34, 0x01,
-      0x01, 0x01, 0x6e, 0x74, 0x03, 0x4f, 0x01, 0x01, 0x03, 0x35, 0x01,
-      0x01, 0x02, 0xdb, 0x15, 0x2a, 0x04, 0x00, 0x01, 0x2e, 0x01, 0x00,
-      0x09, 0x34, 0x02, 0x01, 0x03, 0x7f, 0x2e, 0x00, 0x00, 0x08, 0x34,
-      0x01, 0x00, 0x01, 0x6e, 0x01, 0x00, 0x03, 0x00, 0x03, 0x00, 0x7e,
-      0x10, 0x70, 0x19, 0x62, 0x04, 0x04, 0xae, 0x1d, 0x39, 0x00, 0x04,
-      0x01, 0xb6, 0x00, 0x52, 0x00, 0x02, 0x03, 0x01, 0x00, 0x5a, 0x00};
-  static const unsigned char kOnionHenTriggerBody[] = {
+  static const unsigned char kNewTopNavLinkUri[] = {
+      'O', 'n', 'i', 'o', 'n', 'H', 'E', 'N',
+      '?', 'N', 'a', 'v', 'U', 'I', ' ', ' '};
+  static const unsigned char kOldCustomTitleValue[] = {0x17, 0x0b};
+  static const unsigned char kNewCustomTitleValue[] = {0xff, 0x00};
+  static const unsigned char kLegacyOnionHenButtonBody[] = {
       0x29, 0x00, 0x00, 0x2e, 0x01, 0x00, 0x05, 0x35, 0x04, 0x01, 0x01,
       0x5a, 0x2a, 0x03, 0x01, 0x71, 0x02, 0xba, 0x01, 0x3e, 0x01, 0x02,
       0xa5, 0x17, 0x74, 0x03, 0x51, 0x05, 0x04, 0x03, 0x01, 0x2e, 0x01,
@@ -400,25 +558,49 @@ void patch_homeui_top_nav(unsigned char *buffer, int *size_ptr,
       0x34, 0x01, 0x01, 0x01, 0x6e, 0x01, 0x00, 0x03, 0x00, 0x03, 0x00,
       0x7e, 0x10, 0x70, 0x19, 0x39, 0x00, 0x05, 0x01, 0xb6, 0x00, 0x52,
       0x00, 0x02, 0x03, 0x01, 0x00, 0x5a, 0x00, 0x74, 0x00, 0x74, 0x00};
-  static_assert(sizeof(kOldAppErrorTriggerBody) ==
-                    sizeof(kOnionHenTriggerBody),
-                "HomeUI top-nav trigger body patch must be equal length");
+  static const unsigned char kOnionHenButtonBody[] = {
+      0x29, 0x00, 0x00, 0x2e, 0x01, 0x00, 0x05, 0x35, 0x04, 0x01, 0x01,
+      0x5a, 0x2a, 0x03, 0x01, 0x71, 0x02, 0x17, 0x0b, 0x3e, 0x01, 0x02,
+      0xa5, 0x17, 0x74, 0x03, 0x51, 0x05, 0x04, 0x03, 0x01, 0x2e, 0x01,
+      0x00, 0x09, 0x34, 0x02, 0x01, 0x02, 0x7f, 0x2e, 0x01, 0x00, 0x08,
+      0x34, 0x01, 0x01, 0x01, 0x6e, 0x01, 0x00, 0x03, 0x00, 0x03, 0x00,
+      0x7e, 0x10, 0x70, 0x19, 0x39, 0x00, 0x05, 0x01, 0xb6, 0x00, 0x52,
+      0x00, 0x02, 0x03, 0x01, 0x00, 0x5a, 0x00, 0x74, 0x00, 0x74, 0x00};
+  static const unsigned char kOldFpsBodyPrefix[] = {
+      0x29, 0x00, 0x00, 0x2e, 0x01, 0x00, 0x02, 0x34, 0x04, 0x01, 0x01,
+      0xe8, 0x2e, 0x02, 0x00, 0x00, 0x35, 0x02, 0x02, 0x02, 0xb7, 0x1d,
+      0x74, 0x03, 0x51, 0x02, 0x04, 0x03, 0x02, 0x35, 0x05, 0x02, 0x03,
+      0x4b, 0x1c, 0x34, 0x04, 0x01, 0x04, 0xf5, 0x32, 0x01, 0x62, 0x02,
+      0x01, 0xb0, 0x1d, 0x07, 0x01, 0x00, 0x00, 0x52, 0x04, 0x04, 0x03,
+      0x02, 0x01, 0x35, 0x02, 0x05, 0x05, 0x17, 0x2c, 0x71, 0x01, 0x25,
+      0x0c, 0x51, 0x01, 0x02, 0x05, 0x01, 0x8e, 0x07, 0x01, 0x75, 0x01};
+  static_assert(sizeof(kOldFpsBodyPrefix) == sizeof(kOnionHenButtonBody),
+                "HomeUI top-nav Fps body patch must fit prefix length");
 
-  static const BytePatch kPatches[] = {
-      {"home icon order", 0xbcf40, kOldIconOrder, kNewIconOrder,
+  const BytePatch kPatches[] = {
+      {"home icon order", profile->offsets.home_icon_order, kOldIconOrder,
+       kLegacyAliasedIconOrder, kLegacyHiddenIconOrder, kNewIconOrder,
        sizeof(kOldIconOrder)},
-      {"top-nav icon factory", 0x175cbd, kOriginalFpsFactory,
-       kOnionHenIconFactory, sizeof(kOriginalFpsFactory)},
-      {"top-nav press uri", 0x3a01f, kOldTopNavPressUri, kNewTopNavPressUri,
-       sizeof(kOldTopNavPressUri)},
-      {"custom icon value", 0xc0451, kOldCustomIconValue, kNewCustomIconValue,
+      {"legacy Fps factory repair", profile->offsets.fps_factory,
+       kLegacyAliasedFpsFactory, nullptr, nullptr, kOriginalFpsFactory,
+       sizeof(kOriginalFpsFactory)},
+      {"download_error string repair", profile->offsets.download_error_string,
+       kLegacyTopNavPressUri, nullptr, nullptr, kStockDownloadErrorString,
+       sizeof(kStockDownloadErrorString)},
+      {"custom icon value", profile->offsets.custom_icon_value,
+       kOldCustomIconValue, nullptr, nullptr, kNewCustomIconValue,
        sizeof(kOldCustomIconValue)},
-      {"custom icon uri", 0x533ed, kOldCustomIconUri, kNewCustomIconUri,
-       sizeof(kOldCustomIconUri)},
-      {"custom icon title", 0x49cd3, kOldCustomTitle, kNewCustomTitle,
-       sizeof(kOldCustomTitle)},
-      {"top-nav trigger body", 0x17601a, kOldAppErrorTriggerBody,
-       kOnionHenTriggerBody, sizeof(kOldAppErrorTriggerBody)},
+      {"custom icon uri", profile->offsets.custom_icon_uri, kOldCustomIconUri,
+       nullptr, nullptr, kNewCustomIconUri, sizeof(kOldCustomIconUri)},
+      {"top-nav link uri", profile->offsets.top_nav_link_uri,
+       kOldTopNavLinkUri, kLegacyBlankTopNavLinkUri, nullptr,
+       kNewTopNavLinkUri, sizeof(kOldTopNavLinkUri)},
+      {"custom title value", profile->offsets.custom_title_value,
+       kOldCustomTitleValue, nullptr, nullptr, kNewCustomTitleValue,
+       sizeof(kOldCustomTitleValue)},
+      {"top-nav Fps body", profile->offsets.fps_body, kOldFpsBodyPrefix,
+       kLegacyOnionHenButtonBody, nullptr,
+       kOnionHenButtonBody, sizeof(kOldFpsBodyPrefix)},
   };
 
   bool any_change = false;
@@ -432,8 +614,9 @@ void patch_homeui_top_nav(unsigned char *buffer, int *size_ptr,
 
   if (!any_change) {
 #if SHELL_DEBUG == 1
-    shellui_log("homeui_top_nav_patch: already applied (hbc_base=0x%llx)",
-                (unsigned long long)hbc.base_offset);
+    shellui_log("homeui_top_nav_patch: already applied profile='%s' "
+                "(hbc_base=0x%llx)",
+                profile->name, (unsigned long long)hbc.base_offset);
 #endif
     return;
   }
@@ -445,8 +628,9 @@ void patch_homeui_top_nav(unsigned char *buffer, int *size_ptr,
 
 #if SHELL_DEBUG == 1
   shellui_log("homeui_top_nav_patch: activated OnionHEN top-nav slot "
+              "profile='%s' "
               "(hbc_base=0x%llx)",
-              (unsigned long long)hbc.base_offset);
+              profile->name, (unsigned long long)hbc.base_offset);
 #endif
 #else
   (void)buffer;
