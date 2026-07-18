@@ -13,6 +13,7 @@
 #   export PS5_PAYLOAD_SDK=/path/to/ps5-payload-sdk
 #   ./scripts/build.sh              # cleans previous outputs first
 #   ./scripts/build.sh --clean      # same as default; kept for compatibility
+#   ./scripts/build.sh --release    # non-interactive Release build
 #   ./scripts/build.sh --fw 0x3000000 --jobs 8
 #   ./scripts/build.sh --stub-missing   # compile-only placeholders for missing external ELFs
 #
@@ -27,7 +28,10 @@ BIN="${BUILD}/bin"
 
 PS5_PAYLOAD_SDK="${PS5_PAYLOAD_SDK:-${PS5SDK:-}}"
 V_FW="${V_FW:-0x3000000}"
-BUILD_TYPE="${BUILD_TYPE:-Debug}"
+DEFAULT_BUILD_TYPE="Debug"
+BUILD_TYPE="${BUILD_TYPE:-}"
+BUILD_TYPE_EXPLICIT=0
+[[ -n "${BUILD_TYPE}" ]] && BUILD_TYPE_EXPLICIT=1
 JOBS="${JOBS:-}"
 CONFIGURE_ONLY=0
 STUB_MISSING=0
@@ -63,7 +67,9 @@ Options:
   --configure-only     Only run CMake configure
   --fw <hex>           PS5_FW_VERSION / V_FW (default: ${V_FW})
   --jobs <n>           Parallel build jobs (default: ${JOBS})
-  --build-type <t>     Debug|Release (default: ${BUILD_TYPE})
+  --build-type <t>     Debug|Release (default: ${DEFAULT_BUILD_TYPE})
+  --debug              Same as --build-type Debug
+  --release            Same as --build-type Release
   --build-dir <path>   CMake binary dir (default: <repo>/build)
   --cache-dir <path>   Download cache directory (default: <repo>/.cache/dependencies)
   --stub-missing       Create tiny placeholder ELFs if external blobs are missing
@@ -81,6 +87,7 @@ Environment:
   ONIONHEN_CACHE_DIR Override dependency cache directory
   BUILD_DIR         Override build directory
   V_FW              Same as --fw
+  BUILD_TYPE        Debug|Release; skips the interactive build-type prompt
 
 Third-party (git submodules under third_party/ + release downloads):
   See third_party/README.md and scripts/sync_dependencies.sh
@@ -104,7 +111,9 @@ while [[ $# -gt 0 ]]; do
     --configure-only) CONFIGURE_ONLY=1; shift ;;
     --fw) V_FW="$2"; shift 2 ;;
     --jobs) JOBS="$2"; shift 2 ;;
-    --build-type) BUILD_TYPE="$2"; shift 2 ;;
+    --build-type) BUILD_TYPE="$2"; BUILD_TYPE_EXPLICIT=1; shift 2 ;;
+    --debug) BUILD_TYPE="Debug"; BUILD_TYPE_EXPLICIT=1; shift ;;
+    --release) BUILD_TYPE="Release"; BUILD_TYPE_EXPLICIT=1; shift ;;
     --build-dir) BUILD="$2"; shift 2 ;;
     --cache-dir) CACHE="$2"; shift 2 ;;
     --stub-missing) STUB_MISSING=1; shift ;;
@@ -116,6 +125,44 @@ while [[ $# -gt 0 ]]; do
     *) die "Unknown option: $1 (see --help)" ;;
   esac
 done
+
+normalize_build_type() {
+  case "$1" in
+    [Dd][Ee][Bb][Uu][Gg]|[Dd]) printf 'Debug' ;;
+    [Rr][Ee][Ll][Ee][Aa][Ss][Ee]|[Rr]) printf 'Release' ;;
+    *) return 1 ;;
+  esac
+}
+
+select_build_type() {
+  local selected="${BUILD_TYPE:-}"
+
+  if [[ "${BUILD_TYPE_EXPLICIT}" -eq 1 ]]; then
+    BUILD_TYPE="$(normalize_build_type "${selected}")" ||
+      die "invalid build type: ${selected} (expected Debug or Release)"
+    return 0
+  fi
+
+  if [[ -t 0 && -t 1 ]]; then
+    printf '\nSelect build type:\n'
+    printf '  1) Debug (default)\n'
+    printf '  2) Release\n'
+    printf 'Build type [1]: '
+    read -r selected || selected=""
+    case "${selected}" in
+      ""|1|[Dd]|[Dd][Ee][Bb][Uu][Gg]) BUILD_TYPE="Debug" ;;
+      2|[Rr]|[Rr][Ee][Ll][Ee][Aa][Ss][Ee]) BUILD_TYPE="Release" ;;
+      *)
+        warn "unknown build type selection '${selected}', using ${DEFAULT_BUILD_TYPE}"
+        BUILD_TYPE="${DEFAULT_BUILD_TYPE}"
+        ;;
+    esac
+  else
+    BUILD_TYPE="${DEFAULT_BUILD_TYPE}"
+  fi
+}
+
+select_build_type
 
 # ---------------------------------------------------------------------------
 # Preconditions
