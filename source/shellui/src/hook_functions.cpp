@@ -34,6 +34,7 @@ along with this program; see the file COPYING. If not, see
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <signal.h>
+#include <stdint.h>
 extern "C"{
 #include <ps5/kernel.h>
 }
@@ -208,6 +209,71 @@ static int patch_utf16le_once(unsigned char *buf, int size,
   return 0;
 }
 
+static bool patch_buffer_contains(const unsigned char *buf, size_t size,
+                                  const void *needle, size_t needle_len) {
+  if (!buf || !needle || needle_len == 0 || needle_len > size) {
+    return false;
+  }
+
+  const unsigned char *needle_bytes =
+      reinterpret_cast<const unsigned char *>(needle);
+  for (size_t i = 0; i + needle_len <= size; ++i) {
+    if (memcmp(buf + i, needle_bytes, needle_len) == 0) {
+      return true;
+    }
+  }
+  return false;
+}
+
+static uint32_t patch_read_u32le(const unsigned char *p) {
+  return ((uint32_t)p[0]) | ((uint32_t)p[1] << 8) |
+         ((uint32_t)p[2] << 16) | ((uint32_t)p[3] << 24);
+}
+
+static bool locate_hermes_payload(const unsigned char *buffer, size_t size,
+                                  const unsigned char **hbc,
+                                  size_t *hbc_size) {
+  static const unsigned char kHermesMagic[] = {0xc6, 0x1f, 0xbc, 0x03,
+                                               0xc1, 0x03, 0x19, 0x1f};
+
+  const size_t kMaxHeaderScan = 0x2000;
+  const size_t scan_size = size < kMaxHeaderScan ? size : kMaxHeaderScan;
+  for (size_t i = 0; i + sizeof(kHermesMagic) <= scan_size; ++i) {
+    if (memcmp(buffer + i, kHermesMagic, sizeof(kHermesMagic)) == 0) {
+      *hbc = buffer + i;
+      *hbc_size = size - i;
+      return true;
+    }
+  }
+  return false;
+}
+
+static bool is_supported_settings_bundle(const unsigned char *buffer,
+                                         int size) {
+  static const size_t kHbcFileLengthOffset = 0x20;
+  static const size_t kSupportedSettingsHbcFileLength = 0x4f4bfc;
+  static const char kSettingsUriPrefix[] = "pssettings:play";
+  static const char kDebugSettingsFunction[] = "debug_settings";
+
+  const unsigned char *hbc = nullptr;
+  size_t hbc_size = 0;
+  if (!buffer || size <= 0 ||
+      !locate_hermes_payload(buffer, (size_t)size, &hbc, &hbc_size) ||
+      hbc_size < kHbcFileLengthOffset + sizeof(uint32_t)) {
+    return false;
+  }
+
+  if (patch_read_u32le(hbc + kHbcFileLengthOffset) !=
+      kSupportedSettingsHbcFileLength) {
+    return false;
+  }
+
+  return patch_buffer_contains(hbc, hbc_size, kSettingsUriPrefix,
+                               sizeof(kSettingsUriPrefix) - 1) &&
+         patch_buffer_contains(hbc, hbc_size, kDebugSettingsFunction,
+                               sizeof(kDebugSettingsFunction) - 1);
+}
+
 void patch_bundle_strings(unsigned char* buffer, int* size_ptr, int buffer_capacity) {
   if (!buffer || !size_ptr || *size_ptr <= 0) {
       return;
@@ -230,18 +296,21 @@ void patch_bundle_strings(unsigned char* buffer, int* size_ptr, int buffer_capac
   static_assert(sizeof(kOldDbgLabel) == sizeof(kNewDbgLabel),
                 "UTF-16 Debug Settings label must be equal length");
 
-  int count = patch_utf16le_once(buffer, size, kOldDbgLabel, sizeof(kOldDbgLabel),
-                                 kNewDbgLabel, sizeof(kNewDbgLabel));
+  if (is_supported_settings_bundle(buffer, size)) {
+    int label_count = patch_utf16le_once(
+        buffer, size, kOldDbgLabel, sizeof(kOldDbgLabel), kNewDbgLabel,
+        sizeof(kNewDbgLabel));
+    int icon_count =
+        replace_all(buffer, size_ptr, buffer_capacity, "icon_setting",
+                    "onionh_sicon");
 #if SHELL_DEBUG == 1
-  if (count > 0) {
-      shellui_log("patch_bundle_strings: UTF-16LE ★Debug Settings → ★OnionHEN Tools");
-  } else {
-      shellui_log("patch_bundle_strings: UTF-16LE ★Debug Settings not found (size=%d)",
-                 size);
-  }
+    shellui_log("patch_bundle_strings: NPXS40008 settings patch label=%d icon=%d",
+                label_count, icon_count);
 #else
-  (void)count;
+    (void)label_count;
+    (void)icon_count;
 #endif
+  }
 
   patch_homeui_top_nav(buffer, size_ptr, buffer_capacity);
 }
