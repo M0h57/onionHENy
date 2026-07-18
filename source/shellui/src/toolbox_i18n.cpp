@@ -2,6 +2,10 @@
 
 #include "toolbox_i18n.hpp"
 
+#ifndef ONION_HOST_TEST
+#include "external_symbols.hpp"
+#endif
+
 #include <cstring>
 
 namespace toolbox_i18n {
@@ -210,9 +214,38 @@ const Entry *find_entry(const char *key) {
   return nullptr;
 }
 
+Lang lang_from_ui_value(int ui_lang) {
+  return ui_lang == static_cast<int>(Lang::En) ? Lang::En : Lang::ZhHans;
+}
+
+bool system_lang(Lang &out) {
+#ifdef ONION_HOST_TEST
+  (void)out;
+  return false;
+#else
+  constexpr int kSystemServiceParamIdLang = 1;
+  constexpr int kSystemParamLangChineseTraditional = 10;
+  constexpr int kSystemParamLangChineseSimplified = 11;
+
+  int language = -1;
+  if (!sceSystemServiceParamGetInt ||
+      sceSystemServiceParamGetInt(kSystemServiceParamIdLang, &language) < 0) {
+    return false;
+  }
+
+  out = language == kSystemParamLangChineseTraditional ||
+                language == kSystemParamLangChineseSimplified
+            ? Lang::ZhHans
+            : Lang::En;
+  return true;
+#endif
+}
+
 } // namespace
 
 Lang active_lang() { return g_lang; }
+
+int active_ui_lang_value() { return static_cast<int>(g_lang); }
 
 void set_lang(Lang lang) {
   if (lang != Lang::ZhHans && lang != Lang::En)
@@ -221,7 +254,16 @@ void set_lang(Lang lang) {
 }
 
 void apply_ui_lang(int ui_lang) {
-  set_lang(ui_lang == static_cast<int>(Lang::En) ? Lang::En : Lang::ZhHans);
+  set_lang(lang_from_ui_value(ui_lang));
+}
+
+void apply_system_or_ui_lang(int ui_lang) {
+  Lang lang = Lang::ZhHans;
+  if (system_lang(lang)) {
+    set_lang(lang);
+    return;
+  }
+  set_lang(lang_from_ui_value(ui_lang));
 }
 
 const char *tr(const char *key) {

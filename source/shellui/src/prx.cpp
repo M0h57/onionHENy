@@ -246,6 +246,7 @@ bool resolve_native_symbols(pid_t pid, void*& out_sceAppInstUtilInstallByPackage
 
   int system_service = get_module_handle(pid, "libSceSystemService.sprx");
   KERNEL_DLSYM(system_service, sceSystemServiceGetAppIdOfRunningBigApp);
+  KERNEL_DLSYM(system_service, sceSystemServiceParamGetInt);
   KERNEL_DLSYM(system_service, sceSystemServiceGetAppTitleId);
   {
     void* sceSystemServiceLaunchApp = nullptr;

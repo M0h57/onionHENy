@@ -25,6 +25,7 @@ int (*sceSystemServiceNavigateToGoHome)(void) = nullptr;
 int (*sceSystemServiceGetAppIdOfRunningBigApp)(void) = nullptr;
 // Global function pointers
 SceLncUtilLaunchAppType sceLncUtilLaunchApp_dyn = nullptr;
+int (*sceSystemServiceParamGetInt)(int param_id, int* value) = nullptr;
 int (*sceSystemServiceGetAppTitleId)(int appid, char* titleid) = nullptr; 
 
 /* ====================================== Remote Play Symbols ======================================*/

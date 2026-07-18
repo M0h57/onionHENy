@@ -7,6 +7,7 @@
 #include "hooked_funcs.hpp"
 #include "external_symbols.hpp"
 #include "shellui_state.hpp"
+#include "toolbox_i18n.hpp"
 
 #include <onion/platform.h>
 
@@ -56,7 +57,9 @@ const ExactValueEntry kExactValues[] = {
     {"id_cheats_shortcut",
      +[]() -> std::string { return int_str(g_settings.cheats_shortcut_opt); }},
     {"id_ui_lang",
-     +[]() -> std::string { return int_str(g_settings.ui_lang); }},
+     +[]() -> std::string {
+       return int_str(toolbox_i18n::active_ui_lang_value());
+     }},
     {"id_debug_jb",
      +[]() -> std::string { return bool_str(g_settings.debug_app_jb_msg); }},
     {"id_custom_game_opts",

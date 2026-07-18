@@ -18,11 +18,20 @@ enum class Lang : int {
 /** Active language for tr() (from settings or explicit set). */
 Lang active_lang();
 
+/** Active language as Settings.ui_lang-compatible integer. */
+int active_ui_lang_value();
+
 /**
  * Apply Settings.ui_lang (0=zh-Hans, 1=en). Call after LoadSettings /
  * before building toolbox XML. Invalid values fall back to zh-Hans.
  */
 void apply_ui_lang(int ui_lang);
+
+/**
+ * Prefer the PS5 system language for toolbox XML; fall back to Settings.ui_lang
+ * when SystemService is unavailable (host tests / unresolved symbol).
+ */
+void apply_system_or_ui_lang(int ui_lang);
 
 /** Override without persisting (tests / temporary). */
 void set_lang(Lang lang);

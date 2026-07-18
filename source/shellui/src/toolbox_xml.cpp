@@ -217,7 +217,7 @@ void generate_remote_play_xml(std::string& xml_buffer) {
     remote_play_initialized = true;
   }
 
-  toolbox_i18n::apply_ui_lang(g_settings.ui_lang);
+  toolbox_i18n::apply_system_or_ui_lang(g_settings.ui_lang);
   ps5ui::Page page("remote_play_pin_display", toolbox_i18n::tr("rp.title"));
   page.root_style(ps5ui::Style::Center);
 
@@ -271,7 +271,7 @@ void generate_payload_xml(std::string& xml_buffer, bool list_page) {
       "/usb3/OnionHEN/payloads",
   };
 
-  toolbox_i18n::apply_ui_lang(g_settings.ui_lang);
+  toolbox_i18n::apply_system_or_ui_lang(g_settings.ui_lang);
   const char* root_id = list_page ? "id_payload" : "id_auto_payloads";
   const char* root_title =
       list_page ? toolbox_i18n::tr("payload.title")
@@ -301,7 +301,7 @@ void generate_payload_xml(std::string& xml_buffer, bool list_page) {
 
 void generate_cheats_xml(std::string& new_xml, std::string& not_open_tid,
                          bool running_as_debug_settings, bool show_while_not_open) {
-  toolbox_i18n::apply_ui_lang(g_settings.ui_lang);
+  toolbox_i18n::apply_system_or_ui_lang(g_settings.ui_lang);
   const std::string list_id =
       running_as_debug_settings ? "id_debug_settings" : "id_cheat_title";
 
@@ -383,7 +383,7 @@ void generate_plapps_xml(std::string& new_xml) {
       "/mnt/ext0/homebrew/games",
   };
 
-  toolbox_i18n::apply_ui_lang(g_settings.ui_lang);
+  toolbox_i18n::apply_system_or_ui_lang(g_settings.ui_lang);
   ps5ui::Page page("id_plapps", toolbox_i18n::tr("plapps.title"));
 
   std::random_device rd;
@@ -672,7 +672,7 @@ void append_toolbox_about_group(ps5ui::Group& g) {
 } // namespace
 
 void generate_toolbox_xml(std::string& new_xml) {
-  toolbox_i18n::apply_ui_lang(g_settings.ui_lang);
+  toolbox_i18n::apply_system_or_ui_lang(g_settings.ui_lang);
   ps5ui::Page page("id_debug_settings", toolbox_i18n::tr("root.title"));
   page.root_focus("id_group_pkg");
 

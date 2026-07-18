@@ -516,6 +516,7 @@ extern MonoClass* MemoryStream_IO;
 
 /* ====================================== Dynamic SystemService Symbols ===================================*/
 extern  int (*sceSystemServiceGetAppIdOfRunningBigApp)(void);
+extern  int (*sceSystemServiceParamGetInt)(int param_id, int* value);
 /* ====================================== Remote Play Symbols ======================================*/
 extern int (*sceRemoteplayInitialize)(void*, size_t);
 extern int (*sceRemoteplayGeneratePinCode)(uint32_t*);
