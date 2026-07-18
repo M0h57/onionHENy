@@ -514,8 +514,8 @@ void patch_homeui_top_nav(unsigned char *buffer, int *size_ptr,
    * The Fps body is replaced with a short icon-button body that uses HomeUI's
    * existing useInteractivePress hook. Keep the stock download_error icon id
    * string intact; the link uses the private Trigger AppError string slot as a
-   * padded OnionHEN?NavUI URI, which hook_boot.cpp routes to the Debug Settings
-   * legacy host.
+   * same-length OnionHEN?NavUI=1 URI, which hook_boot.cpp routes to the Debug
+   * Settings legacy host.
    *
    * ReactButtonShadowNode_SetIconSource_Hook mirrors this same ImageSource into
    * invertedIcon so the focused state has an image too.
@@ -545,9 +545,12 @@ void patch_homeui_top_nav(unsigned char *buffer, int *size_ptr,
   static const unsigned char kLegacyBlankTopNavLinkUri[] = {
       ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ',
       ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' '};
-  static const unsigned char kNewTopNavLinkUri[] = {
+  static const unsigned char kLegacyPaddedTopNavLinkUri[] = {
       'O', 'n', 'i', 'o', 'n', 'H', 'E', 'N',
       '?', 'N', 'a', 'v', 'U', 'I', ' ', ' '};
+  static const unsigned char kNewTopNavLinkUri[] = {
+      'O', 'n', 'i', 'o', 'n', 'H', 'E', 'N',
+      '?', 'N', 'a', 'v', 'U', 'I', '=', '1'};
   static const unsigned char kOldCustomTitleValue[] = {0x17, 0x0b};
   static const unsigned char kNewCustomTitleValue[] = {0xff, 0x00};
   static const unsigned char kLegacyOnionHenButtonBody[] = {
@@ -593,7 +596,8 @@ void patch_homeui_top_nav(unsigned char *buffer, int *size_ptr,
       {"custom icon uri", profile->offsets.custom_icon_uri, kOldCustomIconUri,
        nullptr, nullptr, kNewCustomIconUri, sizeof(kOldCustomIconUri)},
       {"top-nav link uri", profile->offsets.top_nav_link_uri,
-       kOldTopNavLinkUri, kLegacyBlankTopNavLinkUri, nullptr,
+       kOldTopNavLinkUri, kLegacyBlankTopNavLinkUri,
+       kLegacyPaddedTopNavLinkUri,
        kNewTopNavLinkUri, sizeof(kOldTopNavLinkUri)},
       {"custom title value", profile->offsets.custom_title_value,
        kOldCustomTitleValue, nullptr, nullptr, kNewCustomTitleValue,

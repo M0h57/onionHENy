@@ -13,7 +13,6 @@
 #include <vector>
 #include <atomic>
 #include <cstring>
-#include <algorithm>
 
 extern bool (*boot_orig)(MonoString* uri, int opt, MonoString* titleIdForBootAction);
 extern bool (*boot_orig_2)(MonoString* uri, int opt);
@@ -31,15 +30,11 @@ static constexpr const char kToolboxUri[] =
     "pssettings:play?mode=settings&function=debug_settings_old";
 static constexpr const char kToolboxUriSimple[] =
     "pssettings:play?function=debug_settings_old";
-static constexpr const char kHomeTopNavUri[] = "OnionHEN?NavUI";
+static constexpr const char kHomeTopNavUri[] = "OnionHEN?NavUI=1";
+static constexpr const char kLegacyHomeTopNavUri[] = "OnionHEN?NavUI";
 
 static bool is_home_top_nav_uri(const std::string &uri) {
-  const size_t uri_len = strlen(kHomeTopNavUri);
-  if (uri.size() < uri_len || uri.compare(0, uri_len, kHomeTopNavUri) != 0) {
-    return false;
-  }
-  return std::all_of(uri.begin() + uri_len, uri.end(),
-                     [](char c) { return c == ' '; });
+  return uri == kHomeTopNavUri || uri == kLegacyHomeTopNavUri;
 }
 
 /** Rewrite function=debug_settings → function=debug_settings_old (idempotent for _old). */
