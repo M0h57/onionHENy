@@ -15,6 +15,7 @@ along with this program; see the file COPYING. If not, see
 <http://www.gnu.org/licenses/>.  */
 
 #include "hooked_funcs.hpp"
+#include "homeui_top_nav_patch.hpp"
 #include <onion/platform.h>
 #include "remote_play.h"
 #include "detour.h"
@@ -57,8 +58,6 @@ bool (*boot_orig_2)(MonoString* uri, int opt) = nullptr;
 
 void (*CaptureScreen_orig_old)(MonoObject * inst, int userId, long deviceId, int capType, MonoObject* capacityInfo) = nullptr;
 void (*CaptureScreen_orig_new)(MonoObject * inst, int userId, long deviceId, int capType, MonoString* format, MonoObject* capacityInfo) = nullptr;
-void(*CallDecrypt_orig)(unsigned char* bundleData, int bundleOffset, int bundleSize, int* payloadOffset, int* realPayloadSize) = nullptr;
-
 void (*createJson)(MonoObject*, MonoObject* array, MonoString* id, MonoString* label, MonoString* actionUrl, MonoString* actionId, MonoString* messageId, MonoObject* subMenu, bool enable) = nullptr;
 
 int (*__sys_regmgr_call)(long, long, int*, int*, long) = nullptr;
@@ -213,7 +212,6 @@ void patch_bundle_strings(unsigned char* buffer, int* size_ptr, int buffer_capac
   if (!buffer || !size_ptr || *size_ptr <= 0) {
       return;
   }
-  (void)buffer_capacity;
   const int size = *size_ptr;
 
   /* ★Debug Settings → ★OnionHEN Tools  (15 UTF-16 code units = 30 bytes) */
@@ -245,8 +243,7 @@ void patch_bundle_strings(unsigned char* buffer, int* size_ptr, int buffer_capac
   (void)count;
 #endif
 
-  /* ASCII Hermes strings remain raw bytes (no UTF-16). Equal length. */
-  replace_all(buffer, size_ptr, buffer_capacity, "icon_setting", "onionh_sicon");
+  patch_homeui_top_nav(buffer, size_ptr, buffer_capacity);
 }
 
 int ioctl_hook(int fd, unsigned long request, void *argp) {
@@ -259,37 +256,26 @@ int ioctl_hook(int fd, unsigned long request, void *argp) {
 #if SHELL_DEBUG == 1
       shellui_log("ioctl_hook called with fd: %d, request: 0x%X, argp: %p", fd, request, argp);
 #endif
+      if (!args || !args->buffer || args->size <= 0) {
+#if SHELL_DEBUG == 1
+          shellui_log("homeui_top_nav_patch: ioctl RNPS args invalid");
+#endif
+          return ret;
+      }
+#if SHELL_DEBUG == 1
+      const unsigned char *p = (const unsigned char *)args->buffer;
+      const unsigned char b0 = args->size > 0 ? p[0] : 0;
+      const unsigned char b1 = args->size > 1 ? p[1] : 0;
+      const unsigned char b2 = args->size > 2 ? p[2] : 0;
+      const unsigned char b3 = args->size > 3 ? p[3] : 0;
+      shellui_log("homeui_top_nav_patch: ioctl RNPS buffer=%p size=%d "
+                  "head=%02x %02x %02x %02x",
+                  args->buffer, args->size, b0, b1, b2, b3);
+#endif
       patch_bundle_strings((unsigned char*)args->buffer, &args->size, args->size);
   }
   return ret;
 }
-
-void CallDecrypt(unsigned char* bundleData, int bundleOffset, int bundleSize, int* payloadOffset, int* realPayloadSize) {
-  if (!shellui_hooks_are_ready()) {
-    if (CallDecrypt_orig)
-      CallDecrypt_orig(bundleData, bundleOffset, bundleSize, payloadOffset,
-                       realPayloadSize);
-    return;
-  }
-
-#if SHELL_DEBUG == 1
-  shellui_log("CallDecrypt: bundleData: %p, bundleOffset: %d, bundleSize: %d, payloadOffset: %p, realPayloadSize: %p", 
-      bundleData, bundleOffset, bundleSize, payloadOffset, realPayloadSize);
-#endif
-  
-  if (!bundleData || !payloadOffset || !realPayloadSize) {
-#if SHELL_DEBUG == 1
-      shellui_log("CallDecrypt: Invalid Parameters");
-#endif
-      return;
-  }
-  
-  CallDecrypt_orig(bundleData, bundleOffset, bundleSize, payloadOffset, realPayloadSize);
-  patch_bundle_strings(bundleData, realPayloadSize, *realPayloadSize);
-}
-
-
-
 
 void ParseCheatID(const char* id, char* tid, int* cheat_id)
 {

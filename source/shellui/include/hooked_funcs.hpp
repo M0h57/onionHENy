@@ -323,7 +323,6 @@ extern void (*UpdateImposeStatusFlag_Orig)(MonoObject* scene, MonoObject* frontA
 extern bool (*boot_orig)(MonoString* uri, int opt, MonoString* titleIdForBootAction);
 extern bool (*boot_orig_2)(MonoString* uri, int opt);
 extern GamePadData (*GetData)(int deviceIndex);
-extern void(*CallDecrypt_orig)(unsigned char* bundleData, int bundleOffset, int bundleSize, int* payloadOffset, int* realPayloadSize);
 extern MonoString *(*oGetString)(MonoObject *Instance, MonoString *str);
 extern void (*createJson)(MonoObject*, MonoObject* array, MonoString* id, MonoString* label, MonoString* actionUrl, MonoString* actionId, MonoString* messageId, MonoObject* subMenu, bool enable);
 extern DecryptRnpsBundle_t DecryptRnpsBundle;
@@ -379,7 +378,6 @@ int usbpath();
 extern "C" int sceUserServiceGetInitialUser(int* uid);
 void ParseCheatID(const char* id, char* tid, int* cheat_id);
 int Launch_FG_Game(const char *path, const char* title_id, const char* title);
-void CallDecrypt(unsigned char* bundleData, int bundleOffset, int bundleSize,  int* payloadOffset, int* realPayloadSize);
 bool uri_boot_hook(MonoString* uri, int opt, MonoString* titleIdForBootAction);
 bool uri_boot_hook_2(MonoString* uri, int opt);
 GamePadData GetData_hook(int deviceIndex);

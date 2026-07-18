@@ -2,6 +2,7 @@
 
 
 #include "hooked_funcs.hpp"
+#include "homeui_top_nav_patch.hpp"
 #include "ipc.hpp"
 #include "external_symbols.hpp"
 #include <onion/settings.hpp>
@@ -492,8 +493,9 @@ void OnRender_Hook(MonoObject* instance) {
     return;
   }
 
-  /* UI thread: apply deferred home reload for Display_tids after cold inject. */
+  /* UI thread: apply deferred home reloads after cold inject. */
   shellui_poll_display_tids_home_reload();
+  shellui_poll_homeui_top_nav_reload();
 
   static bool inited = false;
   static unsigned int idle_thread_id[kCpuCores] = {};

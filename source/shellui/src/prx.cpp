@@ -19,6 +19,7 @@ along with this program; see the file COPYING. If not, see
 #include "appinst_types.hpp"
 #include "defs.h"
 #include "external_symbols.hpp"
+#include "homeui_top_nav_patch.hpp"
 #include "ipc.hpp"
 #include "proc.h"
 #include "ps5/kernel.h"
@@ -595,6 +596,8 @@ bool install_hooks(const ShellImages& img) {
       reinterpret_cast<void*>(&ReactNavigatorManager_UpdateNavigationState_Hook),
       reinterpret_cast<void**>(&ReactNavigatorManager_UpdateNavigationState_Orig));
 
+  install_homeui_top_nav_hooks(img.react_pui);
+
   (void)install_optional_diag(
       "[DBG-GETMODEL] GetModel", img.rn_shell, "ReactNative.Modules.ShellUI.Settings",
       "DebugSettingsModule", "GetModel", 2,
@@ -614,22 +617,18 @@ bool install_hooks(const ShellImages& img) {
       notify("Failed to detour KillAppWithReason");
   }
 
-  // --- Bundle decrypt; fall back to ioctl ---
-  (void)install_mono_hook(
-      {"JavaScriptBundleDecryptor.Decrypt", img.react_pui,
-       "ReactNative.PlayStation.Security", "JavaScriptBundleDecryptor", "Decrypt", 5,
-       reinterpret_cast<void*>(&CallDecrypt), reinterpret_cast<void**>(&CallDecrypt_orig),
-       false});
-  if (!CallDecrypt_orig) {
-    if (!ioctl) {
-      notify("Failed to find decrypt workaround");
-      return false;
-    }
-    shellui_log("Found ioctl at %p", ioctl);
-    DetourFunction(reinterpret_cast<uintptr_t>(ioctl),
-                   reinterpret_cast<void*>(&ioctl_hook));
-    shellui_log("Detoured ioctl to ioctl_hook");
+  // --- RNPS bundle decrypt path ---
+  if (!ioctl) {
+    notify("Failed to find RNPS decrypt ioctl");
+    return false;
   }
+  shellui_log("Found ioctl at %p", ioctl);
+  if (!DetourFunction(reinterpret_cast<uintptr_t>(ioctl),
+                      reinterpret_cast<void*>(&ioctl_hook))) {
+    notify("Failed to detour RNPS decrypt ioctl");
+    return false;
+  }
+  shellui_log("Detoured ioctl to ioctl_hook");
 
   // --- BootHelper.Boot: 3-arg then 2-arg ---
   if (!install_mono_hook({"BootHelper.Boot(3)", img.app_system, "Sce.Vsh.ShellUI.AppSystem",
@@ -813,6 +812,7 @@ int main(int argc, char const* argv[]) {
   if (g_settings.display_tids) {
     shellui_request_display_tids_home_reload();
   }
+  shellui_request_homeui_top_nav_reload();
   hooked = true;
   run_keep_alive();
   return 0;

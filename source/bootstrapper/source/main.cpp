@@ -268,10 +268,14 @@ static void cleanup(void);
   static void write_blob_file(const char *path, const void *data, size_t size) {
     int fd = open(path, O_WRONLY | O_CREAT | O_TRUNC, 0666);
     if (fd < 0) {
+      klog_printf("write_embedded_assets: open failed: %s (%s)\n", path,
+                  strerror(errno));
       perror("open failed");
       return;
     }
     if (write(fd, data, size) == -1) {
+      klog_printf("write_embedded_assets: write failed: %s (%s)\n", path,
+                  strerror(errno));
       perror("write failed");
     }
     close(fd);
@@ -298,6 +302,10 @@ static void cleanup(void);
     write_blob_file("/data/OnionHEN/assets/icon_xml_shortcuts.png", &icon_xml_shortcuts_start, icon_xml_shortcuts_size);
     write_blob_file("/data/OnionHEN/assets/icon_xml_debug.png", &icon_xml_debug_start, icon_xml_debug_size);
     write_blob_file("/data/OnionHEN/assets/icon_xml_about.png", &icon_xml_about_start, icon_xml_about_size);
+
+    mkdir("/system_ex/vsh_asset/", 0777);
+    write_blob_file("/system_ex/vsh_asset/onionhen.png", &sicon_start,
+                    sicon_size);
 
     static const char *const kSettingsSiconPaths[] = {
         "/system_ex/rnps/apps/NPXS40008/assets/src/modules/categoriesList/assets/"

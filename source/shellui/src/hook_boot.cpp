@@ -31,6 +31,7 @@ static constexpr const char kToolboxUri[] =
     "pssettings:play?mode=settings&function=debug_settings_old";
 static constexpr const char kToolboxUriSimple[] =
     "pssettings:play?function=debug_settings_old";
+static constexpr const char kHomeTopNavUri[] = "OnionHEN?NavUI";
 
 /** Rewrite function=debug_settings → function=debug_settings_old (idempotent for _old). */
 std::string rewrite_debug_settings_to_old(const std::string &uri) {
@@ -83,6 +84,12 @@ bool handle_uri_boot_common(MonoString* uri, int opt, MonoString* titleIdForBoot
         
         return true; // Signal to redirect
     }
+    else if (uri_string == kHomeTopNavUri) {
+#if SHELL_DEBUG==1
+      shellui_log("HomeUI top-nav OnionHEN URI detected");
+#endif
+      return true;
+    }
 
     return false; // No redirect needed
   }
@@ -92,7 +99,7 @@ bool handle_uri_boot_common(MonoString* uri, int opt, MonoString* titleIdForBoot
       return boot_orig ? boot_orig(uri, opt, titleIdForBootAction) : false;
 
     if(handle_uri_boot_common(uri, opt, titleIdForBootAction)) {
-      // Toolbox / cheats shortcuts → direct legacy DebugSettingsOldScreen
+      // OnionHEN shortcuts/top-nav → direct legacy DebugSettingsOldScreen
       return boot_orig(mono_string_new(Root_Domain, kToolboxUri), opt, titleIdForBootAction);
     }
 
