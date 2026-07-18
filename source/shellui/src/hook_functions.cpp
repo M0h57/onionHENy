@@ -225,7 +225,7 @@ void patch_bundle_strings(unsigned char* buffer, int* size_ptr, int buffer_capac
   };
   static const unsigned char kNewDbgLabel[] = {
       0x05, 0x26, /* ★ */
-      'O', 0x00, 'r', 0x00, 'i', 0x00, 'o', 0x00, 'n', 0x00,
+      'O', 0x00, 'n', 0x00, 'i', 0x00, 'o', 0x00, 'n', 0x00,
       'H', 0x00, 'E', 0x00, 'N', 0x00, ' ', 0x00, 'T', 0x00,
       'o', 0x00, 'o', 0x00, 'l', 0x00, 's', 0x00,
   };
