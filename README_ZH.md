@@ -189,25 +189,29 @@ OnionHEN 通过以下两个运行时视图创建并共享同一套配置 schema�
 /user/data/OnionHEN/config.ini
 ```
 
-大部分设置都可以直接在 Toolbox 中修改。
+大部分设置都可以直接在 Toolbox 中修改。新的语义化 schema 从
+`schema_version=1` 开始。如果没有配置文件，OnionHEN 会释放一份基于
+[`config.ini.example`](config.ini.example) 的带注释默认配置。
 
-| 配置项 | 默认值 | 用途 |
-| --- | ---: | --- |
-| `Util_rest_kill` | `0` | 在 Rest Mode 处理中停止 utility daemon |
-| `Game_rest_kill` | `0` | 在 Rest Mode 处理中停止当前游戏 |
-| `Rest_Mode_Delay_Seconds` | `0` | 唤醒后延迟重新注入 ShellUI |
-| `libhijacker_cheats` | `0` | 启用 libhijacker 金手指路径 |
-| `APP_JB_Debug_Msg` | `0` | 显示 app jailbreak 调试通知 |
-| `Display_tids` | `0` | 在主界面显示 Title ID |
-| `OnionHEN_Game_Options` | `1` | 启用自定义游戏选项 |
-| `enable_fan_speed` | `0` | 启用风扇温度阈值控制 |
-| `fan_threshold` | `77` | 风扇温度阈值 |
-| `overlay_ram` / `overlay_cpu` / `overlay_gpu` | `1` | 启用资源 overlay 字段 |
-| `overlay_ip` | `0` | 启用 IP overlay 字段 |
-| `all_cpu_usage` | `0` | Overlay 显示全部 CPU 核心占用（需先开 CPU overlay） |
-| `Overlay_pos` | `0` | Overlay 位置：左上、右上、左下或右下 |
-| `Cheats_shortcut_opt` / `Toolbox_shortcut_opt` | `0` | 手柄快捷键模式 |
-| `ui_lang` | `0` | Toolbox 语言：`0` 简体中文，`1` English |
+| 配置项 | 默认值 | 可用值 |
+| --- | --- | --- |
+| `meta.schema_version` | `1` | `1` |
+| `toolbox.language` | `system` | `system`, `zh-Hans`, `en` |
+| `home_screen.show_title_ids` | `false` | `true`, `false` |
+| `game_menu.show_onionhen_options` | `true` | `true`, `false` |
+| `rest_mode.resume_reinject_delay_seconds` | `0` | 秒数 |
+| `rest_mode.stop_utility_daemon_on_entry` | `false` | `true`, `false` |
+| `rest_mode.close_running_game_on_entry` | `false` | `true`, `false` |
+| `cheats.memory_backend` | `default` | `default`, `libhijacker` |
+| `app_jailbreak.debug_notifications` | `false` | `true`, `false` |
+| `cooling.fan_control` | `automatic` | `automatic`, `temperature_threshold` |
+| `cooling.temperature_threshold_celsius` | `77` | `0` 到 `100` |
+| `overlay.edge` | `top` | `top`, `bottom` |
+| `overlay.show_cpu` / `overlay.show_gpu` / `overlay.show_memory` | `true` | `true`, `false` |
+| `overlay.cpu_usage_mode` | `average` | `average`, `per_core` |
+| `overlay.show_ip_address` | `false` | `true`, `false` |
+| `shortcuts.cheats_menu` | `off` | `off`, `r3_l3`, `l2_triangle`, `long_options`, `long_share`, `share` |
+| `shortcuts.toolbox` | `off` | `off`, `l2_r3`, `long_share`, `share` |
 
 ### 运行时数据
 

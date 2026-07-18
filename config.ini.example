@@ -1,0 +1,83 @@
+# OnionHEN configuration
+#
+# This file uses semantic schema version 1.
+# Boolean fields accept true or false.
+# Keep key names lowercase and do not add inline comments after values.
+
+[meta]
+# schema_version identifies this config format.
+# Available values: 1
+schema_version=1
+
+[toolbox]
+# language controls the Toolbox UI language.
+# Available values: system, zh-Hans, en
+# system follows the PS5 system language when it can be detected.
+language=system
+
+[home_screen]
+# show_title_ids displays app Title IDs on the PS5 home screen.
+# Available values: true, false
+show_title_ids=false
+
+[game_menu]
+# show_onionhen_options adds OnionHEN entries to the game options menu.
+# Available values: true, false
+show_onionhen_options=true
+
+[rest_mode]
+# resume_reinject_delay_seconds waits before Toolbox reinjection after resume.
+# Available values: 0 or a positive number of seconds.
+resume_reinject_delay_seconds=0
+# stop_utility_daemon_on_entry stops the utility daemon before Rest Mode.
+# Available values: true, false
+stop_utility_daemon_on_entry=false
+# close_running_game_on_entry closes the active game before Rest Mode.
+# Available values: true, false
+close_running_game_on_entry=false
+
+[cheats]
+# memory_backend selects the cheat memory access implementation.
+# Available values: default, libhijacker
+memory_backend=default
+
+[app_jailbreak]
+# debug_notifications shows a notification when OnionHEN jailbreaks an app.
+# Available values: true, false
+debug_notifications=false
+
+[cooling]
+# fan_control chooses between stock fan behavior and a manual threshold.
+# Available values: automatic, temperature_threshold
+fan_control=automatic
+# temperature_threshold_celsius is used when fan_control is temperature_threshold.
+# Available values: 0 through 100
+temperature_threshold_celsius=77
+
+[overlay]
+# edge chooses the screen edge used by the monitor bar.
+# Available values: top, bottom
+edge=top
+# show_cpu displays CPU temperature and usage.
+# Available values: true, false
+show_cpu=true
+# cpu_usage_mode controls whether CPU usage is averaged or per core.
+# Available values: average, per_core
+cpu_usage_mode=average
+# show_gpu displays GPU temperature and usage.
+# Available values: true, false
+show_gpu=true
+# show_memory displays memory usage.
+# Available values: true, false
+show_memory=true
+# show_ip_address displays the console LAN IP address.
+# Available values: true, false
+show_ip_address=false
+
+[shortcuts]
+# cheats_menu controls the shortcut that opens the cheats menu.
+# Available values: off, r3_l3, l2_triangle, long_options, long_share, share
+cheats_menu=off
+# toolbox controls the shortcut that opens the OnionHEN Toolbox.
+# Available values: off, l2_r3, long_share, share
+toolbox=off

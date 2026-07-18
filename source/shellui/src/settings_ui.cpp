@@ -152,7 +152,7 @@ void shellui_request_display_tids_home_reload(void) {
     return;
   }
   g_display_tids_reload_pending.store(true, std::memory_order_release);
-  shellui_log("Display_tids: queued NPXS40002 home reload for next UI tick");
+  shellui_log("home_screen.show_title_ids: queued NPXS40002 home reload");
 }
 
 void shellui_poll_display_tids_home_reload(void) {
@@ -161,9 +161,9 @@ void shellui_poll_display_tids_home_reload(void) {
     return;
   }
   if (!g_settings.display_tids) {
-    shellui_log("Display_tids: skip home reload (setting off)");
+    shellui_log("home_screen.show_title_ids: skip home reload (setting off)");
     return;
   }
-  shellui_log("Display_tids: applying NPXS40002 home reload on UI thread");
+  shellui_log("home_screen.show_title_ids: applying home reload on UI thread");
   ReloadRNPSApp("NPXS40002");
 }

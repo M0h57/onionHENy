@@ -59,7 +59,8 @@ bool cmd_enable_toolbox(){
 
     OnionHEN_log("Activating toolbox...");
     /*
-     * Rest_Mode_Delay only on rest resume — never on cold start.
+     * rest_mode.resume_reinject_delay_seconds only on rest resume — never on
+     * cold start.
      * util_booted is true almost immediately after util starts (before this
      * inject), so gating on it alone hung first toolbox load for delay seconds.
      * Rest re-activation delay lives in util patch_checker / check_addr_change.

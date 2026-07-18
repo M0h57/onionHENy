@@ -27,14 +27,15 @@ static OnPressResult id_custom_game_opts(OnPressContext &ctx) {
 
 static OnPressResult id_ui_lang(OnPressContext &ctx) {
   int v = atoi(ctx.value.c_str());
-  if (v != 0 && v != 1)
+  if (v < 0 || v > 2)
     v = 0;
   if (v == g_settings.ui_lang)
     return OnPressResult::EarlyReturn;
   g_settings.ui_lang = v;
-  shellui_log("UI language: %s", v == 1 ? "en" : "zh-Hans");
+  const char *name = v == 2 ? "en" : (v == 1 ? "zh-Hans" : "system");
+  shellui_log("UI language: %s", name);
   /* XML is built when the page opens; current tree stays in the old language. */
-  if (v == 1) {
+  if (v == 2) {
     notify("Language saved. Leave and re-open the toolbox for it to take effect.");
   } else {
     notify("语言已保存。退出并重新打开工具箱后生效。");

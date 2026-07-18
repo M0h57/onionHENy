@@ -56,10 +56,7 @@ const ExactValueEntry kExactValues[] = {
      +[]() -> std::string { return bool_str(g_settings.game_rest_kill); }},
     {"id_cheats_shortcut",
      +[]() -> std::string { return int_str(g_settings.cheats_shortcut_opt); }},
-    {"id_ui_lang",
-     +[]() -> std::string {
-       return int_str(toolbox_i18n::active_ui_lang_value());
-     }},
+    {"id_ui_lang", +[]() -> std::string { return int_str(g_settings.ui_lang); }},
     {"id_debug_jb",
      +[]() -> std::string { return bool_str(g_settings.debug_app_jb_msg); }},
     {"id_custom_game_opts",

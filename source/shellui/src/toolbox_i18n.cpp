@@ -134,6 +134,7 @@ constexpr Entry kTable[] = {
   {"lang.list", "工具箱语言", "Toolbox language"},
   {"lang.list.sub", "切换后请退出并重新打开工具箱页面",
    "Leave and re-open the toolbox page after switching"},
+  {"lang.system", "跟随系统语言", "System language"},
   {"lang.zh", "简体中文", "简体中文"},
   {"lang.en", "English", "English"},
 
@@ -215,7 +216,7 @@ const Entry *find_entry(const char *key) {
 }
 
 Lang lang_from_ui_value(int ui_lang) {
-  return ui_lang == static_cast<int>(Lang::En) ? Lang::En : Lang::ZhHans;
+  return ui_lang == 2 ? Lang::En : Lang::ZhHans;
 }
 
 bool system_lang(Lang &out) {
@@ -245,7 +246,7 @@ bool system_lang(Lang &out) {
 
 Lang active_lang() { return g_lang; }
 
-int active_ui_lang_value() { return static_cast<int>(g_lang); }
+int active_ui_lang_value() { return g_lang == Lang::En ? 2 : 1; }
 
 void set_lang(Lang lang) {
   if (lang != Lang::ZhHans && lang != Lang::En)
@@ -259,7 +260,7 @@ void apply_ui_lang(int ui_lang) {
 
 void apply_system_or_ui_lang(int ui_lang) {
   Lang lang = Lang::ZhHans;
-  if (system_lang(lang)) {
+  if (ui_lang == 0 && system_lang(lang)) {
     set_lang(lang);
     return;
   }

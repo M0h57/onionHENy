@@ -157,7 +157,8 @@ void apply_overlay_layout();
 void settings_commit(bool reload_main = false, bool reload_util = false);
 
 /**
- * After cold inject with Display_tids on, queue a one-shot NPXS40002 ReloadApp
+ * After cold inject with home_screen.show_title_ids on, queue a one-shot
+ * NPXS40002 ReloadApp
  * for the next UI-thread poll (OnRender). Never call ReloadRNPSApp from the
  * inject worker. Not timed — readiness is hooks-ready + UI thread, not
  * onion_ready files (those are daemon/process handshake only).

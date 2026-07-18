@@ -102,7 +102,7 @@ struct GameEntry {
 };
 
 // games_list: see shellui_state.hpp (ToolboxUiState)
-// all_cpu_usage: Settings.all_cpu_usage (config.ini)
+// all_cpu_usage: overlay.cpu_usage_mode=per_core (config.ini)
 enum Cheats_Shortcut{
     CHEATS_SC_OFF = 0,
     R3_L3,

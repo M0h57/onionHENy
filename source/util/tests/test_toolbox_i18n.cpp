@@ -24,19 +24,19 @@ static int test_en(void) {
 }
 
 static int test_apply_ui_lang(void) {
-  apply_ui_lang(1);
+  apply_ui_lang(2);
   TEST_ASSERT_TRUE(active_lang() == Lang::En);
-  TEST_ASSERT_EQ_INT(1, active_ui_lang_value());
-  apply_ui_lang(0);
+  TEST_ASSERT_EQ_INT(2, active_ui_lang_value());
+  apply_ui_lang(1);
   TEST_ASSERT_TRUE(active_lang() == Lang::ZhHans);
-  TEST_ASSERT_EQ_INT(0, active_ui_lang_value());
+  TEST_ASSERT_EQ_INT(1, active_ui_lang_value());
   apply_ui_lang(99); /* invalid → zh */
   TEST_ASSERT_TRUE(active_lang() == Lang::ZhHans);
   return 0;
 }
 
 static int test_system_lang_falls_back_to_ui_lang_on_host(void) {
-  apply_system_or_ui_lang(1);
+  apply_system_or_ui_lang(2);
   TEST_ASSERT_TRUE(active_lang() == Lang::En);
   apply_system_or_ui_lang(0);
   TEST_ASSERT_TRUE(active_lang() == Lang::ZhHans);

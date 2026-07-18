@@ -16,6 +16,8 @@ along with this program; see the file COPYING. If not, see
 
 #include <onion/settings.hpp>
 
+#include <cctype>
+#include <cstdlib>
 #include <cstdio>
 #include <cstring>
 #include <fcntl.h>
@@ -50,47 +52,258 @@ long atol_def(const char *s, long def) {
   return s ? atol(s) : def;
 }
 
-void apply_parser(IniParser *parser, Settings *out) {
-  out->util_rest_kill =
-      atoi_def(ini_parser_get(parser, "Settings.Util_rest_kill", "0"), 0) != 0;
-  out->game_rest_kill =
-      atoi_def(ini_parser_get(parser, "Settings.Game_rest_kill", "0"), 0) != 0;
-  out->rest_mode_delay_seconds = static_cast<uint64_t>(
-      atol_def(ini_parser_get(parser, "Settings.Rest_Mode_Delay_Seconds", "0"), 0));
-  out->libhijacker_cheats =
-      atoi_def(ini_parser_get(parser, "Settings.libhijacker_cheats", "0"), 0) != 0;
-  out->debug_app_jb_msg =
-      atoi_def(ini_parser_get(parser, "Settings.APP_JB_Debug_Msg", "0"), 0) != 0;
-  out->display_tids =
-      atoi_def(ini_parser_get(parser, "Settings.Display_tids", "0"), 0) != 0;
+bool streq_ci(const char *a, const char *b) {
+  if (!a || !b) {
+    return false;
+  }
+  while (*a && *b) {
+    if (std::tolower(static_cast<unsigned char>(*a)) !=
+        std::tolower(static_cast<unsigned char>(*b))) {
+      return false;
+    }
+    ++a;
+    ++b;
+  }
+  return *a == '\0' && *b == '\0';
+}
+
+const char *ini_get(IniParser *parser, const char *key) {
+  return ini_parser_get(parser, key, nullptr);
+}
+
+bool parse_bool(const char *s, bool def) {
+  if (!s) {
+    return def;
+  }
+  if (streq_ci(s, "true") || streq_ci(s, "yes") || streq_ci(s, "on") ||
+      std::strcmp(s, "1") == 0) {
+    return true;
+  }
+  if (streq_ci(s, "false") || streq_ci(s, "no") || streq_ci(s, "off") ||
+      std::strcmp(s, "0") == 0) {
+    return false;
+  }
+  return def;
+}
+
+int parse_int_range(const char *s, int def, int min, int max) {
+  const int v = atoi_def(s, def);
+  return v < min || v > max ? def : v;
+}
+
+uint64_t parse_u64(const char *s, uint64_t def) {
+  const long v = atol_def(s, static_cast<long>(def));
+  return v < 0 ? def : static_cast<uint64_t>(v);
+}
+
+int parse_language(const char *s, int def) {
+  if (streq_ci(s, "system")) {
+    return kUiLanguageSystem;
+  }
+  if (streq_ci(s, "zh-Hans") || streq_ci(s, "zh_hans") ||
+      streq_ci(s, "zh")) {
+    return kUiLanguageZhHans;
+  }
+  if (streq_ci(s, "en") || streq_ci(s, "english")) {
+    return kUiLanguageEn;
+  }
+  return def;
+}
+
+const char *language_name(int v) {
+  switch (v) {
+  case kUiLanguageZhHans:
+    return "zh-Hans";
+  case kUiLanguageEn:
+    return "en";
+  case kUiLanguageSystem:
+  default:
+    return "system";
+  }
+}
+
+bool parse_libhijacker_backend(const char *s, bool def) {
+  if (streq_ci(s, "default")) {
+    return false;
+  }
+  if (streq_ci(s, "libhijacker")) {
+    return true;
+  }
+  return def;
+}
+
+const char *cheat_backend_name(bool libhijacker) {
+  return libhijacker ? "libhijacker" : "default";
+}
+
+bool parse_fan_control(const char *s, bool def) {
+  if (streq_ci(s, "automatic")) {
+    return false;
+  }
+  if (streq_ci(s, "temperature_threshold")) {
+    return true;
+  }
+  return def;
+}
+
+const char *fan_control_name(bool enabled) {
+  return enabled ? "temperature_threshold" : "automatic";
+}
+
+int parse_overlay_edge(const char *s, int def) {
+  if (streq_ci(s, "top")) {
+    return 0;
+  }
+  if (streq_ci(s, "bottom")) {
+    return 2;
+  }
+  return def;
+}
+
+const char *overlay_edge_name(int pos) {
+  return pos == 2 || pos == 3 ? "bottom" : "top";
+}
+
+bool parse_per_core_cpu(const char *s, bool def) {
+  if (streq_ci(s, "average")) {
+    return false;
+  }
+  if (streq_ci(s, "per_core")) {
+    return true;
+  }
+  return def;
+}
+
+const char *cpu_usage_mode_name(bool per_core) {
+  return per_core ? "per_core" : "average";
+}
+
+int parse_cheats_shortcut(const char *s, int def) {
+  if (streq_ci(s, "off")) {
+    return 0;
+  }
+  if (streq_ci(s, "r3_l3")) {
+    return 1;
+  }
+  if (streq_ci(s, "l2_triangle")) {
+    return 2;
+  }
+  if (streq_ci(s, "long_options")) {
+    return 3;
+  }
+  if (streq_ci(s, "long_share")) {
+    return 4;
+  }
+  if (streq_ci(s, "share")) {
+    return 5;
+  }
+  return def;
+}
+
+const char *cheats_shortcut_name(int v) {
+  switch (v) {
+  case 1:
+    return "r3_l3";
+  case 2:
+    return "l2_triangle";
+  case 3:
+    return "long_options";
+  case 4:
+    return "long_share";
+  case 5:
+    return "share";
+  case 0:
+  default:
+    return "off";
+  }
+}
+
+int parse_toolbox_shortcut(const char *s, int def) {
+  if (streq_ci(s, "off")) {
+    return 0;
+  }
+  if (streq_ci(s, "l2_r3")) {
+    return 1;
+  }
+  if (streq_ci(s, "long_share")) {
+    return 2;
+  }
+  if (streq_ci(s, "share")) {
+    return 3;
+  }
+  return def;
+}
+
+const char *toolbox_shortcut_name(int v) {
+  switch (v) {
+  case 1:
+    return "l2_r3";
+  case 2:
+    return "long_share";
+  case 3:
+    return "share";
+  case 0:
+  default:
+    return "off";
+  }
+}
+
+std::string bool_text(bool value) { return value ? "true" : "false"; }
+
+bool apply_parser(IniParser *parser, Settings *out) {
+  const int version = atoi_def(ini_get(parser, "meta.schema_version"), -1);
+  if (version != kSettingsSchemaVersion) {
+    return false;
+  }
+
+  out->schema_version = version;
+  out->ui_lang =
+      parse_language(ini_get(parser, "toolbox.language"), out->ui_lang);
+  out->display_tids = parse_bool(
+      ini_get(parser, "home_screen.show_title_ids"), out->display_tids);
   out->onionhen_game_opts =
-      atoi_def(ini_parser_get(parser, "Settings.OnionHEN_Game_Options", "1"), 1) !=
-      0;
+      parse_bool(ini_get(parser, "game_menu.show_onionhen_options"),
+                 out->onionhen_game_opts);
+  out->rest_mode_delay_seconds = parse_u64(
+      ini_get(parser, "rest_mode.resume_reinject_delay_seconds"),
+      out->rest_mode_delay_seconds);
+  out->util_rest_kill =
+      parse_bool(ini_get(parser, "rest_mode.stop_utility_daemon_on_entry"),
+                 out->util_rest_kill);
+  out->game_rest_kill =
+      parse_bool(ini_get(parser, "rest_mode.close_running_game_on_entry"),
+                 out->game_rest_kill);
+  out->libhijacker_cheats = parse_libhijacker_backend(
+      ini_get(parser, "cheats.memory_backend"), out->libhijacker_cheats);
+  out->debug_app_jb_msg =
+      parse_bool(ini_get(parser, "app_jailbreak.debug_notifications"),
+                 out->debug_app_jb_msg);
   out->enable_fan_speed =
-      atoi_def(ini_parser_get(parser, "Settings.enable_fan_speed", "0"), 0) != 0;
+      parse_fan_control(ini_get(parser, "cooling.fan_control"),
+                        out->enable_fan_speed);
   out->fan_threshold =
-      atoi_def(ini_parser_get(parser, "Settings.fan_threshold", "77"), 77);
-  out->overlay_ram =
-      atoi_def(ini_parser_get(parser, "Settings.overlay_ram", "1"), 1) != 0;
-  out->overlay_cpu =
-      atoi_def(ini_parser_get(parser, "Settings.overlay_cpu", "1"), 1) != 0;
-  out->overlay_gpu =
-      atoi_def(ini_parser_get(parser, "Settings.overlay_gpu", "1"), 1) != 0;
-  out->overlay_ip =
-      atoi_def(ini_parser_get(parser, "Settings.overlay_ip", "0"), 0) != 0;
-  out->all_cpu_usage =
-      atoi_def(ini_parser_get(parser, "Settings.all_cpu_usage", "0"), 0) != 0;
+      parse_int_range(ini_get(parser, "cooling.temperature_threshold_celsius"),
+                      out->fan_threshold, 0, 100);
   out->overlay_pos =
-      atoi_def(ini_parser_get(parser, "Settings.Overlay_pos", "0"), 0);
+      parse_overlay_edge(ini_get(parser, "overlay.edge"), out->overlay_pos);
+  out->overlay_cpu =
+      parse_bool(ini_get(parser, "overlay.show_cpu"), out->overlay_cpu);
+  out->all_cpu_usage =
+      parse_per_core_cpu(ini_get(parser, "overlay.cpu_usage_mode"),
+                         out->all_cpu_usage);
+  out->overlay_gpu =
+      parse_bool(ini_get(parser, "overlay.show_gpu"), out->overlay_gpu);
+  out->overlay_ram =
+      parse_bool(ini_get(parser, "overlay.show_memory"), out->overlay_ram);
+  out->overlay_ip = parse_bool(ini_get(parser, "overlay.show_ip_address"),
+                               out->overlay_ip);
   out->cheats_shortcut_opt =
-      atoi_def(ini_parser_get(parser, "Settings.Cheats_shortcut_opt", "0"), 0);
+      parse_cheats_shortcut(ini_get(parser, "shortcuts.cheats_menu"),
+                            out->cheats_shortcut_opt);
   out->toolbox_shortcut_opt =
-      atoi_def(ini_parser_get(parser, "Settings.Toolbox_shortcut_opt", "0"), 0);
-  out->ui_lang = atoi_def(ini_parser_get(parser, "Settings.ui_lang", "0"), 0);
-  if (out->ui_lang != 0 && out->ui_lang != 1)
-    out->ui_lang = 0;
-  out->schema_version =
-      atoi_def(ini_parser_get(parser, "Settings.schema_version", "1"), 1);
+      parse_toolbox_shortcut(ini_get(parser, "shortcuts.toolbox"),
+                             out->toolbox_shortcut_opt);
+  return true;
 }
 
 bool write_path(const char *path, const std::string &body) {
@@ -114,7 +327,11 @@ bool try_load_path(const char *path, Settings *out) {
   if (!ini_parser_load(&parser, path)) {
     return false;
   }
-  apply_parser(&parser, out);
+  Settings parsed = *out;
+  if (!apply_parser(&parser, &parsed)) {
+    return false;
+  }
+  *out = parsed;
   g_last_loaded = path;
   return true;
 }
@@ -123,31 +340,96 @@ bool try_load_path(const char *path, Settings *out) {
 
 std::string settings_serialize(const Settings &in) {
   std::string b;
-  b.reserve(1024);
-  b += "[Settings]\n";
+  b.reserve(4096);
+  b += "# OnionHEN configuration\n";
+  b += "#\n";
+  b += "# This file uses semantic schema version 1.\n";
+  b += "# Boolean fields accept true or false.\n";
+  b += "# Keep key names lowercase and do not add inline comments after values.\n";
+  b += "\n";
+  b += "[meta]\n";
+  b += "# schema_version identifies this config format.\n";
+  b += "# Available values: 1\n";
   b += "schema_version=" + std::to_string(kSettingsSchemaVersion) + "\n";
-  b += "Util_rest_kill=" + std::to_string(in.util_rest_kill ? 1 : 0) + "\n";
-  b += "Game_rest_kill=" + std::to_string(in.game_rest_kill ? 1 : 0) + "\n";
-  b += "Rest_Mode_Delay_Seconds=" +
+  b += "\n";
+  b += "[toolbox]\n";
+  b += "# language controls the Toolbox UI language.\n";
+  b += "# Available values: system, zh-Hans, en\n";
+  b += "# system follows the PS5 system language when it can be detected.\n";
+  b += "language=" + std::string(language_name(in.ui_lang)) + "\n";
+  b += "\n";
+  b += "[home_screen]\n";
+  b += "# show_title_ids displays app Title IDs on the PS5 home screen.\n";
+  b += "# Available values: true, false\n";
+  b += "show_title_ids=" + bool_text(in.display_tids) + "\n";
+  b += "\n";
+  b += "[game_menu]\n";
+  b += "# show_onionhen_options adds OnionHEN entries to the game options menu.\n";
+  b += "# Available values: true, false\n";
+  b += "show_onionhen_options=" + bool_text(in.onionhen_game_opts) + "\n";
+  b += "\n";
+  b += "[rest_mode]\n";
+  b += "# resume_reinject_delay_seconds waits before Toolbox reinjection after resume.\n";
+  b += "# Available values: 0 or a positive number of seconds.\n";
+  b += "resume_reinject_delay_seconds=" +
        std::to_string(static_cast<unsigned long long>(in.rest_mode_delay_seconds)) +
        "\n";
-  b += "libhijacker_cheats=" + std::to_string(in.libhijacker_cheats ? 1 : 0) +
+  b += "# stop_utility_daemon_on_entry stops the utility daemon before Rest Mode.\n";
+  b += "# Available values: true, false\n";
+  b += "stop_utility_daemon_on_entry=" + bool_text(in.util_rest_kill) + "\n";
+  b += "# close_running_game_on_entry closes the active game before Rest Mode.\n";
+  b += "# Available values: true, false\n";
+  b += "close_running_game_on_entry=" + bool_text(in.game_rest_kill) + "\n";
+  b += "\n";
+  b += "[cheats]\n";
+  b += "# memory_backend selects the cheat memory access implementation.\n";
+  b += "# Available values: default, libhijacker\n";
+  b += "memory_backend=" + std::string(cheat_backend_name(in.libhijacker_cheats)) +
        "\n";
-  b += "APP_JB_Debug_Msg=" + std::to_string(in.debug_app_jb_msg ? 1 : 0) + "\n";
-  b += "Display_tids=" + std::to_string(in.display_tids ? 1 : 0) + "\n";
-  b += "OnionHEN_Game_Options=" +
-       std::to_string(in.onionhen_game_opts ? 1 : 0) + "\n";
-  b += "enable_fan_speed=" + std::to_string(in.enable_fan_speed ? 1 : 0) + "\n";
-  b += "fan_threshold=" + std::to_string(in.fan_threshold) + "\n";
-  b += "overlay_ram=" + std::to_string(in.overlay_ram ? 1 : 0) + "\n";
-  b += "overlay_cpu=" + std::to_string(in.overlay_cpu ? 1 : 0) + "\n";
-  b += "overlay_gpu=" + std::to_string(in.overlay_gpu ? 1 : 0) + "\n";
-  b += "overlay_ip=" + std::to_string(in.overlay_ip ? 1 : 0) + "\n";
-  b += "all_cpu_usage=" + std::to_string(in.all_cpu_usage ? 1 : 0) + "\n";
-  b += "Overlay_pos=" + std::to_string(in.overlay_pos) + "\n";
-  b += "Cheats_shortcut_opt=" + std::to_string(in.cheats_shortcut_opt) + "\n";
-  b += "Toolbox_shortcut_opt=" + std::to_string(in.toolbox_shortcut_opt) + "\n";
-  b += "ui_lang=" + std::to_string(in.ui_lang) + "\n";
+  b += "\n";
+  b += "[app_jailbreak]\n";
+  b += "# debug_notifications shows a notification when OnionHEN jailbreaks an app.\n";
+  b += "# Available values: true, false\n";
+  b += "debug_notifications=" + bool_text(in.debug_app_jb_msg) + "\n";
+  b += "\n";
+  b += "[cooling]\n";
+  b += "# fan_control chooses between stock fan behavior and a manual threshold.\n";
+  b += "# Available values: automatic, temperature_threshold\n";
+  b += "fan_control=" + std::string(fan_control_name(in.enable_fan_speed)) + "\n";
+  b += "# temperature_threshold_celsius is used when fan_control is temperature_threshold.\n";
+  b += "# Available values: 0 through 100\n";
+  b += "temperature_threshold_celsius=" + std::to_string(in.fan_threshold) + "\n";
+  b += "\n";
+  b += "[overlay]\n";
+  b += "# edge chooses the screen edge used by the monitor bar.\n";
+  b += "# Available values: top, bottom\n";
+  b += "edge=" + std::string(overlay_edge_name(in.overlay_pos)) + "\n";
+  b += "# show_cpu displays CPU temperature and usage.\n";
+  b += "# Available values: true, false\n";
+  b += "show_cpu=" + bool_text(in.overlay_cpu) + "\n";
+  b += "# cpu_usage_mode controls whether CPU usage is averaged or per core.\n";
+  b += "# Available values: average, per_core\n";
+  b += "cpu_usage_mode=" + std::string(cpu_usage_mode_name(in.all_cpu_usage)) +
+       "\n";
+  b += "# show_gpu displays GPU temperature and usage.\n";
+  b += "# Available values: true, false\n";
+  b += "show_gpu=" + bool_text(in.overlay_gpu) + "\n";
+  b += "# show_memory displays memory usage.\n";
+  b += "# Available values: true, false\n";
+  b += "show_memory=" + bool_text(in.overlay_ram) + "\n";
+  b += "# show_ip_address displays the console LAN IP address.\n";
+  b += "# Available values: true, false\n";
+  b += "show_ip_address=" + bool_text(in.overlay_ip) + "\n";
+  b += "\n";
+  b += "[shortcuts]\n";
+  b += "# cheats_menu controls the shortcut that opens the cheats menu.\n";
+  b += "# Available values: off, r3_l3, l2_triangle, long_options, long_share, share\n";
+  b += "cheats_menu=" + std::string(cheats_shortcut_name(in.cheats_shortcut_opt)) +
+       "\n";
+  b += "# toolbox controls the shortcut that opens the OnionHEN Toolbox.\n";
+  b += "# Available values: off, l2_r3, long_share, share\n";
+  b += "toolbox=" + std::string(toolbox_shortcut_name(in.toolbox_shortcut_opt)) +
+       "\n";
   return b;
 }
 

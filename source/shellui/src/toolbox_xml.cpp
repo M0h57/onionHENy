@@ -508,8 +508,9 @@ void append_toolbox_game_group(ps5ui::Group& g) {
 void append_toolbox_system_group(ps5ui::Group& g) {
   g.list("id_ui_lang", toolbox_i18n::tr("lang.list"),
          [](ps5ui::ListBuilder& L) {
-           L.item("id_ui_lang_zh", toolbox_i18n::tr("lang.zh"), "0")
-               .item("id_ui_lang_en", toolbox_i18n::tr("lang.en"), "1");
+           L.item("id_ui_lang_system", toolbox_i18n::tr("lang.system"), "0")
+               .item("id_ui_lang_zh", toolbox_i18n::tr("lang.zh"), "1")
+               .item("id_ui_lang_en", toolbox_i18n::tr("lang.en"), "2");
          },
          toolbox_i18n::tr("lang.list.sub"), toolbox_val("id_ui_lang", "0"))
       .toggle("id_disp_titleids", toolbox_i18n::tr("disp_tids"),

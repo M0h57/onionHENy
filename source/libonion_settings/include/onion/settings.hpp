@@ -42,47 +42,51 @@ extern "C++" {
 
 namespace onion {
 
-// Canonical filesystem paths (string keys match Settings.* INI keys).
+// Canonical filesystem paths.
 inline constexpr const char *kConfigPathPrimary = "/data/OnionHEN/config.ini";
 inline constexpr const char *kConfigPathShellui = "/user/data/OnionHEN/config.ini";
 
-// Schema version written into INI as Settings.schema_version for future migrations.
+// Semantic config schema. This schema starts at version 1.
 inline constexpr int kSettingsSchemaVersion = 1;
 
+inline constexpr int kUiLanguageSystem = 0;
+inline constexpr int kUiLanguageZhHans = 1;
+inline constexpr int kUiLanguageEn = 2;
+
 struct Settings {
-  // --- Rest mode / services ---
+  // [rest_mode]
   bool util_rest_kill = false;
   bool game_rest_kill = false;
   uint64_t rest_mode_delay_seconds = 0;
 
-  // --- Cheats / debug ---
+  // [cheats], [app_jailbreak]
   bool libhijacker_cheats = false;
   bool debug_app_jb_msg = false;
 
-  // --- Disc / UI ---
+  // [home_screen], [game_menu]
   bool display_tids = false;
   bool onionhen_game_opts = true;
 
-  // --- Fan ---
+  // [cooling]
   bool enable_fan_speed = false;
   int fan_threshold = 77;
 
-  // --- Overlay (shellui) ---
+  // [overlay]
   bool overlay_ram = true;
   bool overlay_cpu = true;
   bool overlay_gpu = true;
   bool overlay_ip = false;
   /** Per-core CPU usage mode on the overlay (id_all_cpu_usage). */
   bool all_cpu_usage = false;
-  int overlay_pos = 0; // 0 TL, 1 TR, 2 BL, 3 BR
+  int overlay_pos = 0; // 0/1 top edge, 2/3 bottom edge
 
-  // --- Shortcuts (shellui) ---
+  // [shortcuts]
   int cheats_shortcut_opt = 0;
   int toolbox_shortcut_opt = 0;
 
-  // --- UI language (shellui toolbox XML) ---
-  // 0 = zh-Hans (default), 1 = English
-  int ui_lang = 0;
+  // [toolbox]
+  // 0 = system (default), 1 = zh-Hans, 2 = English
+  int ui_lang = kUiLanguageSystem;
 
   // Meta
   int schema_version = kSettingsSchemaVersion;
@@ -127,7 +131,7 @@ bool settings_load(Settings *out);
 bool settings_load_file(const char *path, Settings *out);
 bool settings_save_file(const char *path, const Settings &in);
 
-// Serialize full schema to INI text (no I/O).
+// Serialize full schema to annotated INI text (no I/O).
 std::string settings_serialize(const Settings &in);
 
 // Serialize full schema. Writes every path that can be opened for write.

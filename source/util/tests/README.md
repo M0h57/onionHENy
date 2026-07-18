@@ -43,7 +43,7 @@ Binary: `source/util/build/host-tests/onion-host-tests`
 | `test_reg_entity` | registry entity-id formula (account slots) |
 | `test_account_id_b64` | uint64 account id → base64 |
 | `test_toolbox_helpers` | UI path rewrite + payload .elf basename filter |
-| `test_settings` | full schema serialize/round-trip, partial INI defaults, legacy keys |
+| `test_settings` | semantic schema serialize/round-trip, partial INI defaults |
 | `test_ready` | ready markers, PID-bound process instances, path builder, name rejection, **fps_overlay / util_booted** flags, toolbox legacy alias |
 | `test_toolbox_injection` | same-PID skip, new-PID reinject, failure cleanup, concurrent request serialization |
 | `test_platform_fs` | `if_exists` / `touch_file` / `rmtree` (libonion_platform) |

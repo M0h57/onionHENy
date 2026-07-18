@@ -194,25 +194,29 @@ OnionHEN creates and shares the same schema through these runtime views:
 /user/data/OnionHEN/config.ini
 ```
 
-Most settings can be changed directly from the Toolbox.
+Most settings can be changed directly from the Toolbox. The semantic schema
+starts at `schema_version=1`. When no config exists, OnionHEN writes an
+annotated default based on [`config.ini.example`](config.ini.example).
 
-| Key | Default | Purpose |
-| --- | ---: | --- |
-| `Util_rest_kill` | `0` | Stop the utility daemon during Rest Mode handling |
-| `Game_rest_kill` | `0` | Stop the active game during Rest Mode handling |
-| `Rest_Mode_Delay_Seconds` | `0` | Delay ShellUI reinjection after resume |
-| `libhijacker_cheats` | `0` | Enable the libhijacker cheat path |
-| `APP_JB_Debug_Msg` | `0` | Show app-jailbreak debug notifications |
-| `Display_tids` | `0` | Display title IDs in the home UI |
-| `OnionHEN_Game_Options` | `1` | Enable custom game options |
-| `enable_fan_speed` | `0` | Enable fan-threshold control |
-| `fan_threshold` | `77` | Fan temperature threshold |
-| `overlay_ram` / `overlay_cpu` / `overlay_gpu` | `1` | Enable resource overlay fields |
-| `overlay_ip` | `0` | Enable IP overlay field |
-| `all_cpu_usage` | `0` | Per-core CPU usage on the overlay (requires CPU overlay) |
-| `Overlay_pos` | `0` | Overlay corner: top-left, top-right, bottom-left, or bottom-right |
-| `Cheats_shortcut_opt` / `Toolbox_shortcut_opt` | `0` | Controller shortcut modes |
-| `ui_lang` | `0` | Toolbox language: `0` Simplified Chinese, `1` English |
+| Key | Default | Values |
+| --- | --- | --- |
+| `meta.schema_version` | `1` | `1` |
+| `toolbox.language` | `system` | `system`, `zh-Hans`, `en` |
+| `home_screen.show_title_ids` | `false` | `true`, `false` |
+| `game_menu.show_onionhen_options` | `true` | `true`, `false` |
+| `rest_mode.resume_reinject_delay_seconds` | `0` | seconds |
+| `rest_mode.stop_utility_daemon_on_entry` | `false` | `true`, `false` |
+| `rest_mode.close_running_game_on_entry` | `false` | `true`, `false` |
+| `cheats.memory_backend` | `default` | `default`, `libhijacker` |
+| `app_jailbreak.debug_notifications` | `false` | `true`, `false` |
+| `cooling.fan_control` | `automatic` | `automatic`, `temperature_threshold` |
+| `cooling.temperature_threshold_celsius` | `77` | `0` through `100` |
+| `overlay.edge` | `top` | `top`, `bottom` |
+| `overlay.show_cpu` / `overlay.show_gpu` / `overlay.show_memory` | `true` | `true`, `false` |
+| `overlay.cpu_usage_mode` | `average` | `average`, `per_core` |
+| `overlay.show_ip_address` | `false` | `true`, `false` |
+| `shortcuts.cheats_menu` | `off` | `off`, `r3_l3`, `l2_triangle`, `long_options`, `long_share`, `share` |
+| `shortcuts.toolbox` | `off` | `off`, `l2_r3`, `long_share`, `share` |
 
 ### Runtime data
 

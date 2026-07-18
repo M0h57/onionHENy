@@ -804,9 +804,10 @@ int main(int argc, char const* argv[]) {
 
   shellui_hooks_publish_ready();
   /*
-   * Display_tids spoofs RegMgr as soon as hooks are ready, but home already
-   * cached the old value. ReloadApp must run on the UI thread (OnRender), not
-   * this inject worker. Queue a one-shot; no wall-clock delay — the next
+   * home_screen.show_title_ids spoofs RegMgr as soon as hooks are ready, but
+   * home already cached the old value. ReloadApp must run on the UI thread
+   * (OnRender), not this inject worker. Queue a one-shot; no wall-clock delay —
+   * the next
    * OnRender after hooks-ready is the readiness gate (onion_ready TOOLBOX is
    * only a cross-process marker for the daemon, set later in keep-alive).
    */

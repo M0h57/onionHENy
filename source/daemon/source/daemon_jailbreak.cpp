@@ -391,7 +391,7 @@ void *fifo_and_dumper_thread(void *args) noexcept {
     /*
      * Failure path: log only — never onion_notify (user asked not to spam
      * the UI on failed jailbreaks). Success may still notify when
-     * APP_JB_Debug_Msg is enabled.
+     * app_jailbreak.debug_notifications is enabled.
      *
      * Retries: at most a few short attempts for early-spawn race. Do not
      * loop 30× — if ALLPROC is wrong/unresolved, more tries will never help.

@@ -62,7 +62,7 @@ static OnPressResult id_all_cpu_usage(OnPressContext &ctx) {
     notify("To change CPU overlay mode, please enable the CPU overlay first");
     return OnPressResult::EarlyReturn;
   }
-  /* Persisted via settings_commit → Settings.all_cpu_usage in config.ini. */
+  /* Persisted via settings_commit as overlay.cpu_usage_mode in config.ini. */
   g_settings.all_cpu_usage = !g_settings.all_cpu_usage;
   rebuild_overlay_bar();
   return OnPressResult::Handled;

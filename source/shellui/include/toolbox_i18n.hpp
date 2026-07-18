@@ -9,7 +9,7 @@
 
 namespace toolbox_i18n {
 
-/** 0 = Simplified Chinese (default), 1 = English. Matches Settings.ui_lang. */
+/** Runtime language after resolving the stored UI language setting. */
 enum class Lang : int {
   ZhHans = 0,
   En = 1,
@@ -18,18 +18,18 @@ enum class Lang : int {
 /** Active language for tr() (from settings or explicit set). */
 Lang active_lang();
 
-/** Active language as Settings.ui_lang-compatible integer. */
+/** Active resolved language as an explicit UI language setting value. */
 int active_ui_lang_value();
 
 /**
- * Apply Settings.ui_lang (0=zh-Hans, 1=en). Call after LoadSettings /
- * before building toolbox XML. Invalid values fall back to zh-Hans.
+ * Apply an explicit UI language setting value.
+ * 1=zh-Hans, 2=en. Invalid values fall back to zh-Hans.
  */
 void apply_ui_lang(int ui_lang);
 
 /**
- * Prefer the PS5 system language for toolbox XML; fall back to Settings.ui_lang
- * when SystemService is unavailable (host tests / unresolved symbol).
+ * Apply the stored UI language setting.
+ * 0=system, 1=zh-Hans, 2=en. System falls back to zh-Hans when unavailable.
  */
 void apply_system_or_ui_lang(int ui_lang);
 

@@ -24,12 +24,15 @@ static int test_defaults_and_serialize_keys(void) {
   onion::Settings s{};
   std::string text = onion::settings_serialize(s);
 
-  TEST_ASSERT_TRUE(text.find("[Settings]") != std::string::npos);
+  TEST_ASSERT_TRUE(text.find("[meta]") != std::string::npos);
   TEST_ASSERT_TRUE(text.find("schema_version=1") != std::string::npos);
-  TEST_ASSERT_TRUE(text.find("fan_threshold=77") != std::string::npos);
-  TEST_ASSERT_TRUE(text.find("Util_rest_kill=0") != std::string::npos);
-  TEST_ASSERT_TRUE(text.find("Overlay_pos=0") != std::string::npos);
-  TEST_ASSERT_TRUE(text.find("ui_lang=0") != std::string::npos);
+  TEST_ASSERT_TRUE(text.find("[toolbox]") != std::string::npos);
+  TEST_ASSERT_TRUE(text.find("language=system") != std::string::npos);
+  TEST_ASSERT_TRUE(text.find("temperature_threshold_celsius=77") !=
+                   std::string::npos);
+  TEST_ASSERT_TRUE(text.find("stop_utility_daemon_on_entry=false") !=
+                   std::string::npos);
+  TEST_ASSERT_TRUE(text.find("edge=top") != std::string::npos);
   return 0;
 }
 
@@ -41,7 +44,7 @@ static int test_roundtrip_file(void) {
   in.fan_threshold = 55;
   in.cheats_shortcut_opt = 2;
   in.rest_mode_delay_seconds = 7;
-  in.ui_lang = 1;
+  in.ui_lang = onion::kUiLanguageEn;
 
   TEST_ASSERT_TRUE(onion::settings_save_file(path.c_str(), in));
 
@@ -51,7 +54,7 @@ static int test_roundtrip_file(void) {
   TEST_ASSERT_EQ_INT(55, out.fan_threshold);
   TEST_ASSERT_EQ_INT(2, out.cheats_shortcut_opt);
   TEST_ASSERT_EQ_U64(7, out.rest_mode_delay_seconds);
-  TEST_ASSERT_EQ_INT(1, out.ui_lang);
+  TEST_ASSERT_EQ_INT(onion::kUiLanguageEn, out.ui_lang);
   TEST_ASSERT_EQ_INT(onion::kSettingsSchemaVersion, out.schema_version);
 
   unlink(path.c_str());
@@ -88,9 +91,10 @@ static int test_full_schema_roundtrip(void) {
   in.overlay_gpu = false;
   in.overlay_ip = true;
   in.all_cpu_usage = true;
-  in.overlay_pos = 3;
+  in.overlay_pos = 2;
   in.cheats_shortcut_opt = 4;
   in.toolbox_shortcut_opt = 2;
+  in.ui_lang = onion::kUiLanguageZhHans;
 
   TEST_ASSERT_TRUE(onion::settings_save_file(path.c_str(), in));
   onion::Settings out{};
@@ -113,6 +117,7 @@ static int test_full_schema_roundtrip(void) {
   TEST_ASSERT_EQ_INT(in.overlay_pos, out.overlay_pos);
   TEST_ASSERT_EQ_INT(in.cheats_shortcut_opt, out.cheats_shortcut_opt);
   TEST_ASSERT_EQ_INT(in.toolbox_shortcut_opt, out.toolbox_shortcut_opt);
+  TEST_ASSERT_EQ_INT(in.ui_lang, out.ui_lang);
 
   unlink(path.c_str());
   return 0;
@@ -123,7 +128,9 @@ static int test_partial_ini_keeps_defaults(void) {
   TEST_ASSERT_TRUE(!path.empty());
   FILE *f = fopen(path.c_str(), "w");
   TEST_ASSERT_TRUE(f != nullptr);
-  fputs("[Settings]\nUtil_rest_kill=1\n", f);
+  fputs("[meta]\nschema_version=1\n\n[rest_mode]\n"
+        "stop_utility_daemon_on_entry=true\n",
+        f);
   fclose(f);
 
   onion::Settings out{};
@@ -143,9 +150,9 @@ static int test_serialize_contains_overlay_keys(void) {
   s.overlay_pos = 2;
   std::string text = onion::settings_serialize(s);
   TEST_ASSERT_TRUE(text.find("overlay_fps=") == std::string::npos);
-  TEST_ASSERT_TRUE(text.find("overlay_ip=1") != std::string::npos);
-  TEST_ASSERT_TRUE(text.find("all_cpu_usage=1") != std::string::npos);
-  TEST_ASSERT_TRUE(text.find("Overlay_pos=2") != std::string::npos);
+  TEST_ASSERT_TRUE(text.find("show_ip_address=true") != std::string::npos);
+  TEST_ASSERT_TRUE(text.find("cpu_usage_mode=per_core") != std::string::npos);
+  TEST_ASSERT_TRUE(text.find("edge=bottom") != std::string::npos);
   return 0;
 }
 
