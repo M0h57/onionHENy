@@ -440,6 +440,20 @@ constexpr const char* kIconDebug =
     "/user/data/OnionHEN/assets/icon_xml_debug.png";
 constexpr const char* kIconAbout =
     "/user/data/OnionHEN/assets/icon_xml_about.png";
+constexpr const char* kIconKstuff =
+    "/user/data/OnionHEN/assets/icon_xml_kstuff.png";
+constexpr const char* kIconOverlay =
+    "/user/data/OnionHEN/assets/icon_xml_overlay.png";
+constexpr const char* kIconFan =
+    "/user/data/OnionHEN/assets/icon_xml_fan.png";
+constexpr const char* kIconRestMode =
+    "/user/data/OnionHEN/assets/icon_xml_restmode.png";
+constexpr const char* kIconDonations =
+    "/user/data/OnionHEN/assets/icon_xml_donations.png";
+constexpr const char* kIconCredits =
+    "/user/data/OnionHEN/assets/icon_xml_credits.png";
+constexpr const char* kIconProject =
+    "/user/data/OnionHEN/assets/icon_xml_project.png";
 
 bool toolbox_on(const char* id) {
   return resolve_toolbox_control_value(id) == "1";
@@ -471,7 +485,7 @@ void append_toolbox_payloads_group(ps5ui::Group& g) {
                 .button("id_delete_kstuff", toolbox_i18n::tr("kstuff.delete"),
                         std::nullopt, toolbox_i18n::tr("kstuff.delete.desc"));
           },
-          toolbox_i18n::tr("kstuff.group.sub"), std::nullopt,
+          toolbox_i18n::tr("kstuff.group.sub"), kIconKstuff,
           "id_kstuff_autoload");
 }
 
@@ -512,7 +526,7 @@ void append_toolbox_display_group(ps5ui::Group& g) {
                      toolbox_on("id_overlay_ip"), std::nullopt,
                      toolbox_i18n::tr("overlay.ip.desc"));
        },
-       toolbox_i18n::tr("overlay.group.sub"), std::nullopt,
+       toolbox_i18n::tr("overlay.group.sub"), kIconOverlay,
        "id_overlay_change_pos")
       .toggle("id_disp_titleids", toolbox_i18n::tr("disp_tids"),
               toolbox_on("id_disp_titleids"), toolbox_i18n::tr("disp_tids.sub"));
@@ -535,7 +549,7 @@ void append_toolbox_system_group(ps5ui::Group& g) {
                          "2", std::nullopt, std::nullopt, std::nullopt,
                          toolbox_val("id_fan_speed", ""));
        },
-       toolbox_i18n::tr("fan.group.sub"), std::nullopt, "id_enable_fan_speed")
+       toolbox_i18n::tr("fan.group.sub"), kIconFan, "id_enable_fan_speed")
       .group(
           "id_rest_mode", toolbox_i18n::tr("rest.group"),
           [](ps5ui::Group& r) {
@@ -550,7 +564,7 @@ void append_toolbox_system_group(ps5ui::Group& g) {
                         toolbox_on("id_rest_3"),
                         toolbox_i18n::tr("rest.kill_game.sub"));
           },
-          toolbox_i18n::tr("rest.group.sub"), std::nullopt, "id_rest_1")
+          toolbox_i18n::tr("rest.group.sub"), kIconRestMode, "id_rest_1")
       .link("id_external_hdd", toolbox_i18n::tr("hdd.external"),
             "DebugSettings/data/debug_settings_external_hdd.xml",
             toolbox_i18n::tr("hdd.external.sub"))
@@ -618,7 +632,7 @@ void append_toolbox_about_group(ps5ui::Group& g) {
                     "- GoldHEN / SiSTR0  | https://ko-fi.com/sistro",
                     ps5ui::Style::Center);
        },
-       toolbox_i18n::tr("about.donate.sub"))
+       toolbox_i18n::tr("about.donate.sub"), kIconDonations)
       .group(
           "id_onionhen_credits", toolbox_i18n::tr("about.credits"),
           [](ps5ui::Group& c) {
@@ -651,7 +665,7 @@ void append_toolbox_about_group(ps5ui::Group& g) {
                 .label("id_about_more", toolbox_i18n::tr("about.more"),
                        ps5ui::Style::Center);
           },
-          toolbox_i18n::tr("about.credits.sub"))
+          toolbox_i18n::tr("about.credits.sub"), kIconCredits)
       .group(
           "id_inc_project", toolbox_i18n::tr("about.projects"),
           [](ps5ui::Group& p) {
@@ -689,7 +703,7 @@ void append_toolbox_about_group(ps5ui::Group& g) {
                        "miniz / Keystone (cheats engine)",
                        ps5ui::Style::Center);
           },
-          toolbox_i18n::tr("about.projects.sub"));
+          toolbox_i18n::tr("about.projects.sub"), kIconProject);
 }
 
 } // namespace

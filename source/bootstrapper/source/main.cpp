@@ -235,6 +235,20 @@ along with this program; see the file COPYING. If not, see
  extern const unsigned int icon_xml_debug_size;
  extern uint8_t icon_xml_about_start[];
  extern const unsigned int icon_xml_about_size;
+ extern uint8_t icon_xml_kstuff_start[];
+ extern const unsigned int icon_xml_kstuff_size;
+ extern uint8_t icon_xml_overlay_start[];
+ extern const unsigned int icon_xml_overlay_size;
+ extern uint8_t icon_xml_fan_start[];
+ extern const unsigned int icon_xml_fan_size;
+ extern uint8_t icon_xml_restmode_start[];
+ extern const unsigned int icon_xml_restmode_size;
+ extern uint8_t icon_xml_donations_start[];
+ extern const unsigned int icon_xml_donations_size;
+ extern uint8_t icon_xml_credits_start[];
+ extern const unsigned int icon_xml_credits_size;
+ extern uint8_t icon_xml_project_start[];
+ extern const unsigned int icon_xml_project_size;
  
  /******************************************************************************
   * Global Variables
@@ -308,6 +322,13 @@ static void cleanup(void);
     write_blob_file("/data/OnionHEN/assets/icon_xml_shortcuts.png", &icon_xml_shortcuts_start, icon_xml_shortcuts_size);
     write_blob_file("/data/OnionHEN/assets/icon_xml_debug.png", &icon_xml_debug_start, icon_xml_debug_size);
     write_blob_file("/data/OnionHEN/assets/icon_xml_about.png", &icon_xml_about_start, icon_xml_about_size);
+    write_blob_file("/data/OnionHEN/assets/icon_xml_kstuff.png", &icon_xml_kstuff_start, icon_xml_kstuff_size);
+    write_blob_file("/data/OnionHEN/assets/icon_xml_overlay.png", &icon_xml_overlay_start, icon_xml_overlay_size);
+    write_blob_file("/data/OnionHEN/assets/icon_xml_fan.png", &icon_xml_fan_start, icon_xml_fan_size);
+    write_blob_file("/data/OnionHEN/assets/icon_xml_restmode.png", &icon_xml_restmode_start, icon_xml_restmode_size);
+    write_blob_file("/data/OnionHEN/assets/icon_xml_donations.png", &icon_xml_donations_start, icon_xml_donations_size);
+    write_blob_file("/data/OnionHEN/assets/icon_xml_credits.png", &icon_xml_credits_start, icon_xml_credits_size);
+    write_blob_file("/data/OnionHEN/assets/icon_xml_project.png", &icon_xml_project_start, icon_xml_project_size);
 
     mkdir("/system_ex/vsh_asset/", 0777);
     write_blob_file("/system_ex/vsh_asset/onionhen.png", &sicon_start,
