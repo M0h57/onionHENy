@@ -6,6 +6,7 @@
 
 #include "hooked_funcs.hpp"
 #include "external_symbols.hpp"
+#include "shellui_payload_state.hpp"
 #include "shellui_state.hpp"
 #include "toolbox_i18n.hpp"
 
@@ -82,7 +83,8 @@ bool try_payload_list_value(const std::string &id, std::string &out) {
   for (const auto &entry : g_ui.payloads_list) {
     if (entry.id != id)
       continue;
-    out = bool_str(sceSystemServiceGetAppId(entry.tid.c_str()) > 0);
+    out = bool_str(shellui_payload_resolve_recorded_pid(entry.tid.c_str(),
+                                                        nullptr, 0) > 1);
     return true;
   }
   return false;
