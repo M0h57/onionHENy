@@ -550,20 +550,15 @@ bool install_hooks(const ShellImages& img) {
        "OptionMenu", "createJson", 8, reinterpret_cast<void*>(&createJson_hook),
        reinterpret_cast<void**>(&createJson), true},
       /*
-       * DISABLED pending an explicit 11.600 device regression pass.
-       *
-       * Historical field logs faulted at trampoline+0x6 because the old
-       * DetourFunction copied RIP-relative JIT instructions without relocation.
-       * libonion_detour now relocates those instructions, but this unrelated hook
-       * stays off until its lifecycle behavior is validated on hardware. Remote-play
-       * cleanup is already handled from GetManifestResourceStream when leaving the
-       * remote_play page.
-       *
-       * {"LayerManager.UpdateImposeStatusFlag", img.app_system,
-       *  "Sce.Vsh.ShellUI.AppSystem", "LayerManager", "UpdateImposeStatusFlag", 2,
-       *  reinterpret_cast<void*>(&UpdateImposeStatusFlag_hook),
-       *  reinterpret_cast<void**>(&UpdateImposeStatusFlag_Orig), false},
+       * Re-enabled for device test: scene leave should end Remote Play PIN
+       * registration (StopConfirmRegistLoop + NotifyPinCodeError). Historical
+       * crash was old trampoline RIP-rel; libonion_detour relocates that now.
+       * Still non-required so a missing method does not abort hook install.
        */
+      {"LayerManager.UpdateImposeStatusFlag", img.app_system,
+       "Sce.Vsh.ShellUI.AppSystem", "LayerManager", "UpdateImposeStatusFlag", 2,
+       reinterpret_cast<void*>(&UpdateImposeStatusFlag_hook),
+       reinterpret_cast<void**>(&UpdateImposeStatusFlag_Orig), false},
       /* Optional: Core.Input may still be loading while we install; missing is non-fatal. */
       {"GamePad.GetData", img.core, "Sce.PlayStation.Core.Input", "GamePad", "GetData",
        1, reinterpret_cast<void*>(&GetData_hook), reinterpret_cast<void**>(&GetData),

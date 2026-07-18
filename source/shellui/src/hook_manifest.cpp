@@ -57,12 +57,15 @@ uint64_t GetManifestResourceStream_Hook(uint64_t inst, MonoString *FileName) {
       .cheats_shortcut_not_open = g_ui.cheats_shortcut_activated_not_open,
   });
 
-  /* Keep remote-play cleanup independent of LayerManager lifecycle hooks: when
-   * navigating away from the page, stop the pairing registration thread. */
+  /*
+   * Leaving the Remote Play toolbox page must end PIN registration (thread +
+   * sceRemoteplayNotifyPinCodeError). UpdateImposeStatusFlag is disabled, so
+   * this resource-stream transition is the primary leave signal.
+   */
   const bool was_remote_play = g_ui.is_remote_play;
   g_ui.apply_route_flags(route.flags);
   if (was_remote_play && !g_ui.is_remote_play) {
-    shellui_log("[remote_play] left page — StopConfirmRegistLoop");
+    shellui_log("[remote_play] left toolbox page — end registration");
     StopConfirmRegistLoop();
   }
 

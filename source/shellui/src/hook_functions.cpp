@@ -297,12 +297,8 @@ void ParseCheatID(const char* id, char* tid, int* cheat_id)
 }
 
 //
-// Scene has changed, stop Remote Play thread if is running.
-//
-// Kept disabled pending a dedicated 11.600 device regression pass. The original
-// crash was caused by the old memcpy-only trampoline; libonion_detour now
-// relocates RIP-relative prologues. Remote-play cleanup remains in
-// hook_manifest.cpp, so there is no reason to re-enable this hook speculatively.
+// Scene has changed: end Remote Play PIN registration if we are leaving that page.
+// Installed via LayerManager.UpdateImposeStatusFlag (optional / non-required).
 //
 void UpdateImposeStatusFlag_hook(MonoObject* scene, MonoObject* frontActiveScene)
 {
@@ -312,27 +308,28 @@ void UpdateImposeStatusFlag_hook(MonoObject* scene, MonoObject* frontActiveScene
                 g_ui.is_remote_play ? 1 : 0,
                 IsRunningConfirmRegistLoop ? 1 : 0);
     if(!frontActiveScene || !scene) {
-        shellui_log("Scene or frontActiveScene is null, returning...");
+        shellui_log("[DBG-UIS] scene or frontActiveScene null — skip RP cleanup");
+        if (UpdateImposeStatusFlag_Orig)
+            UpdateImposeStatusFlag_Orig(scene, frontActiveScene);
         return;
     }
-    if (!g_ui.is_remote_play && IsRunningConfirmRegistLoop)
-    {
-        shellui_log("[DBG-UIS] stopping confirm loop");
+
+    /*
+     * Old logic only stopped the loop when is_remote_play was already false,
+     * so a real leave (flag still true) never called StopConfirmRegistLoop.
+     * On any scene transition away from the RP page, end registration fully.
+     */
+    if (g_ui.is_remote_play || IsRunningConfirmRegistLoop) {
+        shellui_log("[DBG-UIS] scene change — end remote play registration "
+                    "(remote=%d confirm=%d)",
+                    g_ui.is_remote_play ? 1 : 0,
+                    IsRunningConfirmRegistLoop ? 1 : 0);
         StopConfirmRegistLoop();
-        shellui_log("[DBG-UIS] stopped confirm loop");
+        g_ui.is_remote_play = false;
     }
 
-    if (g_ui.is_remote_play)
-    {
-        //
-        // If the scene is switching, means that we exiting from the current state, a state machine would be good here
-        // otherwise we would need to reverse the SceneBase     
-        //
-        g_ui.is_remote_play = false; 
-    }
-
-    shellui_log("[DBG-UIS] calling original");
-    UpdateImposeStatusFlag_Orig(scene, frontActiveScene);
+    if (UpdateImposeStatusFlag_Orig)
+        UpdateImposeStatusFlag_Orig(scene, frontActiveScene);
     shellui_log("[DBG-UIS] original returned");
 }
 
