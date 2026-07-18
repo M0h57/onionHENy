@@ -2,13 +2,15 @@
 
 Cross-process readiness protocol for OnionHEN services.
 
-Services publish a named marker under /system_tmp/onion_ready/<name>.
+Services publish a named marker under /system_tmp/onionhen/ready/<name>.
 Consumers wait with timeout instead of fixed sleep() races.
 
-Legacy alias: "toolbox" also checks /system_tmp/toolbox_online (and signals it).
+All runtime markers live under the shared OnionHEN system_tmp namespace.
 */
 
 #pragma once
+
+#include <onion/system_tmp.h>
 
 #include <stdbool.h>
 #include <stdint.h>
@@ -19,7 +21,7 @@ Legacy alias: "toolbox" also checks /system_tmp/toolbox_online (and signals it).
 extern "C" {
 #endif
 
-#define ONION_READY_ROOT "/system_tmp/onion_ready"
+#define ONION_READY_ROOT ONION_SYSTEM_TMP_READY_ROOT
 
 /* Well-known service names (startup orchestration) */
 #define ONION_READY_UTIL "util"
@@ -47,8 +49,8 @@ bool onion_ready_is_set(const char *name);
  * A service publishes the PID of the process instance it initialized.  A
  * consumer can then distinguish a still-running initialized instance from a
  * replacement process that reused the same service name.  The marker remains
- * compatible with onion_ready_is_set(); only its contents differ from the
- * legacy value "1".
+ * compatible with onion_ready_is_set(); only its contents differ from the plain
+ * marker value "1".
  */
 bool onion_ready_signal_pid(const char *name, pid_t pid);
 bool onion_ready_read_pid(const char *name, pid_t *pid_out);

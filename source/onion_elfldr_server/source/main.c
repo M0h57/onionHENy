@@ -23,6 +23,7 @@
 #include <unistd.h>
 
 #include <onion/elfldr.h>
+#include <onion/system_tmp.h>
 #include <ps5/kernel.h>
 #include <ps5/klog.h>
 
@@ -46,7 +47,7 @@
 
 #define PTRACE_AUTHID 0x4800000000010003
 
-#define ONION_ELFLDR_STATE "/system_tmp/onion_elfldr_9020.PID"
+#define ONION_ELFLDR_STATE ONION_SYSTEM_TMP_ELFLDR_STATE
 
 static void log_msg(const char *fmt, ...) {
   char buf[512];
@@ -59,6 +60,8 @@ static void log_msg(const char *fmt, ...) {
 }
 
 static void write_state_file(void) {
+  mkdir(ONION_SYSTEM_TMP_ROOT, 0777);
+  mkdir(ONION_SYSTEM_TMP_PID_ROOT, 0777);
   int fd = open(ONION_ELFLDR_STATE, O_WRONLY | O_CREAT | O_TRUNC, 0666);
   if(fd < 0) {
     return;

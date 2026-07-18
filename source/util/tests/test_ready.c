@@ -38,7 +38,7 @@ static int test_ready_path_builder(void) {
   char buf[128];
   TEST_ASSERT_TRUE(onion_ready_path(ONION_FLAG_FPS_OVERLAY, buf, sizeof(buf)));
   TEST_ASSERT_TRUE(strstr(buf, "fps_overlay") != NULL);
-  TEST_ASSERT_TRUE(strstr(buf, "onion_ready") != NULL);
+  TEST_ASSERT_TRUE(strstr(buf, "/tmp/onionhen/ready/") != NULL);
   /* buffer too small */
   TEST_ASSERT_TRUE(!onion_ready_path(ONION_FLAG_FPS_OVERLAY, buf, 8));
   TEST_ASSERT_TRUE(!onion_ready_path(ONION_FLAG_FPS_OVERLAY, NULL, 64));
@@ -63,14 +63,14 @@ static int test_runtime_flag_util_booted(void) {
   return 0;
 }
 
-static int test_toolbox_legacy_alias(void) {
-  /* Clear both modern and legacy paths via clear() */
+static int test_toolbox_marker_under_runtime_root(void) {
+  char path[128];
   onion_ready_clear(ONION_READY_TOOLBOX);
+  TEST_ASSERT_TRUE(onion_ready_path(ONION_READY_TOOLBOX, path, sizeof(path)));
+  TEST_ASSERT_TRUE(strstr(path, "/tmp/onionhen/ready/toolbox") != NULL);
   TEST_ASSERT_TRUE(!onion_ready_is_set(ONION_READY_TOOLBOX));
   TEST_ASSERT_TRUE(onion_ready_signal(ONION_READY_TOOLBOX));
   TEST_ASSERT_TRUE(onion_ready_is_set(ONION_READY_TOOLBOX));
-  /* legacy file should also exist on host */
-  TEST_ASSERT_TRUE(access("/tmp/toolbox_online", F_OK) == 0);
   onion_ready_clear(ONION_READY_TOOLBOX);
   TEST_ASSERT_TRUE(!onion_ready_is_set(ONION_READY_TOOLBOX));
   return 0;
@@ -94,8 +94,8 @@ static int test_process_instance_marker(void) {
   return 0;
 }
 
-static int test_process_instance_rejects_legacy_value(void) {
-  const char *name = "host_legacy_marker";
+static int test_process_instance_rejects_plain_marker_value(void) {
+  const char *name = "host_plain_marker";
   pid_t actual = -1;
 
   onion_ready_clear(name);
@@ -118,10 +118,11 @@ int test_ready_suite(void) {
   failures += onion_test_run("ready_path_builder", test_ready_path_builder);
   failures += onion_test_run("flag_fps_overlay", test_runtime_flag_fps_overlay);
   failures += onion_test_run("flag_util_booted", test_runtime_flag_util_booted);
-  failures += onion_test_run("toolbox_legacy_alias", test_toolbox_legacy_alias);
+  failures += onion_test_run("toolbox_marker_runtime_root",
+                             test_toolbox_marker_under_runtime_root);
   failures += onion_test_run("ready_process_instance",
                              test_process_instance_marker);
-  failures += onion_test_run("ready_process_legacy_value",
-                             test_process_instance_rejects_legacy_value);
+  failures += onion_test_run("ready_process_plain_marker_value",
+                             test_process_instance_rejects_plain_marker_value);
   return failures;
 }

@@ -15,6 +15,7 @@ along with this program; see the file COPYING. If not, see
 <http://www.gnu.org/licenses/>.  */
 
 #include <onion/ipc_server.hpp>
+#include <onion/system_tmp.h>
 
 #include <cstdarg>
 #include <cstdio>
@@ -23,6 +24,7 @@ along with this program; see the file COPYING. If not, see
 #include <pthread.h>
 #include <strings.h>
 #include <sys/socket.h>
+#include <sys/stat.h>
 #include <sys/un.h>
 #include <unistd.h>
 
@@ -103,6 +105,8 @@ int ipc_network_listen(const char *soc_path) {
   if (!soc_path) {
     return INVAIL;
   }
+  mkdir(ONION_SYSTEM_TMP_ROOT, 0777);
+  mkdir(ONION_SYSTEM_TMP_IPC_ROOT, 0777);
   unlink(soc_path);
   logf("[ipc] Deleted Socket %s", soc_path);
 

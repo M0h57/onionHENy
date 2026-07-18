@@ -11,15 +11,6 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
-#if defined(ONION_HOST_TEST)
-#define ONION_READY_ROOT_HOST "/tmp/onion_ready"
-#undef ONION_READY_ROOT
-#define ONION_READY_ROOT ONION_READY_ROOT_HOST
-#define LEGACY_TOOLBOX_ONLINE "/tmp/toolbox_online"
-#else
-#define LEGACY_TOOLBOX_ONLINE "/system_tmp/toolbox_online"
-#endif
-
 static bool valid_name(const char *name) {
   if (!name || !*name) {
     return false;
@@ -41,6 +32,7 @@ bool onion_ready_path(const char *name, char *buf, size_t buflen) {
 }
 
 static void ensure_root(void) {
+  mkdir(ONION_SYSTEM_TMP_ROOT, 0777);
   mkdir(ONION_READY_ROOT, 0777);
 }
 
@@ -74,10 +66,6 @@ bool onion_ready_signal(const char *name) {
   }
   ensure_root();
   bool ok = touch_path(path);
-  /* Keep legacy marker for older daemons / tooling */
-  if (ok && strcmp(name, ONION_READY_TOOLBOX) == 0) {
-    (void)touch_path(LEGACY_TOOLBOX_ONLINE);
-  }
   return ok;
 }
 
@@ -93,11 +81,7 @@ bool onion_ready_signal_pid(const char *name, pid_t pid) {
   }
 
   ensure_root();
-  bool ok = write_path(path, value);
-  if (ok && strcmp(name, ONION_READY_TOOLBOX) == 0) {
-    (void)write_path(LEGACY_TOOLBOX_ONLINE, value);
-  }
-  return ok;
+  return write_path(path, value);
 }
 
 bool onion_ready_clear(const char *name) {
@@ -106,9 +90,6 @@ bool onion_ready_clear(const char *name) {
     return false;
   }
   unlink(path);
-  if (strcmp(name, ONION_READY_TOOLBOX) == 0) {
-    unlink(LEGACY_TOOLBOX_ONLINE);
-  }
   return true;
 }
 
@@ -117,15 +98,7 @@ bool onion_ready_is_set(const char *name) {
   if (!onion_ready_path(name, path, sizeof(path))) {
     return false;
   }
-  if (path_exists(path)) {
-    return true;
-  }
-  /* Accept legacy toolbox marker as ready */
-  if (strcmp(name, ONION_READY_TOOLBOX) == 0 &&
-      path_exists(LEGACY_TOOLBOX_ONLINE)) {
-    return true;
-  }
-  return false;
+  return path_exists(path);
 }
 
 static bool read_pid_path(const char *path, pid_t *pid_out) {
@@ -158,11 +131,7 @@ bool onion_ready_read_pid(const char *name, pid_t *pid_out) {
   if (!pid_out || !onion_ready_path(name, path, sizeof(path))) {
     return false;
   }
-  if (read_pid_path(path, pid_out)) {
-    return true;
-  }
-  return strcmp(name, ONION_READY_TOOLBOX) == 0 &&
-         read_pid_path(LEGACY_TOOLBOX_ONLINE, pid_out);
+  return read_pid_path(path, pid_out);
 }
 
 bool onion_ready_matches_pid(const char *name, pid_t pid) {

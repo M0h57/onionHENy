@@ -19,8 +19,8 @@ bootstrapper.elf ──9021──► util.elf ──► kstuff.elf ──► dae
                               │ 0x8*                      ├─► shellui → SceShellUI
                               │                           └─► fps_elf → 游戏
                               │
-              shellui / fps ──┼── crit: /system_tmp/OnionHEN_crit_service (0x9*)
-                              └── util: /system_tmp/OnionHEN_util_service (0x8*)
+              shellui / fps ──┼── crit: /system_tmp/onionhen/ipc/crit_service (0x9*)
+                              └── util: /system_tmp/onionhen/ipc/util_service (0x8*)
 ```
 
 | 层 | 模块 | 职责 |
@@ -152,7 +152,7 @@ NineS 已避免 per-call authid 翻转；bootstrapper/util attach 仍在翻转�
 | `docs/arch.md` 说法 | 实际 |
 |---------------------|------|
 | `util_booted` 仅 rest/toolbox 延迟 | 冷启动首次 inject 也吃 delay |
-| §3.3 仍以 `toolbox_online` 为主 | 主路径是 `/system_tmp/onion_ready/toolbox`，legacy 仅兼容 |
+| Toolbox readiness marker | 主路径是 `/system_tmp/onionhen/ready/toolbox` |
 | 仓库布局列不全 | 缺少整组 `libonion_*` |
 | 「IPC 协议稳定」 | 线格式稳定；转义/组帧/空 path **不稳** |
 | util 可崩溃恢复 | 有 9021 重启，但 5 次后静默放弃 |

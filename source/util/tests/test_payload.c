@@ -23,7 +23,7 @@ static int test_is_elf(void) {
 static int test_pid_path(void) {
   char path[128];
   onion_payload_pid_path(path, sizeof(path), "mytool");
-  TEST_ASSERT_STREQ("/system_tmp/mytool.PID", path);
+  TEST_ASSERT_STREQ("/tmp/onionhen/pid/mytool.PID", path);
   return 0;
 }
 

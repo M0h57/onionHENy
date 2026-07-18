@@ -9,6 +9,7 @@
 #include <onion/log.h>
 #include <onion/notify.h>
 #include <onion/proc_query.h>
+#include <onion/system_tmp.h>
 
 #include <errno.h>
 #include <fcntl.h>
@@ -54,7 +55,7 @@ bool onion_payload_elf_key_from_name(const char *name, char *out, size_t out_sz)
 }
 
 void onion_payload_pid_path(char *out, size_t out_sz, const char *title_id) {
-  snprintf(out, out_sz, "/system_tmp/%s.PID", title_id ? title_id : "");
+  (void)onion_system_tmp_pid_path(out, out_sz, title_id);
 }
 
 pid_t onion_payload_read_pid_file(const char *pid_path) {
@@ -71,16 +72,22 @@ pid_t onion_payload_read_pid_file(const char *pid_path) {
 }
 
 void onion_payload_write_pid_file(const char *pid_path, pid_t pid) {
+  if (!pid_path) {
+    return;
+  }
+  if (pid < 0) {
+    unlink(pid_path);
+    return;
+  }
+
+  mkdir(ONION_SYSTEM_TMP_ROOT, 0777);
+  mkdir(ONION_SYSTEM_TMP_PID_ROOT, 0777);
   const int f = open(pid_path, O_WRONLY | O_CREAT | O_TRUNC, 0666);
   if (f < 0)
     return;
-  if (pid >= 0) {
-    char t[32];
-    const int len = snprintf(t, sizeof(t), "%d", pid);
-    (void)write(f, t, (size_t)len);
-  } else {
-    unlink(pid_path);
-  }
+  char t[32];
+  const int len = snprintf(t, sizeof(t), "%d", pid);
+  (void)write(f, t, (size_t)len);
   close(f);
 }
 
@@ -206,11 +213,10 @@ void onion_payload_stop_by_title(const char *title_id) {
 
   /* Primary: kill the pid we recorded at launch. */
   pid_t pid = onion_payload_read_pid_file(pid_path);
-  /* PID 0/1 are never valid payload targets (legacy wrote 1 as "unknown"). */
+  /* PID 0/1 are never valid payload targets. */
   if (pid <= 1) {
     if (pid == 1) {
-      OnionHEN_log("Ignoring bogus payload PID 1 for %s (legacy fallback)",
-                   title_id);
+      OnionHEN_log("Ignoring bogus payload PID 1 for %s", title_id);
       unlink(pid_path);
     }
     pid = -1;
@@ -445,7 +451,7 @@ bool onion_payload_load(const char *path, const char *filename,
   onion_payload_stop_by_title(key);
   const pid_t pid = onion_payload_launch_elfldr(key, buf, size);
   free(buf);
-  /* Only persist real pids; never write 0/1 (legacy wrote 1 → ForceKill hang). */
+  /* Only persist real pids; never write 0/1 (PID 1 would hit system init). */
   if (pid > 1)
     onion_payload_write_pid_file(pid_path, pid);
   else

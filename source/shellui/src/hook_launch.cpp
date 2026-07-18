@@ -5,13 +5,16 @@
 #include "ipc.hpp"
 #include "external_symbols.hpp"
 #include <onion/platform.h>
+#include <onion/system_tmp.h>
 #include <string>
 #include <fstream>
+#include <sys/stat.h>
 
 #include "shellui_state.hpp"
 #include <cstring>
 
 void save_appid(int value, const char* filename) {
+    mkdir(ONION_SYSTEM_TMP_ROOT, 0777);
     std::ofstream file(filename);
     file << value;
 }
@@ -21,7 +24,7 @@ int LaunchApp(MonoString* titleId, uint64_t* args, int argsSize, LaunchAppParam 
     return LaunchApp_orig ? LaunchApp_orig(titleId, args, argsSize, param) : -1;
 
 #if 1
-   if(!if_exists("/system_tmp/patch_plugin")) {
+   if(!if_exists(ONION_SYSTEM_TMP_PATCH_PLUGIN)) {
       #if SHELL_DEBUG == 1
       shellui_log("patch payload not running .. returning with orig");
       #endif
@@ -57,7 +60,7 @@ int LaunchApp(MonoString* titleId, uint64_t* args, int argsSize, LaunchAppParam 
   notify("LaunchApp returned: %d", ret);
   #endif
 
-  save_appid(ret, "/system_tmp/app_launched");
+  save_appid(ret, ONION_SYSTEM_TMP_APP_LAUNCHED);
   return ret;
 
 }

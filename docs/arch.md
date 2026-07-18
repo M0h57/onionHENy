@@ -143,7 +143,7 @@ OnionHEN/
 - 内嵌 `shellui.elf`、`fps_elf.elf`，并保留一份 `util.elf` 供 watchdog 纯内存重启
 - 经 **libNineS** 将 Toolbox 注入 `SceShellUI`
 - 监视 util，崩溃可重启
-- Unix socket：`/system_tmp/OnionHEN_crit_service`
+- Unix socket：`/system_tmp/onionhen/ipc/crit_service`
 - IPC 前缀 `0x9000000`（`BREW_*`）
 
 主要能力：
@@ -156,7 +156,7 @@ OnionHEN/
 ### 2.4 `util` → `util.elf`（Utility 守护进程）
 
 - 与 critical 分离，承载网络/IO 与较重业务，提高稳定性
-- Unix socket：`/system_tmp/OnionHEN_util_service`
+- Unix socket：`/system_tmp/onionhen/ipc/util_service`
 - IPC 前缀 `0x8000000`（`BREW_UTIL_*`）
 
 | 服务 | 端口 / 入口 | 说明 |
@@ -202,7 +202,7 @@ OnionHEN/
 | **libonion_detour** | 共享 Detour + hde64 钩子栈；shellui / fps_elf 共用 |
 | **libonion_proc** | 共享 proc/ucred（allproc 遍历、dynlib、authid）+ **sysctl 进程查询**（`find_pid` / `onion_find_pid_ex` / `isProcessAlive`）；daemon / util / shellui / bootstrapper / fps 共用 |
 | **libonion_platform** | 平台叶子：`if_exists` / `touch_file` / `rmtree`、`OnionHEN_log`（可配置 tag/路径）、`onion_notify`；修一处全树受益 |
-| **libonion_ready** | 跨进程 ready/runtime 标记（`/system_tmp/onion_ready/<name>` + wait/timeout）；替代固定 sleep 与 ad-hoc 文件旗 |
+| **libonion_ready** | 跨进程 ready/runtime 标记（`/system_tmp/onionhen/ready/<name>` + wait/timeout）；替代固定 sleep 与 ad-hoc 文件旗 |
 | **onion/lnc.h** | 共享 LNC 启动 ABI（`LncAppParam` / `Flag` / 错误码）；daemon `launcher.hpp` 仅为 shim |
 | **libNineS** | ptrace 注入编排；**proc/ucred → libonion_proc**；**pt/elfldr → libonion_elfldr** |
 
@@ -236,8 +236,8 @@ OnionHEN/
 | `util` | util 在 IPC 线程启动后 | bootstrapper 启动 util 之后 |
 | `kstuff` | bootstrapper 在 mprotect 成功后 | daemon 注入 toolbox 前 |
 | `daemon` | daemon 在 IPC 线程启动后 | bootstrapper 启动 daemon 之后 |
-| `toolbox` | shellui 注入完成后，内容为自身 PID | daemon 按当前 SceShellUI PID 判断跳过或重注入（兼容旧路径 `toolbox_online`） |
-| `fps_overlay` | shellui（overlay FPS 开） | daemon 游戏循环触发 fps inject（替代 `/system_tmp/fps_enabled`） |
+| `toolbox` | shellui 注入完成后，内容为自身 PID | daemon 按当前 SceShellUI PID 判断跳过或重注入 |
+| `fps_overlay` | shellui（overlay FPS 开） | daemon 游戏循环触发 fps inject（替代旧的 fps_enabled 文件旗） |
 | `util_booted` | util 冷启动完成后 | rest-mode / toolbox 延迟路径（替代 `util_first_boot`） |
 
 #### IPC 分层（加深后）
@@ -281,8 +281,8 @@ OverlayLayout         仅 shellui：由 overlay_pos 派生的像素坐标
 ```
 shellui / fps_elf / homebrew
         │ Unix domain socket
-        ├─► /system_tmp/OnionHEN_crit_service  (daemon, 0x9xxxxxxx)
-        └─► /system_tmp/OnionHEN_util_service  (util,   0x8xxxxxxx)
+        ├─► /system_tmp/onionhen/ipc/crit_service  (daemon, 0x9xxxxxxx)
+        └─► /system_tmp/onionhen/ipc/util_service  (util,   0x8xxxxxxx)
 
 homebrew (app jailbreak)
         └─► sandbox file  …/download0/etahen_jailbreak|onionhen_jailbreak  (daemon 轮询 + 白名单 TID)
@@ -335,9 +335,11 @@ struct IPCMessage {
 | `/data/OnionHEN/config.ini` | 配置 |
 | `/data/OnionHEN/OnionHEN.log` | 日志 |
 | `/data/OnionHEN/payloads/` | payload `.elf`（唯一扩展包格式；启动时 stage 到同目录） |
-| `/system_tmp/OnionHEN_*_service` | Unix IPC socket |
-| `/system_tmp/onion_ready/toolbox` | Toolbox 已完成 hooks 的 SceShellUI PID；同 PID 跳过重复注入 |
-| `/system_tmp/toolbox_online` | Toolbox PID 就绪信号的兼容别名 |
+| `/system_tmp/onionhen/ipc/*` | Unix IPC socket |
+| `/system_tmp/onionhen/ready/<name>` | ready/runtime 标记；`toolbox` 内容为 SceShellUI PID |
+| `/system_tmp/onionhen/pid/<key>.PID` | payload/内部服务 PID 状态 |
+| `/system_tmp/onionhen/app_launched` | ShellUI LaunchApp 返回值 |
+| `/system_tmp/onionhen/patch_plugin` | LaunchApp patch gate（外部标记；ShellUI 只读取） |
 
 ---
 

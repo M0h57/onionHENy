@@ -6,6 +6,7 @@
 #include <onion/ipc_client.hpp>
 #include <onion/settings.hpp>
 #include <onion/toolbox_timing.h>
+#include <msg.hpp>
 #include "common_utils.h"
 #include <atomic>
 #include <unistd.h>
@@ -25,8 +26,7 @@ bool enable_toolbox() {
     // Single client path into crit daemon (replaces hand-rolled Unix socket).
     // Wait briefly for crit socket / ready — bootstrap order is util then daemon.
     for (int wait = 0; wait <= 20; ++wait) {
-      if (onion_ready_is_set(ONION_READY_DAEMON) ||
-          if_exists("/system_tmp/OnionHEN_crit_service")) {
+      if (onion_ready_is_set(ONION_READY_DAEMON) || if_exists(CRIT_IPC_SOC)) {
         break;
       }
       if (wait == 20) {
@@ -99,5 +99,3 @@ void patch_checker(bool rest_resume) {
         real_rest_mode_detected = false;
     }
 }
-
-

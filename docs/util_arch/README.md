@@ -6,7 +6,7 @@
 |----|-----|
 | 产物 | `build/bin/util.elf` |
 | 源码根 | `source/util/` |
-| Unix IPC | `/system_tmp/OnionHEN_util_service` |
+| Unix IPC | `/system_tmp/onionhen/ipc/util_service` |
 | IPC 命令前缀 | `0x8000000`（`BREW_UTIL_*`） |
 | 日志 | `OnionHEN_log` → stdout + klog + `/data/OnionHEN/OnionHEN_util_daemon.log` |
 | 崩溃日志 | `/data/OnionHEN/OnionHEN_util_crash.log` |
@@ -21,7 +21,7 @@
 ```text
 ┌─────────────┐     spawn/load      ┌──────────────┐
 │ bootstrapper│ ──────────────────► │  daemon.elf  │  critical IPC
-└─────────────┘                     │  (main)      │  /system_tmp/OnionHEN_crit_service
+└─────────────┘                     │  (main)      │  /system_tmp/onionhen/ipc/crit_service
                                     └──────┬───────┘
                                            │ 也可拉起
                                            ▼

@@ -26,7 +26,7 @@ void onion_payload_pid_path(char *out, size_t out_sz, const char *title_id);
 pid_t onion_payload_read_pid_file(const char *pid_path);
 void onion_payload_write_pid_file(const char *pid_path, pid_t pid);
 
-/** Kill process recorded in /system_tmp/<key>.PID if still valid. */
+/** Kill process recorded in /system_tmp/onionhen/pid/<key>.PID if still valid. */
 void onion_payload_stop_by_title(const char *title_id);
 
 /**
@@ -38,7 +38,7 @@ void onion_payload_stop_by_title(const char *title_id);
  * thr_set_name still gets a correct PID file for later kill.
  *
  * Returns:
- *   >1  observed payload pid (write to /system_tmp/<key>.PID)
+ *   >1  observed payload pid (write to /system_tmp/onionhen/pid/<key>.PID)
  *    0  loader accepted the ELF but no new pid observed (do not write 0/1)
  *   -1  hard failure (send/stage failed)
  * Never returns 1 as a "success" sentinel (that caused ForceKill of system pid 1).

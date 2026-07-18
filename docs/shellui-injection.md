@@ -20,9 +20,8 @@ daemon: cmd_enable_toolbox()          [daemon/source/msg.cpp]
 ```
 
 After all required hooks are installed, the ShellUI payload publishes its own
-PID in `/system_tmp/onion_ready/toolbox` (and the legacy
-`/system_tmp/toolbox_online` alias). The daemon waits up to 45 seconds for the
-expected PID, not merely for file existence.
+PID in `/system_tmp/onionhen/ready/toolbox`. The daemon waits up to 45 seconds
+for the expected PID, not merely for file existence.
 
 The marker is intentionally retained. Before injecting, the daemon compares
 its value with the current `SceShellUI` PID:

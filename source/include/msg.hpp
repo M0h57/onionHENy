@@ -5,10 +5,11 @@
 #include <sys/mman.h>
 #include <string>
 #include <sys/param.h>
+#include <onion/system_tmp.h>
 
 #define INVAIL -1
-#define CRIT_IPC_SOC "/system_tmp/OnionHEN_crit_service"
-#define UTIL_IPC_SOC "/system_tmp/OnionHEN_util_service"
+#define CRIT_IPC_SOC ONION_SYSTEM_TMP_CRIT_SOCKET
+#define UTIL_IPC_SOC ONION_SYSTEM_TMP_UTIL_SOCKET
 #define DAEMON_BUFF_MAX 0x1000
 
 

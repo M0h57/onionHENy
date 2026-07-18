@@ -8,6 +8,7 @@
 
 #include <onion/ipc_client.hpp>
 #include <onion/proc_query.h>
+#include <onion/system_tmp.h>
 
 #include <cstdio>
 #include <cstdlib>
@@ -24,10 +25,7 @@ static pid_t shellui_payload_drop_stale_pid(const char *pid_path,
 }
 
 void shellui_payload_pid_path(char *out, size_t out_sz, const char *key) {
-  if (!out || out_sz == 0) {
-    return;
-  }
-  snprintf(out, out_sz, "/system_tmp/%s.PID", key ? key : "");
+  (void)onion_system_tmp_pid_path(out, out_sz, key);
 }
 
 pid_t shellui_payload_read_pid_file(const char *pid_path) {
@@ -52,8 +50,7 @@ pid_t shellui_payload_validate_pid(pid_t pid, const char *pid_path,
                                    const char *key) {
   if (pid <= 1) {
     if (pid == 1) {
-      shellui_log("Ignoring bogus payload PID 1 for %s (legacy fallback)",
-                  key ? key : "?");
+      shellui_log("Ignoring bogus payload PID 1 for %s", key ? key : "?");
       if (pid_path) {
         unlink(pid_path);
       }
