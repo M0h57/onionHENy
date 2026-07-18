@@ -14,6 +14,10 @@ static int test_default_zh(void) {
   TEST_ASSERT_TRUE(std::strcmp(tr("group.pkg"), "内容安装与管理") == 0);
   TEST_ASSERT_TRUE(std::strcmp(tr("group.display"), "监控与显示") == 0);
   TEST_ASSERT_TRUE(std::strcmp(tr("group.preferences"), "操作偏好") == 0);
+  TEST_ASSERT_TRUE(std::strcmp(tr("pkg.installer.sub"),
+                               "打开系统安装界面，用于安装 PKG 游戏或应用") == 0);
+  TEST_ASSERT_TRUE(std::strcmp(tr("fan.enable.sub"),
+                               "关闭时使用系统默认风扇策略") == 0);
   return 0;
 }
 
@@ -25,6 +29,12 @@ static int test_en(void) {
                                "Account, Connection & Remote Play") == 0);
   TEST_ASSERT_TRUE(std::strcmp(tr("group.preferences"), "Preferences") == 0);
   TEST_ASSERT_TRUE(std::strcmp(tr("sc.off"), "Off (no shortcut)") == 0);
+  TEST_ASSERT_TRUE(std::strcmp(tr("remote_play.link.sub"),
+                               "View PIN and account details for Remote Play "
+                               "from a phone or PC") == 0);
+  TEST_ASSERT_TRUE(std::strcmp(tr("debug.np_env.sub"),
+                               "Change the PlayStation Network environment "
+                               "string; the console reboots after saving") == 0);
   return 0;
 }
 

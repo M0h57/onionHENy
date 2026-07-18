@@ -255,8 +255,9 @@ void generate_remote_play_xml(std::string& xml_buffer) {
              ps5ui::Style::Center);
 
   if (usbpath() != -1)
-    page.button("id_save_rp_info", toolbox_i18n::tr("rp.save_usb"), std::nullopt,
-                std::nullopt, std::nullopt, ps5ui::Style::Center);
+    page.button("id_save_rp_info", toolbox_i18n::tr("rp.save_usb"),
+                toolbox_i18n::tr("rp.save_usb.sub"), std::nullopt, std::nullopt,
+                ps5ui::Style::Center);
 
   xml_buffer = page.build();
 }
@@ -451,18 +452,22 @@ std::string toolbox_val(const char* id, const char* fallback = "0") {
 
 void append_toolbox_pkg_group(ps5ui::Group& g) {
   g.link("id_game_package_installer", toolbox_i18n::tr("pkg.installer"),
-         "PkgInstaller/data/pkginstaller.xml")
+         "PkgInstaller/data/pkginstaller.xml",
+         toolbox_i18n::tr("pkg.installer.sub"))
       .link("id_game_add_content_manager", toolbox_i18n::tr("pkg.add_content"),
-            "Addcontent/data/addcontent.xml");
+            "Addcontent/data/addcontent.xml",
+            toolbox_i18n::tr("pkg.add_content.sub"));
 }
 
 void append_toolbox_payloads_group(ps5ui::Group& g) {
-  g.link("id_payloads", toolbox_i18n::tr("payloads.link"), "payloads.xml")
+  g.link("id_payloads", toolbox_i18n::tr("payloads.link"), "payloads.xml",
+         toolbox_i18n::tr("payloads.link.sub"))
       .group(
           "id_kstuff_opts", toolbox_i18n::tr("kstuff.group"),
           [](ps5ui::Group& k) {
             k.toggle("id_kstuff_autoload", toolbox_i18n::tr("kstuff.autoload"),
-                     toolbox_on("id_kstuff_autoload"))
+                     toolbox_on("id_kstuff_autoload"),
+                     toolbox_i18n::tr("kstuff.autoload.sub"))
                 .button("id_delete_kstuff", toolbox_i18n::tr("kstuff.delete"),
                         std::nullopt, toolbox_i18n::tr("kstuff.delete.desc"));
           },
@@ -471,7 +476,8 @@ void append_toolbox_payloads_group(ps5ui::Group& g) {
 }
 
 void append_toolbox_game_group(ps5ui::Group& g) {
-  g.link("id_cheats", toolbox_i18n::tr("cheats.link"), "cheats.xml")
+  g.link("id_cheats", toolbox_i18n::tr("cheats.link"), "cheats.xml",
+         toolbox_i18n::tr("cheats.link.sub"))
       .toggle("id_custom_game_opts", toolbox_i18n::tr("game_opts.toggle"),
               toolbox_on("id_custom_game_opts"),
               toolbox_i18n::tr("game_opts.toggle.sub"));
@@ -514,7 +520,7 @@ void append_toolbox_display_group(ps5ui::Group& g) {
 
 void append_toolbox_connection_group(ps5ui::Group& g) {
   g.link("remote_play", toolbox_i18n::tr("remote_play.link"),
-         "remote_play.xml");
+         "remote_play.xml", toolbox_i18n::tr("remote_play.link.sub"));
 }
 
 void append_toolbox_system_group(ps5ui::Group& g) {
@@ -522,13 +528,14 @@ void append_toolbox_system_group(ps5ui::Group& g) {
        "id_group_fan", toolbox_i18n::tr("fan.group"),
        [](ps5ui::Group& f) {
          f.toggle("id_enable_fan_speed", toolbox_i18n::tr("fan.enable"),
-                  toolbox_on("id_enable_fan_speed"))
+                  toolbox_on("id_enable_fan_speed"),
+                  toolbox_i18n::tr("fan.enable.sub"))
              .text_field("id_fan_speed", toolbox_i18n::tr("fan.threshold"),
                          toolbox_i18n::tr("fan.threshold.sub"), "number", "2",
                          "2", std::nullopt, std::nullopt, std::nullopt,
                          toolbox_val("id_fan_speed", ""));
        },
-       std::nullopt, std::nullopt, "id_enable_fan_speed")
+       toolbox_i18n::tr("fan.group.sub"), std::nullopt, "id_enable_fan_speed")
       .group(
           "id_rest_mode", toolbox_i18n::tr("rest.group"),
           [](ps5ui::Group& r) {
@@ -545,9 +552,11 @@ void append_toolbox_system_group(ps5ui::Group& g) {
           },
           toolbox_i18n::tr("rest.group.sub"), std::nullopt, "id_rest_1")
       .link("id_external_hdd", toolbox_i18n::tr("hdd.external"),
-            "DebugSettings/data/debug_settings_external_hdd.xml")
+            "DebugSettings/data/debug_settings_external_hdd.xml",
+            toolbox_i18n::tr("hdd.external.sub"))
       .link("id_licenseactivation", toolbox_i18n::tr("license.bd"),
-            "DebugSettings/data/debug_settings_licenseactivation.xml");
+            "DebugSettings/data/debug_settings_licenseactivation.xml",
+            toolbox_i18n::tr("license.bd.sub"));
 }
 
 void append_toolbox_preferences_group(ps5ui::Group& g) {
@@ -590,9 +599,9 @@ void append_toolbox_preferences_group(ps5ui::Group& g) {
 void append_toolbox_debug_group(ps5ui::Group& g) {
   g.toggle("id_debug_jb", toolbox_i18n::tr("debug.jb"),
            toolbox_on("id_debug_jb"), toolbox_i18n::tr("debug.jb.sub"))
-      .text_field("id_np_env", toolbox_i18n::tr("debug.np_env"), std::nullopt,
-                  "basic_latin", "1", "16", "/NP/env",
-                  toolbox_i18n::tr("debug.np_env.confirm"),
+      .text_field("id_np_env", toolbox_i18n::tr("debug.np_env"),
+                  toolbox_i18n::tr("debug.np_env.sub"), "basic_latin", "1",
+                  "16", "/NP/env", toolbox_i18n::tr("debug.np_env.confirm"),
                   toolbox_i18n::tr("debug.np_env.confirm_phrase"));
 }
 
