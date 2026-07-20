@@ -74,6 +74,7 @@ enum HomeUiPatchByteSet {
   kHomeUiPatchByteSet1060,
   kHomeUiPatchByteSet1160,
   kHomeUiPatchByteSet1270,
+  kHomeUiPatchByteSet1220,
 };
 
 struct HomeUiPatchOffsets {
@@ -123,7 +124,7 @@ static const HomeUiPatchProfile kHomeUiPatchProfiles[] = {
         },
     },
     {
-        "10.6 NPXS40002 HomeUI",
+        "10.4/10.6 NPXS40002 HomeUI",
         kHomeUiPatchByteSet1060,
         89,
         0x1b3bcc,
@@ -186,6 +187,28 @@ static const HomeUiPatchProfile kHomeUiPatchProfiles[] = {
             0x4b726,
             0xc304d,
             0x1797ad,
+        },
+    },
+    {
+        "12.20 NPXS40002 HomeUI",
+        kHomeUiPatchByteSet1220,
+        89,
+        0x1b70e4,
+        {0xd9, 0xaa, 0x3e, 0xc2, 0xfc, 0xf7, 0xcc,
+         0x0b, 0xb0, 0xa7, 0xfe, 0x63, 0x62, 0x07,
+         0x9c, 0x49, 0x49, 0x48, 0xcf, 0x5e},
+        {
+            0x46424,
+            0x4559a,
+            0x55598,
+            0xbf6ca,
+            0x1792b3,
+            0x468ce,
+            0xc2ffa,
+            0x54edf,
+            0x4b7cf,
+            0xc2ffe,
+            0x1796a9,
         },
     },
 };
@@ -591,6 +614,14 @@ void patch_homeui_top_nav(unsigned char *buffer, int *size_ptr,
       0x54, 0x4b, 0x1c, 0x3b, 0x16, 0x4a, 0x15, 0x82, 0x16};
   static const unsigned char k1270NewIconOrder[] = {
       0x54, 0x4b, 0x1c, 0xda, 0x1b, 0x4a, 0x15, 0x82, 0x16};
+  static const unsigned char k1220OldIconOrder[] = {
+      0x54, 0xe3, 0x1b, 0x4d, 0x1c, 0x4e, 0x15, 0x85, 0x16};
+  static const unsigned char k1220LegacyAliasedIconOrder[] = {
+      0x54, 0x4d, 0x1c, 0xe3, 0x1b, 0x4e, 0x15, 0x85, 0x16};
+  static const unsigned char k1220LegacyAppErrorIconOrder[] = {
+      0x54, 0x4d, 0x1c, 0x3e, 0x16, 0x4e, 0x15, 0x85, 0x16};
+  static const unsigned char k1220NewIconOrder[] = {
+      0x54, 0x4d, 0x1c, 0xe3, 0x1b, 0x4e, 0x15, 0x85, 0x16};
 
   static const unsigned char k1001OriginalFpsFactory[] = {0x62, 0x01, 0x01,
                                                          0x8e, 0x1d};
@@ -608,6 +639,10 @@ void patch_homeui_top_nav(unsigned char *buffer, int *size_ptr,
                                                          0xd6, 0x1d};
   static const unsigned char k1270LegacyAliasedFpsFactory[] = {
       0x62, 0x01, 0x01, 0xd4, 0x1d};
+  static const unsigned char k1220OriginalFpsFactory[] = {0x62, 0x01, 0x01,
+                                                         0xd5, 0x1d};
+  static const unsigned char k1220LegacyAliasedFpsFactory[] = {
+      0x62, 0x01, 0x01, 0xd3, 0x1d};
 
   /*
    * The visible Settings slot has its own component, so patching its iconId
@@ -640,6 +675,8 @@ void patch_homeui_top_nav(unsigned char *buffer, int *size_ptr,
   static const unsigned char k1160NewCustomIconValue[] = {0x47, 0x0f};
   static const unsigned char k1270OldCustomIconValue[] = {0xac, 0x08};
   static const unsigned char k1270NewCustomIconValue[] = {0x70, 0x0f};
+  static const unsigned char k1220OldCustomIconValue[] = {0xa9, 0x08};
+  static const unsigned char k1220NewCustomIconValue[] = {0x74, 0x0f};
   static const unsigned char kLegacyTopNavPressUri[] = {
       'O', 'n', 'i', 'o', 'n', 'H', 'E', 'N', '?', 'N', 'a', 'v', 'U', 'I'};
   static const unsigned char kStockDownloadErrorString[] = {
@@ -668,6 +705,7 @@ void patch_homeui_top_nav(unsigned char *buffer, int *size_ptr,
   static const unsigned char k1060OldCustomTitleValue[] = {0xf8, 0x0a};
   static const unsigned char k1160OldCustomTitleValue[] = {0x17, 0x0b};
   static const unsigned char k1270OldCustomTitleValue[] = {0x4e, 0x0b};
+  static const unsigned char k1220OldCustomTitleValue[] = {0x55, 0x0b};
   static const unsigned char kNewCustomTitleValue[] = {0xff, 0x00};
   static const unsigned char k1001OnionHenButtonBody[] = {
       0x29, 0x00, 0x00, 0x2e, 0x01, 0x00, 0x0a, 0x35, 0x04, 0x01, 0x01,
@@ -741,11 +779,29 @@ void patch_homeui_top_nav(unsigned char *buffer, int *size_ptr,
       0x01, 0xd7, 0x1d, 0x07, 0x01, 0x00, 0x00, 0x52, 0x04, 0x04, 0x03,
       0x02, 0x01, 0x35, 0x02, 0x05, 0x05, 0x4e, 0x2d, 0x71, 0x01, 0x6c,
       0x0c, 0x51, 0x01, 0x02, 0x05, 0x01, 0x8e, 0x07, 0x01, 0x75, 0x01};
+  static const unsigned char k1220OnionHenButtonBody[] = {
+      0x29, 0x00, 0x00, 0x2e, 0x01, 0x00, 0x05, 0x35, 0x04, 0x01, 0x01,
+      0x68, 0x2b, 0x03, 0x01, 0x71, 0x02, 0x55, 0x0b, 0x3e, 0x01, 0x02,
+      0x43, 0x18, 0x74, 0x03, 0x51, 0x05, 0x04, 0x03, 0x01, 0x2e, 0x01,
+      0x00, 0x09, 0x34, 0x02, 0x01, 0x02, 0x7e, 0x2e, 0x01, 0x00, 0x08,
+      0x34, 0x01, 0x01, 0x01, 0x6c, 0x01, 0x00, 0x03, 0x00, 0x03, 0x00,
+      0x73, 0x12, 0x69, 0x1b, 0x39, 0x00, 0x05, 0x01, 0xbb, 0x00, 0x52,
+      0x00, 0x02, 0x03, 0x01, 0x00, 0x5a, 0x00, 0x74, 0x00, 0x74, 0x00};
+  static const unsigned char k1220OldFpsBodyPrefix[] = {
+      0x29, 0x00, 0x00, 0x2e, 0x01, 0x00, 0x02, 0x34, 0x04, 0x01, 0x01,
+      0xe7, 0x2e, 0x02, 0x00, 0x00, 0x35, 0x02, 0x02, 0x02, 0x8d, 0x1e,
+      0x74, 0x03, 0x51, 0x02, 0x04, 0x03, 0x02, 0x35, 0x05, 0x02, 0x03,
+      0x6f, 0x18, 0x34, 0x04, 0x01, 0x04, 0xf5, 0x32, 0x01, 0x62, 0x02,
+      0x01, 0xd6, 0x1d, 0x07, 0x01, 0x00, 0x00, 0x52, 0x04, 0x04, 0x03,
+      0x02, 0x01, 0x35, 0x02, 0x05, 0x05, 0x4d, 0x2d, 0x71, 0x01, 0x73,
+      0x0c, 0x51, 0x01, 0x02, 0x05, 0x01, 0x8e, 0x07, 0x01, 0x75, 0x01};
   static_assert(sizeof(k1001OldIconOrder) == sizeof(k1160OldIconOrder),
                 "HomeUI top-nav order patch size mismatch");
   static_assert(sizeof(k1001OldIconOrder) == sizeof(k1060OldIconOrder),
                 "HomeUI top-nav order patch size mismatch");
   static_assert(sizeof(k1001OldIconOrder) == sizeof(k1270OldIconOrder),
+                "HomeUI top-nav order patch size mismatch");
+  static_assert(sizeof(k1001OldIconOrder) == sizeof(k1220OldIconOrder),
                 "HomeUI top-nav order patch size mismatch");
   static_assert(sizeof(k1001OriginalFpsFactory) ==
                     sizeof(k1160OriginalFpsFactory),
@@ -756,6 +812,9 @@ void patch_homeui_top_nav(unsigned char *buffer, int *size_ptr,
   static_assert(sizeof(k1001OriginalFpsFactory) ==
                     sizeof(k1270OriginalFpsFactory),
                 "HomeUI Fps factory patch size mismatch");
+  static_assert(sizeof(k1001OriginalFpsFactory) ==
+                    sizeof(k1220OriginalFpsFactory),
+                "HomeUI Fps factory patch size mismatch");
   static_assert(sizeof(k1001OldCustomIconValue) ==
                     sizeof(k1160OldCustomIconValue),
                 "HomeUI custom icon value patch size mismatch");
@@ -765,6 +824,9 @@ void patch_homeui_top_nav(unsigned char *buffer, int *size_ptr,
   static_assert(sizeof(k1001OldCustomIconValue) ==
                     sizeof(k1270OldCustomIconValue),
                 "HomeUI custom icon value patch size mismatch");
+  static_assert(sizeof(k1001OldCustomIconValue) ==
+                    sizeof(k1220OldCustomIconValue),
+                "HomeUI custom icon value patch size mismatch");
   static_assert(sizeof(k1001OldCustomTitleValue) ==
                     sizeof(k1160OldCustomTitleValue),
                 "HomeUI custom title value patch size mismatch");
@@ -773,6 +835,9 @@ void patch_homeui_top_nav(unsigned char *buffer, int *size_ptr,
                 "HomeUI custom title value patch size mismatch");
   static_assert(sizeof(k1001OldCustomTitleValue) ==
                     sizeof(k1270OldCustomTitleValue),
+                "HomeUI custom title value patch size mismatch");
+  static_assert(sizeof(k1001OldCustomTitleValue) ==
+                    sizeof(k1220OldCustomTitleValue),
                 "HomeUI custom title value patch size mismatch");
   static_assert(sizeof(k1001OldFpsBodyPrefix) ==
                     sizeof(k1001OnionHenButtonBody),
@@ -785,6 +850,9 @@ void patch_homeui_top_nav(unsigned char *buffer, int *size_ptr,
                 "HomeUI top-nav Fps body patch must fit prefix length");
   static_assert(sizeof(k1270OldFpsBodyPrefix) ==
                     sizeof(k1270OnionHenButtonBody),
+                "HomeUI top-nav Fps body patch must fit prefix length");
+  static_assert(sizeof(k1220OldFpsBodyPrefix) ==
+                    sizeof(k1220OnionHenButtonBody),
                 "HomeUI top-nav Fps body patch must fit prefix length");
 
   struct HomeUiPatchBytes {
@@ -863,6 +931,21 @@ void patch_homeui_top_nav(unsigned char *buffer, int *size_ptr,
           k1270OldFpsBodyPrefix,
           nullptr,
           k1270OnionHenButtonBody,
+      },
+      {
+          kHomeUiPatchByteSet1220,
+          k1220OldIconOrder,
+          k1220LegacyAliasedIconOrder,
+          k1220LegacyAppErrorIconOrder,
+          k1220NewIconOrder,
+          k1220OriginalFpsFactory,
+          k1220LegacyAliasedFpsFactory,
+          k1220OldCustomIconValue,
+          k1220NewCustomIconValue,
+          k1220OldCustomTitleValue,
+          k1220OldFpsBodyPrefix,
+          nullptr,
+          k1220OnionHenButtonBody,
       },
   };
 
