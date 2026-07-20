@@ -36,11 +36,9 @@ static OnPressResult id_ui_lang(OnPressContext &ctx) {
   g_settings.ui_lang = v;
   const char *name = v == 2 ? "en" : (v == 1 ? "zh-Hans" : "system");
   shellui_log("UI language: %s", name);
+  if (v == 0)
+    (void)onion_notify_refresh_system_language();
   toolbox_i18n::apply_system_or_ui_lang(v);
-  onion_notify_set_language(toolbox_i18n::active_lang() ==
-                                    toolbox_i18n::Lang::ZhHans
-                                ? ONION_NOTIFY_LANG_ZH_HANS
-                                : ONION_NOTIFY_LANG_EN);
   /* XML is built when the page opens; current tree stays in the old language. */
   notify("Language saved. Leave and re-open the toolbox for it to take effect.");
   return OnPressResult::Handled;

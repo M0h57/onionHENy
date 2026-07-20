@@ -1,10 +1,7 @@
 /* Copyright (C) 2025 OnionHEN / LightningMods */
 
 #include "toolbox_i18n.hpp"
-
-#ifndef ONION_HOST_TEST
-#include "external_symbols.hpp"
-#endif
+#include <onion/notify_i18n.h>
 
 #include <cstring>
 
@@ -262,29 +259,6 @@ Lang lang_from_ui_value(int ui_lang) {
   return ui_lang == 2 ? Lang::En : Lang::ZhHans;
 }
 
-bool system_lang(Lang &out) {
-#ifdef ONION_HOST_TEST
-  (void)out;
-  return false;
-#else
-  constexpr int kSystemServiceParamIdLang = 1;
-  constexpr int kSystemParamLangChineseTraditional = 10;
-  constexpr int kSystemParamLangChineseSimplified = 11;
-
-  int language = -1;
-  if (!sceSystemServiceParamGetInt ||
-      sceSystemServiceParamGetInt(kSystemServiceParamIdLang, &language) < 0) {
-    return false;
-  }
-
-  out = language == kSystemParamLangChineseTraditional ||
-                language == kSystemParamLangChineseSimplified
-            ? Lang::ZhHans
-            : Lang::En;
-  return true;
-#endif
-}
-
 } // namespace
 
 Lang active_lang() { return g_lang; }
@@ -295,6 +269,8 @@ void set_lang(Lang lang) {
   if (lang != Lang::ZhHans && lang != Lang::En)
     lang = Lang::ZhHans;
   g_lang = lang;
+  onion_notify_set_language(lang == Lang::ZhHans ? ONION_NOTIFY_LANG_ZH_HANS
+                                                  : ONION_NOTIFY_LANG_EN);
 }
 
 void apply_ui_lang(int ui_lang) {
@@ -302,12 +278,10 @@ void apply_ui_lang(int ui_lang) {
 }
 
 void apply_system_or_ui_lang(int ui_lang) {
-  Lang lang = Lang::ZhHans;
-  if (ui_lang == 0 && system_lang(lang)) {
-    set_lang(lang);
-    return;
-  }
-  set_lang(lang_from_ui_value(ui_lang));
+  onion_notify_apply_ui_language_cached(ui_lang);
+  set_lang(onion_notify_get_language() == ONION_NOTIFY_LANG_ZH_HANS
+               ? Lang::ZhHans
+               : Lang::En);
 }
 
 const char *tr(const char *key) {

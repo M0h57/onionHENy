@@ -278,6 +278,20 @@ static int test_welcome_toast_fallback_uri(void) {
   return 0;
 }
 
+static int test_welcome_toast_localizes_text(void) {
+  onion_notify_set_language(ONION_NOTIFY_LANG_ZH_HANS);
+  const std::string json = onion::daemon::make_welcome_toast_json(
+      "pssettings:play?function=debug_settings");
+  TEST_ASSERT_TRUE(json.find("\"body\": \"欢迎使用 OnionHEN\"") !=
+                   std::string::npos);
+  TEST_ASSERT_TRUE(json.find("\"actionName\": \"前往 OnionHEN 工具箱\"") !=
+                   std::string::npos);
+  TEST_ASSERT_TRUE(json.find(std::string(ONIONHEN_VERSION) + " · 作者：" +
+                             ONIONHEN_AUTHOR) != std::string::npos);
+  onion_notify_set_language(ONION_NOTIFY_LANG_EN);
+  return 0;
+}
+
 extern "C" int test_debug_settings_route_policy_suite(void) {
   int fails = 0;
   fails += onion_test_run("debug_route.1000_standard",
@@ -328,5 +342,7 @@ extern "C" int test_debug_settings_route_policy_suite(void) {
                           test_welcome_toast_replaces_toolbox_uri);
   fails += onion_test_run("daemon.welcome_toast_fallback",
                           test_welcome_toast_fallback_uri);
+  fails += onion_test_run("daemon.welcome_toast_i18n",
+                          test_welcome_toast_localizes_text);
   return fails;
 }

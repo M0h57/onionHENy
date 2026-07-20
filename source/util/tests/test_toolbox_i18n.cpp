@@ -2,6 +2,7 @@
 #include "test_harness.h"
 
 #include "toolbox_i18n.hpp"
+#include <onion/notify_i18n.h>
 
 #include <cstring>
 #include <string>
@@ -54,11 +55,19 @@ static int test_apply_ui_lang(void) {
   return 0;
 }
 
-static int test_system_lang_falls_back_to_ui_lang_on_host(void) {
+static int query_zh_system_language(int param_id, int *value) {
+  TEST_ASSERT_EQ_INT(1, param_id);
+  *value = 11;
+  return 0;
+}
+
+static int test_system_lang_uses_shared_cache(void) {
+  onion_notify_set_system_language_query(query_zh_system_language);
   apply_system_or_ui_lang(2);
   TEST_ASSERT_TRUE(active_lang() == Lang::En);
   apply_system_or_ui_lang(0);
   TEST_ASSERT_TRUE(active_lang() == Lang::ZhHans);
+  onion_notify_set_system_language_query(nullptr);
   return 0;
 }
 
@@ -73,8 +82,8 @@ extern "C" int test_toolbox_i18n_suite(void) {
   fails += onion_test_run("i18n.default_zh", test_default_zh);
   fails += onion_test_run("i18n.en", test_en);
   fails += onion_test_run("i18n.apply_ui_lang", test_apply_ui_lang);
-  fails += onion_test_run("i18n.system_lang_host_fallback",
-                          test_system_lang_falls_back_to_ui_lang_on_host);
+  fails += onion_test_run("i18n.system_lang_shared_cache",
+                          test_system_lang_uses_shared_cache);
   fails += onion_test_run("i18n.missing_key", test_missing_key);
   return fails;
 }

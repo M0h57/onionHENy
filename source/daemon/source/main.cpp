@@ -226,9 +226,11 @@ int main() {
   /* Real linked kernel export (not a dlsym function-pointer variable). */
   onion_notify_set_send(reinterpret_cast<onion_notify_send_fn>(
       sceKernelSendNotificationRequest));
-  int system_language = 1;
-  (void)sceSystemServiceParamGetInt(1, &system_language);
-  onion_notify_apply_ui_language(onion::kUiLanguageSystem, system_language);
+  onion_notify_set_system_language_query(
+      +[](int param_id, int *value) -> int {
+        return sceSystemServiceParamGetInt(param_id, value);
+      });
+  onion_notify_apply_ui_language_cached(onion::kUiLanguageSystem);
 
   char buz[255];
   pthread_t fifo_thr = nullptr;

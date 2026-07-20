@@ -1,6 +1,7 @@
 #pragma once
 
 #include <onion/debug_settings_route_policy.hpp>
+#include <onion/notify_i18n.h>
 #include <onion/version.h>
 
 #include <string>
@@ -10,6 +11,12 @@ namespace onion::daemon {
 
 inline constexpr const char kWelcomeToastToolboxUriToken[] =
     "__ONIONHEN_TOOLBOX_URI__";
+inline constexpr const char kWelcomeToastMessageToken[] =
+    "__ONIONHEN_WELCOME_MESSAGE__";
+inline constexpr const char kWelcomeToastSubMessageToken[] =
+    "__ONIONHEN_WELCOME_SUB_MESSAGE__";
+inline constexpr const char kWelcomeToastActionToken[] =
+    "__ONIONHEN_WELCOME_ACTION__";
 
 inline constexpr const char kWelcomeToastJsonTemplate[] =
     "{\n"
@@ -28,15 +35,14 @@ inline constexpr const char kWelcomeToastJsonTemplate[] =
     "        }\n"
     "      },\n"
     "      \"message\": {\n"
-    "        \"body\": \"" ONIONHEN_VERSION " made by " ONIONHEN_AUTHOR
-    "\"\n"
+    "        \"body\": \"__ONIONHEN_WELCOME_MESSAGE__\"\n"
     "      },\n"
     "      \"subMessage\": {\n"
-    "        \"body\": \"Welcome to OnionHEN\"\n"
+    "        \"body\": \"__ONIONHEN_WELCOME_SUB_MESSAGE__\"\n"
     "      },\n"
     "      \"actions\": [\n"
     "        {\n"
-    "          \"actionName\": \"Go to the OnionHEN Toolbox\",\n"
+    "          \"actionName\": \"__ONIONHEN_WELCOME_ACTION__\",\n"
     "          \"actionType\": \"DeepLink\",\n"
     "          \"defaultFocus\": true,\n"
     "          \"parameters\": {\n"
@@ -55,8 +61,7 @@ inline constexpr const char kWelcomeToastJsonTemplate[] =
     "            }\n"
     "          },\n"
     "          \"message\": {\n"
-    "            \"body\": \"" ONIONHEN_VERSION " made by "
-    ONIONHEN_AUTHOR "\"\n"
+    "            \"body\": \"__ONIONHEN_WELCOME_MESSAGE__\"\n"
     "          }\n"
     "        }\n"
     "      }\n"
@@ -66,19 +71,31 @@ inline constexpr const char kWelcomeToastJsonTemplate[] =
     "  \"localNotificationId\": \"588193127\"\n"
     "}";
 
+inline void replace_all(std::string &text, std::string_view token,
+                        std::string_view replacement) {
+  size_t pos = 0;
+  while ((pos = text.find(token, pos)) != std::string::npos) {
+    text.replace(pos, token.size(), replacement.data(), replacement.size());
+    pos += replacement.size();
+  }
+}
+
 inline std::string make_welcome_toast_json(std::string_view toolbox_uri) {
   std::string json = kWelcomeToastJsonTemplate;
+  const std::string message = std::string(ONIONHEN_VERSION) +
+                              onion_notify_tr(" made by ") + ONIONHEN_AUTHOR;
+  replace_all(json, kWelcomeToastMessageToken, message);
+  replace_all(json, kWelcomeToastSubMessageToken,
+              onion_notify_tr("Welcome to OnionHEN"));
+  replace_all(json, kWelcomeToastActionToken,
+              onion_notify_tr("Go to the OnionHEN Toolbox"));
   const std::string_view replacement =
       toolbox_uri.empty()
           ? std::string_view(
                 onion::debug_settings_route::kStandardRoute.simple_uri)
           : toolbox_uri;
 
-  const size_t pos = json.find(kWelcomeToastToolboxUriToken);
-  if (pos != std::string::npos) {
-    json.replace(pos, sizeof(kWelcomeToastToolboxUriToken) - 1,
-                 replacement.data(), replacement.size());
-  }
+  replace_all(json, kWelcomeToastToolboxUriToken, replacement);
   return json;
 }
 

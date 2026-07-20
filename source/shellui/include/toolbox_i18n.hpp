@@ -29,7 +29,8 @@ void apply_ui_lang(int ui_lang);
 
 /**
  * Apply the stored UI language setting.
- * 0=system, 1=zh-Hans, 2=en. System falls back to zh-Hans when unavailable.
+ * 0=system, 1=zh-Hans, 2=en. System uses the shared process cache and falls
+ * back to English when unavailable.
  */
 void apply_system_or_ui_lang(int ui_lang);
 

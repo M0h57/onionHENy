@@ -851,12 +851,13 @@ int main(void) {
       sceKernelSendNotificationRequest));
   onion_notify_set_rich_send(reinterpret_cast<onion_notify_rich_send_fn>(
       sceNotificationSend));
+  onion_notify_set_system_language_query(
+      +[](int param_id, int *value) -> int {
+        return sceSystemServiceParamGetInt(param_id, value);
+      });
   onion::Settings notification_settings{};
   (void)onion::settings_load(&notification_settings);
-  int system_language = 1;
-  (void)sceSystemServiceParamGetInt(1, &system_language);
-  onion_notify_apply_ui_language(notification_settings.ui_lang,
-                                 system_language);
+  onion_notify_apply_ui_language_cached(notification_settings.ui_lang);
 
   signal(SIGCHLD, SIG_IGN);
 
