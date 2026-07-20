@@ -48,7 +48,7 @@ KNOWN_HOMEUI_PROFILES = [
         "source_hash": "f321f83f9143035f5d97ee5ad98ceb75133c890e",
     },
     {
-        # 12.6 NPXS40002 is byte-identical to the 12.7 dump.
+        # 12.4 and 12.6 NPXS40002 are byte-identical to the 12.7 dump.
         "name": "12.7 NPXS40002 HomeUI",
         "hbc_version": 89,
         "file_length": 0x1B73BC,
@@ -128,6 +128,7 @@ KNOWN_SETTINGS_PROFILES = [
         "source_hash": "445da8bcba93da165473d3da491d9b13f96316cd",
     },
     {
+        # 12.4 and 12.20 dumps share this Settings bundle fingerprint.
         "name": "12.20 NPXS40008 Settings",
         "route": "old",
         "file_length": 0x4E8E54,

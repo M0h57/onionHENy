@@ -41,6 +41,8 @@
   `source_hash=a7b731571f84b6cdaf7c4227a980ba5ee20004a8`，route 为 old。
 - `NPXS40009` 不包含 `debug_settings` / `debug_settings_old`，不能作为
   Settings profile 指纹来源。
+- `12.4DUMP` 的 `NPXS40002` 与 12.7、`NPXS40008` 与 12.20 分别整文件
+  完全一致，复用对应 HomeUI profile 和 Settings fingerprint；route 为 old。
 - `12.6DUMP` 的 `NPXS40002` 与 12.7 完全一致；`NPXS40008` 使用独立
   old-route 指纹：`hbc_file_length=0x4e9028`、
   `source_hash=75747bb5fa7e3a4e22d557882f5281e4d1f12959`。
