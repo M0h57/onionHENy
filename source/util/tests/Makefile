@@ -92,6 +92,7 @@ TEST_CXX_SRCS := \
 	test_ipc_harden.cpp \
 	test_ps5_settings_ui.cpp \
 	test_toolbox_route.cpp \
+	test_onpress_policy.cpp \
 	test_toolbox_helpers.cpp \
 	test_toolbox_i18n.cpp \
 	test_toolbox_injection.cpp \

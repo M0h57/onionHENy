@@ -365,7 +365,7 @@ void UpdateImposeStatusFlag_hook(MonoObject* scene, MonoObject* frontActiveScene
     shellui_log("[DBG-UIS] enter scene=%p front=%p orig=%p remote=%d confirm=%d",
                 scene, frontActiveScene,
                 reinterpret_cast<void*>(UpdateImposeStatusFlag_Orig),
-                g_ui.is_remote_play ? 1 : 0,
+                g_ui.is_active_page(toolbox::Page::RemotePlay) ? 1 : 0,
                 IsRunningConfirmRegistLoop ? 1 : 0);
     if(!frontActiveScene || !scene) {
         shellui_log("[DBG-UIS] scene or frontActiveScene null — skip RP cleanup");
@@ -379,13 +379,14 @@ void UpdateImposeStatusFlag_hook(MonoObject* scene, MonoObject* frontActiveScene
      * so a real leave (flag still true) never called StopConfirmRegistLoop.
      * On any scene transition away from the RP page, end registration fully.
      */
-    if (g_ui.is_remote_play || IsRunningConfirmRegistLoop) {
+    if (g_ui.is_active_page(toolbox::Page::RemotePlay) ||
+        IsRunningConfirmRegistLoop) {
         shellui_log("[DBG-UIS] scene change — end remote play registration "
                     "(remote=%d confirm=%d)",
-                    g_ui.is_remote_play ? 1 : 0,
+                    g_ui.is_active_page(toolbox::Page::RemotePlay) ? 1 : 0,
                     IsRunningConfirmRegistLoop ? 1 : 0);
         StopConfirmRegistLoop();
-        g_ui.is_remote_play = false;
+        g_ui.leave_page(toolbox::Page::RemotePlay);
     }
 
     if (UpdateImposeStatusFlag_Orig)

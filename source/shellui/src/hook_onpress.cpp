@@ -2,12 +2,16 @@
  * ShellUI OnPress_Hook — table-driven toolbox press dispatch.
  */
 #include "onpress.hpp"
-#include <algorithm>
-#include <cstring>
-#include <vector>
+#include "onpress_policy.hpp"
 
 extern int (*oOnPress)(MonoObject *Instance, MonoObject *element, MonoObject *e);
 #include "shellui_state.hpp"
+
+namespace {
+
+int call_original(MonoObject *instance, MonoObject *element, MonoObject *event) {
+  return oOnPress ? oOnPress(instance, element, event) : 0;
+}
 
 static OnPressResult try_exact(const OnPressExactEntry *table, size_t n,
                                OnPressContext &ctx) {
@@ -32,21 +36,68 @@ static OnPressResult try_prefix(const OnPressPrefixEntry *table, size_t n,
   return OnPressResult::NotMine;
 }
 
-int OnPress_Hook(MonoObject *Instance, MonoObject *element, MonoObject *e) {
-  static const std::vector<std::string> excludedIds = {
-      "id_save_rp_info",
-      "id_delete_kstuff",
+OnPressResult dispatch_toolbox_press(toolbox::OnPressDomain domain,
+                                     OnPressContext &ctx) {
+  OnPressResult result = OnPressResult::NotMine;
+  size_t count = 0;
+
+  auto run_prefix = [&](const OnPressPrefixEntry *(*provider)(size_t *)) {
+    if (result == OnPressResult::NotMine) {
+      const OnPressPrefixEntry *table = provider(&count);
+      result = try_prefix(table, count, ctx);
+    }
+  };
+  auto run_exact = [&](const OnPressExactEntry *(*provider)(size_t *)) {
+    if (result == OnPressResult::NotMine) {
+      const OnPressExactEntry *table = provider(&count);
+      result = try_exact(table, count, ctx);
+    }
   };
 
+  switch (domain) {
+  case toolbox::OnPressDomain::Root:
+    run_exact(onpress_overlay_exact);
+    run_exact(onpress_network_exact);
+    run_exact(onpress_system_exact);
+    run_exact(onpress_misc_root_exact);
+    break;
+  case toolbox::OnPressDomain::Payloads:
+  case toolbox::OnPressDomain::AutoPayloads:
+    run_prefix(onpress_payloads_prefix);
+    break;
+  case toolbox::OnPressDomain::Cheats:
+    run_prefix(onpress_cheats_prefix);
+    break;
+  case toolbox::OnPressDomain::RemotePlay:
+    run_exact(onpress_remote_play_exact);
+    break;
+  case toolbox::OnPressDomain::Plapps:
+    run_prefix(onpress_packages_prefix);
+    break;
+  case toolbox::OnPressDomain::PassThrough:
+    break;
+  }
+
+  return result;
+}
+
+} // namespace
+
+int OnPress_Hook(MonoObject *Instance, MonoObject *element, MonoObject *e) {
   if (!shellui_hooks_are_ready())
-    return oOnPress ? oOnPress(Instance, element, e) : 0;
+    return call_original(Instance, element, e);
 
   if (!Instance || !element) {
 #if SHELL_DEBUG == 1
     shellui_log("[LM HOOK] OnPress_Hook: args are null");
 #endif
-    return oOnPress(Instance, element, e);
+    return call_original(Instance, element, e);
   }
+
+  const toolbox::OnPressDomain domain =
+      toolbox::onpress_domain_for_page(g_ui.active_page);
+  if (domain == toolbox::OnPressDomain::PassThrough)
+    return call_original(Instance, element, e);
 
   OnPressContext ctx;
   ctx.instance = Instance;
@@ -56,62 +107,13 @@ int OnPress_Hook(MonoObject *Instance, MonoObject *element, MonoObject *e) {
   ctx.value = GetPropertyValue(element, "Value");
   ctx.title = GetPropertyValue(element, "Title");
 
-  bool is_onionhen_pl = (ctx.id.rfind("id_onionhen_pl_loader_", 0) == 0);
-
-  if (ctx.id.rfind("id_cheat_", 0) == 0 && !g_ui.is_current_game_open) {
-    notify("The Game is not running, to activate cheats launch the game first");
 #if SHELL_DEBUG == 1
-    shellui_log("Failed to activate %s, game is not running", ctx.id.c_str());
-#endif
-    // Dynamic cheat ids are not in the stock Settings model — never oOnPress.
-    return 0;
-  }
-
-  bool isExcludedId =
-      std::find(excludedIds.begin(), excludedIds.end(), ctx.id) !=
-      excludedIds.end();
-  if (ctx.value.empty() && !isExcludedId && !is_onionhen_pl) {
-    /* Stock PkgInstaller: Id = /mnt/usb0/foo.pkg, Value empty. */
-    OnPressResult pkg = onpress_try_pkg_path(ctx);
-    if (pkg == OnPressResult::Consumed)
-      return 0;
-#if SHELL_DEBUG == 1
-    shellui_log("[LM HOOK] OnPress_Hook: Id: %s has no value set",
-                ctx.id.c_str());
-#endif
-    return oOnPress(Instance, element, e);
-  }
-
-#if SHELL_DEBUG == 1
-  shellui_log("[LM HOOK] OnPress_Hook: Id: %s, Value: %s", ctx.id.c_str(),
+  shellui_log("[LM HOOK] OnPress_Hook: page=%u Id=%s Value=%s",
+              static_cast<unsigned>(g_ui.active_page), ctx.id.c_str(),
               ctx.value.c_str());
 #endif
 
-  OnPressResult result = OnPressResult::NotMine;
-  size_t n = 0;
-
-  // Prefix tables first (cheats/payloads/packages) so exact "id_payload" list title
-  // is not required — then exact tables.
-  auto run_prefix = [&](const OnPressPrefixEntry *(*fn)(size_t *)) {
-    if (result != OnPressResult::NotMine)
-      return;
-    const OnPressPrefixEntry *t = fn(&n);
-    result = try_prefix(t, n, ctx);
-  };
-  auto run_exact = [&](const OnPressExactEntry *(*fn)(size_t *)) {
-    if (result != OnPressResult::NotMine)
-      return;
-    const OnPressExactEntry *t = fn(&n);
-    result = try_exact(t, n, ctx);
-  };
-
-  run_prefix(onpress_cheats_prefix);
-  run_prefix(onpress_payloads_prefix);
-  run_prefix(onpress_packages_prefix);
-  run_exact(onpress_overlay_exact);
-  run_exact(onpress_network_exact);
-  run_exact(onpress_system_exact);
-  run_exact(onpress_misc_exact);
+  const OnPressResult result = dispatch_toolbox_press(domain, ctx);
 
   if (result == OnPressResult::Consumed) {
     // Fully owned by OnionHEN (dynamic XML). Skip stock SettingPage.OnPressed.
@@ -120,16 +122,11 @@ int OnPress_Hook(MonoObject *Instance, MonoObject *element, MonoObject *e) {
     }
     return 0;
   }
-  if (result == OnPressResult::EarlyReturn) {
-    return oOnPress(Instance, element, e);
-  }
-  if (result == OnPressResult::NotMine) {
-    shellui_log("Not a toolbox item!");
-  }
-  // Match legacy: persist after any non-early path (including unknown ids).
-  if (ctx.dirty) {
+  if (result == OnPressResult::Handled && ctx.dirty) {
     settings_commit(ctx.reload_main, ctx.reload_util);
   }
 
-  return oOnPress(Instance, element, e);
+  // Handled augments stock value/navigation behavior. EarlyReturn and NotMine
+  // are side-effect-free pass-throughs.
+  return call_original(Instance, element, e);
 }

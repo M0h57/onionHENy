@@ -52,6 +52,7 @@ Binary: `source/util/build/host-tests/onion-host-tests`
 | `test_msg_protocol` | IPC paths, magic, command ordinals, `IPC_Ret`, message POD, reply JSON body |
 | `test_ps5_settings_ui` | fluent XML builder + escaping |
 | `test_toolbox_route` | resource → page routing + cheat map helpers |
+| `test_onpress_policy` | page-scoped OnPress ownership, stock-page pass-through, unrelated-resource stability |
 
 ## Intentionally not host-tested
 
@@ -59,7 +60,7 @@ Binary: `source/util/build/host-tests/onion-host-tests`
 |------|-----|
 | `CheatApplier` / memory backends | needs target process / mdbg |
 | `libonion_proc` allproc / ucred | kernel_copyout |
-| ShellUI Mono / OnPress | SceShellUI |
+| ShellUI Mono invocation / OnPress handlers | SceShellUI; page ownership policy is host-tested |
 | Full IPC server accept loop | device sockets + daemon world |
 | libNineS inject | ptrace |
 

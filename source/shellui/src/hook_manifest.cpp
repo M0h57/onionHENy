@@ -5,6 +5,7 @@
 #include "ipc.hpp"
 #include "external_symbols.hpp"
 #include "shellui_state.hpp"
+#include "onpress_policy.hpp"
 #include "toolbox_route.hpp"
 #include <onion/platform.h>
 #include <string>
@@ -61,10 +62,13 @@ uint64_t GetManifestResourceStream_Hook(uint64_t inst, MonoString *FileName) {
    * Leaving the Remote Play toolbox page must end PIN registration (thread +
    * sceRemoteplayNotifyPinCodeError). UpdateImposeStatusFlag is disabled, so
    * this resource-stream transition is the primary leave signal.
-   */
-  const bool was_remote_play = g_ui.is_remote_play;
-  g_ui.apply_route_flags(route.flags);
-  if (was_remote_play && !g_ui.is_remote_play) {
+  */
+  const bool was_remote_play =
+      g_ui.is_active_page(toolbox::Page::RemotePlay);
+  g_ui.set_active_page(toolbox::active_page_after_resource(
+      g_ui.active_page, route.page, resourceName));
+  if (was_remote_play &&
+      !g_ui.is_active_page(toolbox::Page::RemotePlay)) {
     shellui_log("[remote_play] left toolbox page — end registration");
     StopConfirmRegistLoop();
   }

@@ -7,6 +7,7 @@
 #include "hooked_funcs.hpp"
 #include "external_symbols.hpp"
 #include "ipc.hpp"
+#include "onpress_policy.hpp"
 #include "toolbox_values.hpp"
 
 #include "shellui_state.hpp"
@@ -20,6 +21,10 @@ extern MonoMethod *set_value_method;
 std::string GetPropertyValue(MonoObject *element, const char *propertyName);
 
 namespace {
+
+int call_original(MonoObject *instance, MonoObject *element) {
+  return oOnPreCreate ? oOnPreCreate(instance, element) : 0;
+}
 
 bool ensure_set_value_method() {
   if (set_value_method)
@@ -63,13 +68,17 @@ bool ensure_set_value_method() {
 
 int OnPreCreate_Hook(MonoObject *Instance, MonoObject *element) {
   if (!shellui_hooks_are_ready())
-    return oOnPreCreate ? oOnPreCreate(Instance, element) : 0;
+    return call_original(Instance, element);
 
   if (!Instance || !element) {
 #if SHELL_DEBUG == 1
     shellui_log("[LM HOOK] OnPreCreate_Hook: args are null");
 #endif
-    return oOnPreCreate(Instance, element);
+    return call_original(Instance, element);
+  }
+
+  if (!toolbox::toolbox_owns_settings_page(g_ui.active_page)) {
+    return call_original(Instance, element);
   }
 
   if (!ensure_set_value_method())
@@ -90,7 +99,5 @@ int OnPreCreate_Hook(MonoObject *Instance, MonoObject *element) {
     }
   }
 
-  if (!oOnPreCreate)
-    return 0;
-  return oOnPreCreate(Instance, element);
+  return call_original(Instance, element);
 }

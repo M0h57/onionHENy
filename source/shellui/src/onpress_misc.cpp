@@ -52,15 +52,23 @@ static OnPressResult id_onionhen_credits(OnPressContext &ctx) {
   return OnPressResult::EarlyReturn;
 }
 
-static const OnPressExactEntry kExact[] = {
+static const OnPressExactEntry kRootExact[] = {
     {"id_kstuff_autoload", id_kstuff_autoload},
     {"id_delete_kstuff", id_delete_kstuff},
-    {"id_save_rp_info", id_save_rp_info},
     {"id_lm_test", id_lm_test},
     {"id_onionhen_credits", id_onionhen_credits},
 };
 
-const OnPressExactEntry *onpress_misc_exact(size_t *count) {
-  *count = sizeof(kExact) / sizeof(kExact[0]);
-  return kExact;
+static const OnPressExactEntry kRemotePlayExact[] = {
+    {"id_save_rp_info", id_save_rp_info},
+};
+
+const OnPressExactEntry *onpress_misc_root_exact(size_t *count) {
+  *count = sizeof(kRootExact) / sizeof(kRootExact[0]);
+  return kRootExact;
+}
+
+const OnPressExactEntry *onpress_remote_play_exact(size_t *count) {
+  *count = sizeof(kRemotePlayExact) / sizeof(kRemotePlayExact[0]);
+  return kRemotePlayExact;
 }

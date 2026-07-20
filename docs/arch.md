@@ -229,7 +229,7 @@ OnionHEN/
 | **toolbox_xml** | `generate_*_xml` / `generate_toolbox_xml` 菜单 XML（`ps5ui::Page`） |
 | **settings_ui** | `settings_commit` / SaveSettings 等 UI 侧设置 |
 | **shellui_notify / shellui_proc** | UI 用 `notify(const char*)` 与进程/USB 辅助 |
-| **hook_onpress + onpress_*** | 表驱动 OnPress：`{id → handler}`，按 network / cheats / overlay / system / packages / payloads / misc 拆域 |
+| **hook_onpress + onpress_*** | 页面所有权策略 + 表驱动 OnPress：原生 Settings 页面纯透传，Toolbox 按 root / cheats / payloads / remote-play / plapps 拆域 |
 
 #### Ready / runtime flags 协议
 

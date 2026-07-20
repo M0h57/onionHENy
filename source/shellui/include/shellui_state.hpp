@@ -14,13 +14,7 @@
 
 /** Settings page / resource-stream context for ShellUI hooks. */
 struct ToolboxUiState {
-  bool is_payloads = false;
-  bool is_su_menu = false;
-  bool is_debug_settings = false;
-  bool is_cheats = false;
-  bool is_auto_payload = false;
-  bool is_remote_play = false;
-  bool is_plapps = false;
+  toolbox::Page active_page = toolbox::Page::None;
 
   bool cheats_shortcut_activated = false;
   bool cheats_shortcut_activated_not_open = false;
@@ -39,14 +33,17 @@ struct ToolboxUiState {
 
   std::string remote_play_info;
 
-  void apply_route_flags(const toolbox::RouteFlags &f) {
-    is_payloads = f.is_payloads;
-    is_su_menu = f.is_su_menu;
-    is_debug_settings = f.is_debug_settings;
-    is_cheats = f.is_cheats;
-    is_auto_payload = f.is_auto_payload;
-    is_remote_play = f.is_remote_play;
-    is_plapps = f.is_plapps;
+  void set_active_page(toolbox::Page page) {
+    active_page = page;
+  }
+
+  bool is_active_page(toolbox::Page page) const {
+    return active_page == page;
+  }
+
+  void leave_page(toolbox::Page page) {
+    if (active_page == page)
+      active_page = toolbox::Page::None;
   }
 
   void clear_cheat_shortcuts() {

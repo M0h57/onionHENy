@@ -27,6 +27,7 @@ extern "C" int test_hook_lifecycle_suite(void);
 extern "C" int test_hijack_retry_suite(void);
 extern "C" int test_ps5_settings_ui_suite(void);
 extern "C" int test_toolbox_route_suite(void);
+extern "C" int test_onpress_policy_suite(void);
 extern "C" int test_toolbox_helpers_suite(void);
 extern "C" int test_toolbox_i18n_suite(void);
 
@@ -60,6 +61,7 @@ int main() {
   failures += test_hijack_retry_suite();
   failures += test_ps5_settings_ui_suite();
   failures += test_toolbox_route_suite();
+  failures += test_onpress_policy_suite();
   failures += test_toolbox_helpers_suite();
   failures += test_toolbox_i18n_suite();
 
