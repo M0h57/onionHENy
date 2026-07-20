@@ -87,6 +87,12 @@ KNOWN_SETTINGS_PROFILES = [
         "source_hash": "1824c9fb562e31eef651bb3874c1c73f7f6e24b0",
     },
     {
+        "name": "11.4 NPXS40008 Settings",
+        "route": "old",
+        "file_length": 0x4F45C4,
+        "source_hash": "a7b731571f84b6cdaf7c4227a980ba5ee20004a8",
+    },
+    {
         "name": "11.6 NPXS40008 Settings",
         "route": "old",
         "file_length": 0x4F4BFC,

@@ -27,14 +27,14 @@
 如果文件来自 PS5 机器，先用带解密功能的 FTP / ftpsrv 导出解密后的
 `NPXS*.bin`。不要把未解密文件直接拿来做 profile。
 
-## 已知缺口
+## 已知复用
 
-- `11.40DUMP` 目前只提供了 `NPXS40002.bin` 和 `NPXS40009.bin`。
-  `NPXS40002` 的 HBC 与 11.6 完全一致，可复用 `11.4/11.6`
-  HomeUI profile；但 Settings DebugSettings 兼容仍需要导出解密后的
-  `NPXS40008.bin`。已检查 `NPXS40009.bin`，其中没有
-  `debug_settings` / `debug_settings_old`，不能作为 Settings profile
-  指纹来源。
+- `11.40DUMP` 的 `NPXS40002` HBC 与 11.6 完全一致，复用
+  `11.4/11.6` HomeUI profile。`NPXS40008` 使用独立 Settings 指纹：
+  `hbc_file_length=0x4f45c4`、
+  `source_hash=a7b731571f84b6cdaf7c4227a980ba5ee20004a8`，route 为 old。
+- `NPXS40009` 不包含 `debug_settings` / `debug_settings_old`，不能作为
+  Settings profile 指纹来源。
 
 ## 第一轮识别
 
