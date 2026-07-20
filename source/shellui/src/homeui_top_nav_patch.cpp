@@ -71,7 +71,9 @@ struct BytePatch {
 
 enum HomeUiPatchByteSet {
   kHomeUiPatchByteSet1001,
+  kHomeUiPatchByteSet1060,
   kHomeUiPatchByteSet1160,
+  kHomeUiPatchByteSet1270,
 };
 
 struct HomeUiPatchOffsets {
@@ -121,6 +123,28 @@ static const HomeUiPatchProfile kHomeUiPatchProfiles[] = {
         },
     },
     {
+        "10.6 NPXS40002 HomeUI",
+        kHomeUiPatchByteSet1060,
+        89,
+        0x1b3bcc,
+        {0x2c, 0xac, 0x5c, 0xc4, 0x44, 0xba, 0x04,
+         0x73, 0xea, 0x8e, 0xe6, 0x32, 0xa7, 0x94,
+         0x2f, 0x28, 0x14, 0x82, 0xa6, 0x8a},
+        {
+            0x473fa,
+            0x44718,
+            0x53990,
+            0xbcd9c,
+            0x17593c,
+            0x39d0c,
+            0xc0259,
+            0x4cd5e,
+            0x499ed,
+            0xc025d,
+            0x176079,
+        },
+    },
+    {
         "11.6 NPXS40002 HomeUI",
         kHomeUiPatchByteSet1160,
         89,
@@ -140,6 +164,28 @@ static const HomeUiPatchProfile kHomeUiPatchProfiles[] = {
             0x49cd3,
             0xc0455,
             0x1760b3,
+        },
+    },
+    {
+        "12.7 NPXS40002 HomeUI",
+        kHomeUiPatchByteSet1270,
+        89,
+        0x1b73bc,
+        {0x9d, 0xd2, 0xdc, 0x47, 0xc6, 0x02, 0x48,
+         0x43, 0xf6, 0x85, 0xaf, 0x80, 0xae, 0x92,
+         0x73, 0xe6, 0xa0, 0x75, 0x33, 0x7d},
+        {
+            0x46444,
+            0x455ba,
+            0x55558,
+            0xbf71a,
+            0x1793b7,
+            0x468ee,
+            0xc3049,
+            0x54e9f,
+            0x4b726,
+            0xc304d,
+            0x1797ad,
         },
     },
 };
@@ -523,6 +569,12 @@ void patch_homeui_top_nav(unsigned char *buffer, int *size_ptr,
       0x54, 0xc9, 0x1b, 0x19, 0x16, 0x2e, 0x15, 0x68, 0x16};
   static const unsigned char k1001NewIconOrder[] = {
       0x54, 0xc9, 0x1b, 0x4a, 0x1b, 0x2e, 0x15, 0x68, 0x16};
+  static const unsigned char k1060OldIconOrder[] = {
+      0x54, 0x32, 0x1b, 0xa9, 0x1b, 0x44, 0x15, 0x6e, 0x16};
+  static const unsigned char k1060LegacyAppErrorIconOrder[] = {
+      0x54, 0xa9, 0x1b, 0x27, 0x16, 0x44, 0x15, 0x6e, 0x16};
+  static const unsigned char k1060NewIconOrder[] = {
+      0x54, 0xa9, 0x1b, 0x32, 0x1b, 0x44, 0x15, 0x6e, 0x16};
   static const unsigned char k1160OldIconOrder[] = {
       0x54, 0xfa, 0x1a, 0x5e, 0x1b, 0x0d, 0x15, 0x1b, 0x16};
   static const unsigned char k1160LegacyAliasedIconOrder[] = {
@@ -531,15 +583,31 @@ void patch_homeui_top_nav(unsigned char *buffer, int *size_ptr,
       0x54, 0x5e, 0x1b, 0xdc, 0x15, 0x0d, 0x15, 0x1b, 0x16};
   static const unsigned char k1160NewIconOrder[] = {
       0x54, 0x5e, 0x1b, 0xfa, 0x1a, 0x0d, 0x15, 0x1b, 0x16};
+  static const unsigned char k1270OldIconOrder[] = {
+      0x54, 0xda, 0x1b, 0x4b, 0x1c, 0x4a, 0x15, 0x82, 0x16};
+  static const unsigned char k1270LegacyAliasedIconOrder[] = {
+      0x54, 0x4b, 0x1c, 0xda, 0x1b, 0x4a, 0x15, 0x82, 0x16};
+  static const unsigned char k1270LegacyAppErrorIconOrder[] = {
+      0x54, 0x4b, 0x1c, 0x3b, 0x16, 0x4a, 0x15, 0x82, 0x16};
+  static const unsigned char k1270NewIconOrder[] = {
+      0x54, 0x4b, 0x1c, 0xda, 0x1b, 0x4a, 0x15, 0x82, 0x16};
 
   static const unsigned char k1001OriginalFpsFactory[] = {0x62, 0x01, 0x01,
                                                          0x8e, 0x1d};
   static const unsigned char k1001LegacyAliasedFpsFactory[] = {
       0x62, 0x01, 0x01, 0x8c, 0x1d};
+  static const unsigned char k1060OriginalFpsFactory[] = {0x62, 0x01, 0x01,
+                                                         0x8e, 0x1d};
+  static const unsigned char k1060LegacyAliasedFpsFactory[] = {
+      0x62, 0x01, 0x01, 0x8c, 0x1d};
   static const unsigned char k1160OriginalFpsFactory[] = {0x62, 0x01, 0x01,
                                                          0xaf, 0x1d};
   static const unsigned char k1160LegacyAliasedFpsFactory[] = {
       0x62, 0x01, 0x01, 0xad, 0x1d};
+  static const unsigned char k1270OriginalFpsFactory[] = {0x62, 0x01, 0x01,
+                                                         0xd6, 0x1d};
+  static const unsigned char k1270LegacyAliasedFpsFactory[] = {
+      0x62, 0x01, 0x01, 0xd4, 0x1d};
 
   /*
    * The visible Settings slot has its own component, so patching its iconId
@@ -566,8 +634,12 @@ void patch_homeui_top_nav(unsigned char *buffer, int *size_ptr,
    */
   static const unsigned char k1001OldCustomIconValue[] = {0x8f, 0x01};
   static const unsigned char k1001NewCustomIconValue[] = {0xc9, 0x0e};
+  static const unsigned char k1060OldCustomIconValue[] = {0x87, 0x01};
+  static const unsigned char k1060NewCustomIconValue[] = {0xce, 0x0c};
   static const unsigned char k1160OldCustomIconValue[] = {0xba, 0x01};
   static const unsigned char k1160NewCustomIconValue[] = {0x47, 0x0f};
+  static const unsigned char k1270OldCustomIconValue[] = {0xac, 0x08};
+  static const unsigned char k1270NewCustomIconValue[] = {0x70, 0x0f};
   static const unsigned char kLegacyTopNavPressUri[] = {
       'O', 'n', 'i', 'o', 'n', 'H', 'E', 'N', '?', 'N', 'a', 'v', 'U', 'I'};
   static const unsigned char kStockDownloadErrorString[] = {
@@ -593,7 +665,9 @@ void patch_homeui_top_nav(unsigned char *buffer, int *size_ptr,
       'O', 'n', 'i', 'o', 'n', 'H', 'E', 'N',
       '?', 'N', 'a', 'v', 'U', 'I', '=', '1'};
   static const unsigned char k1001OldCustomTitleValue[] = {0x15, 0x0b};
+  static const unsigned char k1060OldCustomTitleValue[] = {0xf8, 0x0a};
   static const unsigned char k1160OldCustomTitleValue[] = {0x17, 0x0b};
+  static const unsigned char k1270OldCustomTitleValue[] = {0x4e, 0x0b};
   static const unsigned char kNewCustomTitleValue[] = {0xff, 0x00};
   static const unsigned char k1001OnionHenButtonBody[] = {
       0x29, 0x00, 0x00, 0x2e, 0x01, 0x00, 0x0a, 0x35, 0x04, 0x01, 0x01,
@@ -610,6 +684,22 @@ void patch_homeui_top_nav(unsigned char *buffer, int *size_ptr,
       0xae, 0x1c, 0x34, 0x04, 0x01, 0x04, 0xf2, 0x32, 0x01, 0x62, 0x02,
       0x01, 0x8f, 0x1d, 0x07, 0x01, 0x00, 0x00, 0x52, 0x04, 0x04, 0x03,
       0x02, 0x01, 0x35, 0x02, 0x05, 0x05, 0x14, 0x2c, 0x71, 0x01, 0x2b,
+      0x0c, 0x51, 0x01, 0x02, 0x05, 0x01, 0x8e, 0x07, 0x01, 0x75, 0x01};
+  static const unsigned char k1060OnionHenButtonBody[] = {
+      0x29, 0x00, 0x00, 0x2e, 0x01, 0x00, 0x0a, 0x35, 0x04, 0x01, 0x01,
+      0x5b, 0x2a, 0x03, 0x01, 0x71, 0x02, 0xf8, 0x0a, 0x3e, 0x01, 0x02,
+      0xd0, 0x17, 0x74, 0x03, 0x51, 0x05, 0x04, 0x03, 0x01, 0x2e, 0x01,
+      0x00, 0x0e, 0x34, 0x02, 0x01, 0x02, 0x79, 0x2e, 0x01, 0x00, 0x0d,
+      0x34, 0x01, 0x01, 0x01, 0x67, 0x01, 0x00, 0x03, 0x00, 0x03, 0x00,
+      0x6e, 0x10, 0x24, 0x19, 0x39, 0x00, 0x05, 0x01, 0xb1, 0x00, 0x52,
+      0x00, 0x02, 0x03, 0x01, 0x00, 0x5a, 0x00, 0x74, 0x00, 0x74, 0x00};
+  static const unsigned char k1060OldFpsBodyPrefix[] = {
+      0x29, 0x00, 0x00, 0x2e, 0x01, 0x00, 0x03, 0x34, 0x04, 0x01, 0x01,
+      0xe2, 0x2e, 0x02, 0x00, 0x01, 0x35, 0x02, 0x02, 0x02, 0x9b, 0x1b,
+      0x74, 0x03, 0x51, 0x02, 0x04, 0x03, 0x02, 0x35, 0x05, 0x02, 0x03,
+      0x89, 0x1c, 0x34, 0x04, 0x01, 0x04, 0xf2, 0x32, 0x01, 0x62, 0x02,
+      0x01, 0x8f, 0x1d, 0x07, 0x01, 0x00, 0x00, 0x52, 0x04, 0x04, 0x03,
+      0x02, 0x01, 0x35, 0x02, 0x05, 0x05, 0x03, 0x2c, 0x71, 0x01, 0x24,
       0x0c, 0x51, 0x01, 0x02, 0x05, 0x01, 0x8e, 0x07, 0x01, 0x75, 0x01};
   static const unsigned char k1160LegacyOnionHenButtonBody[] = {
       0x29, 0x00, 0x00, 0x2e, 0x01, 0x00, 0x05, 0x35, 0x04, 0x01, 0x01,
@@ -635,63 +725,172 @@ void patch_homeui_top_nav(unsigned char *buffer, int *size_ptr,
       0x01, 0xb0, 0x1d, 0x07, 0x01, 0x00, 0x00, 0x52, 0x04, 0x04, 0x03,
       0x02, 0x01, 0x35, 0x02, 0x05, 0x05, 0x17, 0x2c, 0x71, 0x01, 0x25,
       0x0c, 0x51, 0x01, 0x02, 0x05, 0x01, 0x8e, 0x07, 0x01, 0x75, 0x01};
+  static const unsigned char k1270OnionHenButtonBody[] = {
+      0x29, 0x00, 0x00, 0x2e, 0x01, 0x00, 0x05, 0x35, 0x04, 0x01, 0x01,
+      0x69, 0x2b, 0x03, 0x01, 0x71, 0x02, 0x4e, 0x0b, 0x3e, 0x01, 0x02,
+      0x40, 0x18, 0x74, 0x03, 0x51, 0x05, 0x04, 0x03, 0x01, 0x2e, 0x01,
+      0x00, 0x09, 0x34, 0x02, 0x01, 0x02, 0x7e, 0x2e, 0x01, 0x00, 0x08,
+      0x34, 0x01, 0x01, 0x01, 0x6c, 0x01, 0x00, 0x03, 0x00, 0x03, 0x00,
+      0x73, 0x12, 0x68, 0x1b, 0x39, 0x00, 0x05, 0x01, 0xbb, 0x00, 0x52,
+      0x00, 0x02, 0x03, 0x01, 0x00, 0x5a, 0x00, 0x74, 0x00, 0x74, 0x00};
+  static const unsigned char k1270OldFpsBodyPrefix[] = {
+      0x29, 0x00, 0x00, 0x2e, 0x01, 0x00, 0x02, 0x34, 0x04, 0x01, 0x01,
+      0xe7, 0x2e, 0x02, 0x00, 0x00, 0x35, 0x02, 0x02, 0x02, 0x8e, 0x1e,
+      0x74, 0x03, 0x51, 0x02, 0x04, 0x03, 0x02, 0x35, 0x05, 0x02, 0x03,
+      0x6c, 0x18, 0x34, 0x04, 0x01, 0x04, 0xf5, 0x32, 0x01, 0x62, 0x02,
+      0x01, 0xd7, 0x1d, 0x07, 0x01, 0x00, 0x00, 0x52, 0x04, 0x04, 0x03,
+      0x02, 0x01, 0x35, 0x02, 0x05, 0x05, 0x4e, 0x2d, 0x71, 0x01, 0x6c,
+      0x0c, 0x51, 0x01, 0x02, 0x05, 0x01, 0x8e, 0x07, 0x01, 0x75, 0x01};
   static_assert(sizeof(k1001OldIconOrder) == sizeof(k1160OldIconOrder),
+                "HomeUI top-nav order patch size mismatch");
+  static_assert(sizeof(k1001OldIconOrder) == sizeof(k1060OldIconOrder),
+                "HomeUI top-nav order patch size mismatch");
+  static_assert(sizeof(k1001OldIconOrder) == sizeof(k1270OldIconOrder),
                 "HomeUI top-nav order patch size mismatch");
   static_assert(sizeof(k1001OriginalFpsFactory) ==
                     sizeof(k1160OriginalFpsFactory),
                 "HomeUI Fps factory patch size mismatch");
+  static_assert(sizeof(k1001OriginalFpsFactory) ==
+                    sizeof(k1060OriginalFpsFactory),
+                "HomeUI Fps factory patch size mismatch");
+  static_assert(sizeof(k1001OriginalFpsFactory) ==
+                    sizeof(k1270OriginalFpsFactory),
+                "HomeUI Fps factory patch size mismatch");
   static_assert(sizeof(k1001OldCustomIconValue) ==
                     sizeof(k1160OldCustomIconValue),
+                "HomeUI custom icon value patch size mismatch");
+  static_assert(sizeof(k1001OldCustomIconValue) ==
+                    sizeof(k1060OldCustomIconValue),
+                "HomeUI custom icon value patch size mismatch");
+  static_assert(sizeof(k1001OldCustomIconValue) ==
+                    sizeof(k1270OldCustomIconValue),
                 "HomeUI custom icon value patch size mismatch");
   static_assert(sizeof(k1001OldCustomTitleValue) ==
                     sizeof(k1160OldCustomTitleValue),
                 "HomeUI custom title value patch size mismatch");
+  static_assert(sizeof(k1001OldCustomTitleValue) ==
+                    sizeof(k1060OldCustomTitleValue),
+                "HomeUI custom title value patch size mismatch");
+  static_assert(sizeof(k1001OldCustomTitleValue) ==
+                    sizeof(k1270OldCustomTitleValue),
+                "HomeUI custom title value patch size mismatch");
   static_assert(sizeof(k1001OldFpsBodyPrefix) ==
                     sizeof(k1001OnionHenButtonBody),
+                "HomeUI top-nav Fps body patch must fit prefix length");
+  static_assert(sizeof(k1060OldFpsBodyPrefix) ==
+                    sizeof(k1060OnionHenButtonBody),
                 "HomeUI top-nav Fps body patch must fit prefix length");
   static_assert(sizeof(k1160OldFpsBodyPrefix) ==
                     sizeof(k1160OnionHenButtonBody),
                 "HomeUI top-nav Fps body patch must fit prefix length");
+  static_assert(sizeof(k1270OldFpsBodyPrefix) ==
+                    sizeof(k1270OnionHenButtonBody),
+                "HomeUI top-nav Fps body patch must fit prefix length");
 
-  const bool use_1001 = profile->byte_set == kHomeUiPatchByteSet1001;
-  const unsigned char *old_icon_order =
-      use_1001 ? k1001OldIconOrder : k1160OldIconOrder;
-  const unsigned char *legacy_aliased_icon_order =
-      use_1001 ? k1001NewIconOrder : k1160LegacyAliasedIconOrder;
-  const unsigned char *legacy_app_error_icon_order =
-      use_1001 ? k1001LegacyAppErrorIconOrder : k1160LegacyAppErrorIconOrder;
-  const unsigned char *new_icon_order =
-      use_1001 ? k1001NewIconOrder : k1160NewIconOrder;
-  const unsigned char *original_fps_factory =
-      use_1001 ? k1001OriginalFpsFactory : k1160OriginalFpsFactory;
-  const unsigned char *legacy_aliased_fps_factory =
-      use_1001 ? k1001LegacyAliasedFpsFactory
-               : k1160LegacyAliasedFpsFactory;
-  const unsigned char *old_custom_icon_value =
-      use_1001 ? k1001OldCustomIconValue : k1160OldCustomIconValue;
-  const unsigned char *new_custom_icon_value =
-      use_1001 ? k1001NewCustomIconValue : k1160NewCustomIconValue;
-  const unsigned char *old_custom_title_value =
-      use_1001 ? k1001OldCustomTitleValue : k1160OldCustomTitleValue;
-  const unsigned char *old_fps_body_prefix =
-      use_1001 ? k1001OldFpsBodyPrefix : k1160OldFpsBodyPrefix;
-  const unsigned char *legacy_onion_hen_button_body =
-      use_1001 ? nullptr : k1160LegacyOnionHenButtonBody;
-  const unsigned char *onion_hen_button_body =
-      use_1001 ? k1001OnionHenButtonBody : k1160OnionHenButtonBody;
+  struct HomeUiPatchBytes {
+    HomeUiPatchByteSet byte_set;
+    const unsigned char *old_icon_order;
+    const unsigned char *legacy_aliased_icon_order;
+    const unsigned char *legacy_app_error_icon_order;
+    const unsigned char *new_icon_order;
+    const unsigned char *original_fps_factory;
+    const unsigned char *legacy_aliased_fps_factory;
+    const unsigned char *old_custom_icon_value;
+    const unsigned char *new_custom_icon_value;
+    const unsigned char *old_custom_title_value;
+    const unsigned char *old_fps_body_prefix;
+    const unsigned char *legacy_onion_hen_button_body;
+    const unsigned char *onion_hen_button_body;
+  };
+
+  static const HomeUiPatchBytes kPatchBytes[] = {
+      {
+          kHomeUiPatchByteSet1001,
+          k1001OldIconOrder,
+          k1001NewIconOrder,
+          k1001LegacyAppErrorIconOrder,
+          k1001NewIconOrder,
+          k1001OriginalFpsFactory,
+          k1001LegacyAliasedFpsFactory,
+          k1001OldCustomIconValue,
+          k1001NewCustomIconValue,
+          k1001OldCustomTitleValue,
+          k1001OldFpsBodyPrefix,
+          nullptr,
+          k1001OnionHenButtonBody,
+      },
+      {
+          kHomeUiPatchByteSet1060,
+          k1060OldIconOrder,
+          k1060NewIconOrder,
+          k1060LegacyAppErrorIconOrder,
+          k1060NewIconOrder,
+          k1060OriginalFpsFactory,
+          k1060LegacyAliasedFpsFactory,
+          k1060OldCustomIconValue,
+          k1060NewCustomIconValue,
+          k1060OldCustomTitleValue,
+          k1060OldFpsBodyPrefix,
+          nullptr,
+          k1060OnionHenButtonBody,
+      },
+      {
+          kHomeUiPatchByteSet1160,
+          k1160OldIconOrder,
+          k1160LegacyAliasedIconOrder,
+          k1160LegacyAppErrorIconOrder,
+          k1160NewIconOrder,
+          k1160OriginalFpsFactory,
+          k1160LegacyAliasedFpsFactory,
+          k1160OldCustomIconValue,
+          k1160NewCustomIconValue,
+          k1160OldCustomTitleValue,
+          k1160OldFpsBodyPrefix,
+          k1160LegacyOnionHenButtonBody,
+          k1160OnionHenButtonBody,
+      },
+      {
+          kHomeUiPatchByteSet1270,
+          k1270OldIconOrder,
+          k1270LegacyAliasedIconOrder,
+          k1270LegacyAppErrorIconOrder,
+          k1270NewIconOrder,
+          k1270OriginalFpsFactory,
+          k1270LegacyAliasedFpsFactory,
+          k1270OldCustomIconValue,
+          k1270NewCustomIconValue,
+          k1270OldCustomTitleValue,
+          k1270OldFpsBodyPrefix,
+          nullptr,
+          k1270OnionHenButtonBody,
+      },
+  };
+
+  const HomeUiPatchBytes *bytes = nullptr;
+  for (size_t i = 0; i < sizeof(kPatchBytes) / sizeof(kPatchBytes[0]); ++i) {
+    if (kPatchBytes[i].byte_set == profile->byte_set) {
+      bytes = &kPatchBytes[i];
+      break;
+    }
+  }
+  if (!bytes) {
+    return;
+  }
 
   const BytePatch kPatches[] = {
-      {"home icon order", profile->offsets.home_icon_order, old_icon_order,
-       legacy_aliased_icon_order, legacy_app_error_icon_order, new_icon_order,
+      {"home icon order", profile->offsets.home_icon_order,
+       bytes->old_icon_order, bytes->legacy_aliased_icon_order,
+       bytes->legacy_app_error_icon_order, bytes->new_icon_order,
        sizeof(k1160OldIconOrder)},
       {"legacy Fps factory repair", profile->offsets.fps_factory,
-       legacy_aliased_fps_factory, nullptr, nullptr, original_fps_factory,
-       sizeof(k1160OriginalFpsFactory)},
+       bytes->legacy_aliased_fps_factory, nullptr, nullptr,
+       bytes->original_fps_factory, sizeof(k1160OriginalFpsFactory)},
       {"download_error string repair", profile->offsets.download_error_string,
        kLegacyTopNavPressUri, nullptr, nullptr, kStockDownloadErrorString,
        sizeof(kStockDownloadErrorString)},
       {"custom icon value", profile->offsets.custom_icon_value,
-       old_custom_icon_value, nullptr, nullptr, new_custom_icon_value,
+       bytes->old_custom_icon_value, nullptr, nullptr,
+       bytes->new_custom_icon_value,
        sizeof(k1160OldCustomIconValue)},
       {"custom icon uri", profile->offsets.custom_icon_uri, kOldCustomIconUri,
        nullptr, nullptr, kNewCustomIconUri, sizeof(kOldCustomIconUri)},
@@ -700,11 +899,11 @@ void patch_homeui_top_nav(unsigned char *buffer, int *size_ptr,
        kLegacyPaddedTopNavLinkUri,
        kNewTopNavLinkUri, sizeof(kOldTopNavLinkUri)},
       {"custom title value", profile->offsets.custom_title_value,
-       old_custom_title_value, nullptr, nullptr, kNewCustomTitleValue,
+       bytes->old_custom_title_value, nullptr, nullptr, kNewCustomTitleValue,
        sizeof(k1160OldCustomTitleValue)},
-      {"top-nav Fps body", profile->offsets.fps_body, old_fps_body_prefix,
-       legacy_onion_hen_button_body, nullptr,
-       onion_hen_button_body, sizeof(k1160OldFpsBodyPrefix)},
+      {"top-nav Fps body", profile->offsets.fps_body,
+       bytes->old_fps_body_prefix, bytes->legacy_onion_hen_button_body,
+       nullptr, bytes->onion_hen_button_body, sizeof(k1160OldFpsBodyPrefix)},
   };
 
   bool any_change = false;
