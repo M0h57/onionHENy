@@ -175,8 +175,8 @@ constexpr Entry kTable[] = {
 
   // About (UI chrome; person/project names stay as literals in XML)
   {"about.donate", "支持本项目", "Support this project"},
-  {"about.donate.sub", "喜欢这个项目吗？欢迎捐赠支持上游作者",
-   "Like the project? Consider supporting the upstream authors"},
+  {"about.donate.sub", "喜欢这个项目吗？欢迎通过 Ko-fi 捐赠支持",
+   "Like the project? Consider supporting it on Ko-fi"},
   {"about.donate.methods", "★ 捐赠方式", "★ Donation methods"},
   {"about.credits", "OnionHEN 致谢", "OnionHEN Credits"},
   {"about.credits.sub", "传承、测试与致谢", "Lineage, testers, and credits"},

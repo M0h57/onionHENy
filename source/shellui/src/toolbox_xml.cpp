@@ -475,8 +475,6 @@ constexpr const char* kIconRestMode =
     "/user/data/OnionHEN/assets/icon_xml_restmode.png";
 constexpr const char* kIconDonations =
     "/user/data/OnionHEN/assets/icon_xml_donations.png";
-constexpr const char* kQrDonation =
-    "/user/data/OnionHEN/assets/qr_kofi_0xp0co.png";
 constexpr const char* kIconCredits =
     "/user/data/OnionHEN/assets/icon_xml_credits.png";
 constexpr const char* kIconProject =
@@ -654,9 +652,6 @@ void append_toolbox_about_group(ps5ui::Group& g) {
                  ps5ui::Style::Center)
              .label("id_method_1",
                     "- Ko-fi  | https://ko-fi.com/0xp0co",
-                    ps5ui::Style::Center, kQrDonation)
-             .label("id_method_2",
-                    "- GoldHEN / SiSTR0  | https://ko-fi.com/sistro",
                     ps5ui::Style::Center);
        },
        toolbox_i18n::tr("about.donate.sub"), kIconDonations)
