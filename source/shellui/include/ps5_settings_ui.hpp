@@ -64,7 +64,8 @@ struct Node {
 
 class ListBuilder {
 public:
-  ListBuilder& item(std::string id, std::string title, std::string value);
+  ListBuilder& item(std::string id, std::string title, std::string value,
+                    std::optional<std::string> icon = std::nullopt);
 
 private:
   template <typename>
@@ -105,7 +106,8 @@ public:
                 std::optional<std::string> second_title = std::nullopt,
                 std::optional<std::string> value = std::nullopt,
                 std::optional<std::string> confirm = std::nullopt,
-                std::optional<std::string> confirm_phrase = std::nullopt);
+                std::optional<std::string> confirm_phrase = std::nullopt,
+                std::optional<std::string> icon = std::nullopt);
 
   Derived& text_field(std::string id, std::string title,
                       std::optional<std::string> second_title = std::nullopt,
@@ -115,7 +117,8 @@ public:
                       std::optional<std::string> key = std::nullopt,
                       std::optional<std::string> confirm = std::nullopt,
                       std::optional<std::string> confirm_phrase = std::nullopt,
-                      std::optional<std::string> value = std::nullopt);
+                      std::optional<std::string> value = std::nullopt,
+                      std::optional<std::string> icon = std::nullopt);
 
   Derived& group(std::string id, std::string title,
                  const std::function<void(Group&)>& body,
@@ -151,6 +154,7 @@ public:
 
   Page& root_style(Style style);
   Page& root_focus(std::string id);
+  Page& root_icon(std::string icon);
 
   /** Serialize to a complete system_settings document. */
   [[nodiscard]] std::string build() const;
@@ -228,7 +232,8 @@ Derived& GroupT<Derived>::list(std::string id, std::string title,
                                std::optional<std::string> second_title,
                                std::optional<std::string> value,
                                std::optional<std::string> confirm,
-                               std::optional<std::string> confirm_phrase) {
+                               std::optional<std::string> confirm_phrase,
+                               std::optional<std::string> icon) {
   Node n;
   n.kind = Node::Kind::List;
   n.attrs.id = std::move(id);
@@ -237,6 +242,7 @@ Derived& GroupT<Derived>::list(std::string id, std::string title,
   n.attrs.value = std::move(value);
   n.attrs.confirm = std::move(confirm);
   n.attrs.confirm_phrase = std::move(confirm_phrase);
+  n.attrs.icon = std::move(icon);
   node_->children.push_back(std::move(n));
   ListBuilder lb(node_->children.back());
   if (body)
@@ -253,7 +259,8 @@ Derived& GroupT<Derived>::text_field(std::string id, std::string title,
                                      std::optional<std::string> key,
                                      std::optional<std::string> confirm,
                                      std::optional<std::string> confirm_phrase,
-                                     std::optional<std::string> value) {
+                                     std::optional<std::string> value,
+                                     std::optional<std::string> icon) {
   Node n;
   n.kind = Node::Kind::TextField;
   n.attrs.id = std::move(id);
@@ -266,6 +273,7 @@ Derived& GroupT<Derived>::text_field(std::string id, std::string title,
   n.attrs.confirm = std::move(confirm);
   n.attrs.confirm_phrase = std::move(confirm_phrase);
   n.attrs.value = std::move(value);
+  n.attrs.icon = std::move(icon);
   return add(std::move(n));
 }
 

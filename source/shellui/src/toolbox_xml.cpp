@@ -652,6 +652,9 @@ void append_toolbox_about_group(ps5ui::Group& g) {
                  ps5ui::Style::Center)
              .label("id_method_1",
                     "- Ko-fi  | https://ko-fi.com/0xp0co",
+                    ps5ui::Style::Center)
+             .label("id_donor_info", "★ 捐赠者 ★", ps5ui::Style::Center)
+             .label("id_donor_1", "爱过流星 · 狂爱龙卷風 · 石之心",
                     ps5ui::Style::Center);
        },
        toolbox_i18n::tr("about.donate.sub"), kIconDonations)
@@ -674,15 +677,14 @@ void append_toolbox_about_group(ps5ui::Group& g) {
                 .label("id_about_testers_intro",
                        toolbox_i18n::tr("about.testers.intro"),
                        ps5ui::Style::Center)
-                /* Names from kylin-core-web non-OEM KcContributorModal avatars. */
                 .label("id_about_tester_1",
-                       "B站谢锡榆 · Misy · pj123rock · 风吹屁屁凉 · 风清扬",
+                       "即食面 · 安定区 · 随风",
                        ps5ui::Style::Center)
                 .label("id_about_tester_2",
-                       "狂爱龙卷风 · 萌面超人 · 石之心 · 西安萼片 · 萧河",
+                       "麒麟 · 大饼电玩 · 尼克库尔曼",
                        ps5ui::Style::Center)
                 .label("id_about_tester_3",
-                       "心どいの小霖 · 夜太美 · 影TGlobal-sky",
+                       "云",
                        ps5ui::Style::Center)
                 .label("id_about_more", toolbox_i18n::tr("about.more"),
                        ps5ui::Style::Center);

@@ -249,6 +249,49 @@ static int test_toolbox_like_skeleton(void) {
   return 0;
 }
 
+static int test_icons_on_every_entry_kind(void) {
+  const char* icon = "/user/data/icon.png";
+  const std::string escaped_icon = "icon=\"//user//data//icon.png\"";
+  const std::string xml =
+      Page("id_root", "Root")
+          .root_icon(icon)
+          .group(
+              "id_group", "Group",
+              [icon](Group& g) {
+                g.label("id_label", "Label", Style::None, icon)
+                    .toggle("id_toggle", "Toggle", false, std::nullopt,
+                            std::nullopt, icon)
+                    .button("id_button", "Button", std::nullopt,
+                            std::nullopt, icon)
+                    .link("id_link", "Link", "page.xml", std::nullopt, icon)
+                    .list(
+                        "id_list", "List",
+                        [icon](ListBuilder& list) {
+                          list.item("id_item", "Item", "1", icon);
+                        },
+                        std::nullopt, "1", std::nullopt, std::nullopt, icon)
+                    .text_field("id_text", "Text", std::nullopt,
+                                std::nullopt, std::nullopt, std::nullopt,
+                                std::nullopt, std::nullopt, std::nullopt,
+                                std::nullopt, icon);
+              },
+              std::nullopt, icon)
+          .build();
+
+  const char* ids[] = {"id_root",   "id_group", "id_label", "id_toggle",
+                       "id_button", "id_link",  "id_list",  "id_item",
+                       "id_text"};
+  for (const char* id : ids) {
+    const size_t node = xml.find(std::string("id=\"") + id + "\"");
+    TEST_ASSERT_TRUE(node != std::string::npos);
+    const size_t end = xml.find('>', node);
+    TEST_ASSERT_TRUE(end != std::string::npos);
+    TEST_ASSERT_TRUE(xml.substr(node, end - node).find(escaped_icon) !=
+                     std::string::npos);
+  }
+  return 0;
+}
+
 extern "C" int test_ps5_settings_ui_suite(void) {
   int fails = 0;
   fails += onion_test_run("ps5ui.escape", test_escape_special_chars);
@@ -263,5 +306,7 @@ extern "C" int test_ps5_settings_ui_suite(void) {
   fails += onion_test_run("ps5ui.fluent_chain", test_fluent_returns_this);
   fails += onion_test_run("ps5ui.text_field_confirm", test_text_field_and_confirm);
   fails += onion_test_run("ps5ui.toolbox_skeleton", test_toolbox_like_skeleton);
+  fails += onion_test_run("ps5ui.icons_everywhere",
+                          test_icons_on_every_entry_kind);
   return fails;
 }

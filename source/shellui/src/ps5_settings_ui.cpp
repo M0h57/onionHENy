@@ -149,12 +149,15 @@ std::string escape(std::string_view text) {
   return out;
 }
 
-ListBuilder& ListBuilder::item(std::string id, std::string title, std::string value) {
+ListBuilder& ListBuilder::item(std::string id, std::string title,
+                              std::string value,
+                              std::optional<std::string> icon) {
   Node n;
   n.kind = Node::Kind::ListItem;
   n.attrs.id = std::move(id);
   n.attrs.title = std::move(title);
   n.attrs.value = std::move(value);
+  n.attrs.icon = std::move(icon);
   list_node_.children.push_back(std::move(n));
   return *this;
 }
@@ -174,6 +177,11 @@ Page& Page::root_style(Style style) {
 
 Page& Page::root_focus(std::string id) {
   root_.attrs.initial_focus_to = std::move(id);
+  return *this;
+}
+
+Page& Page::root_icon(std::string icon) {
+  root_.attrs.icon = std::move(icon);
   return *this;
 }
 
