@@ -179,6 +179,7 @@ along with this program; see the file COPYING. If not, see
      int sceKernelSendNotificationRequest(int32_t device,
                                           OrbisNotificationRequest *req,
                                           size_t size, int32_t blocking);
+     int sceNotificationSend(int user_id, bool is_logged, const char *payload);
      int sceUserServiceGetForegroundUser(uint32_t *userId);
      int sceLncUtilLaunchApp(const char *tid, const char *argv[],
                              LncAppParam *param);
@@ -268,8 +269,10 @@ along with this program; see the file COPYING. If not, see
  /******************************************************************************
   * Function Prototypes
   ******************************************************************************/
- void write_embedded_assets();
+/** Materialize embedded assets; return whether the startup icon is ready. */
+static bool write_embedded_assets();
  void notify(const char *text, ...);
+static void notify_starting(bool custom_icon_ready);
 static void cleanup(void);
  FileDescriptor FileDescriptor_init(int fd);
  int initStdout();
@@ -283,23 +286,56 @@ static void cleanup(void);
  extern uint8_t shellui_prx_start[];
  extern const unsigned int shellui_prx_size;
 
-  static void write_blob_file(const char *path, const void *data, size_t size) {
-    int fd = open(path, O_WRONLY | O_CREAT | O_TRUNC, 0666);
+  static bool write_blob_file(const char *path, const void *data, size_t size) {
+    char temp_path[1024];
+    const int path_len = snprintf(temp_path, sizeof(temp_path), "%s.tmp.%d", path,
+                                  getpid());
+    if (path_len < 0 || static_cast<size_t>(path_len) >= sizeof(temp_path)) {
+      klog_printf("write_embedded_assets: path too long: %s\n", path);
+      return false;
+    }
+
+    unlink(temp_path);
+    int fd = open(temp_path, O_WRONLY | O_CREAT | O_TRUNC, 0666);
     if (fd < 0) {
       klog_printf("write_embedded_assets: open failed: %s (%s)\n", path,
                   strerror(errno));
-      perror("open failed");
-      return;
+      return false;
     }
-    if (write(fd, data, size) == -1) {
-      klog_printf("write_embedded_assets: write failed: %s (%s)\n", path,
+
+    const uint8_t *cursor = static_cast<const uint8_t *>(data);
+    size_t remaining = size;
+    while (remaining > 0) {
+      const ssize_t written = write(fd, cursor, remaining);
+      if (written < 0 && errno == EINTR)
+        continue;
+      if (written < 0) {
+        klog_printf("write_embedded_assets: write failed: %s (%s)\n", path,
+                    strerror(errno));
+        close(fd);
+        unlink(temp_path);
+        return false;
+      }
+      if (written == 0) {
+        klog_printf("write_embedded_assets: zero-byte write: %s\n", path);
+        close(fd);
+        unlink(temp_path);
+        return false;
+      }
+      cursor += written;
+      remaining -= static_cast<size_t>(written);
+    }
+
+    if (close(fd) != 0 || rename(temp_path, path) != 0) {
+      klog_printf("write_embedded_assets: commit failed: %s (%s)\n", path,
                   strerror(errno));
-      perror("write failed");
+      unlink(temp_path);
+      return false;
     }
-    close(fd);
+    return true;
   }
 
-  void write_embedded_assets() {
+  static bool write_embedded_assets() {
     mkdir("/data/OnionHEN/", 0777);
     mkdir("/data/OnionHEN/assets/", 0777);
     /*
@@ -309,7 +345,8 @@ static void cleanup(void);
      * NPXS40008 = RN Settings (debug settings list). ShellUI also rewrites
      * texture ids to the short name onionh_sicon (CxmlUri / GetString path).
      */
-    write_blob_file("/data/OnionHEN/onionhen.png", &sicon_start, sicon_size);
+    const bool startup_icon_ready = write_blob_file(
+        "/data/OnionHEN/onionhen.png", &sicon_start, sicon_size);
 
     // Toolbox category icons
     write_blob_file("/data/OnionHEN/assets/icon_xml_package.png", &icon_xml_package_start, icon_xml_package_size);
@@ -346,6 +383,18 @@ static void cleanup(void);
     };
     for (const char *path : kSettingsSiconPaths)
       write_blob_file(path, &sicon_start, sicon_size);
+    return startup_icon_ready;
+}
+
+static void notify_starting(bool custom_icon_ready) {
+  if (!custom_icon_ready) {
+    klog_puts("Startup icon unavailable; using system notification icon");
+    notify("OnionHEN is starting...");
+    return;
+  }
+  onion_notify_rich("OnionHEN", "OnionHEN is starting...",
+                    "/user/data/OnionHEN/onionhen.png", "download",
+                    "588193128");
 }
 
   bool is_elf_header(uint8_t* data)
@@ -809,6 +858,8 @@ int main(void) {
   /* Real linked kernel export — must bind before any notify(). */
   onion_notify_set_send(reinterpret_cast<onion_notify_send_fn>(
       sceKernelSendNotificationRequest));
+  onion_notify_set_rich_send(reinterpret_cast<onion_notify_rich_send_fn>(
+      sceNotificationSend));
 
   signal(SIGCHLD, SIG_IGN);
 
@@ -862,8 +913,9 @@ int main(void) {
   klog_printf("   Success!\n");
 
   klog_printf("Writing embedded assets ...");
-  write_embedded_assets();
+  const bool startup_icon_ready = write_embedded_assets();
   klog_printf("   Written!\n");
+  notify_starting(startup_icon_ready);
 
   klog_printf("Unmounting /update forcefully ...");
   unlink("/update/PS5UPDATE.PUP");
