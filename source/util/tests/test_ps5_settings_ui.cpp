@@ -43,13 +43,16 @@ static int test_minimal_page_shell(void) {
 static int test_toggle_button_label_attrs(void) {
   const std::string xml =
       Page("id_page", "Page")
-          .label("id_lbl", "Hello", Style::Center)
+          .label("id_lbl", "Hello", Style::Center,
+                 "/user/data/OnionHEN/assets/qr.png")
           .toggle("id_sw", "Switch", true, "second", "desc", "tex_icon")
           .button("id_btn", "Btn", "sec", "d", "icn", Style::Center)
           .build();
 
-  TEST_ASSERT_TRUE(xml.find("<label id=\"id_lbl\" title=\"Hello\" style=\"center\"/>") !=
-                   std::string::npos);
+  TEST_ASSERT_TRUE(
+      xml.find("<label id=\"id_lbl\" title=\"Hello\" "
+               "icon=\"//user//data//OnionHEN//assets//qr.png\" "
+               "style=\"center\"/>") != std::string::npos);
   TEST_ASSERT_TRUE(xml.find("<toggle_switch id=\"id_sw\" title=\"Switch\" "
                             "second_title=\"second\" description=\"desc\" "
                             "icon=\"tex_icon\" value=\"1\"/>") != std::string::npos);

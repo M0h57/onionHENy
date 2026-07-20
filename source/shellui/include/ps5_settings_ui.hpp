@@ -81,7 +81,8 @@ class Group; // nested scopes always use Group
 template <typename Derived>
 class GroupT {
 public:
-  Derived& label(std::string id, std::string title, Style style = Style::None);
+  Derived& label(std::string id, std::string title, Style style = Style::None,
+                 std::optional<std::string> icon = std::nullopt);
 
   Derived& button(std::string id, std::string title,
                   std::optional<std::string> second_title = std::nullopt,
@@ -162,12 +163,14 @@ private:
 // ---- template method definitions ----
 
 template <typename Derived>
-Derived& GroupT<Derived>::label(std::string id, std::string title, Style style) {
+Derived& GroupT<Derived>::label(std::string id, std::string title, Style style,
+                                std::optional<std::string> icon) {
   Node n;
   n.kind = Node::Kind::Label;
   n.attrs.id = std::move(id);
   n.attrs.title = std::move(title);
   n.attrs.style = style;
+  n.attrs.icon = std::move(icon);
   return add(std::move(n));
 }
 

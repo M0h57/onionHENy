@@ -81,7 +81,7 @@ endif()
 set_source_files_properties(
 	${D_SRC}/daemon.c
 	PROPERTIES OBJECT_DEPENDS
-		"${_onion_daemon_elf};${_onion_util_elf};${_onion_elfldr_elf};${ONIONHEN_KSTUFF_ELF};${D_CWD}/assets/onionhen_sicon.png;${D_CWD}/assets/icon_xml_package.png;${D_CWD}/assets/icon_xml_plugins.png;${D_CWD}/assets/icon_xml_game.png;${D_CWD}/assets/icon_xml_monitor.png;${D_CWD}/assets/icon_xml_account.png;${D_CWD}/assets/icon_xml_network.png;${D_CWD}/assets/icon_xml_settings.png;${D_CWD}/assets/icon_xml_shortcuts.png;${D_CWD}/assets/icon_xml_debug.png;${D_CWD}/assets/icon_xml_about.png;${D_CWD}/assets/icon_xml_kstuff.png;${D_CWD}/assets/icon_xml_overlay.png;${D_CWD}/assets/icon_xml_fan.png;${D_CWD}/assets/icon_xml_restmode.png;${D_CWD}/assets/icon_xml_donations.png;${D_CWD}/assets/icon_xml_credits.png;${D_CWD}/assets/icon_xml_project.png"
+		"${_onion_daemon_elf};${_onion_util_elf};${_onion_elfldr_elf};${ONIONHEN_KSTUFF_ELF};${D_CWD}/assets/onionhen_sicon.png;${D_CWD}/assets/icon_xml_package.png;${D_CWD}/assets/icon_xml_plugins.png;${D_CWD}/assets/icon_xml_game.png;${D_CWD}/assets/icon_xml_monitor.png;${D_CWD}/assets/icon_xml_account.png;${D_CWD}/assets/icon_xml_network.png;${D_CWD}/assets/icon_xml_settings.png;${D_CWD}/assets/icon_xml_shortcuts.png;${D_CWD}/assets/icon_xml_debug.png;${D_CWD}/assets/icon_xml_about.png;${D_CWD}/assets/icon_xml_kstuff.png;${D_CWD}/assets/icon_xml_overlay.png;${D_CWD}/assets/icon_xml_fan.png;${D_CWD}/assets/icon_xml_restmode.png;${D_CWD}/assets/icon_xml_donations.png;${D_CWD}/assets/qr_kofi_0xp0co.png;${D_CWD}/assets/icon_xml_credits.png;${D_CWD}/assets/icon_xml_project.png"
 )
 target_compile_definitions(${PROJECT_NAME} PRIVATE
 	ONIONHEN_DAEMON_ELF="${_onion_daemon_elf}"
