@@ -32,6 +32,65 @@ else()
 endif()
 set(D_SRC ${D_CWD}/source)
 
+# SVG menu icons are the source of truth. Rasterize them into the build tree so
+# editing an icon cannot leave a stale checked-in PNG embedded in bootstrapper.
+set(_icon_source_dir "${D_CWD}/assets/icons")
+set(_icon_output_dir "${CMAKE_CURRENT_BINARY_DIR}/generated/assets")
+file(GLOB _icon_svg_files CONFIGURE_DEPENDS "${_icon_source_dir}/icon_xml_*.svg")
+
+find_program(RSVG_CONVERT_EXECUTABLE NAMES rsvg-convert)
+if(NOT RSVG_CONVERT_EXECUTABLE)
+	find_program(IMAGEMAGICK_EXECUTABLE NAMES magick convert)
+endif()
+if(NOT RSVG_CONVERT_EXECUTABLE AND NOT IMAGEMAGICK_EXECUTABLE)
+	message(FATAL_ERROR
+		"SVG icon conversion requires rsvg-convert (preferred) or ImageMagick")
+endif()
+
+set(_generated_icon_files)
+foreach(_svg_file IN LISTS _icon_svg_files)
+	get_filename_component(_icon_name "${_svg_file}" NAME_WE)
+	set(_png_file "${_icon_output_dir}/${_icon_name}.png")
+	if(RSVG_CONVERT_EXECUTABLE)
+		add_custom_command(
+			OUTPUT "${_png_file}"
+			COMMAND ${CMAKE_COMMAND} -E make_directory "${_icon_output_dir}"
+			COMMAND "${RSVG_CONVERT_EXECUTABLE}" --width 64 --height 64
+				--output "${_png_file}" "${_svg_file}"
+			DEPENDS "${_svg_file}"
+			COMMENT "Rasterizing ${_icon_name}.svg"
+			VERBATIM
+		)
+	else()
+		add_custom_command(
+			OUTPUT "${_png_file}"
+			COMMAND ${CMAKE_COMMAND} -E make_directory "${_icon_output_dir}"
+			COMMAND "${IMAGEMAGICK_EXECUTABLE}" -background none "${_svg_file}"
+				-resize 64x64 "${_png_file}"
+			DEPENDS "${_svg_file}"
+			COMMENT "Rasterizing ${_icon_name}.svg"
+			VERBATIM
+		)
+	endif()
+	list(APPEND _generated_icon_files "${_png_file}")
+endforeach()
+
+# These two icons do not have SVG sources yet. Copy them into the same generated
+# directory so daemon.c has one stable asset location.
+foreach(_raster_icon IN ITEMS icon_xml_monitor.png icon_xml_network.png)
+	set(_raster_source "${D_CWD}/assets/${_raster_icon}")
+	set(_raster_output "${_icon_output_dir}/${_raster_icon}")
+	add_custom_command(
+		OUTPUT "${_raster_output}"
+		COMMAND ${CMAKE_COMMAND} -E make_directory "${_icon_output_dir}"
+		COMMAND ${CMAKE_COMMAND} -E copy_if_different "${_raster_source}" "${_raster_output}"
+		DEPENDS "${_raster_source}"
+		COMMENT "Copying ${_raster_icon}"
+		VERBATIM
+	)
+	list(APPEND _generated_icon_files "${_raster_output}")
+endforeach()
+
 # Headers
 include_directories	(SYSTEM "${PS5_PAYLOAD_SDK}")
 include_directories	(SYSTEM "${PS5_PAYLOAD_SDK}/include")
@@ -81,13 +140,14 @@ endif()
 set_source_files_properties(
 	${D_SRC}/daemon.c
 	PROPERTIES OBJECT_DEPENDS
-		"${_onion_daemon_elf};${_onion_util_elf};${_onion_elfldr_elf};${ONIONHEN_KSTUFF_ELF};${D_CWD}/assets/onionhen_sicon.png;${D_CWD}/assets/icon_xml_package.png;${D_CWD}/assets/icon_xml_plugins.png;${D_CWD}/assets/icon_xml_game.png;${D_CWD}/assets/icon_xml_monitor.png;${D_CWD}/assets/icon_xml_account.png;${D_CWD}/assets/icon_xml_network.png;${D_CWD}/assets/icon_xml_settings.png;${D_CWD}/assets/icon_xml_shortcuts.png;${D_CWD}/assets/icon_xml_debug.png;${D_CWD}/assets/icon_xml_about.png;${D_CWD}/assets/icon_xml_kstuff.png;${D_CWD}/assets/icon_xml_overlay.png;${D_CWD}/assets/icon_xml_fan.png;${D_CWD}/assets/icon_xml_restmode.png;${D_CWD}/assets/icon_xml_donations.png;${D_CWD}/assets/icon_xml_credits.png;${D_CWD}/assets/icon_xml_project.png"
+		"${_onion_daemon_elf};${_onion_util_elf};${_onion_elfldr_elf};${ONIONHEN_KSTUFF_ELF};${D_CWD}/assets/onionhen_sicon.png;${_generated_icon_files}"
 )
 target_compile_definitions(${PROJECT_NAME} PRIVATE
 	ONIONHEN_DAEMON_ELF="${_onion_daemon_elf}"
 	ONIONHEN_UTIL_ELF="${_onion_util_elf}"
 	ONIONHEN_ELFLDR_ELF="${_onion_elfldr_elf}"
 	ONIONHEN_KSTUFF_ELF="${ONIONHEN_KSTUFF_ELF}"
+	ONIONHEN_ICON_ASSET_DIR="${_icon_output_dir}"
 )
 # elfldr_raise_privileges from libonion_elfldr; launches go via elfldr_remote.c.
 target_include_directories(${PROJECT_NAME} PRIVATE
@@ -102,6 +162,8 @@ target_link_directories	(${PROJECT_NAME} PUBLIC "${ONIONHEN_PS5_STUB_DIR}")
 target_sources(${PROJECT_NAME} PRIVATE "${ONIONHEN_COMMON_DIR}/elfldr_remote.c")
 target_link_libraries	(${PROJECT_NAME} PUBLIC onion_proc onion_platform onion_payload onion_ready onion_elfldr SceNotification)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+add_custom_target(${PROJECT_NAME}_assets DEPENDS ${_generated_icon_files})
+add_dependencies(${PROJECT_NAME} ${PROJECT_NAME}_assets)
 add_dependencies(${PROJECT_NAME} daemon util shellui onion_elfldr_server onion_proc onion_platform onion_payload onion_ready onion_elfldr)
 
 # Copy bootstrapper.elf as test.elf before processing

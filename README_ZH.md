@@ -177,6 +177,7 @@ OnionHEN.elf → bootstrapper → onion_elfldr.elf (:9020) → util.elf → kstu
 | [PS5 Payload SDK](https://github.com/ps5-payload-dev/sdk) | Prospero 编译器、目标头文件、运行库和 CMake wrapper |
 | CMake 3.20+ 与 Ninja | 配置并构建 payload 依赖图 |
 | Clang / LLVM | 编译 `x86_64-sie-ps5` 目标 |
+| `rsvg-convert` 或 ImageMagick | 构建时将 bootstrapper 的 SVG 图标栅格化 |
 | `lzma` 或 `xz` | 压缩 bootstrapper |
 | Git 与 `curl` 或 `wget` | 初始化 submodule 并获取外部 payload 输入 |
 
@@ -218,6 +219,8 @@ export PS5_PAYLOAD_SDK=/path/to/ps5-payload-sdk
 | `build/lib/*.a` | 第一方静态库 |
 
 所有生成文件都位于 `build/`；下载的输入缓存在 `.cache/dependencies/`。
+Bootstrapper 图标源文件位于 `source/bootstrapper/assets/icons/`，构建时会自动栅格化到
+`build/bootstrapper/generated/assets/`。
 `source/` 不再作为构建产物目录使用。
 
 ### 测试

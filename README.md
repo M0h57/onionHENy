@@ -179,6 +179,7 @@ Cheat files are loaded locally. Changes are detected and reloaded without restar
 | [PS5 Payload SDK](https://github.com/ps5-payload-dev/sdk) | Prospero compiler, target headers, runtime, and CMake wrapper |
 | CMake 3.20+ and Ninja | Configure and build the payload graph |
 | Clang / LLVM | Compile the `x86_64-sie-ps5` targets |
+| `rsvg-convert` or ImageMagick | Rasterize bootstrapper SVG icons during the build |
 | `lzma` or `xz` | Compress the bootstrapper |
 | Git and `curl` or `wget` | Initialize submodules and fetch external payload inputs |
 
@@ -221,6 +222,8 @@ Run `./scripts/build.sh --help` for the complete option list.
 | `build/lib/*.a` | First-party static libraries |
 
 All generated files stay under `build/`; downloaded inputs are cached under `.cache/dependencies/`.
+Bootstrapper icon sources live in `source/bootstrapper/assets/icons/` and are rasterized to
+`build/bootstrapper/generated/assets/` automatically.
 The `source/` tree is not used as an artifact directory.
 
 ### Tests
