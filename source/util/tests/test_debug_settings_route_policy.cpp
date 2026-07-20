@@ -264,9 +264,10 @@ static int test_welcome_toast_replaces_toolbox_uri(void) {
   TEST_ASSERT_TRUE(json.find("__ONIONHEN_TOOLBOX_URI__") == std::string::npos);
   TEST_ASSERT_TRUE(json.find("pssettings:play?function=debug_settings_old") !=
                    std::string::npos);
-  TEST_ASSERT_TRUE(json.find("OnionHEN " ONIONHEN_VERSION) !=
+  TEST_ASSERT_TRUE(json.find("\"body\": \"Welcome to OnionHEN\"") !=
                    std::string::npos);
-  TEST_ASSERT_TRUE(json.find("made by " ONIONHEN_AUTHOR) != std::string::npos);
+  TEST_ASSERT_TRUE(json.find("\"body\": \"" ONIONHEN_VERSION " made by "
+                             ONIONHEN_AUTHOR "\"") != std::string::npos);
   return 0;
 }
 

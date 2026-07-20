@@ -49,8 +49,7 @@ if(_git_clean AND _tag_result EQUAL 0 AND NOT _git_tag STREQUAL "")
     set(_version "v${_git_tag}")
   endif()
 else()
-  string(TIMESTAMP _build_date "%y%m%d")
-  set(_version "dirty-${_build_date}-${_git_sha}")
+  set(_version "dirty-${_git_sha}")
 endif()
 
 # Keep the generated value safe inside both a C string and notification JSON.
