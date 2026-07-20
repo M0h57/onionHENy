@@ -477,8 +477,8 @@ constexpr const char* kIconRemotePlay =
     "/user/data/OnionHEN/assets/icon_xml_remote_play.png";
 constexpr const char* kIconDonations =
     "/user/data/OnionHEN/assets/icon_xml_donations.png";
-constexpr const char* kIconCredits =
-    "/user/data/OnionHEN/assets/icon_xml_credits.png";
+constexpr const char* kIconThanks =
+    "/user/data/OnionHEN/assets/icon_xml_thanks.png";
 constexpr const char* kIconProject =
     "/user/data/OnionHEN/assets/icon_xml_project.png";
 constexpr const char* kIconAuthorAvatar =
@@ -696,7 +696,7 @@ void append_toolbox_about_group(ps5ui::Group& g) {
                 .label("id_about_more", toolbox_i18n::tr("about.more"),
                        ps5ui::Style::Center);
           },
-          toolbox_i18n::tr("about.credits.sub"), kIconCredits)
+          toolbox_i18n::tr("about.credits.sub"), kIconThanks)
       .group(
           "id_inc_project", toolbox_i18n::tr("about.projects"),
           [](ps5ui::Group& p) {
