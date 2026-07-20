@@ -38,7 +38,8 @@ static OnPressResult prefix_id_cheat(OnPressContext &ctx) {
     (void)g_ui.reset_cheats_if_tid_changed(tid);
     const bool enabled = ctx.value == "1";
     g_ui.set_cheat_enabled(cheat_id, enabled);
-    notify("★ %s [%s] ★", cheat_name.c_str(), enabled ? "ON" : "OFF");
+    notify("★ %s [%s] ★", cheat_name.c_str(),
+           onion_notify_tr(enabled ? "ON" : "OFF"));
   } else {
     notify("[ERROR] Failed to activate %s", cheat_name.c_str());
   }

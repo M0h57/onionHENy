@@ -248,6 +248,7 @@ OnionHEN 通过以下两个运行时视图创建并共享同一套配置 schema�
 大部分设置都可以直接在 Toolbox 中修改。新的语义化 schema 从
 `schema_version=1` 开始。如果没有配置文件，OnionHEN 会释放一份基于
 [`config.ini.example`](config.ini.example) 的带注释默认配置。
+`toolbox.language` 同时控制普通通知和右侧带图标通知的语言。
 
 | 配置项 | 默认值 | 可用值 |
 | --- | --- | --- |

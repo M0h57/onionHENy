@@ -353,7 +353,7 @@ std::string settings_serialize(const Settings &in) {
   b += "schema_version=" + std::to_string(kSettingsSchemaVersion) + "\n";
   b += "\n";
   b += "[toolbox]\n";
-  b += "# language controls the Toolbox UI language.\n";
+  b += "# language controls the Toolbox UI and notification language.\n";
   b += "# Available values: system, zh-Hans, en\n";
   b += "# system follows the PS5 system language when it can be detected.\n";
   b += "language=" + std::string(language_name(in.ui_lang)) + "\n";

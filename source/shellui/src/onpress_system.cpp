@@ -1,5 +1,7 @@
 /* Copyright (C) 2025 OnionHEN / LightningMods — OnPress system settings domain */
 #include "onpress.hpp"
+#include "toolbox_i18n.hpp"
+#include <onion/notify_i18n.h>
 #include <cstdlib>
 
 static OnPressResult id_debug_jb(OnPressContext &ctx) {
@@ -34,12 +36,13 @@ static OnPressResult id_ui_lang(OnPressContext &ctx) {
   g_settings.ui_lang = v;
   const char *name = v == 2 ? "en" : (v == 1 ? "zh-Hans" : "system");
   shellui_log("UI language: %s", name);
+  toolbox_i18n::apply_system_or_ui_lang(v);
+  onion_notify_set_language(toolbox_i18n::active_lang() ==
+                                    toolbox_i18n::Lang::ZhHans
+                                ? ONION_NOTIFY_LANG_ZH_HANS
+                                : ONION_NOTIFY_LANG_EN);
   /* XML is built when the page opens; current tree stays in the old language. */
-  if (v == 2) {
-    notify("Language saved. Leave and re-open the toolbox for it to take effect.");
-  } else {
-    notify("语言已保存。退出并重新打开工具箱后生效。");
-  }
+  notify("Language saved. Leave and re-open the toolbox for it to take effect.");
   return OnPressResult::Handled;
 }
 

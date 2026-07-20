@@ -47,6 +47,7 @@ extern "C" {
   int sceKernelGetAppInfo(pid_t pid, app_info_t * info);
   int sceKernelGetProcessName(int pid, char * out);
   int _sceApplicationGetAppId(int pid, uint32_t * appId);
+  int sceSystemServiceParamGetInt(int param_id, int *value);
 
   // set_proc_authid / get_proc_by_pid: libonion_proc
 }
@@ -84,6 +85,9 @@ bool LoadSettings() {
     }
 
     g_settings.store(s);
+    int system_language = 1;
+    (void)sceSystemServiceParamGetInt(1, &system_language);
+    onion_notify_apply_ui_language(s.ui_lang, system_language);
     /* Missing file is not an error — defaults were applied. */
     return true;
 }
@@ -101,6 +105,9 @@ int main(void) {
     /* Real linked kernel export (not a dlsym function-pointer variable). */
     onion_notify_set_send(reinterpret_cast<onion_notify_send_fn>(
         sceKernelSendNotificationRequest));
+    int system_language = 1;
+    (void)sceSystemServiceParamGetInt(1, &system_language);
+    onion_notify_apply_ui_language(onion::kUiLanguageSystem, system_language);
     OnionHEN_log("util daemon entered");
 
     if (setjmp(g_catch_buf) == 0)

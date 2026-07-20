@@ -1,6 +1,7 @@
 /* Copyright (C) 2025 OnionHEN / LightningMods */
 
 #include <onion/notify.h>
+#include <onion/notify_i18n.h>
 #include <onion/log.h>
 
 #include <stdarg.h>
@@ -105,7 +106,7 @@ static void json_escape(char *out, size_t out_sz, const char *in) {
 void onion_notify_format(char *out, size_t out_sz, int show_watermark,
                          const char *fmt, va_list ap) {
   char buff[3075];
-  vsnprintf(buff, sizeof(buff), fmt, ap);
+  vsnprintf(buff, sizeof(buff), onion_notify_tr(fmt), ap);
   (void)show_watermark;
   snprintf(out, out_sz, "[OnionHEN] %s", buff);
 }
@@ -150,8 +151,10 @@ void onion_notify_rich(const char *message, const char *sub_message,
   char payload[4096];
   int rc;
 
-  json_escape(msg, sizeof(msg), message ? message : "OnionHEN");
-  json_escape(sub, sizeof(sub), sub_message ? sub_message : "");
+  json_escape(msg, sizeof(msg),
+              onion_notify_tr(message ? message : "OnionHEN"));
+  json_escape(sub, sizeof(sub),
+              onion_notify_tr(sub_message ? sub_message : ""));
   json_escape(icon, sizeof(icon),
               icon_url ? icon_url : "/user/data/OnionHEN/onionhen.png");
   json_escape(preview, sizeof(preview),

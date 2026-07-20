@@ -22,6 +22,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include <onion/notify_i18n.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif

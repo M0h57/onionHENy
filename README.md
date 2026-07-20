@@ -253,6 +253,7 @@ OnionHEN creates and shares the same schema through these runtime views:
 Most settings can be changed directly from the Toolbox. The semantic schema
 starts at `schema_version=1`. When no config exists, OnionHEN writes an
 annotated default based on [`config.ini.example`](config.ini.example).
+`toolbox.language` also controls plain and icon-rich notification text.
 
 | Key | Default | Values |
 | --- | --- | --- |

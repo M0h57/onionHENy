@@ -38,6 +38,27 @@ static int test_notify_send_noop(void) {
   return 0;
 }
 
+static int test_notify_language_resolution(void) {
+  TEST_ASSERT_EQ_INT(ONION_NOTIFY_LANG_ZH_HANS,
+                     onion_notify_resolve_language(0, 11));
+  TEST_ASSERT_EQ_INT(ONION_NOTIFY_LANG_ZH_HANS,
+                     onion_notify_resolve_language(1, 1));
+  TEST_ASSERT_EQ_INT(ONION_NOTIFY_LANG_EN,
+                     onion_notify_resolve_language(2, 11));
+  TEST_ASSERT_EQ_INT(ONION_NOTIFY_LANG_EN,
+                     onion_notify_resolve_language(0, 0));
+  return 0;
+}
+
+static int test_notify_format_localized(void) {
+  char out[128];
+  onion_notify_set_language(ONION_NOTIFY_LANG_ZH_HANS);
+  format_msg(out, sizeof(out), 1, "Unable to raise privileges");
+  TEST_ASSERT_STREQ("[OnionHEN] 无法提升权限", out);
+  onion_notify_set_language(ONION_NOTIFY_LANG_EN);
+  return 0;
+}
+
 static char g_rich_payload[4096];
 
 static int32_t capture_rich_notify(int32_t user_id, bool is_logged,
@@ -61,12 +82,29 @@ static int test_notify_rich_formats_payload(void) {
   return 0;
 }
 
+static int test_notify_rich_localizes_both_text_fields(void) {
+  g_rich_payload[0] = '\0';
+  onion_notify_set_language(ONION_NOTIFY_LANG_ZH_HANS);
+  onion_notify_set_rich_send(capture_rich_notify);
+  onion_notify_rich("OnionHEN", "OnionHEN is starting...", "/icon.png",
+                    "download", "43");
+  TEST_ASSERT_TRUE(strstr(g_rich_payload, "OnionHEN 正在启动...") != NULL);
+  onion_notify_set_language(ONION_NOTIFY_LANG_EN);
+  return 0;
+}
+
 int test_platform_notify_suite(void) {
   int failures = 0;
   failures += onion_test_run("notify_format_prefix", test_notify_format_prefix);
   failures += onion_test_run("notify_format_truncates", test_notify_format_truncates);
   failures += onion_test_run("notify_send_noop", test_notify_send_noop);
+  failures += onion_test_run("notify_language_resolution",
+                             test_notify_language_resolution);
+  failures += onion_test_run("notify_format_localized",
+                             test_notify_format_localized);
   failures +=
       onion_test_run("notify_rich_formats_payload", test_notify_rich_formats_payload);
+  failures += onion_test_run("notify_rich_localizes_both_text_fields",
+                             test_notify_rich_localizes_both_text_fields);
   return failures;
 }

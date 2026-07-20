@@ -49,6 +49,7 @@ along with this program; see the file COPYING. If not, see
 #include <string.h>
 #include <stdio.h>
 #include <onion/ready.h>
+#include <onion/settings.hpp>
 #include <onion/platform.h>
 #include <onion/notify.h>
 #include <onion/platform.h>
@@ -185,6 +186,7 @@ along with this program; see the file COPYING. If not, see
                              LncAppParam *param);
      uint32_t sceLncUtilKillApp(uint32_t appId);
      int sceSystemServiceGetAppId(const char *titleId);
+     int sceSystemServiceParamGetInt(int param_id, int *value);
      int sceUserServiceInitialize(void *param);
      int sceKernelGetProsperoSystemSwVersion(OrbisKernelSwVersion *sw);
      int unmount(const char *path, int flags);
@@ -501,22 +503,16 @@ static void notify_starting(bool custom_icon_ready) {
  int initStdout() {
    // Check for logging file existence logic here
    // For simplicity, I'm assuming it always exists
-   char error_msg[500] = {0};
- 
    sock.fd = -1;
    sock = FileDescriptor_init(socket(AF_INET, SOCK_STREAM, 0));
    if (sock.fd == -1) {
-     snprintf(error_msg, sizeof(error_msg), "Failed to create socket: %s",
-              strerror(errno));
-     notify(error_msg);
+     notify("Failed to create socket: %s", strerror(errno));
      return -1;
    }
  
    int value = 1;
    if (setsockopt(sock.fd, SOL_SOCKET, SO_REUSEADDR, &value, sizeof(value)) < 0) {
-     snprintf(error_msg, sizeof(error_msg), "Failed to set socket options: %s",
-              strerror(errno));
-     notify(error_msg);
+     notify("Failed to set socket options: %s", strerror(errno));
      return -1;
    }
  
@@ -527,16 +523,12 @@ static void notify_starting(bool custom_icon_ready) {
    server_addr.sin_addr.s_addr = 0;
  
    if (bind(sock.fd, (struct sockaddr *)&server_addr, sizeof(server_addr)) != 0) {
-     snprintf(error_msg, sizeof(error_msg), "Failed to bind socket: %s",
-              strerror(errno));
-     notify(error_msg);
+     notify("Failed to bind socket: %s", strerror(errno));
      return -1;
    }
  
    if (listen(sock.fd, 1) != 0) {
-     snprintf(error_msg, sizeof(error_msg), "Failed to listen on socket: %s",
-              strerror(errno));
-     notify(error_msg);
+     notify("Failed to listen on socket: %s", strerror(errno));
      return -1;
    }
  
@@ -550,9 +542,7 @@ static void notify_starting(bool custom_icon_ready) {
      return conn;
    }
  
-   snprintf(error_msg, sizeof(error_msg), "Failed to accept connection: %s",
-            strerror(errno));
-   notify(error_msg);
+   notify("Failed to accept connection: %s", strerror(errno));
    return -1;
  }
  
@@ -844,9 +834,7 @@ static void load_autostart_payloads(void) {
       continue;
     klog_printf("Loading payload: %s\n", payload_paths[i]);
     if (!load_payload(payload_paths[i], loaded_filenames[i])) {
-      snprintf(buff, sizeof(buff),
-               "[OnionHEN] Failed to load payload!\nPath: %s", payload_paths[i]);
-      notify(buff);
+      notify("Failed to load payload!\nPath: %s", payload_paths[i]);
       klog_puts("FAILED!");
       continue;
     }
@@ -863,6 +851,12 @@ int main(void) {
       sceKernelSendNotificationRequest));
   onion_notify_set_rich_send(reinterpret_cast<onion_notify_rich_send_fn>(
       sceNotificationSend));
+  onion::Settings notification_settings{};
+  (void)onion::settings_load(&notification_settings);
+  int system_language = 1;
+  (void)sceSystemServiceParamGetInt(1, &system_language);
+  onion_notify_apply_ui_language(notification_settings.ui_lang,
+                                 system_language);
 
   signal(SIGCHLD, SIG_IGN);
 

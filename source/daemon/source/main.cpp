@@ -91,6 +91,7 @@ extern "C" {
     uint64_t sceKernelGetProcessTime();
     int sceSystemServiceGetAppId(const char *title_id);
     int sceSystemServiceGetAppIdOfRunningBigApp(void);
+    int sceSystemServiceParamGetInt(int param_id, int *value);
     int scePadSetProcessPrivilege(int priv);
 
     int sceUserServiceGetForegroundUser(int *userId);
@@ -225,6 +226,9 @@ int main() {
   /* Real linked kernel export (not a dlsym function-pointer variable). */
   onion_notify_set_send(reinterpret_cast<onion_notify_send_fn>(
       sceKernelSendNotificationRequest));
+  int system_language = 1;
+  (void)sceSystemServiceParamGetInt(1, &system_language);
+  onion_notify_apply_ui_language(onion::kUiLanguageSystem, system_language);
 
   char buz[255];
   pthread_t fifo_thr = nullptr;

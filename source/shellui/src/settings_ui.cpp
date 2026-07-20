@@ -4,6 +4,8 @@
  */
 
 #include "hooked_funcs.hpp"
+#include "toolbox_i18n.hpp"
+#include <onion/notify_i18n.h>
 #include <onion/platform.h>
 #include <onion/ready.h>
 #include "ipc.hpp" // shellui_log + IPC_Client
@@ -119,6 +121,11 @@ bool LoadSettings()
 
   // Process-local store (UI thread); twin disk paths via settings_load/save.
   g_settings = s;
+  toolbox_i18n::apply_system_or_ui_lang(s.ui_lang);
+  onion_notify_set_language(toolbox_i18n::active_lang() ==
+                                    toolbox_i18n::Lang::ZhHans
+                                ? ONION_NOTIFY_LANG_ZH_HANS
+                                : ONION_NOTIFY_LANG_EN);
   /* Clear stale fps_overlay marker left by older shellui builds. */
   onion_ready_clear(ONION_FLAG_FPS_OVERLAY);
   apply_overlay_layout();
