@@ -67,8 +67,10 @@ python3 scripts/analyze_rnps_dump.py /path/to/DUMP --json --allow-unsupported
 - `NPXS40008` 未命中：需要新增 Settings fingerprint。
 - Settings route 推断必须和 profile route 一致。
 
-12.02 适配记录：`NPXS40002` 与现有 12.20 HomeUI profile 相同；
-`NPXS40008` 使用 old route，指纹为 `hbc_file_length=0x4e7bec`、
+12.0/12.02 适配记录：两个版本的 `NPXS40002` dump 与现有 12.20
+HomeUI profile 完全一致，直接复用；`NPXS40008` 也使用同一份 bundle
+指纹和 old route：
+`hbc_file_length=0x4e7bec`、
 `source_hash=fc7c4f15af42929e1d52420c2d174944b4a88043`。
 
 ## Settings 兼容

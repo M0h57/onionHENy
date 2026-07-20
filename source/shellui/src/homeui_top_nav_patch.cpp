@@ -213,6 +213,7 @@ static const HomeUiPatchProfile kHomeUiPatchProfiles[] = {
         },
     },
     {
+        // 12.0 and 12.02 NPXS40002 dumps are byte-identical to 12.20.
         "12.20 NPXS40002 HomeUI",
         kHomeUiPatchByteSet1220,
         89,
