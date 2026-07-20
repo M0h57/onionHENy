@@ -469,6 +469,12 @@ constexpr const char* kIconFan =
     "/user/data/OnionHEN/assets/icon_xml_fan.png";
 constexpr const char* kIconRestMode =
     "/user/data/OnionHEN/assets/icon_xml_restmode.png";
+constexpr const char* kIconHardDrive =
+    "/user/data/OnionHEN/assets/icon_xml_hardrive.png";
+constexpr const char* kIconDiscLicense =
+    "/user/data/OnionHEN/assets/icon_xml_disc_license.png";
+constexpr const char* kIconRemotePlay =
+    "/user/data/OnionHEN/assets/icon_xml_remote_play.png";
 constexpr const char* kIconDonations =
     "/user/data/OnionHEN/assets/icon_xml_donations.png";
 constexpr const char* kIconCredits =
@@ -557,7 +563,8 @@ void append_toolbox_display_group(ps5ui::Group& g) {
 
 void append_toolbox_connection_group(ps5ui::Group& g) {
   g.link("remote_play", toolbox_i18n::tr("remote_play.link"),
-         "remote_play.xml", toolbox_i18n::tr("remote_play.link.sub"));
+         "remote_play.xml", toolbox_i18n::tr("remote_play.link.sub"),
+         kIconRemotePlay);
 }
 
 void append_toolbox_system_group(ps5ui::Group& g) {
@@ -590,10 +597,10 @@ void append_toolbox_system_group(ps5ui::Group& g) {
           toolbox_i18n::tr("rest.group.sub"), kIconRestMode, "id_rest_1")
       .link("id_external_hdd", toolbox_i18n::tr("hdd.external"),
             "DebugSettings/data/debug_settings_external_hdd.xml",
-            toolbox_i18n::tr("hdd.external.sub"))
+            toolbox_i18n::tr("hdd.external.sub"), kIconHardDrive)
       .link("id_licenseactivation", toolbox_i18n::tr("license.bd"),
             "DebugSettings/data/debug_settings_licenseactivation.xml",
-            toolbox_i18n::tr("license.bd.sub"));
+            toolbox_i18n::tr("license.bd.sub"), kIconDiscLicense);
 }
 
 void append_toolbox_preferences_group(ps5ui::Group& g) {
