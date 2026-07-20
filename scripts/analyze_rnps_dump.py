@@ -34,7 +34,13 @@ KNOWN_HOMEUI_PROFILES = [
         "source_hash": "2cac5cc444ba0473ea8ee632a7942f281482a68a",
     },
     {
-        "name": "11.6 NPXS40002 HomeUI",
+        "name": "11.0 NPXS40002 HomeUI",
+        "hbc_version": 89,
+        "file_length": 0x1B3010,
+        "source_hash": "e21110895e8fb6c85f49db972d51fc101bb8fc52",
+    },
+    {
+        "name": "11.4/11.6 NPXS40002 HomeUI",
         "hbc_version": 89,
         "file_length": 0x1B2CC8,
         "source_hash": "f321f83f9143035f5d97ee5ad98ceb75133c890e",
@@ -72,6 +78,12 @@ KNOWN_SETTINGS_PROFILES = [
         "route": "standard",
         "file_length": 0x4E0954,
         "source_hash": "31651a188d49b23b7635afa449395e0fbd9f682a",
+    },
+    {
+        "name": "11.0 NPXS40008 Settings",
+        "route": "old",
+        "file_length": 0x4FA540,
+        "source_hash": "1824c9fb562e31eef651bb3874c1c73f7f6e24b0",
     },
     {
         "name": "11.6 NPXS40008 Settings",

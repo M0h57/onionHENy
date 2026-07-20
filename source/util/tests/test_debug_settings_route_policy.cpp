@@ -168,6 +168,15 @@ static int test_settings_bundle_accepts_known_1060_hash(void) {
   return 0;
 }
 
+static int test_settings_bundle_accepts_known_1100_hash(void) {
+  static const uint8_t hash[] = {
+      0x18, 0x24, 0xc9, 0xfb, 0x56, 0x2e, 0x31, 0xee, 0xf6, 0x51,
+      0xbb, 0x38, 0x74, 0xc1, 0xc7, 0x3f, 0x7f, 0x6e, 0x24, 0xb0};
+  TEST_ASSERT_TRUE(onion::debug_settings_route::settings_bundle_is_supported(
+      0x4fa540, hash));
+  return 0;
+}
+
 static int test_settings_bundle_accepts_known_1160_hash(void) {
   static const uint8_t hash[] = {
       0x92, 0x56, 0x61, 0x24, 0xb6, 0xcf, 0xe0, 0xb0, 0xa7, 0xc8,
@@ -255,6 +264,8 @@ extern "C" int test_debug_settings_route_policy_suite(void) {
                           test_settings_bundle_accepts_known_1040_hash);
   fails += onion_test_run("debug_route.bundle_1060",
                           test_settings_bundle_accepts_known_1060_hash);
+  fails += onion_test_run("debug_route.bundle_1100",
+                          test_settings_bundle_accepts_known_1100_hash);
   fails += onion_test_run("debug_route.bundle_1160",
                           test_settings_bundle_accepts_known_1160_hash);
   fails += onion_test_run("debug_route.bundle_1270",
