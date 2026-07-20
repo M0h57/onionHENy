@@ -52,8 +52,8 @@ static OnPressResult id_onionhen_credits(OnPressContext &ctx) {
   return OnPressResult::EarlyReturn;
 }
 
-static OnPressResult id_author_0xp0co(OnPressContext &ctx) {
-  // This is a presentation-only author card in the dynamic Toolbox XML.
+static OnPressResult id_presentation_card(OnPressContext &ctx) {
+  // Author and donator cards in the dynamic Toolbox XML are display-only.
   ctx.dirty = false;
   return OnPressResult::Consumed;
 }
@@ -63,7 +63,10 @@ static const OnPressExactEntry kRootExact[] = {
     {"id_delete_kstuff", id_delete_kstuff},
     {"id_lm_test", id_lm_test},
     {"id_onionhen_credits", id_onionhen_credits},
-    {"id_author_0xp0co", id_author_0xp0co},
+    {"id_author_0xp0co", id_presentation_card},
+    {"id_donator_aglx", id_presentation_card},
+    {"id_donator_ljf", id_presentation_card},
+    {"id_donator_szx", id_presentation_card},
 };
 
 static const OnPressExactEntry kRemotePlayExact[] = {

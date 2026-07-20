@@ -80,7 +80,10 @@ endforeach()
 foreach(_raster_icon IN ITEMS
 		icon_xml_monitor.png
 		icon_xml_network.png
-		icon_xml_author_avatar.jpg)
+		icon_xml_author_avatar.png
+		icon_xml_donator_ljf.png
+		icon_xml_donator_szx.png
+		icon_xml_donator_aglx.png)
 	set(_raster_source "${D_CWD}/assets/${_raster_icon}")
 	set(_raster_output "${_icon_output_dir}/${_raster_icon}")
 	add_custom_command(

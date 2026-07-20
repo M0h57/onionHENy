@@ -482,7 +482,13 @@ constexpr const char* kIconThanks =
 constexpr const char* kIconProject =
     "/user/data/OnionHEN/assets/icon_xml_project.png";
 constexpr const char* kIconAuthorAvatar =
-    "/user/data/OnionHEN/assets/icon_xml_author_avatar.jpg";
+    "/user/data/OnionHEN/assets/icon_xml_author_avatar.png";
+constexpr const char* kIconDonatorLjf =
+    "/user/data/OnionHEN/assets/icon_xml_donator_ljf.png";
+constexpr const char* kIconDonatorSzx =
+    "/user/data/OnionHEN/assets/icon_xml_donator_szx.png";
+constexpr const char* kIconDonatorAglx =
+    "/user/data/OnionHEN/assets/icon_xml_donator_aglx.png";
 
 bool toolbox_on(const char* id) {
   return resolve_toolbox_control_value(id) == "1";
@@ -653,16 +659,21 @@ void append_toolbox_about_group(ps5ui::Group& g) {
   g.group(
        "id_donation_methods", toolbox_i18n::tr("about.donate"),
        [](ps5ui::Group& d) {
-         d.button("id_author_0xp0co", "0xP0CO", std::nullopt, "@0xP0CO",
-                  kIconAuthorAvatar)
-             .label("id_method_info", toolbox_i18n::tr("about.donate.methods"),
+         d.label("id_method_info", toolbox_i18n::tr("about.donate.methods"),
                     ps5ui::Style::Center)
              .label("id_method_1",
                     "- Ko-fi  | https://ko-fi.com/0xp0co",
                     ps5ui::Style::Center)
+             .button("id_author_0xp0co", "0xP0CO", std::nullopt, "@0xP0CO",
+                     kIconAuthorAvatar)
+             .label("id_author_donor_spacer", "　", ps5ui::Style::Center)
              .label("id_donor_info", "★ 捐赠者 ★", ps5ui::Style::Center)
-             .label("id_donor_1", "爱过流星 · 狂爱龙卷風 · 石之心",
-                    ps5ui::Style::Center);
+             .button("id_donator_aglx", "爱过流星", std::nullopt,
+                     std::nullopt, kIconDonatorAglx)
+             .button("id_donator_ljf", "狂爱龙卷風", std::nullopt,
+                     std::nullopt, kIconDonatorLjf)
+             .button("id_donator_szx", "石之心", std::nullopt,
+                     std::nullopt, kIconDonatorSzx);
        },
        toolbox_i18n::tr("about.donate.sub"), kIconDonations)
       .group(
@@ -685,13 +696,16 @@ void append_toolbox_about_group(ps5ui::Group& g) {
                        toolbox_i18n::tr("about.testers.intro"),
                        ps5ui::Style::Center)
                 .label("id_about_tester_1",
-                       "即食面 · 安定区 · 随风",
+                       "即食面 · 雨之声 · 大饼电玩",
                        ps5ui::Style::Center)
                 .label("id_about_tester_2",
-                       "麒麟 · 大饼电玩 · 尼克库尔曼",
+                       "安定区 · 随风 · 麒麟",
                        ps5ui::Style::Center)
                 .label("id_about_tester_3",
-                       "云",
+                       "尼克库尔曼 · 云 · 啊烦",
+                       ps5ui::Style::Center)
+                .label("id_about_tester_4",
+                       "小小蔡",
                        ps5ui::Style::Center)
                 .label("id_about_more", toolbox_i18n::tr("about.more"),
                        ps5ui::Style::Center);
