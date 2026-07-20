@@ -1,6 +1,7 @@
 #pragma once
 
 #include <onion/debug_settings_route_policy.hpp>
+#include <onion/version.h>
 
 #include <string>
 #include <string_view>
@@ -27,10 +28,10 @@ inline constexpr const char kWelcomeToastJsonTemplate[] =
     "        }\n"
     "      },\n"
     "      \"message\": {\n"
-    "        \"body\": \"OnionHEN\"\n"
+    "        \"body\": \"OnionHEN " ONIONHEN_VERSION "\"\n"
     "      },\n"
     "      \"subMessage\": {\n"
-    "        \"body\": \"Welcome to OnionHEN\"\n"
+    "        \"body\": \"made by " ONIONHEN_AUTHOR "\"\n"
     "      },\n"
     "      \"actions\": [\n"
     "        {\n"
@@ -53,7 +54,8 @@ inline constexpr const char kWelcomeToastJsonTemplate[] =
     "            }\n"
     "          },\n"
     "          \"message\": {\n"
-    "            \"body\": \"OnionHEN Running\"\n"
+    "            \"body\": \"OnionHEN " ONIONHEN_VERSION
+    " made by " ONIONHEN_AUTHOR "\"\n"
     "          }\n"
     "        }\n"
     "      }\n"

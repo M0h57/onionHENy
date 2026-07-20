@@ -15,10 +15,12 @@ along with this program; see the file COPYING. If not, see
 <http://www.gnu.org/licenses/>.  */
 
 #pragma once
+
+#include <onion/version.h>
+
 #define PUBLIC_TEST 0
 #define PRE_RELEASE 0
 #define SHELL_DEBUG 1
-#define OnionHEN_VERSION "1.0"
 
 #define libSceKernelHandle 0x2001
 #define KERNEL_DLSYM(handle, sym) \
@@ -26,4 +28,3 @@ along with this program; see the file COPYING. If not, see
 
 
 typedef void* ScePthread;
-

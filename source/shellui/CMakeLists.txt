@@ -67,7 +67,7 @@ set(CMAKE_CXX_FLAGS "${CMAKE_C_FLAGS} -DDEBUG -gfull -gdwarf-2 -O0 -pedantic -pe
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O0 ")
 
 target_sources(${PROJECT_NAME} PRIVATE ${SrcFiles})
-add_dependencies(${PROJECT_NAME} onion_ipc onion_settings onion_detour onion_proc onion_platform onion_ready)
+add_dependencies(${PROJECT_NAME} onion_version onion_ipc onion_settings onion_detour onion_proc onion_platform onion_ready)
 target_include_directories(${PROJECT_NAME} PRIVATE
 	"${D_CWD}/include"
 	"${ONIONHEN_THIRD_PARTY_DIR}/cjson"

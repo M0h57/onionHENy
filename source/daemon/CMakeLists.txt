@@ -90,7 +90,7 @@ target_include_directories(${PROJECT_NAME} PRIVATE
 	"${PROJECT_ROOT}/include"
 )
 target_link_directories	(${PROJECT_NAME} PUBLIC "${ONIONHEN_PS5_STUB_DIR}")
-add_dependencies(${PROJECT_NAME} util NineS shellui hijacker onion_settings onion_ipc onion_proc onion_platform onion_ready onion_elfldr)
+add_dependencies(${PROJECT_NAME} onion_version util NineS shellui hijacker onion_settings onion_ipc onion_proc onion_platform onion_ready onion_elfldr)
 # Restarts the embedded util bytes via OnionHEN 9020, falling back to 9021.
 target_link_libraries	(${PROJECT_NAME} PUBLIC onion_ipc onion_settings onion_proc onion_platform onion_ready onion_elfldr hijacker SceSystemService SceNotification SceUserService SceNetCtl SceSysCore kernel_sys NineS)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)

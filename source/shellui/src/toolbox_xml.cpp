@@ -662,7 +662,7 @@ void append_toolbox_about_group(ps5ui::Group& g) {
           "id_onionhen_credits", toolbox_i18n::tr("about.credits"),
           [](ps5ui::Group& c) {
             const std::string ver =
-                std::string("★ OnionHEN ") + OnionHEN_VERSION;
+                std::string("★ OnionHEN ") + ONIONHEN_VERSION;
             c.label("id_about_version", ver, ps5ui::Style::Center)
                 .label("id_about_lineage", toolbox_i18n::tr("about.lineage"),
                        ps5ui::Style::Center)

@@ -10,6 +10,21 @@ set(ONIONHEN_COMMON_DIR "${PROJECT_ROOT}/common")
 set(ONIONHEN_PS5_STUB_DIR "${PROJECT_ROOT}/platform/ps5/stubs")
 set(ONIONHEN_KSTUFF_ELF "${ONIONHEN_ROOT}/.cache/dependencies/kstuff.elf"
 	CACHE FILEPATH "Path to the kstuff ELF embedded by the bootstrapper")
+set(ONIONHEN_GENERATED_INCLUDE_DIR "${CMAKE_BINARY_DIR}/generated/include")
+set(ONIONHEN_VERSION_HEADER
+	"${ONIONHEN_GENERATED_INCLUDE_DIR}/onion/version.h")
+
+# Re-evaluate Git state on every build. The script preserves the header mtime
+# when the version is unchanged, so incremental compilation remains cheap.
+add_custom_target(onion_version
+	COMMAND "${CMAKE_COMMAND}"
+		"-DREPO_ROOT=${ONIONHEN_ROOT}"
+		"-DOUTPUT_FILE=${ONIONHEN_VERSION_HEADER}"
+		-P "${PROJECT_ROOT}/cmake/GenerateVersionHeader.cmake"
+	BYPRODUCTS "${ONIONHEN_VERSION_HEADER}"
+	COMMENT "Generating OnionHEN build version"
+	VERBATIM
+)
 
 # ---------------------------------------------------------------------------
 # Artifact layout
@@ -28,6 +43,7 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${ONIONHEN_OUT_BIN})
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${ONIONHEN_OUT_LIB})
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${ONIONHEN_OUT_LIB})
 
+include_directories(BEFORE "${ONIONHEN_GENERATED_INCLUDE_DIR}")
 include_directories	(SYSTEM "${PROJECT_ROOT}/include")
 include_directories(SYSTEM "${PS5_PAYLOAD_SDK}")
 include_directories(SYSTEM "${PS5_PAYLOAD_SDK}/include")

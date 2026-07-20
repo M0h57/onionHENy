@@ -390,7 +390,7 @@ bool init_version_string(const OrbisKernelSwVersion& sw) {
       encrypt_decrypt(reinterpret_cast<const unsigned char*>(enc_ver),
                       sizeof(enc_ver) - 1, key);
   std::string dec_ver(dev_ver_bytes.begin(), dev_ver_bytes.end());
-  dec_ver += OnionHEN_VERSION;
+  dec_ver += ONIONHEN_VERSION;
 
   std::string final_ver;
 #if PUBLIC_TEST == 1
