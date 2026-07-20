@@ -52,11 +52,18 @@ static OnPressResult id_onionhen_credits(OnPressContext &ctx) {
   return OnPressResult::EarlyReturn;
 }
 
+static OnPressResult id_author_0xp0co(OnPressContext &ctx) {
+  // This is a presentation-only author card in the dynamic Toolbox XML.
+  ctx.dirty = false;
+  return OnPressResult::Consumed;
+}
+
 static const OnPressExactEntry kRootExact[] = {
     {"id_kstuff_autoload", id_kstuff_autoload},
     {"id_delete_kstuff", id_delete_kstuff},
     {"id_lm_test", id_lm_test},
     {"id_onionhen_credits", id_onionhen_credits},
+    {"id_author_0xp0co", id_author_0xp0co},
 };
 
 static const OnPressExactEntry kRemotePlayExact[] = {

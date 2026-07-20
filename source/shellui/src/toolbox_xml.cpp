@@ -479,6 +479,8 @@ constexpr const char* kIconCredits =
     "/user/data/OnionHEN/assets/icon_xml_credits.png";
 constexpr const char* kIconProject =
     "/user/data/OnionHEN/assets/icon_xml_project.png";
+constexpr const char* kIconAuthorAvatar =
+    "/user/data/OnionHEN/assets/icon_xml_author_avatar.jpg";
 
 bool toolbox_on(const char* id) {
   return resolve_toolbox_control_value(id) == "1";
@@ -648,8 +650,10 @@ void append_toolbox_about_group(ps5ui::Group& g) {
   g.group(
        "id_donation_methods", toolbox_i18n::tr("about.donate"),
        [](ps5ui::Group& d) {
-         d.label("id_method_info", toolbox_i18n::tr("about.donate.methods"),
-                 ps5ui::Style::Center)
+         d.button("id_author_0xp0co", "0xP0CO", std::nullopt, "@0xP0CO",
+                  kIconAuthorAvatar)
+             .label("id_method_info", toolbox_i18n::tr("about.donate.methods"),
+                    ps5ui::Style::Center)
              .label("id_method_1",
                     "- Ko-fi  | https://ko-fi.com/0xp0co",
                     ps5ui::Style::Center)

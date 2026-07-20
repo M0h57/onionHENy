@@ -75,9 +75,12 @@ foreach(_svg_file IN LISTS _icon_svg_files)
 	list(APPEND _generated_icon_files "${_png_file}")
 endforeach()
 
-# These two icons do not have SVG sources yet. Copy them into the same generated
-# directory so daemon.c has one stable asset location.
-foreach(_raster_icon IN ITEMS icon_xml_monitor.png icon_xml_network.png)
+# These raster-only icons do not have SVG sources. Copy them into the same
+# generated directory so daemon.c has one stable asset location.
+foreach(_raster_icon IN ITEMS
+		icon_xml_monitor.png
+		icon_xml_network.png
+		icon_xml_author_avatar.jpg)
 	set(_raster_source "${D_CWD}/assets/${_raster_icon}")
 	set(_raster_output "${_icon_output_dir}/${_raster_icon}")
 	add_custom_command(
