@@ -85,7 +85,10 @@ bool LoadSettings() {
     }
 
     g_settings.store(s);
-    onion_notify_apply_ui_language_cached(s.ui_lang);
+    int system_language = 1;
+    if (s.ui_lang == onion::kUiLanguageSystem)
+        (void)sceSystemServiceParamGetInt(1, &system_language);
+    onion_notify_apply_ui_language(s.ui_lang, system_language);
     /* Missing file is not an error — defaults were applied. */
     return true;
 }
@@ -103,11 +106,6 @@ int main(void) {
     /* Real linked kernel export (not a dlsym function-pointer variable). */
     onion_notify_set_send(reinterpret_cast<onion_notify_send_fn>(
         sceKernelSendNotificationRequest));
-    onion_notify_set_system_language_query(
-        +[](int param_id, int *value) -> int {
-          return sceSystemServiceParamGetInt(param_id, value);
-        });
-    onion_notify_apply_ui_language_cached(onion::kUiLanguageSystem);
     OnionHEN_log("util daemon entered");
 
     if (setjmp(g_catch_buf) == 0)

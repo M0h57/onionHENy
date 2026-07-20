@@ -189,57 +189,6 @@ static const notify_translation_t kTranslations[] = {
 
 static atomic_int gLanguage = ATOMIC_VAR_INIT(ONION_NOTIFY_LANG_EN);
 
-enum {
-  kSystemLanguageQuerying = -3,
-  kSystemLanguageUnknown = -2,
-  kSystemLanguageEnglishFallback = 1,
-};
-
-static atomic_int gSystemLanguage = ATOMIC_VAR_INIT(kSystemLanguageUnknown);
-static onion_notify_system_language_query_fn gSystemLanguageQuery = NULL;
-
-void onion_notify_set_system_language_query(
-    onion_notify_system_language_query_fn query) {
-  gSystemLanguageQuery = query;
-  onion_notify_invalidate_system_language();
-}
-
-void onion_notify_invalidate_system_language(void) {
-  atomic_store_explicit(&gSystemLanguage, kSystemLanguageUnknown,
-                        memory_order_release);
-}
-
-int onion_notify_cached_system_language(void) {
-  int language = atomic_load_explicit(&gSystemLanguage, memory_order_acquire);
-  if (language >= 0) {
-    return language;
-  }
-
-  int expected = kSystemLanguageUnknown;
-  if (atomic_compare_exchange_strong_explicit(
-          &gSystemLanguage, &expected, kSystemLanguageQuerying,
-          memory_order_acq_rel, memory_order_acquire)) {
-    language = kSystemLanguageEnglishFallback;
-    if (!gSystemLanguageQuery || gSystemLanguageQuery(1, &language) < 0 ||
-        language < 0) {
-      language = kSystemLanguageEnglishFallback;
-    }
-    atomic_store_explicit(&gSystemLanguage, language, memory_order_release);
-    return language;
-  }
-
-  /* Another thread owns the one-time query; wait for its short system call. */
-  do {
-    language = atomic_load_explicit(&gSystemLanguage, memory_order_acquire);
-  } while (language == kSystemLanguageQuerying);
-  return language >= 0 ? language : kSystemLanguageEnglishFallback;
-}
-
-int onion_notify_refresh_system_language(void) {
-  onion_notify_invalidate_system_language();
-  return onion_notify_cached_system_language();
-}
-
 void onion_notify_set_language(onion_notify_language_t language) {
   if (language != ONION_NOTIFY_LANG_ZH_HANS &&
       language != ONION_NOTIFY_LANG_EN) {
@@ -271,13 +220,6 @@ onion_notify_language_t onion_notify_resolve_language(int ui_language,
 void onion_notify_apply_ui_language(int ui_language, int system_language) {
   onion_notify_set_language(
       onion_notify_resolve_language(ui_language, system_language));
-}
-
-void onion_notify_apply_ui_language_cached(int ui_language) {
-  const int system_language = ui_language == 0
-                                  ? onion_notify_cached_system_language()
-                                  : kSystemLanguageEnglishFallback;
-  onion_notify_apply_ui_language(ui_language, system_language);
 }
 
 const char *onion_notify_tr(const char *english) {

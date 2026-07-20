@@ -50,37 +50,6 @@ static int test_notify_language_resolution(void) {
   return 0;
 }
 
-static int g_system_language_queries;
-
-static int query_zh_system_language(int param_id, int *value) {
-  TEST_ASSERT_EQ_INT(1, param_id);
-  g_system_language_queries++;
-  *value = 11;
-  return 0;
-}
-
-static int test_notify_system_language_cache(void) {
-  g_system_language_queries = 0;
-  onion_notify_set_system_language_query(query_zh_system_language);
-
-  onion_notify_apply_ui_language_cached(0);
-  TEST_ASSERT_EQ_INT(ONION_NOTIFY_LANG_ZH_HANS,
-                     onion_notify_get_language());
-  onion_notify_apply_ui_language_cached(0);
-  TEST_ASSERT_EQ_INT(11, onion_notify_cached_system_language());
-  TEST_ASSERT_EQ_INT(1, g_system_language_queries);
-
-  onion_notify_apply_ui_language_cached(2);
-  TEST_ASSERT_EQ_INT(ONION_NOTIFY_LANG_EN, onion_notify_get_language());
-  TEST_ASSERT_EQ_INT(1, g_system_language_queries);
-
-  TEST_ASSERT_EQ_INT(11, onion_notify_refresh_system_language());
-  TEST_ASSERT_EQ_INT(2, g_system_language_queries);
-  onion_notify_set_system_language_query(NULL);
-  onion_notify_set_language(ONION_NOTIFY_LANG_EN);
-  return 0;
-}
-
 static int test_notify_format_localized(void) {
   char out[128];
   onion_notify_set_language(ONION_NOTIFY_LANG_ZH_HANS);
@@ -131,8 +100,6 @@ int test_platform_notify_suite(void) {
   failures += onion_test_run("notify_send_noop", test_notify_send_noop);
   failures += onion_test_run("notify_language_resolution",
                              test_notify_language_resolution);
-  failures += onion_test_run("notify_system_language_cache",
-                             test_notify_system_language_cache);
   failures += onion_test_run("notify_format_localized",
                              test_notify_format_localized);
   failures +=

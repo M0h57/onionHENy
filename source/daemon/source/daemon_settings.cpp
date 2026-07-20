@@ -9,6 +9,8 @@
 #include <onion/notify_i18n.h>
 #include <onion/settings.hpp>
 
+extern "C" int sceSystemServiceParamGetInt(int param_id, int *value);
+
 namespace {
 
 struct ConfigState {
@@ -57,7 +59,10 @@ bool LoadSettings() {
   OnionHEN_log("enable_fan_speed: %d", s.enable_fan_speed ? 1 : 0);
 
   g_settings.store(s);
-  onion_notify_apply_ui_language_cached(s.ui_lang);
+  int system_language = 1;
+  if (s.ui_lang == onion::kUiLanguageSystem)
+    (void)sceSystemServiceParamGetInt(1, &system_language);
+  onion_notify_apply_ui_language(s.ui_lang, system_language);
   config_state.last_modified = onion::settings_config_newest_mtime();
   config_state.ever_loaded = true;
   return true;

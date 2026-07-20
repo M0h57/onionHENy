@@ -3,12 +3,14 @@
 #include "toolbox_i18n.hpp"
 #include <onion/notify_i18n.h>
 
+#ifndef ONION_HOST_TEST
+#include "external_symbols.hpp"
+#endif
+
 #include <cstring>
 
 namespace toolbox_i18n {
 namespace {
-
-Lang g_lang = Lang::ZhHans;
 
 struct Entry {
   const char *key;
@@ -261,14 +263,17 @@ Lang lang_from_ui_value(int ui_lang) {
 
 } // namespace
 
-Lang active_lang() { return g_lang; }
+Lang active_lang() {
+  return onion_notify_get_language() == ONION_NOTIFY_LANG_ZH_HANS
+             ? Lang::ZhHans
+             : Lang::En;
+}
 
-int active_ui_lang_value() { return g_lang == Lang::En ? 2 : 1; }
+int active_ui_lang_value() { return active_lang() == Lang::En ? 2 : 1; }
 
 void set_lang(Lang lang) {
   if (lang != Lang::ZhHans && lang != Lang::En)
     lang = Lang::ZhHans;
-  g_lang = lang;
   onion_notify_set_language(lang == Lang::ZhHans ? ONION_NOTIFY_LANG_ZH_HANS
                                                   : ONION_NOTIFY_LANG_EN);
 }
@@ -278,8 +283,18 @@ void apply_ui_lang(int ui_lang) {
 }
 
 void apply_system_or_ui_lang(int ui_lang) {
-  onion_notify_apply_ui_language_cached(ui_lang);
-  set_lang(onion_notify_get_language() == ONION_NOTIFY_LANG_ZH_HANS
+  if (ui_lang != 0) {
+    set_lang(lang_from_ui_value(ui_lang));
+    return;
+  }
+
+  int system_language = 1;
+#ifndef ONION_HOST_TEST
+  if (sceSystemServiceParamGetInt)
+    (void)sceSystemServiceParamGetInt(1, &system_language);
+#endif
+  set_lang(onion_notify_resolve_language(0, system_language) ==
+                   ONION_NOTIFY_LANG_ZH_HANS
                ? Lang::ZhHans
                : Lang::En);
 }
@@ -288,7 +303,7 @@ const char *tr(const char *key) {
   const Entry *e = find_entry(key);
   if (!e)
     return key ? key : "";
-  return g_lang == Lang::En ? e->en : e->zh;
+  return active_lang() == Lang::En ? e->en : e->zh;
 }
 
 } // namespace toolbox_i18n

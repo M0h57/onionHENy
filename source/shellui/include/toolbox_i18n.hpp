@@ -29,8 +29,8 @@ void apply_ui_lang(int ui_lang);
 
 /**
  * Apply the stored UI language setting.
- * 0=system, 1=zh-Hans, 2=en. System uses the shared process cache and falls
- * back to English when unavailable.
+ * 0=system, 1=zh-Hans, 2=en. This is a configuration boundary: system is
+ * queried here once, then XML and notifications reuse the resolved language.
  */
 void apply_system_or_ui_lang(int ui_lang);
 

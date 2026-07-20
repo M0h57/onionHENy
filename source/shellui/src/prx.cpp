@@ -248,13 +248,6 @@ bool resolve_native_symbols(pid_t pid, void*& out_sceAppInstUtilInstallByPackage
   int system_service = get_module_handle(pid, "libSceSystemService.sprx");
   KERNEL_DLSYM(system_service, sceSystemServiceGetAppIdOfRunningBigApp);
   KERNEL_DLSYM(system_service, sceSystemServiceParamGetInt);
-  onion_notify_set_system_language_query(
-      +[](int param_id, int *value) -> int {
-        if (!sceSystemServiceParamGetInt)
-          return -1;
-        return sceSystemServiceParamGetInt(param_id, value);
-      });
-  onion_notify_apply_ui_language_cached(/*system=*/0);
   KERNEL_DLSYM(system_service, sceSystemServiceGetAppTitleId);
   {
     void* sceSystemServiceLaunchApp = nullptr;
