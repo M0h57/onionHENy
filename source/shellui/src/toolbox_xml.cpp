@@ -475,7 +475,7 @@ void append_toolbox_pkg_group(ps5ui::Group& g) {
 
 void append_toolbox_payloads_group(ps5ui::Group& g) {
   g.link("id_payloads", toolbox_i18n::tr("payloads.link"), "payloads.xml",
-         toolbox_i18n::tr("payloads.link.sub"))
+         toolbox_i18n::tr("payloads.link.sub"), kIconPlugins)
       .group(
           "id_kstuff_opts", toolbox_i18n::tr("kstuff.group"),
           [](ps5ui::Group& k) {

@@ -96,7 +96,8 @@ public:
                   std::optional<std::string> confirm = std::nullopt);
 
   Derived& link(std::string id, std::string title, std::string file,
-                std::optional<std::string> second_title = std::nullopt);
+                std::optional<std::string> second_title = std::nullopt,
+                std::optional<std::string> icon = std::nullopt);
 
   Derived& list(std::string id, std::string title,
                 const std::function<void(ListBuilder&)>& body,
@@ -206,13 +207,15 @@ Derived& GroupT<Derived>::toggle(std::string id, std::string title, bool on,
 
 template <typename Derived>
 Derived& GroupT<Derived>::link(std::string id, std::string title, std::string file,
-                               std::optional<std::string> second_title) {
+                               std::optional<std::string> second_title,
+                               std::optional<std::string> icon) {
   Node n;
   n.kind = Node::Kind::Link;
   n.attrs.id = std::move(id);
   n.attrs.title = std::move(title);
   n.attrs.file = std::move(file);
   n.attrs.second_title = std::move(second_title);
+  n.attrs.icon = std::move(icon);
   return add(std::move(n));
 }
 

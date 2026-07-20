@@ -16,6 +16,7 @@ along with this program; see the file COPYING. If not, see
 
 #include "hooked_funcs.hpp"
 #include "homeui_top_nav_patch.hpp"
+#include <onion/debug_settings_route_policy.hpp>
 #include <onion/platform.h>
 #include "remote_play.h"
 #include "detour.h"
@@ -251,7 +252,7 @@ static bool locate_hermes_payload(const unsigned char *buffer, size_t size,
 static bool is_supported_settings_bundle(const unsigned char *buffer,
                                          int size) {
   static const size_t kHbcFileLengthOffset = 0x20;
-  static const size_t kSupportedSettingsHbcFileLength = 0x4f4bfc;
+  static const size_t kHbcSourceHashOffset = 0x0c;
   static const char kSettingsUriPrefix[] = "pssettings:play";
   static const char kDebugSettingsFunction[] = "debug_settings";
 
@@ -259,12 +260,16 @@ static bool is_supported_settings_bundle(const unsigned char *buffer,
   size_t hbc_size = 0;
   if (!buffer || size <= 0 ||
       !locate_hermes_payload(buffer, (size_t)size, &hbc, &hbc_size) ||
-      hbc_size < kHbcFileLengthOffset + sizeof(uint32_t)) {
+      hbc_size < kHbcFileLengthOffset + sizeof(uint32_t) ||
+      hbc_size < kHbcSourceHashOffset +
+                     onion::debug_settings_route::kSourceHashLength) {
     return false;
   }
 
-  if (patch_read_u32le(hbc + kHbcFileLengthOffset) !=
-      kSupportedSettingsHbcFileLength) {
+  const uint32_t hbc_file_length = patch_read_u32le(hbc + kHbcFileLengthOffset);
+  const uint8_t *source_hash = hbc + kHbcSourceHashOffset;
+  if (!onion::debug_settings_route::settings_bundle_is_supported(
+          hbc_file_length, source_hash)) {
     return false;
   }
 

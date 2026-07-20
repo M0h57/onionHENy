@@ -2,6 +2,7 @@
  * Extracted from hook_functions.cpp — hook_boot
  */
 #include "hooked_funcs.hpp"
+#include "debug_settings_route_runtime.hpp"
 #include "remote_play.h"
 #include "detour.h"
 #include "ipc.hpp"
@@ -21,39 +22,11 @@ extern bool (*boot_orig_2)(MonoString* uri, int opt);
 
 std::string Mono_to_String(MonoString *str);
 
-// 11.6 RN Settings (NPXS40008) deeplink map (from application.ps.bundle):
-//   function=debug_settings     → DebugSettingsScreen + "/debugSettings"  (RN intermediate)
-//   function=debug_settings_old → path "debugSettingsOld" → DebugSettingsOldScreen
-//                                   (Legacy UI3 host; GetManifestResourceStream returns toolbox XML)
-// Opening _old only avoids: Settings → RN DebugSettings → legacy XML stack pollution.
-static constexpr const char kToolboxUri[] =
-    "pssettings:play?mode=settings&function=debug_settings_old";
-static constexpr const char kToolboxUriSimple[] =
-    "pssettings:play?function=debug_settings_old";
 static constexpr const char kHomeTopNavUri[] = "OnionHEN?NavUI=1";
 static constexpr const char kLegacyHomeTopNavUri[] = "OnionHEN?NavUI";
 
 static bool is_home_top_nav_uri(const std::string &uri) {
   return uri == kHomeTopNavUri || uri == kLegacyHomeTopNavUri;
-}
-
-/** Rewrite function=debug_settings → function=debug_settings_old (idempotent for _old). */
-std::string rewrite_debug_settings_to_old(const std::string &uri) {
-  static constexpr const char kNeedle[] = "function=debug_settings";
-  static constexpr const char kOld[] = "function=debug_settings_old";
-  std::string out = uri;
-  size_t pos = 0;
-  while ((pos = out.find(kNeedle, pos)) != std::string::npos) {
-    const size_t end = pos + sizeof(kNeedle) - 1;
-    // Already _old, or an unexpected longer suffix — leave alone.
-    if (end < out.size() && out[end] != '&') {
-      pos = end;
-      continue;
-    }
-    out.replace(pos, sizeof(kNeedle) - 1, kOld);
-    pos += sizeof(kOld) - 1;
-  }
-  return out;
 }
 
 bool handle_uri_boot_common(MonoString* uri, int opt, MonoString* titleIdForBootAction) {
@@ -103,13 +76,14 @@ bool handle_uri_boot_common(MonoString* uri, int opt, MonoString* titleIdForBoot
       return boot_orig ? boot_orig(uri, opt, titleIdForBootAction) : false;
 
     if(handle_uri_boot_common(uri, opt, titleIdForBootAction)) {
-      // OnionHEN shortcuts/top-nav → direct legacy DebugSettingsOldScreen
-      return boot_orig(mono_string_new(Root_Domain, kToolboxUri), opt, titleIdForBootAction);
+      return boot_orig(
+          mono_string_new(Root_Domain, shellui_debug_settings_toolbox_uri()), opt,
+          titleIdForBootAction);
     }
 
-    // Appdb ★Debug Settings and any other debug_settings deeplink: never land on RN screen.
+    // On 11.6+, appdb Debug Settings and other deeplinks must avoid the RN screen.
     const std::string original_uri = Mono_to_String(uri);
-    const std::string rewritten = rewrite_debug_settings_to_old(original_uri);
+    const std::string rewritten = shellui_rewrite_debug_settings_route(original_uri);
     if (rewritten != original_uri) {
 #if SHELL_DEBUG == 1
       shellui_log("Boot: rewrite debug_settings → old: %s", rewritten.c_str());
@@ -130,11 +104,14 @@ bool handle_uri_boot_common(MonoString* uri, int opt, MonoString* titleIdForBoot
     shellui_log("uri_boot_hook_2: %s, opt: %i", original_uri.c_str(), opt);
   #endif
     if(handle_uri_boot_common(uri, opt, nullptr)) {
-      // Redirect to debug settings (no titleId parameter for older fw)
-      return boot_orig_2(mono_string_new(Root_Domain, kToolboxUriSimple), opt);
+      // Redirect to debug settings (no titleId parameter for older fw).
+      return boot_orig_2(
+          mono_string_new(Root_Domain,
+                          shellui_debug_settings_toolbox_uri_simple()),
+          opt);
     }
 
-    const std::string rewritten = rewrite_debug_settings_to_old(original_uri);
+    const std::string rewritten = shellui_rewrite_debug_settings_route(original_uri);
     if (rewritten != original_uri) {
 #if SHELL_DEBUG == 1
       shellui_log("Boot2: rewrite debug_settings → old: %s", rewritten.c_str());
@@ -284,7 +261,7 @@ bool handle_uri_boot_common(MonoString* uri, int opt, MonoString* titleIdForBoot
 #if SHELL_DEBUG == 1
         shellui_log("Toolbox Shortcut Activated");
 #endif
-        GoToURI(kToolboxUri);
+        GoToURI(shellui_debug_settings_toolbox_uri());
         result.Buttons = None; // Clear the Select button to prevent triggering other actions
       }
     }

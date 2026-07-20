@@ -2,6 +2,7 @@
  * Extracted from hook_functions.cpp — hook_capture
  */
 #include "hooked_funcs.hpp"
+#include "debug_settings_route_runtime.hpp"
 #include "remote_play.h"
 #include "detour.h"
 #include "ipc.hpp"
@@ -29,8 +30,7 @@ bool CaptureScreen(){
   }
   else if (g_settings.toolbox_shortcut_opt == TOOLBOX_LONG_SHARE){
     //shellui_log("CaptureScreen: Long Share Shortcut activated");
-    // Direct legacy DebugSettingsOldScreen (not RN DebugSettingsScreen).
-    GoToURI("pssettings:play?mode=settings&function=debug_settings_old");
+    GoToURI(shellui_debug_settings_toolbox_uri());
     return true;
   }
 
@@ -94,7 +94,7 @@ void OnShareButton(MonoObject * data) {
   }
   else if (g_settings.toolbox_shortcut_opt == TOOLBOX_SINGLE_SHARE) {
     // shellui_log("Share Shortcut: Redirecting to Toolbox");
-    GoToURI("pssettings:play?mode=settings&function=debug_settings_old");
+    GoToURI(shellui_debug_settings_toolbox_uri());
     return;
   }
 

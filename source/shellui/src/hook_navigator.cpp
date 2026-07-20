@@ -2,13 +2,14 @@
 
 
 #include "hooked_funcs.hpp"
+#include "debug_settings_route_runtime.hpp"
 #include "ipc.hpp"
 #include "external_symbols.hpp"
 #include <chrono>
 #include <string>
 
 /*
- * 11.6 navigation notes (NPXS40008 + Legacy UI3):
+ * 11.6+ navigation notes (NPXS40008 + Legacy UI3):
  *
  *   function=debug_settings     → RN DebugSettingsScreen  (no toolbox XML)
  *   function=debug_settings_old → DebugSettingsOldScreen → Legacy SettingPage
@@ -27,9 +28,6 @@
 
 extern bool (*boot_orig)(MonoString *uri, int opt, MonoString *titleIdForBootAction);
 extern bool (*boot_orig_2)(MonoString *uri, int opt);
-
-static constexpr const char kLegacyDebugSettingsUri[] =
-    "pssettings:play?function=debug_settings_old";
 
 /** Ignore duplicate GetModel + UpdateNavigationState within this window. */
 static constexpr auto kLegacyNavDebounce = std::chrono::milliseconds(750);
@@ -77,14 +75,15 @@ static void navigate_legacy_debug_settings(const char *reason) {
     dom = Root_Domain;
   if (!dom || !mono_string_new) {
     shellui_log("[DBG-NAV] no domain; fallback GoToURI (%s)", reason);
-    GoToURI(kLegacyDebugSettingsUri);
+    GoToURI(shellui_debug_settings_toolbox_uri_simple());
     return;
   }
 
-  MonoString *uri = mono_string_new(dom, kLegacyDebugSettingsUri);
+  MonoString *uri =
+      mono_string_new(dom, shellui_debug_settings_toolbox_uri_simple());
   if (!uri) {
     shellui_log("[DBG-NAV] mono_string_new failed; fallback GoToURI (%s)", reason);
-    GoToURI(kLegacyDebugSettingsUri);
+    GoToURI(shellui_debug_settings_toolbox_uri_simple());
     return;
   }
 
@@ -105,7 +104,7 @@ static void navigate_legacy_debug_settings(const char *reason) {
   }
 
   shellui_log("[DBG-NAV] BootHelper missing; fallback GoToURI (%s)", reason);
-  GoToURI(kLegacyDebugSettingsUri);
+  GoToURI(shellui_debug_settings_toolbox_uri_simple());
 }
 
 void ReactNavigatorManager_UpdateNavigationState_Hook(MonoObject *instance,
@@ -117,6 +116,12 @@ void ReactNavigatorManager_UpdateNavigationState_Hook(MonoObject *instance,
   }
 
   std::string state_text = MonoObjectToString(state);
+
+  if (!shellui_debug_settings_uses_old_route()) {
+    if (ReactNavigatorManager_UpdateNavigationState_Orig)
+      ReactNavigatorManager_UpdateNavigationState_Orig(instance, state);
+    return;
+  }
 
   // Back on settings home → next toolbox open must not be debounced as "duplicate".
   if (state_text.find("ps5:settings:main") != std::string::npos ||
@@ -148,6 +153,12 @@ void ReactNavigatorManager_UpdateNavigationState_Hook(MonoObject *instance,
 void DebugSettings_GetModel_Hook(MonoObject *instance, MonoObject *param,
                                  MonoObject *promise) {
   if (!shellui_hooks_are_ready()) {
+    if (DebugSettings_GetModel_Orig)
+      DebugSettings_GetModel_Orig(instance, param, promise);
+    return;
+  }
+
+  if (!shellui_debug_settings_uses_old_route()) {
     if (DebugSettings_GetModel_Orig)
       DebugSettings_GetModel_Orig(instance, param, promise);
     return;

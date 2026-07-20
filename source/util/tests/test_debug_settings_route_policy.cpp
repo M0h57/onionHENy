@@ -1,0 +1,183 @@
+/* Host unit tests for DebugSettingsRoutePolicy (no PS5/Mono). */
+#include "test_harness.h"
+
+#include "welcome_toast.hpp"
+#include <onion/debug_settings_route_policy.hpp>
+
+#include <string>
+
+using onion::debug_settings_route::DebugSettingsRoutePolicy;
+using onion::debug_settings_route::UriKind;
+
+static int test_1000_uses_standard_route(void) {
+  const DebugSettingsRoutePolicy policy =
+      DebugSettingsRoutePolicy::for_system_version(0x10000000);
+
+  TEST_ASSERT_TRUE(!policy.uses_old_route());
+  TEST_ASSERT_STREQ("pssettings:play?function=debug_settings",
+                    policy.toolbox_uri(UriKind::Simple));
+  return 0;
+}
+
+static int test_1001_uses_standard_route(void) {
+  const DebugSettingsRoutePolicy policy =
+      DebugSettingsRoutePolicy::for_system_version(0x10010000);
+
+  TEST_ASSERT_TRUE(!policy.uses_old_route());
+  TEST_ASSERT_STREQ(
+      "pssettings:play?mode=settings&function=debug_settings",
+      policy.toolbox_uri(UriKind::WithMode));
+  TEST_ASSERT_STREQ("pssettings:play?function=debug_settings",
+                    policy.toolbox_uri(UriKind::Simple));
+  return 0;
+}
+
+static int test_1100_uses_old_route(void) {
+  const DebugSettingsRoutePolicy policy =
+      DebugSettingsRoutePolicy::for_system_version(0x11000000);
+
+  TEST_ASSERT_TRUE(policy.uses_old_route());
+  TEST_ASSERT_STREQ("pssettings:play?function=debug_settings_old",
+                    policy.toolbox_uri(UriKind::Simple));
+  return 0;
+}
+
+static int test_1160_uses_old_route(void) {
+  const DebugSettingsRoutePolicy policy =
+      DebugSettingsRoutePolicy::for_system_version(0x11060000);
+
+  TEST_ASSERT_TRUE(policy.uses_old_route());
+  TEST_ASSERT_STREQ(
+      "pssettings:play?mode=settings&function=debug_settings_old",
+      policy.toolbox_uri(UriKind::WithMode));
+  TEST_ASSERT_STREQ("pssettings:play?function=debug_settings_old",
+                    policy.toolbox_uri(UriKind::Simple));
+  return 0;
+}
+
+static int test_standard_route_does_not_rewrite(void) {
+  const DebugSettingsRoutePolicy policy =
+      DebugSettingsRoutePolicy::for_system_version(0x10010000);
+
+  const std::string input =
+      "pssettings:play?mode=settings&function=debug_settings";
+  const std::string rewritten = policy.rewrite(input);
+  TEST_ASSERT_STREQ(input.c_str(), rewritten.c_str());
+  return 0;
+}
+
+static int test_old_route_rewrites_debug_settings(void) {
+  const DebugSettingsRoutePolicy policy =
+      DebugSettingsRoutePolicy::for_system_version(0x11060000);
+
+  const std::string rewritten = policy.rewrite(
+      "pssettings:play?mode=settings&function=debug_settings&x=1");
+  TEST_ASSERT_STREQ(
+      "pssettings:play?mode=settings&function=debug_settings_old&x=1",
+      rewritten.c_str());
+  return 0;
+}
+
+static int test_old_route_rewrites_only_function_param(void) {
+  const DebugSettingsRoutePolicy policy =
+      DebugSettingsRoutePolicy::for_system_version(0x11060000);
+
+  const std::string rewritten = policy.rewrite(
+      "pssettings:play?xfunction=debug_settings&function=debug_settings#end");
+  TEST_ASSERT_STREQ(
+      "pssettings:play?xfunction=debug_settings&function=debug_settings_old#end",
+      rewritten.c_str());
+  return 0;
+}
+
+static int test_old_route_rewrite_is_idempotent(void) {
+  const DebugSettingsRoutePolicy policy =
+      DebugSettingsRoutePolicy::for_system_version(0x11060000);
+
+  const std::string rewritten =
+      policy.rewrite("pssettings:play?function=debug_settings_old");
+  TEST_ASSERT_STREQ("pssettings:play?function=debug_settings_old",
+                    rewritten.c_str());
+  return 0;
+}
+
+static int test_settings_bundle_accepts_known_1001_hash(void) {
+  static const uint8_t hash[] = {
+      0xad, 0x6c, 0xf2, 0xd6, 0xf8, 0x97, 0x4c, 0xcd, 0x34, 0xb1,
+      0x4e, 0x69, 0xbb, 0x6e, 0x34, 0x0e, 0x8d, 0xec, 0x5d, 0xc5};
+  TEST_ASSERT_TRUE(onion::debug_settings_route::settings_bundle_is_supported(
+      0x4dda8c, hash));
+  return 0;
+}
+
+static int test_settings_bundle_accepts_known_1160_hash(void) {
+  static const uint8_t hash[] = {
+      0x92, 0x56, 0x61, 0x24, 0xb6, 0xcf, 0xe0, 0xb0, 0xa7, 0xc8,
+      0x12, 0xfc, 0x8a, 0x3b, 0xbf, 0xcf, 0x32, 0xac, 0x46, 0x83};
+  TEST_ASSERT_TRUE(onion::debug_settings_route::settings_bundle_is_supported(
+      0x4f4bfc, hash));
+  return 0;
+}
+
+static int test_settings_bundle_rejects_hash_mismatch(void) {
+  uint8_t hash[onion::debug_settings_route::kSourceHashLength]{};
+  TEST_ASSERT_TRUE(!onion::debug_settings_route::settings_bundle_is_supported(
+      0x4dda8c, hash));
+  return 0;
+}
+
+static int test_settings_bundle_rejects_length_mismatch(void) {
+  static const uint8_t hash[] = {
+      0xad, 0x6c, 0xf2, 0xd6, 0xf8, 0x97, 0x4c, 0xcd, 0x34, 0xb1,
+      0x4e, 0x69, 0xbb, 0x6e, 0x34, 0x0e, 0x8d, 0xec, 0x5d, 0xc5};
+  TEST_ASSERT_TRUE(!onion::debug_settings_route::settings_bundle_is_supported(
+      0x4dda8d, hash));
+  return 0;
+}
+
+static int test_welcome_toast_replaces_toolbox_uri(void) {
+  const std::string json = onion::daemon::make_welcome_toast_json(
+      "pssettings:play?function=debug_settings_old");
+  TEST_ASSERT_TRUE(json.find("__ONIONHEN_TOOLBOX_URI__") == std::string::npos);
+  TEST_ASSERT_TRUE(json.find("pssettings:play?function=debug_settings_old") !=
+                   std::string::npos);
+  return 0;
+}
+
+static int test_welcome_toast_fallback_uri(void) {
+  const std::string json = onion::daemon::make_welcome_toast_json("");
+  TEST_ASSERT_TRUE(json.find("pssettings:play?function=debug_settings") !=
+                   std::string::npos);
+  return 0;
+}
+
+extern "C" int test_debug_settings_route_policy_suite(void) {
+  int fails = 0;
+  fails += onion_test_run("debug_route.1000_standard",
+                          test_1000_uses_standard_route);
+  fails += onion_test_run("debug_route.1001_standard",
+                          test_1001_uses_standard_route);
+  fails += onion_test_run("debug_route.1100_old", test_1100_uses_old_route);
+  fails += onion_test_run("debug_route.1160_old", test_1160_uses_old_route);
+  fails += onion_test_run("debug_route.standard_no_rewrite",
+                          test_standard_route_does_not_rewrite);
+  fails += onion_test_run("debug_route.old_rewrite",
+                          test_old_route_rewrites_debug_settings);
+  fails += onion_test_run("debug_route.old_query_rewrite",
+                          test_old_route_rewrites_only_function_param);
+  fails += onion_test_run("debug_route.old_idempotent",
+                          test_old_route_rewrite_is_idempotent);
+  fails += onion_test_run("debug_route.bundle_1001",
+                          test_settings_bundle_accepts_known_1001_hash);
+  fails += onion_test_run("debug_route.bundle_1160",
+                          test_settings_bundle_accepts_known_1160_hash);
+  fails += onion_test_run("debug_route.bundle_hash_reject",
+                          test_settings_bundle_rejects_hash_mismatch);
+  fails += onion_test_run("debug_route.bundle_length_reject",
+                          test_settings_bundle_rejects_length_mismatch);
+  fails += onion_test_run("daemon.welcome_toast_uri",
+                          test_welcome_toast_replaces_toolbox_uri);
+  fails += onion_test_run("daemon.welcome_toast_fallback",
+                          test_welcome_toast_fallback_uri);
+  return fails;
+}

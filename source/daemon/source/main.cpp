@@ -45,6 +45,8 @@ along with this program; see the file COPYING. If not, see
 #include "globalconf.hpp"
 #include "launcher.hpp"
 #include "ipc.hpp"
+#include "welcome_toast.hpp"
+#include <onion/debug_settings_route_policy.hpp>
 #include <onion/ready.h>
 
 #define MSG_NOSIGNAL 0x20000 /* do not generate SIGPIPE on EOF. */
@@ -134,60 +136,6 @@ extern void makenewapp();
 extern bool is_handler_enabled;
 
 namespace {
-
-/** Welcome toast shown once at daemon startup. */
-constexpr const char kWelcomeToastJson[] =
-    "{\n"
-    "  \"rawData\": {\n"
-    "    \"viewTemplateType\": \"InteractiveToastTemplateB\",\n"
-    "    \"channelType\": \"Downloads\",\n"
-    "    \"useCaseId\": \"IDC\",\n"
-    "    \"toastOverwriteType\": \"No\",\n"
-    "    \"isImmediate\": true,\n"
-    "    \"priority\": 100,\n"
-    "    \"viewData\": {\n"
-    "      \"icon\": {\n"
-    "        \"type\": \"Url\",\n"
-    "        \"parameters\": {\n"
-    "          \"url\": \"/user/data/OnionHEN/onionhen.png\"\n"
-    "        }\n"
-    "      },\n"
-    "      \"message\": {\n"
-    "        \"body\": \"OnionHEN\"\n"
-    "      },\n"
-    "      \"subMessage\": {\n"
-    "        \"body\": \"Welcome to OnionHEN\"\n"
-    "      },\n"
-    "      \"actions\": [\n"
-    "        {\n"
-    "          \"actionName\": \"Go to the OnionHEN Toolbox\",\n"
-    "          \"actionType\": \"DeepLink\",\n"
-    "          \"defaultFocus\": true,\n"
-    "          \"parameters\": {\n"
-    "            \"actionUrl\": \"pssettings:play?function=debug_settings_old\"\n"
-    "          }\n"
-    "        }\n"
-    "      ]\n"
-    "    },\n"
-    "    \"platformViews\": {\n"
-    "      \"previewDisabled\": {\n"
-    "        \"viewData\": {\n"
-    "          \"icon\": {\n"
-    "            \"type\": \"Predefined\",\n"
-    "            \"parameters\": {\n"
-    "              \"icon\": \"download\"\n"
-    "            }\n"
-    "          },\n"
-    "          \"message\": {\n"
-    "            \"body\": \"OnionHEN Running\"\n"
-    "          }\n"
-    "        }\n"
-    "      }\n"
-    "    }\n"
-    "  },\n"
-    "  \"createdDateTime\": \"2025-12-14T03:14:51.473Z\",\n"
-    "  \"localNotificationId\": \"588193127\"\n"
-    "}";
 
 void install_crash_handlers() {
   struct sigaction action {};
@@ -289,6 +237,9 @@ int main() {
   OrbisKernelSwVersion sys_ver;
   sceKernelGetProsperoSystemSwVersion(&sys_ver);
   const int fw_ver = (sys_ver.version >> 16);
+  const auto debug_settings_route =
+      onion::debug_settings_route::DebugSettingsRoutePolicy::for_system_version(
+          sys_ver.version);
 
   install_crash_handlers();
 
@@ -328,7 +279,10 @@ int main() {
   /* Always inject toolbox into ShellUI; do not auto-open any settings page. */
   cmd_enable_toolbox();
 
-  sceNotificationSend(0xFE, true, kWelcomeToastJson);
+  const std::string welcome_toast_json = onion::daemon::make_welcome_toast_json(
+      debug_settings_route.toolbox_uri(
+          onion::debug_settings_route::UriKind::Simple));
+  sceNotificationSend(0xFE, true, welcome_toast_json.c_str());
   OnionHEN_log("StartUp thread created!! - welcome to OnionHEN");
 
   ipc_supervisor_loop(&msg_thr);

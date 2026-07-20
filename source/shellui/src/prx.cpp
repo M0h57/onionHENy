@@ -15,6 +15,7 @@ along with this program; see the file COPYING. If not, see
 <http://www.gnu.org/licenses/>.  */
 
 #include "detour.h"
+#include "debug_settings_route_runtime.hpp"
 #include "hooked_funcs.hpp"
 #include "appinst_types.hpp"
 #include "defs.h"
@@ -756,8 +757,10 @@ int main(int argc, char const* argv[]) {
   sceKernelGetProsperoSystemSwVersion(&sw);
   is_3xx = (sw.version < kFw3xxMaxExclusive);
   is_6xx = (sw.version >= kFw6xxMin);
-  shellui_log("System Software Version: %s is_3xx: %s", sw.version_str,
-              is_3xx ? "Yes" : "No");
+  shellui_configure_debug_settings_route(sw.version);
+  shellui_log("System Software Version: %s is_3xx: %s debug_settings_old: %s",
+              sw.version_str, is_3xx ? "Yes" : "No",
+              shellui_debug_settings_uses_old_route() ? "Yes" : "No");
 
   if (!mono_get_root_domain)
     return -1;

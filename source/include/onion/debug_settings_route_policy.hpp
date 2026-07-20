@@ -1,0 +1,205 @@
+#pragma once
+
+#include <cstddef>
+#include <cstdint>
+#include <string>
+#include <string_view>
+
+namespace onion::debug_settings_route {
+
+enum class UriKind {
+  WithMode,
+  Simple,
+};
+
+enum class RouteVariant {
+  Standard,
+  Old,
+};
+
+inline constexpr uint32_t kVersionMin = 0x00000000;
+inline constexpr uint32_t kVersionMax = 0xffffffff;
+inline constexpr size_t kSourceHashLength = 20;
+
+struct RouteDefinition {
+  RouteVariant variant;
+  const char *with_mode_uri;
+  const char *simple_uri;
+};
+
+struct SettingsBundleFingerprint {
+  uint32_t hbc_file_length;
+  uint8_t source_hash[kSourceHashLength];
+};
+
+struct CompatibilityProfile {
+  const char *name;
+  uint32_t min_version;
+  uint32_t max_version;
+  RouteVariant variant;
+  const SettingsBundleFingerprint *settings_bundles;
+  size_t settings_bundle_count;
+};
+
+inline constexpr RouteDefinition kStandardRoute{
+    RouteVariant::Standard,
+    "pssettings:play?mode=settings&function=debug_settings",
+    "pssettings:play?function=debug_settings",
+};
+
+inline constexpr RouteDefinition kOldRoute{
+    RouteVariant::Old,
+    "pssettings:play?mode=settings&function=debug_settings_old",
+    "pssettings:play?function=debug_settings_old",
+};
+
+inline constexpr SettingsBundleFingerprint kStandardSettingsBundles[] = {
+    {
+        0x4dda8c, // 10.01 NPXS40008
+        {0xad, 0x6c, 0xf2, 0xd6, 0xf8, 0x97, 0x4c, 0xcd, 0x34, 0xb1,
+         0x4e, 0x69, 0xbb, 0x6e, 0x34, 0x0e, 0x8d, 0xec, 0x5d, 0xc5},
+    },
+};
+
+inline constexpr SettingsBundleFingerprint kOldRouteSettingsBundles[] = {
+    {
+        0x4f4bfc, // 11.6 NPXS40008
+        {0x92, 0x56, 0x61, 0x24, 0xb6, 0xcf, 0xe0, 0xb0, 0xa7, 0xc8,
+         0x12, 0xfc, 0x8a, 0x3b, 0xbf, 0xcf, 0x32, 0xac, 0x46, 0x83},
+    },
+};
+
+inline constexpr CompatibilityProfile kCompatibilityProfiles[] = {
+    {
+        "standard-through-10.01",
+        kVersionMin,
+        0x1001ffff,
+        RouteVariant::Standard,
+        kStandardSettingsBundles,
+        sizeof(kStandardSettingsBundles) / sizeof(kStandardSettingsBundles[0]),
+    },
+    {
+        "old-route-11.x-plus",
+        0x11000000,
+        kVersionMax,
+        RouteVariant::Old,
+        kOldRouteSettingsBundles,
+        sizeof(kOldRouteSettingsBundles) / sizeof(kOldRouteSettingsBundles[0]),
+    },
+};
+
+class DebugSettingsRoutePolicy {
+public:
+  constexpr DebugSettingsRoutePolicy()
+      : variant_(RouteVariant::Standard) {}
+
+  constexpr explicit DebugSettingsRoutePolicy(RouteVariant variant)
+      : variant_(variant) {}
+
+  static constexpr DebugSettingsRoutePolicy for_system_version(
+      uint32_t system_version) {
+    return DebugSettingsRoutePolicy(resolve_variant(system_version));
+  }
+
+  constexpr RouteVariant variant() const {
+    return variant_;
+  }
+
+  constexpr bool uses_old_route() const {
+    return variant_ == RouteVariant::Old;
+  }
+
+  constexpr const char *toolbox_uri(UriKind kind) const {
+    const RouteDefinition &definition = route_definition();
+    return kind == UriKind::WithMode ? definition.with_mode_uri
+                                     : definition.simple_uri;
+  }
+
+  std::string rewrite(std::string_view uri) const {
+    if (!uses_old_route())
+      return std::string(uri);
+    return rewrite_function_param(std::string(uri), "debug_settings_old");
+  }
+
+private:
+  static constexpr RouteVariant resolve_variant(uint32_t system_version) {
+    for (const CompatibilityProfile &profile : kCompatibilityProfiles) {
+      if (system_version >= profile.min_version &&
+          system_version <= profile.max_version) {
+        return profile.variant;
+      }
+    }
+    return RouteVariant::Standard;
+  }
+
+  constexpr const RouteDefinition &route_definition() const {
+    return uses_old_route() ? kOldRoute : kStandardRoute;
+  }
+
+  static std::string rewrite_function_param(std::string uri,
+                                            std::string_view new_value) {
+    const size_t query_begin = uri.find('?');
+    if (query_begin == std::string::npos)
+      return uri;
+
+    const size_t fragment_begin = uri.find('#', query_begin + 1);
+    const size_t query_end =
+        fragment_begin == std::string::npos ? uri.size() : fragment_begin;
+
+    size_t part_begin = query_begin + 1;
+    while (part_begin <= query_end) {
+      size_t part_end = uri.find('&', part_begin);
+      if (part_end == std::string::npos || part_end > query_end)
+        part_end = query_end;
+
+      const size_t equals = uri.find('=', part_begin);
+      if (equals != std::string::npos && equals < part_end) {
+        const std::string_view key(uri.data() + part_begin,
+                                   equals - part_begin);
+        const size_t value_begin = equals + 1;
+        const std::string_view value(uri.data() + value_begin,
+                                     part_end - value_begin);
+        if (key == "function" && value == "debug_settings") {
+          uri.replace(value_begin, value.size(), new_value.data(),
+                      new_value.size());
+          return uri;
+        }
+      }
+
+      if (part_end == query_end)
+        break;
+      part_begin = part_end + 1;
+    }
+    return uri;
+  }
+
+  RouteVariant variant_;
+};
+
+inline bool source_hash_equals(
+    const uint8_t *source_hash,
+    const SettingsBundleFingerprint &fingerprint) {
+  if (!source_hash)
+    return false;
+  for (size_t i = 0; i < kSourceHashLength; ++i) {
+    if (source_hash[i] != fingerprint.source_hash[i])
+      return false;
+  }
+  return true;
+}
+
+inline bool settings_bundle_is_supported(uint32_t hbc_file_length,
+                                         const uint8_t *source_hash) {
+  for (const CompatibilityProfile &profile : kCompatibilityProfiles) {
+    for (size_t i = 0; i < profile.settings_bundle_count; ++i) {
+      const SettingsBundleFingerprint &fingerprint = profile.settings_bundles[i];
+      if (hbc_file_length == fingerprint.hbc_file_length &&
+          source_hash_equals(source_hash, fingerprint)) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+} // namespace onion::debug_settings_route
