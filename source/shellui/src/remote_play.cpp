@@ -46,39 +46,68 @@ void Base64Encode(uint64_t input, char *output) {
   onion_account_id_base64_encode(input, output);
 }
 
-void InitRemotePlay() {
+bool InitRemotePlay() {
   int rp_enable = 0, err = 0;
   if ((err = sceRegMgrGetInt_hook(REMOTE_PLAY_ENABLE_REGISTRY, &rp_enable))) {
     notify("SCE_REGMGR: unable to get REMOTEPLAY_rp_enable (0x%x)", err);
+    return false;
   } else if (rp_enable != 1) {
     rp_enable = 1;
     if ((err = sceRegMgrSetInt(REMOTE_PLAY_ENABLE_REGISTRY, rp_enable))) {
       notify("SCE_REGMGR: unable to set REMOTEPLAY_rp_enable (0x%x)", err);
+      return false;
+    }
+    int verify_enable = 0;
+    if ((err = sceRegMgrGetInt_hook(REMOTE_PLAY_ENABLE_REGISTRY,
+                                    &verify_enable)) ||
+        verify_enable != 1) {
+      notify("SCE_REGMGR: unable to verify REMOTEPLAY_rp_enable (0x%x)", err);
+      return false;
     }
     shellui_log("[remote_play] enabled REMOTEPLAY_rp_enable registry");
   }
 
-  if (sceRemoteplayInitialize)
-    sceRemoteplayInitialize(0, 0);
+  if (!sceRemoteplayInitialize) {
+    shellui_log("[remote_play] Initialize unresolved");
+    return false;
+  }
+
+  // ShellUI may already have initialized this library. Keep the existing
+  // session usable while recording the result for device diagnostics.
+  err = sceRemoteplayInitialize(nullptr, 0);
+  shellui_log("[remote_play] Initialize => 0x%x", err);
+  return true;
 }
 
-uint32_t GeneratePINCode() {
-  uint32_t pin = 0;
+bool GeneratePINCode(uint32_t& pin) {
+  pin = 0;
 
   /* Join prior confirm thread; StopConfirmRegistLoop also invalidates PIN. */
   StopConfirmRegistLoop();
 
-  if (sceRemoteplayGeneratePinCode)
-    sceRemoteplayGeneratePinCode(&pin);
-  else
+  if (!sceRemoteplayGeneratePinCode) {
     shellui_log("[remote_play] GeneratePinCode unresolved");
+    return false;
+  }
 
-  pthread_create(&ConfirmRegistLoop_Thread, nullptr,
-                 reinterpret_cast<void *(*)(void *)>(ConfirmRegistLoop),
-                 nullptr);
+  const int err = sceRemoteplayGeneratePinCode(&pin);
+  if (err != 0) {
+    shellui_log("[remote_play] GeneratePinCode failed => 0x%x", err);
+    return false;
+  }
+
+  const int thread_err =
+      pthread_create(&ConfirmRegistLoop_Thread, nullptr, ConfirmRegistLoop,
+                     nullptr);
+  if (thread_err != 0) {
+    shellui_log("[remote_play] confirm thread create failed => 0x%x",
+                thread_err);
+    invalidate_pin_registration("thread_create_failed");
+    return false;
+  }
   g_confirm_thread_started = true;
 
-  return pin;
+  return true;
 }
 
 void StopConfirmRegistLoop() {
@@ -105,18 +134,38 @@ void StopConfirmRegistLoop() {
                                                          : "stop_idle");
 }
 
-void GetEncodedAccountID(char *buff, uint64_t &accountid) {
-  Activator activator(true);
+bool GetEncodedAccountID(char *buff, uint64_t &accountid,
+                         bool &activated_now) {
+  if (!buff) {
+    return false;
+  }
+  buff[0] = '\0';
+  accountid = 0;
+  activated_now = false;
 
-  if (activator.IsNotActivated()) {
-    activator.Activate();
+  Activator activator(true);
+  if (!activator.Valid()) {
+    shellui_log("[remote_play] foreground account registry slot not found");
+    return false;
   }
 
-  Base64Encode(activator.currentUser.accountID, buff);
+  if (activator.IsNotActivated()) {
+    if (!activator.Activate()) {
+      shellui_log("[remote_play] account activation failed");
+      return false;
+    }
+    activated_now = true;
+  }
+
   accountid = activator.currentUser.accountID;
+  if (accountid == 0) {
+    return false;
+  }
+  Base64Encode(accountid, buff);
+  return buff[0] != '\0';
 }
 
-void ConfirmRegistLoop() {
+void *ConfirmRegistLoop(void *) {
   IsRunningConfirmRegistLoop = true;
   int pair_stat = -1, pair_err = -1, err = -1;
 
@@ -152,9 +201,5 @@ void ConfirmRegistLoop() {
 
   IsRunningConfirmRegistLoop = false;
   shellui_log("[remote_play] ConfirmRegistLoop exit");
-}
-
-bool IsNotActivated() {
-  Activator activator(true);
-  return activator.IsNotActivated();
+  return nullptr;
 }

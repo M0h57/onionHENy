@@ -32,6 +32,10 @@ static int test_en(void) {
   TEST_ASSERT_TRUE(std::strcmp(tr("remote_play.link.sub"),
                                "View PIN and account details for Remote Play "
                                "from a phone or PC") == 0);
+  TEST_ASSERT_TRUE(std::strcmp(tr("rp.account_id_decoded"),
+                               "Decoded account ID: ") == 0);
+  TEST_ASSERT_TRUE(std::strcmp(tr("rp.pin_error"),
+                               "Could not obtain a Remote Play PIN") == 0);
   TEST_ASSERT_TRUE(std::strcmp(tr("debug.np_env.sub"),
                                "Change the PlayStation Network environment "
                                "string; the console reboots after saving") == 0);

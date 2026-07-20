@@ -14,13 +14,14 @@
 #include "toolbox_values.hpp"
 #include "onion_cjson.hpp"
 
-#define PIN_CODE_SIZE 30
+#define PIN_CODE_SIZE 64
 #define ACCOUNT_ID_BASE64_SIZE 16
 
 #include <dirent.h>
 #include <fcntl.h>
 #include <unistd.h>
 #include <sys/stat.h>
+#include <cstdio>
 #include <cstring>
 #include <cstdlib>
 #include <sstream>
@@ -208,50 +209,74 @@ void generate_remote_play_xml(std::string& xml_buffer) {
   char pin_code[PIN_CODE_SIZE] = {0};
   char AccountID[ACCOUNT_ID_BASE64_SIZE] = {0};
   uint64_t dec_account_id = 0;
+  bool activated_now = false;
   bzero(AccountID, ACCOUNT_ID_BASE64_SIZE);
 
   shellui_log("Starting remote play");
   static bool remote_play_initialized = false;
   if (!remote_play_initialized) {
-    InitRemotePlay();
-    remote_play_initialized = true;
+    remote_play_initialized = InitRemotePlay();
   }
 
   toolbox_i18n::apply_system_or_ui_lang(g_settings.ui_lang);
   ps5ui::Page page("remote_play_pin_display", toolbox_i18n::tr("rp.title"));
   page.root_style(ps5ui::Style::Center);
 
-  if (IsNotActivated()) {
-    GetEncodedAccountID(AccountID, dec_account_id);
+  if (!remote_play_initialized) {
+    page.label("remote_play_init_error", toolbox_i18n::tr("rp.init_error"),
+               ps5ui::Style::Center);
+    xml_buffer = page.build();
+    return;
+  }
+
+  if (!GetEncodedAccountID(AccountID, dec_account_id, activated_now)) {
+    page.label("remote_play_account_error",
+               toolbox_i18n::tr("rp.account_error"), ps5ui::Style::Center);
+    xml_buffer = page.build();
+    return;
+  }
+
+  if (activated_now) {
     page.label("id_pin_2", toolbox_i18n::tr("rp.need_reboot"),
                ps5ui::Style::Center);
     xml_buffer = page.build();
     return;
   }
 
-  shellui_log("Get encoded account id");
-  GetEncodedAccountID(AccountID, dec_account_id);
   shellui_log("Get encoded account id ==> %s", AccountID);
+
+  std::stringstream account_id_stream;
+  account_id_stream << std::hex << std::uppercase << dec_account_id;
+  const std::string decoded_account_id = account_id_stream.str();
 
   g_ui.remote_play_info =
       std::string(toolbox_i18n::tr("rp.account_id")) + AccountID;
-  {
-    std::stringstream ss;
-    ss << std::hex << std::uppercase << dec_account_id;
-    g_ui.remote_play_info +=
-        std::string("\n") + toolbox_i18n::tr("rp.account_id_decoded") + ss.str();
+  g_ui.remote_play_info +=
+      std::string("\n") + toolbox_i18n::tr("rp.account_id_decoded") +
+      decoded_account_id;
+
+  uint32_t pinCode = 0;
+  const bool pin_ready = GeneratePINCode(pinCode);
+  std::string pin_display;
+  if (pin_ready) {
+    shellui_log("Pin code => %u", pinCode);
+    snprintf(pin_code, sizeof(pin_code), "%s%04u %04u    ",
+             toolbox_i18n::tr("rp.pin"), pinCode / 10000u,
+             pinCode % 10000u);
+    pin_display = pin_code;
+    shellui_log("Pin code str => %s", pin_code);
+  } else {
+    pin_display = toolbox_i18n::tr("rp.pin_error");
   }
+  g_ui.remote_play_info += "\n" + pin_display;
 
-  const uint32_t pinCode = GeneratePINCode();
-  shellui_log("Pin code => %d", pinCode);
-  sprintf(pin_code, "%s%04d %04d    ", toolbox_i18n::tr("rp.pin"),
-          pinCode / 10000, pinCode % 10000);
-  g_ui.remote_play_info += "\n" + std::string(pin_code);
-  shellui_log("Pin code str => %s", pin_code);
-
-  page.label("id_pin", pin_code, ps5ui::Style::Center)
+  page.label("id_pin", pin_display, ps5ui::Style::Center)
       .label("base64_account_id",
              std::string(toolbox_i18n::tr("rp.account_id")) + AccountID,
+             ps5ui::Style::Center)
+      .label("decoded_account_id",
+             std::string(toolbox_i18n::tr("rp.account_id_decoded")) +
+                 decoded_account_id,
              ps5ui::Style::Center);
 
   if (usbpath() != -1)

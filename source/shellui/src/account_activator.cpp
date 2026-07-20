@@ -18,8 +18,9 @@ along with this program; see the file COPYING. If not, see
 #include <onion/reg_entity.h>
 
 
-Activator::Activator(bool skip_userservice_init)
+Activator::Activator(bool skip_userservice_init) : currentUser{}
 {
+    currentUser.account_number = -1;
 
     if (!skip_userservice_init)
     {
@@ -35,21 +36,40 @@ Activator::Activator(bool skip_userservice_init)
     //
     // Get current logged user
     //
-    int user_id;
+    int user_id = -1;
     char username[100] = {0};
-    sceUserServiceGetForegroundUser(&user_id);
-    sceUserServiceGetUserName(user_id, username, sizeof(username));  
-    currentUser.Username = std::string(username);
-    // currentUser.Username = "User1";
-    currentUser.account_number = GetRegistryFromUsername(currentUser.Username);
+    if (sceUserServiceGetForegroundUser(&user_id) != 0)
+    {
+        std::puts("Error sceUserServiceGetForegroundUser");
+        return;
+    }
+    currentUser.account_number = GetRegistryFromUserId(user_id);
 
     if (currentUser.account_number == -1)
     {
-        std::printf("Invalid user %s, aborting...\n", currentUser.Username.c_str());
+        std::printf("Invalid foreground user id %d, aborting...\n", user_id);
         return;    
     }
 
-    currentUser.accountID = GetAccountID(currentUser.account_number);
+    if (!GetAccountID(currentUser.account_number, currentUser.accountID))
+    {
+        std::puts("Error sceRegMgrGetBin(account id)");
+        currentUser.account_number = -1;
+        return;
+    }
+
+    // The username is needed only when an offline account has no account ID
+    // and OnionHEN must generate one. Do not make an already activated account
+    // unreadable merely because its display name lookup failed.
+    if (sceUserServiceGetUserName(user_id, username, sizeof(username)) == 0)
+        currentUser.Username = std::string(username);
+    else if (currentUser.accountID == 0)
+    {
+        std::puts("Error sceUserServiceGetUserName");
+        currentUser.account_number = -1;
+        return;
+    }
+
     GetAccountType(currentUser.account_number, currentUser.AccountType);
 
     std::printf("Current user => %s\n", currentUser.Username.c_str());
@@ -65,16 +85,18 @@ Activator::Activator(bool skip_userservice_init)
 }
 
 
-uint32_t Activator::GetRegistryFromUsername(const std::string& username)
+int32_t Activator::GetRegistryFromUserId(int32_t user_id)
 {
-    char reg_username[100] = {0};
-
-    for (ssize_t i = 0; i < 100; ++i)
+    // Registry account slots are 1..16. Match the foreground user id exactly,
+    // as kylin-core does, instead of relying on a potentially ambiguous
+    // username prefix match.
+    for (int32_t i = 1; i <= 16; ++i)
     {
-        int reg_number = GetEntityNumber(i, USERNAME_ENTITY_NUMBER, USERNAME_ENTITY_NUMBER_2);
-        sceRegMgrGetStr(reg_number, reg_username, 100);
-        
-        if (!strncmp(username.c_str(), reg_username, username.size()))
+        int32_t registry_user_id = -1;
+        int reg_number = GetEntityNumber(i, USER_ID_ENTITY_NUMBER,
+                                         USER_ID_ENTITY_NUMBER_2);
+        if (sceRegMgrGetInt_hook(reg_number, &registry_user_id) == 0 &&
+            registry_user_id == user_id)
         {
             return i;
         }
@@ -84,30 +106,28 @@ uint32_t Activator::GetRegistryFromUsername(const std::string& username)
 }
 
 
-uint64_t Activator::GetAccountID(uint32_t account_number)
+bool Activator::GetAccountID(uint32_t account_number, uint64_t& account_id)
 {
     int n = GetEntityNumber(account_number, ACCOUNT_ID_ENTITY_NUMBER, ACCOUNT_ID_ENTITY_NUMBER_2);
-    uint64_t val = 0;
+    account_id = 0;
 
-    sceRegMgrGetBin(n, &val, sizeof(uint64_t));
-
-    return val;
+    return sceRegMgrGetBin(n, &account_id, sizeof(account_id)) == 0;
 }
 
 
-void Activator::SetAccountID(uint32_t account_number, uint64_t AccountID)
+bool Activator::SetAccountID(uint32_t account_number, uint64_t AccountID)
 {
     int n = GetEntityNumber(account_number, ACCOUNT_ID_ENTITY_NUMBER, ACCOUNT_ID_ENTITY_NUMBER_2);
 
-    sceRegMgrSetBin(n, &AccountID, sizeof(uint64_t));
+    return sceRegMgrSetBin(n, &AccountID, sizeof(uint64_t)) == 0;
 }
 
 
-void Activator::SetAccountType(uint32_t account_number, char* AccountType)
+bool Activator::SetAccountType(uint32_t account_number, char* AccountType)
 {
     int n = GetEntityNumber(account_number, ACCOUNT_TYPE_ENTITY_NUMBER, ACCOUNT_TYPE_ENTITY_NUMBER_2);
     
-    sceRegMgrSetStr(n, AccountType, ACCOUNT_TYPE_MAX);
+    return sceRegMgrSetStr(n, AccountType, ACCOUNT_TYPE_MAX) == 0;
 }
 
 
@@ -129,10 +149,10 @@ uint32_t Activator::GetAccountFlags(uint32_t account_number)
     return val;
 }
 
-void Activator::SetAccountFlags(uint32_t account_number, uint32_t Flags)
+bool Activator::SetAccountFlags(uint32_t account_number, uint32_t Flags)
 {
     int n = GetEntityNumber(account_number, ACCOUNT_ENTITY_FLAGS_NUMBER, ACCOUNT_ENTITY_FLAGS_NUMBER_2);
-    sceRegMgrSetInt(n, Flags);
+    return sceRegMgrSetInt(n, Flags) == 0;
 }
 
 
@@ -144,16 +164,21 @@ bool Activator::IsNotActivated()
 }
 
 bool Activator::Activate()
-{    
+{
+    if (!Valid())
+        return false;
+
     if (IsNotActivated())
     {
         uint64_t accountID = GenerateAccountID(currentUser.Username.c_str());
         char account_type[ACCOUNT_TYPE_MAX] = "np";
         uint32_t flags = 4098;
 
-        SetAccountID(currentUser.account_number, accountID);
-        SetAccountType(currentUser.account_number, account_type);
-        SetAccountFlags(currentUser.account_number, flags);
+        if (accountID == 0 ||
+            !SetAccountID(currentUser.account_number, accountID) ||
+            !SetAccountType(currentUser.account_number, account_type) ||
+            !SetAccountFlags(currentUser.account_number, flags))
+            return false;
         
         //
         // Update it
@@ -191,4 +216,3 @@ void Activator::GetPSAccount(std::string& account)
 {   
     
 }
-

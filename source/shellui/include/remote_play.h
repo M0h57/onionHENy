@@ -22,9 +22,9 @@ extern void notify(const char* text, ...);
 extern bool IsRunningConfirmRegistLoop; 
 
 void Base64Encode(uint64_t input, char* output);
-void InitRemotePlay();
-uint32_t GeneratePINCode();
-void GetEncodedAccountID(char* buff, uint64_t &accountid);
+bool InitRemotePlay();
+bool GeneratePINCode(uint32_t& pin);
+bool GetEncodedAccountID(char* buff, uint64_t& accountid,
+                         bool& activated_now);
 void StopConfirmRegistLoop();
-void ConfirmRegistLoop();
-bool IsNotActivated();
+void* ConfirmRegistLoop(void*);

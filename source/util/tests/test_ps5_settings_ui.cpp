@@ -159,6 +159,8 @@ static int test_remote_play_like_page(void) {
           .root_style(Style::Center)
           .label("id_pin", "PIN 码  : 1234 5678    ", Style::Center)
           .label("base64_account_id", "账号 ID: ABCD", Style::Center)
+          .label("decoded_account_id", "解码后账号 ID: 1234ABCD",
+                 Style::Center)
           .button("id_save_rp_info", "将远程游玩详情保存到 USB", std::nullopt,
                   std::nullopt, std::nullopt, Style::Center)
           .build();
@@ -166,6 +168,8 @@ static int test_remote_play_like_page(void) {
   TEST_ASSERT_TRUE(xml.find("id=\"remote_play_pin_display\"") != std::string::npos);
   TEST_ASSERT_TRUE(xml.find("id=\"id_pin\"") != std::string::npos);
   TEST_ASSERT_TRUE(xml.find("id=\"base64_account_id\"") != std::string::npos);
+  TEST_ASSERT_TRUE(xml.find("id=\"decoded_account_id\"") != std::string::npos);
+  TEST_ASSERT_TRUE(xml.find("解码后账号 ID: 1234ABCD") != std::string::npos);
   TEST_ASSERT_TRUE(xml.find("id=\"id_save_rp_info\"") != std::string::npos);
   TEST_ASSERT_TRUE(xml.find("远程游玩") != std::string::npos);
   return 0;

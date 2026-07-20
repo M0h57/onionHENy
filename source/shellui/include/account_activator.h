@@ -23,8 +23,8 @@ along with this program; see the file COPYING. If not, see
 #include "hooked_funcs.hpp"
 
 
-#define USERNAME_ENTITY_NUMBER      0x7800200
-#define USERNAME_ENTITY_NUMBER_2    0x7940200
+#define USER_ID_ENTITY_NUMBER       0x7800100
+#define USER_ID_ENTITY_NUMBER_2     0x7940100
 
 #define ACCOUNT_ID_ENTITY_NUMBER    0x7800500
 #define ACCOUNT_ID_ENTITY_NUMBER_2  0x7940500
@@ -58,7 +58,7 @@ typedef std::vector<std::string> AccountList;
 struct User
 {
     std::string Username;
-    uint32_t account_number;
+    int32_t account_number;
     uint64_t accountID;
     char AccountType[ACCOUNT_TYPE_MAX];
 };
@@ -71,22 +71,23 @@ public:
     bool Activate();
     void GetPSAccount(std::string& account);
 
-    inline bool Valid() const { return currentUser.account_number != -1; }
+    inline bool Valid() const {
+        return currentUser.account_number >= 1 && currentUser.account_number <= 16;
+    }
     bool IsNotActivated();
 
     User currentUser;
 private:
     int GetEntityNumber(int a, int d, int e);
-    uint32_t GetRegistryFromUsername(const std::string& username);
-    uint64_t GetAccountID(uint32_t account_number);
+    int32_t GetRegistryFromUserId(int32_t user_id);
+    bool GetAccountID(uint32_t account_number, uint64_t& account_id);
     uint32_t GetAccountType(uint32_t account_number, char* account_type);
     uint32_t GetAccountFlags(uint32_t account_number);
     uint64_t GenerateAccountID(const char* username);
 
-    
-    void SetAccountID(uint32_t account_number, uint64_t AccountID);
-    void SetAccountType(uint32_t account_number, char* AccountType);
-    void SetAccountFlags(uint32_t account_number, uint32_t Flags);
+    bool SetAccountID(uint32_t account_number, uint64_t AccountID);
+    bool SetAccountType(uint32_t account_number, char* AccountType);
+    bool SetAccountFlags(uint32_t account_number, uint32_t Flags);
 
 
 
