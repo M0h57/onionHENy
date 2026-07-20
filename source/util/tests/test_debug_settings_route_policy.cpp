@@ -32,6 +32,16 @@ static int test_1001_uses_standard_route(void) {
   return 0;
 }
 
+static int test_1020_uses_standard_route(void) {
+  const DebugSettingsRoutePolicy policy =
+      DebugSettingsRoutePolicy::for_system_version(0x10200000);
+
+  TEST_ASSERT_TRUE(!policy.uses_old_route());
+  TEST_ASSERT_STREQ("pssettings:play?function=debug_settings",
+                    policy.toolbox_uri(UriKind::Simple));
+  return 0;
+}
+
 static int test_1040_uses_standard_route(void) {
   const DebugSettingsRoutePolicy policy =
       DebugSettingsRoutePolicy::for_system_version(0x10040000);
@@ -55,6 +65,16 @@ static int test_1060_uses_standard_route(void) {
 static int test_1100_uses_old_route(void) {
   const DebugSettingsRoutePolicy policy =
       DebugSettingsRoutePolicy::for_system_version(0x11000000);
+
+  TEST_ASSERT_TRUE(policy.uses_old_route());
+  TEST_ASSERT_STREQ("pssettings:play?function=debug_settings_old",
+                    policy.toolbox_uri(UriKind::Simple));
+  return 0;
+}
+
+static int test_1120_uses_old_route(void) {
+  const DebugSettingsRoutePolicy policy =
+      DebugSettingsRoutePolicy::for_system_version(0x11200000);
 
   TEST_ASSERT_TRUE(policy.uses_old_route());
   TEST_ASSERT_STREQ("pssettings:play?function=debug_settings_old",
@@ -98,6 +118,16 @@ static int test_1270_uses_old_route(void) {
 static int test_1202_uses_old_route(void) {
   const DebugSettingsRoutePolicy policy =
       DebugSettingsRoutePolicy::for_system_version(0x12020000);
+
+  TEST_ASSERT_TRUE(policy.uses_old_route());
+  TEST_ASSERT_STREQ("pssettings:play?function=debug_settings_old",
+                    policy.toolbox_uri(UriKind::Simple));
+  return 0;
+}
+
+static int test_1260_uses_old_route(void) {
+  const DebugSettingsRoutePolicy policy =
+      DebugSettingsRoutePolicy::for_system_version(0x12600000);
 
   TEST_ASSERT_TRUE(policy.uses_old_route());
   TEST_ASSERT_STREQ("pssettings:play?function=debug_settings_old",
@@ -197,6 +227,15 @@ static int test_settings_bundle_accepts_known_1100_hash(void) {
   return 0;
 }
 
+static int test_settings_bundle_accepts_known_1120_hash(void) {
+  static const uint8_t hash[] = {
+      0xd0, 0x34, 0x62, 0xa9, 0x12, 0xc4, 0xb5, 0xb8, 0xdb, 0x4a,
+      0x98, 0xd0, 0x44, 0xb9, 0xd4, 0x88, 0xa2, 0xdf, 0xfc, 0x7a};
+  TEST_ASSERT_TRUE(onion::debug_settings_route::settings_bundle_is_supported(
+      0x4f45b8, hash));
+  return 0;
+}
+
 static int test_settings_bundle_accepts_known_1140_hash(void) {
   static const uint8_t hash[] = {
       0xa7, 0xb7, 0x31, 0x57, 0x1f, 0x84, 0xb6, 0xcd, 0xaf, 0x7c,
@@ -230,6 +269,15 @@ static int test_settings_bundle_accepts_known_1202_hash(void) {
       0x42, 0x0c, 0x2d, 0x17, 0x49, 0x44, 0xb4, 0xa8, 0x80, 0x43};
   TEST_ASSERT_TRUE(onion::debug_settings_route::settings_bundle_is_supported(
       0x4e7bec, hash));
+  return 0;
+}
+
+static int test_settings_bundle_accepts_known_1260_hash(void) {
+  static const uint8_t hash[] = {
+      0x75, 0x74, 0x7b, 0xb5, 0xfa, 0x7e, 0x3a, 0x4e, 0x22, 0xd5,
+      0x57, 0x88, 0x2f, 0x52, 0x81, 0xe4, 0xd1, 0xf1, 0x29, 0x59};
+  TEST_ASSERT_TRUE(onion::debug_settings_route::settings_bundle_is_supported(
+      0x4e9028, hash));
   return 0;
 }
 
@@ -298,14 +346,18 @@ extern "C" int test_debug_settings_route_policy_suite(void) {
                           test_1000_uses_standard_route);
   fails += onion_test_run("debug_route.1001_standard",
                           test_1001_uses_standard_route);
+  fails += onion_test_run("debug_route.1020_standard",
+                          test_1020_uses_standard_route);
   fails += onion_test_run("debug_route.1040_standard",
                           test_1040_uses_standard_route);
   fails += onion_test_run("debug_route.1060_standard",
                           test_1060_uses_standard_route);
   fails += onion_test_run("debug_route.1100_old", test_1100_uses_old_route);
+  fails += onion_test_run("debug_route.1120_old", test_1120_uses_old_route);
   fails += onion_test_run("debug_route.1140_old", test_1140_uses_old_route);
   fails += onion_test_run("debug_route.1160_old", test_1160_uses_old_route);
   fails += onion_test_run("debug_route.1202_old", test_1202_uses_old_route);
+  fails += onion_test_run("debug_route.1260_old", test_1260_uses_old_route);
   fails += onion_test_run("debug_route.1270_old", test_1270_uses_old_route);
   fails += onion_test_run("debug_route.1220_old", test_1220_uses_old_route);
   fails += onion_test_run("debug_route.standard_no_rewrite",
@@ -324,12 +376,16 @@ extern "C" int test_debug_settings_route_policy_suite(void) {
                           test_settings_bundle_accepts_known_1060_hash);
   fails += onion_test_run("debug_route.bundle_1100",
                           test_settings_bundle_accepts_known_1100_hash);
+  fails += onion_test_run("debug_route.bundle_1120",
+                          test_settings_bundle_accepts_known_1120_hash);
   fails += onion_test_run("debug_route.bundle_1140",
                           test_settings_bundle_accepts_known_1140_hash);
   fails += onion_test_run("debug_route.bundle_1160",
                           test_settings_bundle_accepts_known_1160_hash);
   fails += onion_test_run("debug_route.bundle_1202",
                           test_settings_bundle_accepts_known_1202_hash);
+  fails += onion_test_run("debug_route.bundle_1260",
+                          test_settings_bundle_accepts_known_1260_hash);
   fails += onion_test_run("debug_route.bundle_1270",
                           test_settings_bundle_accepts_known_1270_hash);
   fails += onion_test_run("debug_route.bundle_1220",

@@ -28,6 +28,7 @@ KNOWN_HOMEUI_PROFILES = [
         "source_hash": "ae256655beaeea9e752e23256bbdddf1af254aea",
     },
     {
+        # 10.2 NPXS40002 is byte-identical to the 10.4/10.6 dump.
         "name": "10.4/10.6 NPXS40002 HomeUI",
         "hbc_version": 89,
         "file_length": 0x1B3BCC,
@@ -40,12 +41,14 @@ KNOWN_HOMEUI_PROFILES = [
         "source_hash": "e21110895e8fb6c85f49db972d51fc101bb8fc52",
     },
     {
+        # 11.2 NPXS40002 is byte-identical to the 11.4/11.6 dump.
         "name": "11.4/11.6 NPXS40002 HomeUI",
         "hbc_version": 89,
         "file_length": 0x1B2CC8,
         "source_hash": "f321f83f9143035f5d97ee5ad98ceb75133c890e",
     },
     {
+        # 12.6 NPXS40002 is byte-identical to the 12.7 dump.
         "name": "12.7 NPXS40002 HomeUI",
         "hbc_version": 89,
         "file_length": 0x1B73BC,
@@ -69,6 +72,7 @@ KNOWN_SETTINGS_PROFILES = [
         "source_hash": "ad6cf2d6f8974ccd34b14e69bb6e340e8dec5dc5",
     },
     {
+        # 10.2 and 10.4 dumps share this Settings bundle fingerprint.
         "name": "10.4 NPXS40008 Settings",
         "route": "standard",
         "file_length": 0x4E089C,
@@ -85,6 +89,12 @@ KNOWN_SETTINGS_PROFILES = [
         "route": "old",
         "file_length": 0x4FA540,
         "source_hash": "1824c9fb562e31eef651bb3874c1c73f7f6e24b0",
+    },
+    {
+        "name": "11.2 NPXS40008 Settings",
+        "route": "old",
+        "file_length": 0x4F45B8,
+        "source_hash": "d03462a912c4b5b8db4a98d044b9d488a2dffc7a",
     },
     {
         "name": "11.4 NPXS40008 Settings",
@@ -104,6 +114,12 @@ KNOWN_SETTINGS_PROFILES = [
         "route": "old",
         "file_length": 0x4E7BEC,
         "source_hash": "fc7c4f15af42929e1d52420c2d174944b4a88043",
+    },
+    {
+        "name": "12.6 NPXS40008 Settings",
+        "route": "old",
+        "file_length": 0x4E9028,
+        "source_hash": "75747bb5fa7e3a4e22d557882f5281e4d1f12959",
     },
     {
         "name": "12.7 NPXS40008 Settings",

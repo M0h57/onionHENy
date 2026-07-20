@@ -125,6 +125,7 @@ static const HomeUiPatchProfile kHomeUiPatchProfiles[] = {
         },
     },
     {
+        // 10.2 NPXS40002 is byte-identical to the 10.4/10.6 dump.
         "10.4/10.6 NPXS40002 HomeUI",
         kHomeUiPatchByteSet1060,
         89,
@@ -169,6 +170,7 @@ static const HomeUiPatchProfile kHomeUiPatchProfiles[] = {
         },
     },
     {
+        // 11.2 NPXS40002 is byte-identical to the 11.4/11.6 dump.
         "11.4/11.6 NPXS40002 HomeUI",
         kHomeUiPatchByteSet1160,
         89,
@@ -191,6 +193,7 @@ static const HomeUiPatchProfile kHomeUiPatchProfiles[] = {
         },
     },
     {
+        // 12.6 NPXS40002 is byte-identical to the 12.7 dump.
         "12.7 NPXS40002 HomeUI",
         kHomeUiPatchByteSet1270,
         89,

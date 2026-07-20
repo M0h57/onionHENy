@@ -29,12 +29,21 @@
 
 ## 已知复用
 
+- `10.2DUMP` 的 `NPXS40002`、`NPXS40008` 分别与 10.4 对应文件整文件
+  完全一致，直接复用 `10.4/10.6` HomeUI profile 和 10.4 Settings
+  fingerprint；Settings route 为 standard。
+- `11.2DUMP` 的 `NPXS40002` 与 11.4/11.6 完全一致；`NPXS40008`
+  使用独立 old-route 指纹：`hbc_file_length=0x4f45b8`、
+  `source_hash=d03462a912c4b5b8db4a98d044b9d488a2dffc7a`。
 - `11.40DUMP` 的 `NPXS40002` HBC 与 11.6 完全一致，复用
   `11.4/11.6` HomeUI profile。`NPXS40008` 使用独立 Settings 指纹：
   `hbc_file_length=0x4f45c4`、
   `source_hash=a7b731571f84b6cdaf7c4227a980ba5ee20004a8`，route 为 old。
 - `NPXS40009` 不包含 `debug_settings` / `debug_settings_old`，不能作为
   Settings profile 指纹来源。
+- `12.6DUMP` 的 `NPXS40002` 与 12.7 完全一致；`NPXS40008` 使用独立
+  old-route 指纹：`hbc_file_length=0x4e9028`、
+  `source_hash=75747bb5fa7e3a4e22d557882f5281e4d1f12959`。
 
 ## 第一轮识别
 
