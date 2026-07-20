@@ -16,6 +16,8 @@
 <p align="center">
   <b><a href="#功能">功能</a></b>
   ·
+  <b><a href="#与-etahen-的功能对照">功能对照</a></b>
+  ·
   <b><a href="#运行">运行</a></b>
   ·
   <b><a href="#构建">构建</a></b>
@@ -50,12 +52,63 @@ OnionHEN 致力于为已破解的 PS5 系统提供实用、可维护的自制程
 - **系统准备** — 提权、文件系统重新挂载和系统更新分区阻断
 - **fSELF / fPKG 支持** — 由内嵌 `kstuff` payload 提供可选内核能力
 - **Payload 管理器** — 启动和停止裸 `.elf` payload，并支持自动启动
-- **游戏 Overlay** — 可配置 FPS、CPU、GPU、RAM、温度、占用率和网络信息
+- **游戏 Overlay** — 可配置 CPU、GPU、RAM、温度、占用率和网络信息
 - **金手指引擎** — 支持本地 JSON、SHN、MC4 和 ShnExt 文件及运行时开关
 - **主机工具** — Rest Mode、Remote Play、外置硬盘、Title ID、风扇、快捷键和游戏选项
 - **App Jailbreak** — 白名单自制程序可通过 daemon 沙盒 FIFO 请求提权
 - **高可用运行时** — critical 与 utility 守护进程分离，主守护进程可自动拉起 utility
 - **统一配置** — Toolbox 和守护进程共享同一套带版本号的 `config.ini` schema
+
+## 与 etaHEN 的功能对照
+
+与原版 [etaHEN](https://github.com/etaHEN/etaHEN) 对比：
+
+<table width="100%">
+  <thead>
+    <tr>
+      <th align="left" width="70%">功能名称</th>
+      <th align="center" width="15%">OnionHEN</th>
+      <th align="center" width="15%">etaHEN</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr><td>Toolbox 工具箱</td><td align="center">✅</td><td align="center">✅</td></tr>
+    <tr><td>简体中文界面</td><td align="center">✅</td><td align="center">❌</td></tr>
+    <tr><td>主界面顶栏快捷入口</td><td align="center">✅</td><td align="center">❌</td></tr>
+    <tr><td>fSELF / fPKG 支持</td><td align="center">✅</td><td align="center">✅</td></tr>
+    <tr><td><code>kstuff</code> 管理</td><td align="center">✅</td><td align="center">✅</td></tr>
+    <tr><td>系统更新阻断</td><td align="center">✅</td><td align="center">✅</td></tr>
+    <tr><td>PKG 安装器</td><td align="center">✅</td><td align="center">✅</td></tr>
+    <tr><td>附加内容管理</td><td align="center">✅</td><td align="center">✅</td></tr>
+    <tr><td>Homebrew Store 安装</td><td align="center">❌</td><td align="center">✅</td></tr>
+    <tr><td>远程 PKG 安装</td><td align="center">❌</td><td align="center">✅</td></tr>
+    <tr><td>ELF Payload 管理</td><td align="center">✅</td><td align="center">✅</td></tr>
+    <tr><td>Payload 自动启动</td><td align="center">✅</td><td align="center">✅</td></tr>
+    <tr><td>etaHEN SDK 插件</td><td align="center">❌</td><td align="center">✅</td></tr>
+    <tr><td>JSON / SHN / MC4 金手指</td><td align="center">✅</td><td align="center">✅</td></tr>
+    <tr><td>ShnExt 金手指</td><td align="center">✅</td><td align="center">❌</td></tr>
+    <tr><td>在线下载金手指</td><td align="center">❌</td><td align="center">✅</td></tr>
+    <tr><td>游戏状态 Overlay</td><td align="center">✅</td><td align="center">✅</td></tr>
+    <tr><td>FPS 显示</td><td align="center">❌</td><td align="center">✅</td></tr>
+    <tr><td>Rest Mode 选项</td><td align="center">✅</td><td align="center">✅</td></tr>
+    <tr><td>Remote Play 工具</td><td align="center">✅</td><td align="center">✅</td></tr>
+    <tr><td>外置硬盘工具</td><td align="center">✅</td><td align="center">✅</td></tr>
+    <tr><td>Title ID 显示</td><td align="center">✅</td><td align="center">✅</td></tr>
+    <tr><td>风扇控制</td><td align="center">✅</td><td align="center">✅</td></tr>
+    <tr><td>手柄快捷键</td><td align="center">✅</td><td align="center">✅</td></tr>
+    <tr><td>自定义游戏选项</td><td align="center">✅</td><td align="center">✅</td></tr>
+    <tr><td>蓝光许可证激活</td><td align="center">✅</td><td align="center">✅</td></tr>
+    <tr><td>自动退盘</td><td align="center">❌</td><td align="center">✅</td></tr>
+    <tr><td>App Jailbreak</td><td align="center">✅</td><td align="center">✅</td></tr>
+    <tr><td>FTP 服务</td><td align="center">❌</td><td align="center">✅</td></tr>
+    <tr><td>Klog 服务</td><td align="center">❌</td><td align="center">✅</td></tr>
+    <tr><td>PS5Debug</td><td align="center">❌</td><td align="center">✅</td></tr>
+    <tr><td>Discord RPC</td><td align="center">❌</td><td align="center">✅</td></tr>
+    <tr><td>Itemzflow / 游戏转储集成</td><td align="center">❌</td><td align="center">✅</td></tr>
+    <tr><td>PS5 webMAN 游戏菜单</td><td align="center">❌</td><td align="center">✅</td></tr>
+    <tr><td>自定义系统信息</td><td align="center">❌</td><td align="center">✅</td></tr>
+  </tbody>
+</table>
 
 OnionHEN 不内置内核 exploit。它仍然需要外部 **9021** `elfldr` 完成首跳
 bootstrap，随后会启动自己的内置私有 **9020** loader，用于运行时 ELF 与用户

@@ -16,6 +16,8 @@
 <p align="center">
   <b><a href="#features">Features</a></b>
   ·
+  <b><a href="#feature-comparison-with-etahen">Comparison</a></b>
+  ·
   <b><a href="#run">Run</a></b>
   ·
   <b><a href="#build">Build</a></b>
@@ -51,12 +53,63 @@ OnionHEN focuses on a practical, maintainable homebrew environment for exploited
 - **System preparation** — privilege setup, filesystem remounting, and update-partition blocking
 - **fSELF / fPKG support** — optional kernel functionality provided by the embedded `kstuff` payload
 - **Payload manager** — launch and stop bare `.elf` payloads, with optional automatic startup
-- **Game overlay** — configurable FPS, CPU, GPU, RAM, temperature, usage, and network information
+- **Game overlay** — configurable CPU, GPU, RAM, temperature, usage, and network information
 - **Cheat engine** — local JSON, SHN, MC4, and ShnExt files with runtime toggle support
 - **Console tools** — Rest Mode controls, Remote Play options, external HDD tools, title IDs, fan settings, shortcuts, and game options
 - **App jailbreak** — whitelist homebrew can request privilege escape via daemon sandbox FIFO
 - **Resilient runtime** — critical and utility daemons are separated; the main daemon can restart the utility daemon
 - **Centralized configuration** — Toolbox and daemon settings share one versioned `config.ini` schema
+
+## Feature comparison with etaHEN
+
+Compared with the original [etaHEN](https://github.com/etaHEN/etaHEN):
+
+<table width="100%">
+  <thead>
+    <tr>
+      <th align="left" width="70%">Feature</th>
+      <th align="center" width="15%">OnionHEN</th>
+      <th align="center" width="15%">etaHEN</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr><td>Toolbox</td><td align="center">✅</td><td align="center">✅</td></tr>
+    <tr><td>Simplified Chinese UI</td><td align="center">✅</td><td align="center">❌</td></tr>
+    <tr><td>Home screen top-bar shortcut</td><td align="center">✅</td><td align="center">❌</td></tr>
+    <tr><td>fSELF / fPKG support</td><td align="center">✅</td><td align="center">✅</td></tr>
+    <tr><td><code>kstuff</code> management</td><td align="center">✅</td><td align="center">✅</td></tr>
+    <tr><td>Update blocker</td><td align="center">✅</td><td align="center">✅</td></tr>
+    <tr><td>Package Installer</td><td align="center">✅</td><td align="center">✅</td></tr>
+    <tr><td>Add-on Content Manager</td><td align="center">✅</td><td align="center">✅</td></tr>
+    <tr><td>Homebrew Store installer</td><td align="center">❌</td><td align="center">✅</td></tr>
+    <tr><td>Remote PKG installer</td><td align="center">❌</td><td align="center">✅</td></tr>
+    <tr><td>ELF payload manager</td><td align="center">✅</td><td align="center">✅</td></tr>
+    <tr><td>Payload auto-start</td><td align="center">✅</td><td align="center">✅</td></tr>
+    <tr><td>etaHEN SDK plugins</td><td align="center">❌</td><td align="center">✅</td></tr>
+    <tr><td>JSON / SHN / MC4 cheats</td><td align="center">✅</td><td align="center">✅</td></tr>
+    <tr><td>ShnExt cheats</td><td align="center">✅</td><td align="center">❌</td></tr>
+    <tr><td>Online cheat downloads</td><td align="center">❌</td><td align="center">✅</td></tr>
+    <tr><td>Game status overlay</td><td align="center">✅</td><td align="center">✅</td></tr>
+    <tr><td>FPS display</td><td align="center">❌</td><td align="center">✅</td></tr>
+    <tr><td>Rest Mode options</td><td align="center">✅</td><td align="center">✅</td></tr>
+    <tr><td>Remote Play tools</td><td align="center">✅</td><td align="center">✅</td></tr>
+    <tr><td>External HDD tools</td><td align="center">✅</td><td align="center">✅</td></tr>
+    <tr><td>Title ID display</td><td align="center">✅</td><td align="center">✅</td></tr>
+    <tr><td>Fan control</td><td align="center">✅</td><td align="center">✅</td></tr>
+    <tr><td>Controller shortcuts</td><td align="center">✅</td><td align="center">✅</td></tr>
+    <tr><td>Custom game options</td><td align="center">✅</td><td align="center">✅</td></tr>
+    <tr><td>Blu-ray license activation</td><td align="center">✅</td><td align="center">✅</td></tr>
+    <tr><td>Automatic disc eject</td><td align="center">❌</td><td align="center">✅</td></tr>
+    <tr><td>App jailbreak</td><td align="center">✅</td><td align="center">✅</td></tr>
+    <tr><td>FTP server</td><td align="center">❌</td><td align="center">✅</td></tr>
+    <tr><td>Klog server</td><td align="center">❌</td><td align="center">✅</td></tr>
+    <tr><td>PS5Debug</td><td align="center">❌</td><td align="center">✅</td></tr>
+    <tr><td>Discord RPC</td><td align="center">❌</td><td align="center">✅</td></tr>
+    <tr><td>Itemzflow / game dumper integration</td><td align="center">❌</td><td align="center">✅</td></tr>
+    <tr><td>PS5 webMAN games</td><td align="center">❌</td><td align="center">✅</td></tr>
+    <tr><td>Custom system information</td><td align="center">❌</td><td align="center">✅</td></tr>
+  </tbody>
+</table>
 
 OnionHEN intentionally does not bundle a kernel exploit. It still needs an
 external `elfldr` on **9021** for the initial bootstrap, then starts its own

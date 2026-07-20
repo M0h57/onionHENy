@@ -8,3 +8,4 @@ OnionHEN continues **etaHEN** (LightningMods) for PS5, in the same AIO-HEN tradi
 | [util_arch/](util_arch/) | util.elf daemon: boot order, modules, IPC, cheats, CMD |
 | [pkg-writeup.md](pkg-writeup.md) | PS5 PKG technical writeup |
 | [shellui-injection.md](shellui-injection.md) | ShellUI inject path + kylin-core libNineS stability fixes |
+| [homeui-settings-compat.md](homeui-settings-compat.md) | Firmware compatibility handoff for HomeUI nav and Settings DebugSettings profiles |
