@@ -315,11 +315,6 @@ void generate_payload_xml(std::string& xml_buffer, bool list_page) {
     closedir(dir);
   }
 
-  if (list_page) {
-    page.link("id_auto_payloads", toolbox_i18n::tr("payload.auto.link"),
-              "auto_payloads.xml", toolbox_i18n::tr("payload.auto.sub"));
-  }
-
   xml_buffer = page.build();
 }
 
@@ -511,6 +506,8 @@ void append_toolbox_pkg_group(ps5ui::Group& g) {
 void append_toolbox_payloads_group(ps5ui::Group& g) {
   g.link("id_payloads", toolbox_i18n::tr("payloads.link"), "payloads.xml",
          toolbox_i18n::tr("payloads.link.sub"), kIconPlugins)
+      .link("id_auto_payloads", toolbox_i18n::tr("payload.auto.link"),
+            "auto_payloads.xml", toolbox_i18n::tr("payload.auto.sub"), kIconPlugins)
       .group(
           "id_kstuff_opts", toolbox_i18n::tr("kstuff.group"),
           [](ps5ui::Group& k) {
