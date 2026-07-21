@@ -16,8 +16,11 @@ along with this program; see the file COPYING. If not, see
 
 #include "homeui_top_nav_patch.hpp"
 
+#if SHELLUI_HOMEUI_TOP_NAV_PATCH == 1
+
 #include "defs.h"
 #include "detour.h"
+#include "external_symbols.hpp"
 #include "hooked_funcs.hpp"
 #include "ipc.hpp"
 #include <elf/nid/sha1.hpp>
@@ -90,6 +93,8 @@ struct HomeUiPatchOffsets {
   size_t top_nav_link_uri;
   size_t custom_title_value;
   size_t fps_body;
+  /* ApplicationErrorEventTrigger function start (77-byte button host). */
+  size_t app_error_body;
 };
 
 struct HomeUiPatchProfile {
@@ -122,6 +127,7 @@ static const HomeUiPatchProfile kHomeUiPatchProfiles[] = {
             0x49cc6,
             0xc012d,
             0x175a00,
+            0x175967,
         },
     },
     {
@@ -145,6 +151,7 @@ static const HomeUiPatchProfile kHomeUiPatchProfiles[] = {
             0x499ed,
             0xc025d,
             0x176079,
+            0x175fe0,
         },
     },
     {
@@ -167,6 +174,7 @@ static const HomeUiPatchProfile kHomeUiPatchProfiles[] = {
             0x49d54,
             0xc0536,
             0x176998,
+            0x1768ff,
         },
     },
     {
@@ -190,6 +198,7 @@ static const HomeUiPatchProfile kHomeUiPatchProfiles[] = {
             0x49cd3,
             0xc0455,
             0x1760b3,
+            0x17601a,
         },
     },
     {
@@ -213,6 +222,7 @@ static const HomeUiPatchProfile kHomeUiPatchProfiles[] = {
             0x4b726,
             0xc304d,
             0x1797ad,
+            0x179714,
         },
     },
     {
@@ -236,6 +246,7 @@ static const HomeUiPatchProfile kHomeUiPatchProfiles[] = {
             0x4b7cf,
             0xc2ffe,
             0x1796a9,
+            0x179610,
         },
     },
 };
@@ -456,8 +467,16 @@ static void update_hbc_footer_sha1(HbcView &hbc, size_t file_length) {
   SHA1Final(hbc.data + footer_offset, &ctx);
 }
 
+/*
+ * Focused top-nav buttons use invertedIconSource. Named system icons (Search,
+ * Settings) resolve both states from iconId; a custom file URI only fills the
+ * normal source unless we mirror it into invertedIcon.
+ *
+ * Crash history was from Fps body hijack on game-close remount, not from this
+ * mirror itself. Still harden: path filter, exception-safe ToString, re-entry
+ * guard (SetinvertedIconSource must not re-enter SetIconSource).
+ */
 static bool is_homeui_top_nav_icon_source(MonoObject *source) {
-#if SHELLUI_HOMEUI_TOP_NAV_PATCH == 1
   if (!source || !mono_object_to_string) {
     return false;
   }
@@ -465,39 +484,38 @@ static bool is_homeui_top_nav_icon_source(MonoObject *source) {
   MonoObject *exception = nullptr;
   MonoString *text = mono_object_to_string(source, &exception);
   if (exception || !text) {
-#if SHELL_DEBUG == 1
-    shellui_log("homeui_top_nav_patch: ReactButton icon source ToString failed");
-#endif
     return false;
   }
 
   return Mono_to_String(text).find(kOnionHenTopNavIconPath) !=
          std::string::npos;
-#else
-  (void)source;
-  return false;
-#endif
 }
 
 static void ReactButtonShadowNode_SetIconSource_Hook(MonoObject *instance,
                                                      MonoObject *source) {
+  thread_local int depth = 0;
+
   if (g_react_button_set_icon_source_orig) {
     g_react_button_set_icon_source_orig(instance, source);
   }
 
-  if (!shellui_hooks_are_ready() || !instance || !source ||
+  if (depth > 0 || !shellui_hooks_are_ready() || !instance || !source ||
       !g_react_button_set_inverted_icon_source ||
       !is_homeui_top_nav_icon_source(source)) {
     return;
   }
 
+  ++depth;
   g_react_button_set_inverted_icon_source(instance, source);
+  --depth;
 #if SHELL_DEBUG == 1
-  shellui_log("homeui_top_nav_patch: mirrored top-nav icon to invertedIcon");
+  shellui_log("homeui_top_nav_patch: mirrored OnionHEN icon to invertedIcon");
 #endif
 }
 
 } // namespace
+
+#endif /* SHELLUI_HOMEUI_TOP_NAV_PATCH == 1 */
 
 void install_homeui_top_nav_hooks(MonoImage *react_pui) {
 #if SHELLUI_HOMEUI_TOP_NAV_PATCH == 1
@@ -511,11 +529,10 @@ void install_homeui_top_nav_hooks(MonoImage *react_pui) {
           Get_Address_of_Method(react_pui, "ReactNative.Views.UI3.View",
                                 "ReactButtonShadowNode",
                                 "SetinvertedIconSource", 1));
-#if SHELL_DEBUG == 1
-  shellui_log(g_react_button_set_inverted_icon_source
-                  ? "homeui_top_nav_patch: SetinvertedIconSource found"
-                  : "homeui_top_nav_patch: SetinvertedIconSource missing");
-#endif
+  if (!g_react_button_set_inverted_icon_source) {
+    shellui_log("homeui_top_nav_patch: SetinvertedIconSource missing; "
+                "focused icon may be blank");
+  }
 
   const uint64_t set_icon_source =
       Get_Address_of_Method(react_pui, "ReactNative.Views.UI3.View",
@@ -529,7 +546,8 @@ void install_homeui_top_nav_hooks(MonoImage *react_pui) {
       set_icon_source,
       reinterpret_cast<void *>(&ReactButtonShadowNode_SetIconSource_Hook),
       reinterpret_cast<void **>(&g_react_button_set_icon_source_orig));
-  shellui_log(installed ? "homeui_top_nav_patch: SetIconSource hooked"
+  shellui_log(installed ? "homeui_top_nav_patch: SetIconSource hooked "
+                          "(invertedIcon mirror for OnionHEN)"
                         : "homeui_top_nav_patch: SetIconSource detour failed");
 #else
   (void)react_pui;
@@ -684,27 +702,28 @@ void patch_homeui_top_nav(unsigned char *buffer, int *size_ptr,
       0x62, 0x01, 0x01, 0xd3, 0x1d};
 
   /*
-   * The visible Settings slot has its own component, so patching its iconId
-   * would turn both Settings and the inserted slot into OnionHEN. Instead, keep
-   * the normal top-nav component names and make the dormant Fps slot render the
-   * OnionHEN button:
+   * Root cause of ShellUI SIGSEGV on game close (SceRnJs-rnps-home):
    *
-   *   object icon value: download_error -> /system_ex/vsh_asset/onionhen.png
-   *   object title:      Trigger AppError -> empty string
+   * Earlier builds rewrote the Fps *function body* (131-byte showFps debug
+   * component) into a useInteractivePress button and put Fps in the top-nav
+   * array. Fps remounts on BIG_APP → home focus restore and crashed the RN JS
+   * executor.
    *
-   * The Fps body is replaced with a short icon-button body that uses HomeUI's
-   * existing useInteractivePress hook. Keep the stock download_error icon id
-   * string intact; the link uses the private Trigger AppError string slot as a
-   * same-length OnionHEN?NavUI=1 URI, which hook_boot.cpp routes to the Debug
-   * Settings legacy host.
+   * Safe design (keeps the toolbox top-nav entry):
    *
-   * ReactButtonShadowNode_SetIconSource_Hook mirrors this same ImageSource into
-   * invertedIcon so the focused state has an image too.
+   *   top-nav order: [Search, ApplicationErrorEventTrigger, Settings, Profile]
+   *   host function: ApplicationErrorEventTrigger (already a 77-byte button)
+   *   body:          full 77-byte useInteractivePress OnionHEN button
+   *   Fps:           restore/leave stock showFps implementation
+   *   focus icon:    SetIconSource hook mirrors onionhen.png → invertedIcon
    *
-   * Older test builds aliased Fps to ApplicationErrorEventTrigger or inserted
-   * ApplicationErrorEventTrigger directly. Accept and repair those in-memory
-   * shapes, but keep Fps on its original export so profile modal rendering sees
-   * the expected HomeUI module shape.
+   * Object table still retargets:
+   *   iconId string → /system_ex/vsh_asset/onionhen.png
+   *   title id      → empty
+   *   Trigger AppError string slot → OnionHEN?NavUI=1 (hook_boot → toolbox)
+   *
+   * Accept prior in-memory shapes (Fps-in-array + Fps body rewrite, factory
+   * alias) and repair them toward this layout.
    */
   static const unsigned char k1001OldCustomIconValue[] = {0x8f, 0x01};
   static const unsigned char k1001NewCustomIconValue[] = {0xc9, 0x0e};
@@ -853,6 +872,55 @@ void patch_homeui_top_nav(unsigned char *buffer, int *size_ptr,
       0x01, 0xd6, 0x1d, 0x07, 0x01, 0x00, 0x00, 0x52, 0x04, 0x04, 0x03,
       0x02, 0x01, 0x35, 0x02, 0x05, 0x05, 0x4d, 0x2d, 0x71, 0x01, 0x73,
       0x0c, 0x51, 0x01, 0x02, 0x05, 0x01, 0x8e, 0x07, 0x01, 0x75, 0x01};
+  /* Stock ApplicationErrorEventTrigger bodies (full 77-byte functions). */
+  static const unsigned char k1001StockAppErrorBody[] = {
+      0x32, 0x04, 0x29, 0x00, 0x00, 0x2e, 0x01, 0x00, 0x0b, 0x34, 0x01,
+      0x01, 0x01, 0x69, 0x74, 0x03, 0x4f, 0x01, 0x01, 0x03, 0x35, 0x01,
+      0x01, 0x02, 0x18, 0x16, 0x2a, 0x04, 0x00, 0x01, 0x2e, 0x01, 0x00,
+      0x0e, 0x34, 0x02, 0x01, 0x03, 0x7b, 0x2e, 0x00, 0x00, 0x0d, 0x34,
+      0x01, 0x00, 0x01, 0x69, 0x01, 0x00, 0x03, 0x00, 0x03, 0x00, 0x7c,
+      0x10, 0x58, 0x19, 0x62, 0x04, 0x04, 0x8d, 0x1d, 0x39, 0x00, 0x04,
+      0x01, 0xb2, 0x00, 0x52, 0x00, 0x02, 0x03, 0x01, 0x00, 0x5a, 0x00};
+  static const unsigned char k1060StockAppErrorBody[] = {
+      0x32, 0x04, 0x29, 0x00, 0x00, 0x2e, 0x01, 0x00, 0x0b, 0x34, 0x01,
+      0x01, 0x01, 0x67, 0x74, 0x03, 0x4f, 0x01, 0x01, 0x03, 0x35, 0x01,
+      0x01, 0x02, 0x26, 0x16, 0x2a, 0x04, 0x00, 0x01, 0x2e, 0x01, 0x00,
+      0x0e, 0x34, 0x02, 0x01, 0x03, 0x79, 0x2e, 0x00, 0x00, 0x0d, 0x34,
+      0x01, 0x00, 0x01, 0x67, 0x01, 0x00, 0x03, 0x00, 0x03, 0x00, 0x6e,
+      0x10, 0x24, 0x19, 0x62, 0x04, 0x04, 0x8d, 0x1d, 0x39, 0x00, 0x04,
+      0x01, 0xb1, 0x00, 0x52, 0x00, 0x02, 0x03, 0x01, 0x00, 0x5a, 0x00};
+  static const unsigned char k1100StockAppErrorBody[] = {
+      0x32, 0x04, 0x29, 0x00, 0x00, 0x2e, 0x01, 0x00, 0x06, 0x34, 0x01,
+      0x01, 0x01, 0x6c, 0x74, 0x03, 0x4f, 0x01, 0x01, 0x03, 0x35, 0x01,
+      0x01, 0x02, 0xee, 0x15, 0x2a, 0x04, 0x00, 0x01, 0x2e, 0x01, 0x00,
+      0x09, 0x34, 0x02, 0x01, 0x03, 0x7d, 0x2e, 0x00, 0x00, 0x08, 0x34,
+      0x01, 0x00, 0x01, 0x6c, 0x01, 0x00, 0x03, 0x00, 0x03, 0x00, 0x7e,
+      0x10, 0x79, 0x19, 0x62, 0x04, 0x04, 0xb8, 0x1d, 0x39, 0x00, 0x04,
+      0x01, 0xb5, 0x00, 0x52, 0x00, 0x02, 0x03, 0x01, 0x00, 0x5a, 0x00};
+  static const unsigned char k1160StockAppErrorBody[] = {
+      0x32, 0x04, 0x29, 0x00, 0x00, 0x2e, 0x01, 0x00, 0x06, 0x34, 0x01,
+      0x01, 0x01, 0x6e, 0x74, 0x03, 0x4f, 0x01, 0x01, 0x03, 0x35, 0x01,
+      0x01, 0x02, 0xdb, 0x15, 0x2a, 0x04, 0x00, 0x01, 0x2e, 0x01, 0x00,
+      0x09, 0x34, 0x02, 0x01, 0x03, 0x7f, 0x2e, 0x00, 0x00, 0x08, 0x34,
+      0x01, 0x00, 0x01, 0x6e, 0x01, 0x00, 0x03, 0x00, 0x03, 0x00, 0x7e,
+      0x10, 0x70, 0x19, 0x62, 0x04, 0x04, 0xae, 0x1d, 0x39, 0x00, 0x04,
+      0x01, 0xb6, 0x00, 0x52, 0x00, 0x02, 0x03, 0x01, 0x00, 0x5a, 0x00};
+  static const unsigned char k1270StockAppErrorBody[] = {
+      0x32, 0x04, 0x29, 0x00, 0x00, 0x2e, 0x01, 0x00, 0x06, 0x34, 0x01,
+      0x01, 0x01, 0x6c, 0x74, 0x03, 0x4f, 0x01, 0x01, 0x03, 0x35, 0x01,
+      0x01, 0x02, 0x3a, 0x16, 0x2a, 0x04, 0x00, 0x01, 0x2e, 0x01, 0x00,
+      0x09, 0x34, 0x02, 0x01, 0x03, 0x7e, 0x2e, 0x00, 0x00, 0x08, 0x34,
+      0x01, 0x00, 0x01, 0x6c, 0x01, 0x00, 0x03, 0x00, 0x03, 0x00, 0x73,
+      0x12, 0x68, 0x1b, 0x62, 0x04, 0x04, 0xd5, 0x1d, 0x39, 0x00, 0x04,
+      0x01, 0xbb, 0x00, 0x52, 0x00, 0x02, 0x03, 0x01, 0x00, 0x5a, 0x00};
+  static const unsigned char k1220StockAppErrorBody[] = {
+      0x32, 0x04, 0x29, 0x00, 0x00, 0x2e, 0x01, 0x00, 0x06, 0x34, 0x01,
+      0x01, 0x01, 0x6c, 0x74, 0x03, 0x4f, 0x01, 0x01, 0x03, 0x35, 0x01,
+      0x01, 0x02, 0x3d, 0x16, 0x2a, 0x04, 0x00, 0x01, 0x2e, 0x01, 0x00,
+      0x09, 0x34, 0x02, 0x01, 0x03, 0x7e, 0x2e, 0x00, 0x00, 0x08, 0x34,
+      0x01, 0x00, 0x01, 0x6c, 0x01, 0x00, 0x03, 0x00, 0x03, 0x00, 0x73,
+      0x12, 0x69, 0x1b, 0x62, 0x04, 0x04, 0xd4, 0x1d, 0x39, 0x00, 0x04,
+      0x01, 0xbb, 0x00, 0x52, 0x00, 0x02, 0x03, 0x01, 0x00, 0x5a, 0x00};
   static_assert(sizeof(k1001OldIconOrder) == sizeof(k1160OldIconOrder),
                 "HomeUI top-nav order patch size mismatch");
   static_assert(sizeof(k1001OldIconOrder) == sizeof(k1060OldIconOrder),
@@ -926,13 +994,33 @@ void patch_homeui_top_nav(unsigned char *buffer, int *size_ptr,
   static_assert(sizeof(k1220OldFpsBodyPrefix) ==
                     sizeof(k1220OnionHenButtonBody),
                 "HomeUI top-nav Fps body patch must fit prefix length");
+  static_assert(sizeof(k1001StockAppErrorBody) ==
+                    sizeof(k1001OnionHenButtonBody),
+                "AppError body and OnionHEN button must be equal length");
+  static_assert(sizeof(k1060StockAppErrorBody) ==
+                    sizeof(k1060OnionHenButtonBody),
+                "AppError body and OnionHEN button must be equal length");
+  static_assert(sizeof(k1100StockAppErrorBody) ==
+                    sizeof(k1100OnionHenButtonBody),
+                "AppError body and OnionHEN button must be equal length");
+  static_assert(sizeof(k1160StockAppErrorBody) ==
+                    sizeof(k1160OnionHenButtonBody),
+                "AppError body and OnionHEN button must be equal length");
+  static_assert(sizeof(k1270StockAppErrorBody) ==
+                    sizeof(k1270OnionHenButtonBody),
+                "AppError body and OnionHEN button must be equal length");
+  static_assert(sizeof(k1220StockAppErrorBody) ==
+                    sizeof(k1220OnionHenButtonBody),
+                "AppError body and OnionHEN button must be equal length");
 
   struct HomeUiPatchBytes {
     HomeUiPatchByteSet byte_set;
     const unsigned char *old_icon_order;
+    /* Prior strategy: [Search, Fps, Settings, Profile] — migrate away. */
+    const unsigned char *legacy_fps_slot_icon_order;
     const unsigned char *legacy_aliased_icon_order;
-    const unsigned char *legacy_app_error_icon_order;
-    const unsigned char *new_icon_order;
+    /* Target: [Search, ApplicationErrorEventTrigger, Settings, Profile]. */
+    const unsigned char *app_error_icon_order;
     const unsigned char *original_fps_factory;
     const unsigned char *legacy_aliased_fps_factory;
     const unsigned char *old_custom_icon_value;
@@ -941,6 +1029,7 @@ void patch_homeui_top_nav(unsigned char *buffer, int *size_ptr,
     const unsigned char *old_fps_body_prefix;
     const unsigned char *legacy_onion_hen_button_body;
     const unsigned char *onion_hen_button_body;
+    const unsigned char *stock_app_error_body;
   };
 
   static const HomeUiPatchBytes kPatchBytes[] = {
@@ -948,8 +1037,8 @@ void patch_homeui_top_nav(unsigned char *buffer, int *size_ptr,
           kHomeUiPatchByteSet1001,
           k1001OldIconOrder,
           k1001NewIconOrder,
-          k1001LegacyAppErrorIconOrder,
           k1001NewIconOrder,
+          k1001LegacyAppErrorIconOrder,
           k1001OriginalFpsFactory,
           k1001LegacyAliasedFpsFactory,
           k1001OldCustomIconValue,
@@ -958,13 +1047,14 @@ void patch_homeui_top_nav(unsigned char *buffer, int *size_ptr,
           k1001OldFpsBodyPrefix,
           nullptr,
           k1001OnionHenButtonBody,
+          k1001StockAppErrorBody,
       },
       {
           kHomeUiPatchByteSet1060,
           k1060OldIconOrder,
           k1060NewIconOrder,
-          k1060LegacyAppErrorIconOrder,
           k1060NewIconOrder,
+          k1060LegacyAppErrorIconOrder,
           k1060OriginalFpsFactory,
           k1060LegacyAliasedFpsFactory,
           k1060OldCustomIconValue,
@@ -973,13 +1063,14 @@ void patch_homeui_top_nav(unsigned char *buffer, int *size_ptr,
           k1060OldFpsBodyPrefix,
           nullptr,
           k1060OnionHenButtonBody,
+          k1060StockAppErrorBody,
       },
       {
           kHomeUiPatchByteSet1100,
           k1100OldIconOrder,
+          k1100NewIconOrder,
           k1100LegacyAliasedIconOrder,
           k1100LegacyAppErrorIconOrder,
-          k1100NewIconOrder,
           k1100OriginalFpsFactory,
           k1100LegacyAliasedFpsFactory,
           k1100OldCustomIconValue,
@@ -988,13 +1079,14 @@ void patch_homeui_top_nav(unsigned char *buffer, int *size_ptr,
           k1100OldFpsBodyPrefix,
           nullptr,
           k1100OnionHenButtonBody,
+          k1100StockAppErrorBody,
       },
       {
           kHomeUiPatchByteSet1160,
           k1160OldIconOrder,
+          k1160NewIconOrder,
           k1160LegacyAliasedIconOrder,
           k1160LegacyAppErrorIconOrder,
-          k1160NewIconOrder,
           k1160OriginalFpsFactory,
           k1160LegacyAliasedFpsFactory,
           k1160OldCustomIconValue,
@@ -1003,13 +1095,14 @@ void patch_homeui_top_nav(unsigned char *buffer, int *size_ptr,
           k1160OldFpsBodyPrefix,
           k1160LegacyOnionHenButtonBody,
           k1160OnionHenButtonBody,
+          k1160StockAppErrorBody,
       },
       {
           kHomeUiPatchByteSet1270,
           k1270OldIconOrder,
+          k1270NewIconOrder,
           k1270LegacyAliasedIconOrder,
           k1270LegacyAppErrorIconOrder,
-          k1270NewIconOrder,
           k1270OriginalFpsFactory,
           k1270LegacyAliasedFpsFactory,
           k1270OldCustomIconValue,
@@ -1018,13 +1111,14 @@ void patch_homeui_top_nav(unsigned char *buffer, int *size_ptr,
           k1270OldFpsBodyPrefix,
           nullptr,
           k1270OnionHenButtonBody,
+          k1270StockAppErrorBody,
       },
       {
           kHomeUiPatchByteSet1220,
           k1220OldIconOrder,
+          k1220NewIconOrder,
           k1220LegacyAliasedIconOrder,
           k1220LegacyAppErrorIconOrder,
-          k1220NewIconOrder,
           k1220OriginalFpsFactory,
           k1220LegacyAliasedFpsFactory,
           k1220OldCustomIconValue,
@@ -1033,6 +1127,7 @@ void patch_homeui_top_nav(unsigned char *buffer, int *size_ptr,
           k1220OldFpsBodyPrefix,
           nullptr,
           k1220OnionHenButtonBody,
+          k1220StockAppErrorBody,
       },
   };
 
@@ -1048,9 +1143,13 @@ void patch_homeui_top_nav(unsigned char *buffer, int *size_ptr,
   }
 
   const BytePatch kPatches[] = {
+      /*
+       * Order: stock / prior Fps-slot strategy / aliased → AppError slot.
+       * replacement is ApplicationErrorEventTrigger between Search & Settings.
+       */
       {"home icon order", profile->offsets.home_icon_order,
-       bytes->old_icon_order, bytes->legacy_aliased_icon_order,
-       bytes->legacy_app_error_icon_order, bytes->new_icon_order,
+       bytes->old_icon_order, bytes->legacy_fps_slot_icon_order,
+       bytes->legacy_aliased_icon_order, bytes->app_error_icon_order,
        sizeof(k1160OldIconOrder)},
       {"legacy Fps factory repair", profile->offsets.fps_factory,
        bytes->legacy_aliased_fps_factory, nullptr, nullptr,
@@ -1071,9 +1170,20 @@ void patch_homeui_top_nav(unsigned char *buffer, int *size_ptr,
       {"custom title value", profile->offsets.custom_title_value,
        bytes->old_custom_title_value, nullptr, nullptr, kNewCustomTitleValue,
        sizeof(k1160OldCustomTitleValue)},
-      {"top-nav Fps body", profile->offsets.fps_body,
-       bytes->old_fps_body_prefix, bytes->legacy_onion_hen_button_body,
-       nullptr, bytes->onion_hen_button_body, sizeof(k1160OldFpsBodyPrefix)},
+      /*
+       * Repair prior Fps-body hijack back to stock showFps (prefix only).
+       * expected = onion body still sitting on Fps; replacement = stock Fps.
+       */
+      {"Fps body repair", profile->offsets.fps_body,
+       bytes->onion_hen_button_body, bytes->legacy_onion_hen_button_body,
+       nullptr, bytes->old_fps_body_prefix, sizeof(k1160OldFpsBodyPrefix)},
+      /*
+       * Host OnionHEN on ApplicationErrorEventTrigger (exact 77-byte replace).
+       */
+      {"AppError OnionHEN body", profile->offsets.app_error_body,
+       bytes->stock_app_error_body, bytes->onion_hen_button_body,
+       bytes->legacy_onion_hen_button_body, bytes->onion_hen_button_body,
+       sizeof(k1160OnionHenButtonBody)},
   };
 
   bool any_change = false;

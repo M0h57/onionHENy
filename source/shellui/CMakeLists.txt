@@ -56,6 +56,15 @@ target_compile_options(${PROJECT_NAME} PUBLIC
 	$<$<COMPILE_LANGUAGE:ASM>:${ASM_FLAGS}>
 )
 
+# A/B: disable HomeUI top-nav Hermes patch without editing sources.
+#   cmake -DONIONHEN_SHELLUI_HOMEUI_TOP_NAV_PATCH=OFF ...
+option(ONIONHEN_SHELLUI_HOMEUI_TOP_NAV_PATCH
+	"Patch HomeUI top-nav Fps slot into OnionHEN entry" ON)
+if(NOT ONIONHEN_SHELLUI_HOMEUI_TOP_NAV_PATCH)
+	target_compile_definitions(${PROJECT_NAME} PRIVATE SHELLUI_HOMEUI_TOP_NAV_PATCH=0)
+	message(STATUS "shellui: HomeUI top-nav patch DISABLED")
+endif()
+
 message("========== build: ${PROJECT_NAME} ==========")
 
 
