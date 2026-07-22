@@ -13,7 +13,11 @@ static int test_default_zh(void) {
   set_lang(Lang::ZhHans);
   TEST_ASSERT_TRUE(std::strcmp(tr("root.title"), "★OnionHEN 工具箱") == 0);
   TEST_ASSERT_TRUE(std::strcmp(tr("group.pkg"), "内容安装与管理") == 0);
+  TEST_ASSERT_TRUE(std::strcmp(tr("group.game.sub"),
+                               "当前游戏的金手指菜单") == 0);
   TEST_ASSERT_TRUE(std::strcmp(tr("group.display"), "监控与显示") == 0);
+  TEST_ASSERT_TRUE(std::strcmp(tr("group.display.sub"),
+                               "游戏覆盖层、主菜单显示与游戏选项入口") == 0);
   TEST_ASSERT_TRUE(std::strcmp(tr("group.preferences"), "操作偏好") == 0);
   TEST_ASSERT_TRUE(std::strcmp(tr("pkg.installer.sub"),
                                "打开系统安装界面，用于安装 PKG 游戏或应用") == 0);
@@ -26,6 +30,11 @@ static int test_en(void) {
   set_lang(Lang::En);
   TEST_ASSERT_TRUE(std::strcmp(tr("root.title"), "★OnionHEN Toolbox") == 0);
   TEST_ASSERT_TRUE(std::strcmp(tr("group.pkg"), "Content Install & Management") == 0);
+  TEST_ASSERT_TRUE(std::strcmp(tr("group.game.sub"),
+                               "Cheats for the current game") == 0);
+  TEST_ASSERT_TRUE(std::strcmp(tr("group.display.sub"),
+                               "In-game overlay, home menu display, and game "
+                               "options entry") == 0);
   TEST_ASSERT_TRUE(std::strcmp(tr("group.connection"),
                                "Account, Connection & Remote Play") == 0);
   TEST_ASSERT_TRUE(std::strcmp(tr("group.preferences"), "Preferences") == 0);

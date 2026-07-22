@@ -523,10 +523,7 @@ void append_toolbox_payloads_group(ps5ui::Group& g) {
 
 void append_toolbox_game_group(ps5ui::Group& g) {
   g.link("id_cheats", toolbox_i18n::tr("cheats.link"), "cheats.xml",
-         toolbox_i18n::tr("cheats.link.sub"))
-      .toggle("id_custom_game_opts", toolbox_i18n::tr("game_opts.toggle"),
-              toolbox_on("id_custom_game_opts"),
-              toolbox_i18n::tr("game_opts.toggle.sub"));
+         toolbox_i18n::tr("cheats.link.sub"));
 }
 
 void append_toolbox_display_group(ps5ui::Group& g) {
@@ -561,7 +558,10 @@ void append_toolbox_display_group(ps5ui::Group& g) {
        toolbox_i18n::tr("overlay.group.sub"), kIconOverlay,
        "id_overlay_change_pos")
       .toggle("id_disp_titleids", toolbox_i18n::tr("disp_tids"),
-              toolbox_on("id_disp_titleids"), toolbox_i18n::tr("disp_tids.sub"));
+              toolbox_on("id_disp_titleids"), toolbox_i18n::tr("disp_tids.sub"))
+      .toggle("id_custom_game_opts", toolbox_i18n::tr("game_opts.toggle"),
+              toolbox_on("id_custom_game_opts"),
+              toolbox_i18n::tr("game_opts.toggle.sub"));
 }
 
 void append_toolbox_connection_group(ps5ui::Group& g) {

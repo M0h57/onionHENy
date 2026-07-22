@@ -67,6 +67,25 @@ endif()
 
 message("========== build: ${PROJECT_NAME} ==========")
 
+find_package(Python3 REQUIRED COMPONENTS Interpreter)
+
+set(I18N_DIR "${D_CWD}/i18n")
+set(I18N_GENERATED_DIR "${CMAKE_CURRENT_BINARY_DIR}/generated")
+set(I18N_CATALOG "${I18N_GENERATED_DIR}/toolbox_i18n_catalog.inc")
+add_custom_command(
+	OUTPUT "${I18N_CATALOG}"
+	COMMAND "${Python3_EXECUTABLE}" "${I18N_DIR}/generate_catalog.py"
+		--zh-cn "${I18N_DIR}/zh-CN.json"
+		--en-us "${I18N_DIR}/en-US.json"
+		--output "${I18N_CATALOG}"
+	DEPENDS
+		"${I18N_DIR}/generate_catalog.py"
+		"${I18N_DIR}/zh-CN.json"
+		"${I18N_DIR}/en-US.json"
+	COMMENT "Generating toolbox i18n catalog"
+	VERBATIM
+)
+add_custom_target(shellui_i18n_catalog DEPENDS "${I18N_CATALOG}")
 
 file(GLOB SrcFiles ${D_SRC}/*.c ${D_SRC}/*.cpp ${D_SRC}/../include/*.h ${D_SRC}/../include/*.hpp ${D_SRC}/*.s ${ONIONHEN_THIRD_PARTY_DIR}/cjson/*.cpp ${ONIONHEN_THIRD_PARTY_DIR}/cjson/*.hpp ${ONIONHEN_COMMON_DIR}/backtrace.cpp)
 
@@ -76,9 +95,10 @@ set(CMAKE_CXX_FLAGS "${CMAKE_C_FLAGS} -DDEBUG -gfull -gdwarf-2 -O0 -pedantic -pe
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O0 ")
 
 target_sources(${PROJECT_NAME} PRIVATE ${SrcFiles})
-add_dependencies(${PROJECT_NAME} onion_version onion_ipc onion_settings onion_detour onion_proc onion_platform onion_ready)
+add_dependencies(${PROJECT_NAME} shellui_i18n_catalog onion_version onion_ipc onion_settings onion_detour onion_proc onion_platform onion_ready)
 target_include_directories(${PROJECT_NAME} PRIVATE
 	"${D_CWD}/include"
+	"${I18N_GENERATED_DIR}"
 	"${ONIONHEN_THIRD_PARTY_DIR}/cjson"
 	"${PROJECT_ROOT}/libonion_ipc/include"
 	"${PROJECT_ROOT}/libonion_settings/include"
