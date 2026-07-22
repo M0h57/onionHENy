@@ -23,11 +23,29 @@ static int test_ipc_paths_and_magic(void) {
 static int test_crit_command_base_and_order(void) {
   TEST_ASSERT_EQ_U64(0x9000000u, static_cast<unsigned>(BREW_TEST_CONNECTION));
   TEST_ASSERT_EQ_U64(0x9000002u, static_cast<unsigned>(BREW_RETURN_VALUE));
-  /* Sequential after RETURN_VALUE */
-  TEST_ASSERT_EQ_U64(static_cast<unsigned>(BREW_RETURN_VALUE) + 1u,
-                     static_cast<unsigned>(BREW_REMOUNT_FOLDER));
-  TEST_ASSERT_EQ_U64(static_cast<unsigned>(BREW_ENABLE_TOOLBOX),
-                     static_cast<unsigned>(BREW_CHMOD_DIR) - 1u);
+  /* Original etaHEN ABI used by released Itemzflow binaries. */
+  TEST_ASSERT_EQ_U64(0x9000003u, static_cast<unsigned>(BREW_REMOUNT_FOLDER));
+  TEST_ASSERT_EQ_U64(0x9000004u,
+                     static_cast<unsigned>(BREW_UNUSED_ACTIVATE_DUMPER));
+  TEST_ASSERT_EQ_U64(0x9000005u, static_cast<unsigned>(BREW_STAT_CMD));
+  TEST_ASSERT_EQ_U64(0x9000006u, static_cast<unsigned>(BREW_CALC_DIR_SIZE));
+  TEST_ASSERT_EQ_U64(0x9000007u, static_cast<unsigned>(BREW_COPY_FILE));
+  TEST_ASSERT_EQ_U64(0x9000008u, static_cast<unsigned>(BREW_COPY_DIR));
+  TEST_ASSERT_EQ_U64(0x9000009u, static_cast<unsigned>(BREW_DELETE_DIR));
+  TEST_ASSERT_EQ_U64(0x900000au, static_cast<unsigned>(BREW_UNUSED_1));
+  TEST_ASSERT_EQ_U64(0x900000bu, static_cast<unsigned>(BREW_TEST_SB_FILE));
+  TEST_ASSERT_EQ_U64(0x900000cu, static_cast<unsigned>(BREW_DAEMON_PID));
+  TEST_ASSERT_EQ_U64(0x900000du,
+                     static_cast<unsigned>(BREW_UNUSED_STORE_INSTALLER));
+  TEST_ASSERT_EQ_U64(0x900000eu,
+                     static_cast<unsigned>(BREW_UNUSED_DECRYPT_DIR));
+  TEST_ASSERT_EQ_U64(0x900000fu, static_cast<unsigned>(BREW_LAST_RET));
+  TEST_ASSERT_EQ_U64(0x9000010u,
+                     static_cast<unsigned>(BREW_UNUSED_TESTKIT_CHECK));
+  TEST_ASSERT_EQ_U64(0x9000011u, static_cast<unsigned>(BREW_ENABLE_TOOLBOX));
+  TEST_ASSERT_EQ_U64(0x9000012u, static_cast<unsigned>(BREW_CHMOD_DIR));
+  TEST_ASSERT_EQ_U64(0x9000013u,
+                     static_cast<unsigned>(BREW_ADJUST_FAN_SPEED));
   return 0;
 }
 

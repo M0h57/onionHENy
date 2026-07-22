@@ -89,6 +89,7 @@ TEST_CXX_SRCS := \
 	test_cheat_parsers.cpp \
 	test_settings.cpp \
 	test_msg_protocol.cpp \
+	test_app_jailbreak_policy.cpp \
 	test_debug_settings_route_policy.cpp \
 	test_ipc_harden.cpp \
 	test_ps5_settings_ui.cpp \

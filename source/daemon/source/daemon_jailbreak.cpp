@@ -20,13 +20,13 @@
 #include <onion/proc_query.h>
 #include <onion/platform.h>
 #include <onion/settings.hpp>
+#include <onion/app_jailbreak_policy.hpp>
 #include "onion_cjson.hpp"
 
 #include <atomic>
 #include <iomanip>
 #include <sstream>
 #include <string>
-#include <unordered_set>
 
 #include <pthread.h>
 #include <stdlib.h>
@@ -44,17 +44,7 @@ pthread_mutex_t jb_lock = PTHREAD_MUTEX_INITIALIZER;
 constexpr uint64_t kJbAuthId = 0x4801000000000013ull;
 
 bool is_whitelisted_app(const std::string &tid) {
-  static const std::unordered_set<std::string> whitelist = {
-      "NPXS39041",
-      "PKGI13337",
-      "PKGI12345",
-      "TOOL00001",
-  };
-  if (whitelist.find(tid) != whitelist.end())
-    return true;
-  if (tid.find("LAPY") != std::string::npos)
-    return true;
-  return false;
+  return onion::app_jailbreak::is_whitelisted(tid);
 }
 
 int jb_read_uid(pid_t pid) {
@@ -73,14 +63,7 @@ uint64_t jb_read_authid(pid_t pid) {
 }
 
 const char *jb_whitelist_reason(const std::string &tid) {
-  if (tid == "NPXS39041" || tid == "PKGI13337" || tid == "PKGI12345" ||
-      tid == "TOOL00001") {
-    return "exact";
-  }
-  if (tid.find("LAPY") != std::string::npos) {
-    return "LAPY*";
-  }
-  return "none";
+  return onion::app_jailbreak::whitelist_reason(tid);
 }
 
 /**
@@ -173,8 +156,8 @@ void *fifo_and_dumper_thread(void *args) noexcept {
   std::string last_reject_logged;
   int no_app_log_suppress = 0;
 
-  OnionHEN_log("[JB] fifo watcher started (whitelist: NPXS39041, PKGI13337, "
-               "PKGI12345, TOOL00001, *LAPY*)");
+  OnionHEN_log("[JB] fifo watcher started (whitelist: ITEM00001, NPXS39041, "
+               "PKGI13337, PKGI12345, TOOL00001, *LAPY*)");
   OnionHEN_log("[JB] kernel symbols: ALLPROC=0x%lx ROOTVNODE=0x%lx "
                "(0 means SDK did not resolve — jailbreak will fail)",
                static_cast<unsigned long>(KERNEL_ADDRESS_ALLPROC),

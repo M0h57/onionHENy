@@ -324,6 +324,7 @@ struct IPCMessage {
 
 **已废弃但保留序号（兼容旧客户端）：**
 
+- `BREW_UNUSED_ACTIVATE_DUMPER`（原 `ACTIVATE_DUMPER`，固定保留 `0x9000004`，避免 Itemzflow ABI 后续命令错位）
 - `BREW_UTIL_UNUSED_LEGACY_CMD_SERVER`（原 TOGGLE_LEGACY_CMD_SERVER / TCP 9028 已移除）
 - `BREW_UNUSED_DECRYPT_DIR`（原 DECRYPT_DIR，SELF 目录解密已移除）
 - `BREW_UNUSED_TESTKIT_CHECK`（原 TESTKIT_CHECK；客户端改为本地探测）
@@ -344,6 +345,12 @@ struct IPCMessage {
 | `/system_tmp/onionhen/pid/<key>.PID` | payload/内部服务 PID 状态 |
 | `/system_tmp/onionhen/app_launched` | ShellUI LaunchApp 返回值 |
 | `/system_tmp/onionhen/patch_plugin` | LaunchApp patch gate（外部标记；ShellUI 只读取） |
+
+### 3.4 Itemzflow 兼容状态
+
+- 已恢复 `ITEM00001` 应用 jailbreak 白名单，避免 Loader 因未进入 jailbreak 流程而等待 30 秒。
+- Critical IPC 保留原版 `BREW_ACTIVATE_DUMPER=0x9000004` 的废弃槽位，确保 Itemzflow 使用的后续命令数值不发生错位。
+- **已知问题：**已发布的 ItemzCore 固定连接 `/system_tmp/etaHEN_crit_service`，当前 daemon 仅监听 `/system_tmp/onionhen/ipc/crit_service`，因此 Loader 通过后仍可能出现最长一分钟的 daemon 等待。后续应增加独立受监控的旧路径监听器，并与当前路径共用 `handleIPC`；不得直接替换当前路径，也不应依赖 Unix socket 符号链接。
 
 ---
 

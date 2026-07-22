@@ -69,6 +69,10 @@ void handleIPC(clientArgs *client, std::string &inputStr,
     reply(sender_app, last != 0, last != 0 ? "1" : "0");
     break;
   }
+  case BREW_UNUSED_ACTIVATE_DUMPER:
+    OnionHEN_log("BREW_ACTIVATE_DUMPER: unsupported (legacy dumper removed)");
+    reply(sender_app, true);
+    break;
   case BREW_UNUSED_DECRYPT_DIR:
     /* SELF directory decrypt removed from OnionHEN. */
     OnionHEN_log("BREW_DECRYPT_DIR: unsupported (removed)");

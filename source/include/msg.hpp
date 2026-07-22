@@ -26,6 +26,9 @@ enum DaemonCommands : unsigned int {
   BREW_TEST_CONNECTION = 0x9000000u,
   BREW_RETURN_VALUE = 0x9000002u,
   BREW_REMOUNT_FOLDER,
+  // Original 0x9000004. Keep the slot so released Itemzflow clients retain
+  // the numeric ABI even though OnionHEN does not bundle the legacy dumper.
+  BREW_UNUSED_ACTIVATE_DUMPER,
   BREW_STAT_CMD,
   BREW_CALC_DIR_SIZE,
   BREW_COPY_FILE,
