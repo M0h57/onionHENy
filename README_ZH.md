@@ -135,8 +135,10 @@ payload 加载。
 3. 等待 utility daemon、`kstuff` 和 main daemon 依次启动。
 4. 打开 PS5 设置区域访问 OnionHEN Toolbox。
 
-运行时启动顺序经过有意串行化。bootstrap 之后，OnionHEN 会优先使用内置
-`onion_elfldr.elf` 的 **9020** 端口，并保留 **9021** 作为兼容 fallback。
+运行时启动顺序经过有意串行化。bootstrap 之后，内置 `onion_elfldr.elf` 的
+**9020** 端口是必需的运行时加载器；**9021** 仅保留用于首次引导和恢复私有
+加载器，用户 Payload 不会回退到该端口。daemon 会监控 **9020**，必要时通过
+**9021** 恢复它，然后才通过 **9020** 恢复 `util.elf`。
 
 ```text
 OnionHEN.elf → bootstrapper → onion_elfldr.elf (:9020) → util.elf → kstuff.elf → daemon.elf → Toolbox
@@ -152,6 +154,10 @@ OnionHEN.elf → bootstrapper → onion_elfldr.elf (:9020) → util.elf → kstu
 
 仅支持裸 `.elf` payload。可以在 Toolbox 中启用自动启动；OnionHEN 会通过同名
 `.auto_start` 标记文件保存这个选择。
+
+用户 Payload 必须通过健康的私有 **9020** 加载器启动，并取得加载器返回的精确
+PID。若 **9020** 不可用或未返回有效 PID，请求会直接失败，不执行进程快照、
+自动重试，也不会回退到 **9021**。
 
 ### 金手指
 

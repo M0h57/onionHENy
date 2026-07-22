@@ -18,7 +18,7 @@ extern bool is_handler_enabled;
 
 /**
  * Full stack teardown in progress (BREW_SHUTDOWN_STACK / TCP SHUTDOWN).
- * Util watchdog must not relaunch util once this is true.
+ * Runtime supervisor must not relaunch :9020 or util once this is true.
  * One-way: set true, never cleared (process exits).
  */
 extern std::atomic_bool g_stack_shutting_down;
@@ -48,6 +48,7 @@ bool set_fan_threshold(int temp);
  * Tear down OnionHEN userland (does not return). Caller should reply to IPC first.
  *
  * Sets g_stack_shutting_down, then: stop util → restart SceShellUI → exit.
+ * The private loader is left available as the runtime recovery endpoint.
  * Does NOT kill kstuff — hard-unloading kernel patches panics the console.
  */
 [[noreturn]] void cmd_shutdown_onion_stack(void);
@@ -68,3 +69,4 @@ bool Open_Utility_Elf(const char *path, uint8_t **buffer);
 
 /* ---- background threads ---- */
 void *fifo_and_dumper_thread(void *args) noexcept; // daemon_jailbreak.cpp
+void *runtime_supervisor_thread(void *args) noexcept;

@@ -74,6 +74,27 @@ static void write_state_file(void) {
   close(fd);
 }
 
+static void set_launch_busy(bool busy) {
+  if(!busy) {
+    unlink(ONION_SYSTEM_TMP_ELFLDR_BUSY);
+    return;
+  }
+
+  mkdir(ONION_SYSTEM_TMP_ROOT, 0777);
+  mkdir(ONION_SYSTEM_TMP_PID_ROOT, 0777);
+  int fd = open(ONION_SYSTEM_TMP_ELFLDR_BUSY,
+                O_WRONLY | O_CREAT | O_TRUNC, 0666);
+  if(fd < 0) {
+    return;
+  }
+  char buf[32];
+  int len = snprintf(buf, sizeof(buf), "%d", getpid());
+  if(len > 0) {
+    (void)write(fd, buf, (size_t)len);
+  }
+  close(fd);
+}
+
 static int send_text(int fd, const char *text) {
   if(fd < 0 || !text) {
     return -1;
@@ -417,6 +438,9 @@ static void on_connection(int fd) {
   }
 
   log_msg("spawning %s (%zu bytes)", filename, len);
+  /* The runtime supervisor must not mistake a synchronous, long-running spawn
+   * for a wedged loader just because ping is queued behind this connection. */
+  set_launch_busy(true);
   pid = payload_spawn(filename, args, buf, len);
   if(pid > 1) {
     char out[64];
@@ -427,6 +451,7 @@ static void on_connection(int fd) {
     send_text(fd, "ERR spawn failed\n");
     log_msg("spawn failed for %s", filename);
   }
+  set_launch_busy(false);
 
   free(filename);
   free(args);
@@ -484,6 +509,7 @@ static int serve_elfldr(uint16_t port) {
 
   close(srvfd);
   unlink(ONION_ELFLDR_STATE);
+  unlink(ONION_SYSTEM_TMP_ELFLDR_BUSY);
   return -1;
 }
 
@@ -491,6 +517,7 @@ int main(void) {
   signal(SIGCHLD, SIG_IGN);
   signal(SIGPIPE, SIG_IGN);
   syscall(SYS_thr_set_name, -1, "onion_elfldr.elf");
+  unlink(ONION_SYSTEM_TMP_ELFLDR_BUSY);
 
   if(chdir("/") != 0) {
     log_msg("chdir failed: %s", strerror(errno));

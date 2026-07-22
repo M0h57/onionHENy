@@ -23,6 +23,8 @@
 
 #define ONION_SYSTEM_TMP_ELFLDR_STATE                                      \
   ONION_SYSTEM_TMP_PID_ROOT "/onion_elfldr_9020.PID"
+#define ONION_SYSTEM_TMP_ELFLDR_BUSY                                       \
+  ONION_SYSTEM_TMP_PID_ROOT "/onion_elfldr_9020.busy"
 #define ONION_SYSTEM_TMP_APP_LAUNCHED ONION_SYSTEM_TMP_ROOT "/app_launched"
 #define ONION_SYSTEM_TMP_PATCH_PLUGIN ONION_SYSTEM_TMP_ROOT "/patch_plugin"
 

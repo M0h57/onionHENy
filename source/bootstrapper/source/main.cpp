@@ -566,9 +566,7 @@ static void notify_starting(bool custom_icon_ready) {
  
  // Load a payload .elf
 bool load_payload(const char *path, const char *filename) {
-  onion_payload_load_opts opts = {};
-  opts.always_succeed_after_launch = 1;
-  return onion_payload_load(path, filename, &opts);
+  return onion_payload_load(path, filename);
 }
 
 /*=================== LOAD PAYLOADS (autostart .elf) =========================*/
@@ -842,6 +840,12 @@ static int launch_chain(const OrbisKernelSwVersion &sys_ver) {
 
 /** Autostart payloads (.elf) with .auto_start marker; skip *elfldr*. */
 static void load_autostart_payloads(void) {
+  if (!elfldr_remote_onion_available()) {
+    klog_puts("Skipping user payload autostart: private elfldr :9020 unavailable");
+    notify("User payload autostart skipped: private elfldr :9020 is unavailable");
+    return;
+  }
+
   char **payload_paths = find_payload_files();
   if (!payload_paths || payload_count <= 0)
     return;

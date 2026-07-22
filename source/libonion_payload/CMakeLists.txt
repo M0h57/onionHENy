@@ -1,5 +1,5 @@
 ###################################################################################################
-# OnionHEN payload ELF load helpers (9020/9021 elfldr + PID files)
+# OnionHEN user Payload helpers (strict private :9020 + exact PID files)
 ###################################################################################################
 
 cmake_minimum_required(VERSION 3.20)

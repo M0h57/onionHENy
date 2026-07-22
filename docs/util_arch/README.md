@@ -163,7 +163,7 @@ struct IPCMessage {
 | `DOWNLOAD_CHEATS` | 下仓库 zip → staging → flatten | `http` + `CheatService::flattenInstallTree` |
 | `RELOAD_CHEATS` | **已移除**（枚举占位 `UNUSED_RELOAD_CHEATS`） | 列表/开关靠文件签名热重载，无索引重建 |
 | `DOWNLOAD_KSTUFF` | 下载 kstuff.elf | `http` |
-| `LAUNCH_PAYLOAD` | 加载 payload `.elf` | `load_payload` → `onion_payload_load`（9020 优先，9021 fallback） |
+| `LAUNCH_PAYLOAD` | 加载 payload `.elf` | `load_payload` → `onion_payload_load`（仅私有 9020，必须返回精确 PID；失败不回退 9021） |
 | `UNUSED_LEGACY_CMD_SERVER` | 已移除（原 TCP 9028） | 固定失败 |
 | `LAUNCH_ELFLDR` | 已移除 | 固定失败 |
 | `UNUSED_FTP` / `UNUSED_KLOG` | 已移除 | 固定失败 |

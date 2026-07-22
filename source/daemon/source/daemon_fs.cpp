@@ -337,8 +337,8 @@ static void shutdown_restart_shellui(void) {
       "cmd_shutdown_onion_stack: util → restart ShellUI → self (leave kstuff)");
 
   /*
-   * Order matters: arm stack-shutdown first so the util watchdog will not
-   * relaunch util after we kill it. Then stop IPC, then kill util.
+   * Order matters: arm stack-shutdown first so the runtime supervisor will not
+   * relaunch :9020 or util after teardown begins. Then stop IPC and kill util.
    */
   g_stack_shutting_down.store(true, std::memory_order_release);
   is_handler_enabled = false;

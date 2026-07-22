@@ -5,6 +5,8 @@
  * libonion_platform when ONION_HOST_TEST builds include them.
  * This file only supplies symbols that are PS5-runtime-only.
  */
+#include <elfldr_remote.h>
+
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -15,12 +17,32 @@
 
 /* --- libonion_payload / elfldr_remote (device-only launch path) --- */
 
+static bool g_test_onion_available = false;
+static pid_t g_test_onion_launch_pid = -1;
+static int g_test_onion_launch_calls = 0;
+static uint16_t g_test_onion_last_port = 0;
+
+void onion_test_elfldr_reset(void) {
+  g_test_onion_available = false;
+  g_test_onion_launch_pid = -1;
+  g_test_onion_launch_calls = 0;
+  g_test_onion_last_port = 0;
+}
+
+void onion_test_elfldr_configure(bool available, pid_t launch_pid) {
+  g_test_onion_available = available;
+  g_test_onion_launch_pid = launch_pid;
+}
+
+int onion_test_elfldr_launch_calls(void) { return g_test_onion_launch_calls; }
+uint16_t onion_test_elfldr_last_port(void) { return g_test_onion_last_port; }
+
 bool elfldr_remote_available_on(uint16_t port) {
   (void)port;
   return false;
 }
 
-bool elfldr_remote_onion_available(void) { return false; }
+bool elfldr_remote_onion_available(void) { return g_test_onion_available; }
 
 bool elfldr_remote_available(void) { return false; }
 
@@ -32,49 +54,15 @@ bool elfldr_remote_send_bytes_to(uint16_t port, const uint8_t *elf,
   return false;
 }
 
-bool elfldr_remote_send_bytes(const uint8_t *elf, size_t size) {
-  (void)elf;
-  (void)size;
-  return false;
-}
-
-bool elfldr_remote_send_file_uri_to(uint16_t port, const char *abs_path) {
-  (void)port;
-  (void)abs_path;
-  return false;
-}
-
-bool elfldr_remote_send_file_uri(const char *abs_path) {
-  (void)abs_path;
-  return false;
-}
-
-bool elfldr_remote_write_and_launch_to(uint16_t port, const char *abs_path,
-                                       const uint8_t *elf, size_t size) {
-  (void)port;
+pid_t elfldr_remote_onion_write_and_launch_get_pid(const char *abs_path,
+                                                   const uint8_t *elf,
+                                                   size_t size) {
   (void)abs_path;
   (void)elf;
   (void)size;
-  return false;
-}
-
-pid_t elfldr_remote_write_and_launch_get_pid(uint16_t port,
-                                             const char *abs_path,
-                                             const uint8_t *elf,
-                                             size_t size) {
-  (void)port;
-  (void)abs_path;
-  (void)elf;
-  (void)size;
-  return -1;
-}
-
-bool elfldr_remote_write_and_launch(const char *abs_path, const uint8_t *elf,
-                                    size_t size) {
-  (void)abs_path;
-  (void)elf;
-  (void)size;
-  return false;
+  ++g_test_onion_launch_calls;
+  g_test_onion_last_port = ONION_ELFLDR_PORT;
+  return g_test_onion_launch_pid;
 }
 
 pid_t find_pid(const char *name) {
@@ -90,15 +78,6 @@ pid_t onion_find_pid(const char *name) {
 pid_t onion_find_pid_substr(const char *substr) {
   (void)substr;
   return -1;
-}
-
-size_t onion_collect_pids(const char *const *names, size_t nnames, pid_t *out,
-                          size_t max_out) {
-  (void)names;
-  (void)nnames;
-  (void)out;
-  (void)max_out;
-  return 0;
 }
 
 bool onion_proc_is_alive(pid_t pid) {

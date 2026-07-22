@@ -136,9 +136,12 @@ private embedded loader on **9020** for runtime ELF and user payload launches.
 3. Wait for the utility daemon, `kstuff`, and main daemon to start in sequence.
 4. Open the PS5 settings area to access the OnionHEN Toolbox.
 
-The runtime launch order is deliberately serialized. After bootstrap, OnionHEN
-prefers its embedded `onion_elfldr.elf` on **9020** and keeps **9021** as a
-compatibility fallback.
+The runtime launch order is deliberately serialized. After bootstrap,
+`onion_elfldr.elf` on **9020** is the required runtime loader. Port **9021** is
+reserved for initial bootstrap and recovery of the private loader; user
+payloads never fall back to it. The daemon supervises **9020**, recovers it
+through **9021** when necessary, and only then recovers `util.elf` through
+**9020**.
 
 ```text
 OnionHEN.elf → bootstrapper → onion_elfldr.elf (:9020) → util.elf → kstuff.elf → daemon.elf → Toolbox
@@ -154,6 +157,10 @@ Place standalone payloads in:
 
 Only bare `.elf` payloads are supported. Automatic startup can be enabled from the Toolbox;
 OnionHEN records that choice with a sibling `.auto_start` marker.
+
+User payload launches require a healthy private loader on **9020** and its exact
+reported process ID. If **9020** is unavailable or no valid PID is returned,
+the request fails without a process snapshot, retry, or fallback to **9021**.
 
 ### Cheats
 

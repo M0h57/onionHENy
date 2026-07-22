@@ -1,6 +1,6 @@
 /* Copyright (C) 2025 OnionHEN / LightningMods
  *
- * Payload ELF loader (PID files + elfldr socket). .plugin packages removed.
+ * Strict user Payload ELF loader (PID files + private :9020 elfldr).
  */
 
 #include <onion/payload.h>
@@ -75,7 +75,7 @@ void onion_payload_write_pid_file(const char *pid_path, pid_t pid) {
   if (!pid_path) {
     return;
   }
-  if (pid < 0) {
+  if (pid <= 1) {
     unlink(pid_path);
     return;
   }
@@ -105,52 +105,6 @@ void onion_payload_write_pid_file(const char *pid_path, pid_t pid) {
 #define COMMLEN 19
 #endif
 
-#define PAYLOAD_PID_SNAP_MAX 64
-
-/** Build the set of ki_comm strings this launch may appear under. */
-static size_t onion_payload_candidate_names(const char *title_id, char *elf_name,
-                                            size_t elf_name_sz, char *trunc_name,
-                                            size_t trunc_sz,
-                                            const char **names, size_t max_names) {
-  size_t n = 0;
-  if (!title_id || !title_id[0] || !names || max_names == 0)
-    return 0;
-
-  /* Most common for tools that never thr_set_name. */
-  if (n < max_names)
-    names[n++] = "payload.elf";
-
-  if (elf_name && elf_name_sz > 0) {
-    snprintf(elf_name, elf_name_sz, "%s.elf", title_id);
-    if (n < max_names)
-      names[n++] = elf_name;
-
-    /* Truncated form when basename > COMMLEN (ki_comm hard limit). */
-    if (trunc_name && trunc_sz > 0 && strlen(elf_name) > (size_t)COMMLEN) {
-      size_t copy = (size_t)COMMLEN;
-      if (copy >= trunc_sz)
-        copy = trunc_sz - 1;
-      memcpy(trunc_name, elf_name, copy);
-      trunc_name[copy] = '\0';
-      if (n < max_names)
-        names[n++] = trunc_name;
-    }
-  }
-
-  if (n < max_names)
-    names[n++] = title_id;
-
-  return n;
-}
-
-static bool onion_payload_pid_in_list(pid_t pid, const pid_t *list, size_t n) {
-  for (size_t i = 0; i < n; ++i) {
-    if (list[i] == pid)
-      return true;
-  }
-  return false;
-}
-
 /**
  * Name-based resolve for kill fallback only.
  * Prefer title-specific names; avoid bare "payload.elf" (ambiguous).
@@ -176,35 +130,6 @@ static pid_t onion_payload_resolve_pid_by_title(const char *title_id) {
   if (pid <= 1)
     return -1;
   return pid;
-}
-
-/**
- * After a loader accepts launch: find a NEW pid among candidate names not in
- * @before. Picks the highest new pid (typically the most recently created).
- */
-static pid_t onion_payload_find_new_pid(const char *title_id,
-                                        const pid_t *before, size_t n_before) {
-  char elf_name[64];
-  char trunc_name[COMMLEN + 1];
-  const char *names[8];
-  const size_t nnames = onion_payload_candidate_names(
-      title_id, elf_name, sizeof(elf_name), trunc_name, sizeof(trunc_name),
-      names, sizeof(names) / sizeof(names[0]));
-
-  pid_t after[PAYLOAD_PID_SNAP_MAX];
-  const size_t n_after =
-      onion_collect_pids(names, nnames, after, PAYLOAD_PID_SNAP_MAX);
-
-  pid_t best = -1;
-  for (size_t i = 0; i < n_after; ++i) {
-    if (after[i] <= 1)
-      continue;
-    if (onion_payload_pid_in_list(after[i], before, n_before))
-      continue;
-    if (after[i] > best)
-      best = after[i];
-  }
-  return best;
 }
 
 void onion_payload_stop_by_title(const char *title_id) {
@@ -234,7 +159,7 @@ void onion_payload_stop_by_title(const char *title_id) {
     }
   }
 
-  /* Secondary: title-specific process name only (not generic payload.elf). */
+  /* Secondary: title-specific process name only (never generic payload.elf). */
   if (pid <= 1)
     pid = onion_payload_resolve_pid_by_title(title_id);
 
@@ -268,99 +193,27 @@ pid_t onion_payload_launch_elfldr(const char *title_id, const uint8_t *elf,
   snprintf(epath, sizeof(epath), "/data/OnionHEN/payloads/%s.elf", title_id);
   OnionHEN_log("loading payload via elfldr key=%s path=%s", title_id, epath);
 
-  /*
-   * Snapshot candidate pids BEFORE launch so we can attribute a new
-   * "payload.elf" (or basename) process to this launch, even when several
-   * homebrews share the same ki_comm.
-   */
-  char elf_name[64];
-  char trunc_name[COMMLEN + 1];
-  const char *names[8];
-  const size_t nnames = onion_payload_candidate_names(
-      title_id, elf_name, sizeof(elf_name), trunc_name, sizeof(trunc_name),
-      names, sizeof(names) / sizeof(names[0]));
-
-  pid_t before[PAYLOAD_PID_SNAP_MAX];
-  const size_t n_before =
-      onion_collect_pids(names, nnames, before, PAYLOAD_PID_SNAP_MAX);
-  OnionHEN_log("  pre-launch snapshot: %zu candidate pid(s) "
-               "(names include payload.elf / %s)",
-               n_before, elf_name);
-
-  pid_t reported_pid = -1;
-  uint16_t used_port = 0;
-  if (elfldr_remote_onion_available()) {
-    reported_pid = elfldr_remote_write_and_launch_get_pid(
-        ONION_ELFLDR_PORT, epath, elf, elf_sz);
-    if (reported_pid >= 0) {
-      used_port = ONION_ELFLDR_PORT;
-    } else {
-      OnionHEN_log("  9020 launch failed for %s; trying external 9021",
-                   title_id);
-    }
-  }
-
-  if (used_port == 0) {
-    if (!elfldr_remote_write_and_launch_to(ELFLDR_REMOTE_PORT, epath, elf,
-                                           elf_sz)) {
-      OnionHEN_log("  Failed elfldr launch for %s", title_id);
-      return -1;
-    }
-    used_port = ELFLDR_REMOTE_PORT;
-    reported_pid = 0;
-  }
-
-  if (reported_pid > 1) {
-    char pname[32] = {0};
-    if (sceKernelGetProcessName(reported_pid, pname) == 0)
-      OnionHEN_log("  Launched via %u (pid=%d name=%s)", used_port,
-                   (int)reported_pid, pname);
-    else
-      OnionHEN_log("  Launched via %u (pid=%d)", used_port,
-                   (int)reported_pid);
-    return reported_pid;
-  }
-
-  if (reported_pid < 0) {
-    OnionHEN_log("  Failed elfldr launch for %s", title_id);
+  if (!elfldr_remote_onion_available()) {
+    OnionHEN_log("  Private elfldr :%u unavailable; strict payload launch failed",
+                 ONION_ELFLDR_PORT);
     return -1;
   }
 
-  /*
-   * Poll for a NEW pid among candidates. Never invent pid=1.
-   *
-   * Return codes:
-   *   >1  real payload pid (caller writes PID file)
-   *    0  loader accepted ELF but process not observed
-   *   -1  hard failure
-   */
-  pid_t pid = -1;
-  for (int attempt = 0; attempt < 25; ++attempt) {
-    usleep(200 * 1000); /* 200ms × 25 ≈ 5s max */
-    pid = onion_payload_find_new_pid(title_id, before, n_before);
-    if (pid > 1)
-      break;
+  const pid_t pid =
+      elfldr_remote_onion_write_and_launch_get_pid(epath, elf, elf_sz);
+  if (pid <= 1) {
+    OnionHEN_log("  Private elfldr :%u returned no valid PID for %s (pid=%d)",
+                 ONION_ELFLDR_PORT, title_id, (int)pid);
+    return -1;
   }
 
-  if (pid > 1) {
-    char pname[32] = {0};
-    if (sceKernelGetProcessName(pid, pname) == 0)
-      OnionHEN_log("  Launched via %u (pid=%d name=%s)", used_port, (int)pid,
-                   pname);
-    else
-      OnionHEN_log("  Launched via %u (pid=%d)", used_port, (int)pid);
-    return pid;
-  }
-
-  OnionHEN_log("  Launched via %u but new PID not observed for %s "
-               "(no PID file; stop will try title name only)",
-               used_port, title_id);
-  return 0;
-}
-
-pid_t onion_payload_launch_9021(const char *title_id, const uint8_t *elf,
-                                size_t elf_sz) {
-  return onion_payload_launch_elfldr(title_id, elf, elf_sz);
+  char pname[32] = {0};
+  if (sceKernelGetProcessName(pid, pname) == 0)
+    OnionHEN_log("  Launched via %u (pid=%d name=%s)", ONION_ELFLDR_PORT,
+                 (int)pid, pname);
+  else
+    OnionHEN_log("  Launched via %u (pid=%d)", ONION_ELFLDR_PORT, (int)pid);
+  return pid;
 }
 
 uint8_t *onion_payload_read_file(const char *path, size_t *out_size) {
@@ -404,12 +257,7 @@ uint8_t *onion_payload_read_file(const char *path, size_t *out_size) {
   return buf;
 }
 
-bool onion_payload_load(const char *path, const char *filename,
-                       const onion_payload_load_opts *opts) {
-  onion_payload_load_opts local = {0};
-  if (opts)
-    local = *opts;
-
+bool onion_payload_load(const char *path, const char *filename) {
   size_t size = 0;
   uint8_t *buf = onion_payload_read_file(path, &size);
   if (!buf)
@@ -448,6 +296,17 @@ bool onion_payload_load(const char *path, const char *filename,
   OnionHEN_log("payload launch key=%s (from %s)", key, base);
   char pid_path[256];
   onion_payload_pid_path(pid_path, sizeof(pid_path), key);
+
+  /* Do not tear down a running instance when its replacement cannot even be
+   * submitted. The launch function repeats this check to keep its public API
+   * strict when called directly. */
+  if (!elfldr_remote_onion_available()) {
+    OnionHEN_log("Private elfldr :%u unavailable; payload %s not replaced",
+                 ONION_ELFLDR_PORT, key);
+    free(buf);
+    return false;
+  }
+
   onion_payload_stop_by_title(key);
   const pid_t pid = onion_payload_launch_elfldr(key, buf, size);
   free(buf);
@@ -456,8 +315,5 @@ bool onion_payload_load(const char *path, const char *filename,
     onion_payload_write_pid_file(pid_path, pid);
   else
     onion_payload_write_pid_file(pid_path, -1);
-  if (local.always_succeed_after_launch)
-    return true;
-  /* 0 = launch accepted but pid unknown; >1 = full success; -1 = fail. */
-  return pid >= 0;
+  return pid > 1;
 }

@@ -152,6 +152,9 @@ void start_worker_threads(pthread_t* fifo_thr, pthread_t* msg_thr) {
   pthread_t ctrl_thr = nullptr;
   pthread_create(&ctrl_thr, nullptr, control_tcp_loop, nullptr);
   pthread_detach(ctrl_thr);
+  pthread_t supervisor_thr = nullptr;
+  pthread_create(&supervisor_thr, nullptr, runtime_supervisor_thread, nullptr);
+  pthread_detach(supervisor_thr);
 }
 
 /** Keep IPC_loop alive: rejoin + restart on exit. */

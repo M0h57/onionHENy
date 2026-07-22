@@ -68,17 +68,20 @@ target_sources(${PROJECT_NAME} PRIVATE ${SrcFiles} "${ONIONHEN_COMMON_DIR}/elfld
 # Without OBJECT_DEPENDS, embedded payload rebuilds do not re-embed into daemon.elf.
 if(DEFINED ONIONHEN_OUT_BIN)
 	set(_onion_util_elf "${ONIONHEN_OUT_BIN}/util.elf")
+	set(_onion_elfldr_elf "${ONIONHEN_OUT_BIN}/onion_elfldr.elf")
 else()
 	set(_onion_util_elf "${PROJECT_ROOT}/bin/util.elf")
+	set(_onion_elfldr_elf "${PROJECT_ROOT}/bin/onion_elfldr.elf")
 endif()
 set_source_files_properties(
 	${D_SRC}/embeddded_payloads.c
 	PROPERTIES OBJECT_DEPENDS
-		"${ONIONHEN_OUT_BIN}/shellui.elf;${_onion_util_elf}"
+		"${ONIONHEN_OUT_BIN}/shellui.elf;${_onion_util_elf};${_onion_elfldr_elf}"
 )
 target_compile_definitions(${PROJECT_NAME} PRIVATE
-	ONIONHEN_SHELLUI_ELF="${ONIONHEN_OUT_BIN}/shellui.elf"
-	ONIONHEN_UTIL_ELF="${_onion_util_elf}"
+		ONIONHEN_SHELLUI_ELF="${ONIONHEN_OUT_BIN}/shellui.elf"
+		ONIONHEN_UTIL_ELF="${_onion_util_elf}"
+		ONIONHEN_ELFLDR_ELF="${_onion_elfldr_elf}"
 )
 target_include_directories(${PROJECT_NAME} PRIVATE
 	"${D_CWD}/include"
@@ -90,8 +93,8 @@ target_include_directories(${PROJECT_NAME} PRIVATE
 	"${PROJECT_ROOT}/include"
 )
 target_link_directories	(${PROJECT_NAME} PUBLIC "${ONIONHEN_PS5_STUB_DIR}")
-add_dependencies(${PROJECT_NAME} onion_version util NineS shellui hijacker onion_settings onion_ipc onion_proc onion_platform onion_ready onion_elfldr)
-# Restarts the embedded util bytes via OnionHEN 9020, falling back to 9021.
+add_dependencies(${PROJECT_NAME} onion_version util onion_elfldr_server NineS shellui hijacker onion_settings onion_ipc onion_proc onion_platform onion_ready onion_elfldr)
+# Supervises private :9020 via external :9021, then restarts embedded util via :9020.
 target_link_libraries	(${PROJECT_NAME} PUBLIC onion_ipc onion_settings onion_proc onion_platform onion_ready onion_elfldr hijacker SceSystemService SceNotification SceUserService SceNetCtl SceSysCore kernel_sys NineS)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 # Add post-build command

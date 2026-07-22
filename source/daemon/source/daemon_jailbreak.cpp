@@ -1,6 +1,6 @@
 /* Copyright (C) 2025 OnionHEN / LightningMods
  *
- * Jailbreak FIFO watcher + util watchdog — extracted from commands.cpp.
+ * Jailbreak FIFO watcher — extracted from commands.cpp.
  *
  * Protocol (homebrew → daemon):
  *   1. App is foreground "big app" with a whitelisted Title ID.
@@ -20,8 +20,6 @@
 #include <onion/proc_query.h>
 #include <onion/platform.h>
 #include <onion/settings.hpp>
-#include "globalconf.hpp"
-#include <elfldr_remote.h>
 #include "onion_cjson.hpp"
 
 #include <atomic>
@@ -30,17 +28,12 @@
 #include <string>
 #include <unordered_set>
 
-#include <errno.h>
 #include <pthread.h>
-#include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
 #include <unistd.h>
 
 extern "C" {
 #include <ps5/kernel.h>
-extern uint8_t util_elf_start[];
-extern const unsigned int util_elf_size;
 }
 
 namespace {
@@ -169,10 +162,8 @@ void *fifo_and_dumper_thread(void *args) noexcept {
   (void)args;
   char *json_str = nullptr;
   std::string tid, sandbox_dir_base;
-  int retries = 0;
   bool fifo_found = false;
 
-  constexpr int kMaxRetries = 5;
   constexpr useconds_t kIdleUsleep = 200 * 1000; /* 200ms when nothing to do */
   /* Only for early-spawn race (sysctl alive, kproc not linked yet). */
   constexpr int kProcResolveAttempts = 3;
@@ -196,43 +187,6 @@ void *fifo_and_dumper_thread(void *args) noexcept {
     if (g_stack_shutting_down.load(std::memory_order_acquire)) {
       sleep(1);
       continue;
-    }
-
-    // Restart util if it crashes or exits (normal operation only).
-    if (find_pid("util.elf") < 0 && find_pid("OnionHEN Utility") < 0 &&
-        retries < kMaxRetries) {
-      if (retries == 0)
-        onion_notify(true, "OnionHEN Utility is not running, restarting...");
-
-      if (++retries >= kMaxRetries) {
-        onion_notify(true,
-                     "OnionHEN Utility services failed to restart — check "
-                     "elfldr :9020/9021");
-        usleep(kIdleUsleep);
-        continue;
-      }
-
-      bool ok = false;
-      uint16_t launch_port = ELFLDR_REMOTE_PORT;
-      if (elfldr_remote_onion_available()) {
-        launch_port = ONION_ELFLDR_PORT;
-        ok = elfldr_remote_send_bytes_to(ONION_ELFLDR_PORT, util_elf_start,
-                                         util_elf_size);
-      }
-      if (!ok) {
-        launch_port = ELFLDR_REMOTE_PORT;
-        ok = elfldr_remote_send_bytes_to(ELFLDR_REMOTE_PORT, util_elf_start,
-                                         util_elf_size);
-      }
-      if (ok) {
-        sleep(2);
-        OnionHEN_log("  Launched util via elfldr :%u!", launch_port);
-        onion_notify(true, "OnionHEN Utility services successfully restarted");
-        retries = 0;
-      } else {
-        OnionHEN_log("failed to launch embedded util via elfldr, retry: %d",
-                     retries);
-      }
     }
 
     pthread_mutex_lock(&jb_lock);

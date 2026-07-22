@@ -47,7 +47,7 @@ atomic_bool not_connected = false;
 #define SCE_NET_CTL_ERROR_NOT_CONNECTED 0x80412108
 #define SCE_NET_CTL_ERROR_NOT_AVAIL 0x80412109
 
-/* OnionHEN: payloads launch via the selected elfldr socket (9020, then 9021).
+/* OnionHEN: user payloads launch exclusively via private elfldr :9020.
  * ptrace attach/mmap: libonion_elfldr (pt_attach / pt_mmap). Authid is raised
  * once in util main via set_ucred_to_ptrace(), not flipped per ptrace call.
  */
@@ -116,10 +116,7 @@ bool copyFile(const char *source, const char *destination)
 
 bool load_payload(const char *path) {
   /* Payload .elf only — .plugin packages removed. */
-  onion_payload_load_opts opts = {
-      .always_succeed_after_launch = 0,
-  };
-  return onion_payload_load(path, /*filename=*/NULL, &opts);
+  return onion_payload_load(path, /*filename=*/NULL);
 }
 
 int launchApp(const char *titleId)

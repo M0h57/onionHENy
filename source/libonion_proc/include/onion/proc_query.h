@@ -20,14 +20,6 @@ pid_t onion_find_pid(const char *name);
 pid_t onion_find_pid_substr(const char *substr);
 
 /**
- * Collect all pids whose ki_comm (or ki_tdname) exactly matches any of @names.
- * Skips pid <= 1. Writes up to @max_out entries into @out.
- * Returns number of pids written.
- */
-size_t onion_collect_pids(const char *const *names, size_t nnames, pid_t *out,
-                          size_t max_out);
-
-/**
  * Extended lookup used by ShellUI toolbox / cheats / daemon inject.
  * @param needle     if true, substring match process name; else exact.
  * @param for_bigapp if true, match running big-app (requires host SCE helpers

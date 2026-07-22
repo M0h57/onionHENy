@@ -3,11 +3,17 @@
 #include "test_support.h"
 
 #include <onion/payload.h>
+#include <elfldr_remote.h>
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+
+void onion_test_elfldr_reset(void);
+void onion_test_elfldr_configure(bool available, pid_t launch_pid);
+int onion_test_elfldr_launch_calls(void);
+uint16_t onion_test_elfldr_last_port(void);
 
 static int test_is_elf(void) {
   const unsigned char elf[8] = {0x7F, 'E', 'L', 'F', 2, 1, 1, 0};
@@ -54,6 +60,11 @@ static int test_pid_file_roundtrip(void) {
   onion_payload_write_pid_file(path, -1);
   TEST_ASSERT_EQ_INT(-1, (int)onion_payload_read_pid_file(path));
 
+  onion_payload_write_pid_file(path, 1);
+  TEST_ASSERT_EQ_INT(-1, (int)onion_payload_read_pid_file(path));
+  onion_payload_write_pid_file(path, 0);
+  TEST_ASSERT_EQ_INT(-1, (int)onion_payload_read_pid_file(path));
+
   TEST_ASSERT_EQ_INT(-1, (int)onion_payload_read_pid_file(
                              "/tmp/onion-payload-pid-missing-xyz.PID"));
   onion_test_remove_file(path);
@@ -87,6 +98,62 @@ static int test_read_file(void) {
   return 0;
 }
 
+static int test_strict_private_loader_policy(void) {
+  const unsigned char elf[8] = {0x7F, 'E', 'L', 'F', 2, 1, 1, 0};
+
+  onion_test_elfldr_reset();
+  TEST_ASSERT_EQ_INT(-1, (int)onion_payload_launch_elfldr(
+                             "strict-test", elf, sizeof(elf)));
+  TEST_ASSERT_EQ_INT(0, onion_test_elfldr_launch_calls());
+
+  onion_test_elfldr_configure(true, 4242);
+  TEST_ASSERT_EQ_INT(4242, (int)onion_payload_launch_elfldr(
+                               "strict-test", elf, sizeof(elf)));
+  TEST_ASSERT_EQ_INT(1, onion_test_elfldr_launch_calls());
+  TEST_ASSERT_EQ_INT(ONION_ELFLDR_PORT, onion_test_elfldr_last_port());
+
+  onion_test_elfldr_configure(true, 0);
+  TEST_ASSERT_EQ_INT(-1, (int)onion_payload_launch_elfldr(
+                             "strict-test", elf, sizeof(elf)));
+  TEST_ASSERT_EQ_INT(2, onion_test_elfldr_launch_calls());
+
+  onion_test_elfldr_configure(true, -1);
+  TEST_ASSERT_EQ_INT(-1, (int)onion_payload_launch_elfldr(
+                             "strict-test", elf, sizeof(elf)));
+  TEST_ASSERT_EQ_INT(3, onion_test_elfldr_launch_calls());
+  return 0;
+}
+
+static int test_load_requires_real_pid(void) {
+  char path[256];
+  char pid_path[256];
+  const unsigned char elf[8] = {0x7F, 'E', 'L', 'F', 2, 1, 1, 0};
+
+  TEST_ASSERT_EQ_INT(0, onion_test_write_temp_file(
+                            ".elf", elf, sizeof(elf), path, sizeof(path)));
+
+  onion_test_elfldr_reset();
+  onion_test_elfldr_configure(true, 5151);
+  TEST_ASSERT_TRUE(onion_payload_load(path, NULL));
+
+  char path_copy[256];
+  snprintf(path_copy, sizeof(path_copy), "%s", path);
+  const char *base = strrchr(path_copy, '/');
+  base = base ? base + 1 : path_copy;
+  char key[64];
+  TEST_ASSERT_TRUE(onion_payload_elf_key_from_name(base, key, sizeof(key)));
+  onion_payload_pid_path(pid_path, sizeof(pid_path), key);
+  TEST_ASSERT_EQ_INT(5151, (int)onion_payload_read_pid_file(pid_path));
+
+  onion_test_elfldr_configure(true, 0);
+  TEST_ASSERT_TRUE(!onion_payload_load(path, NULL));
+  TEST_ASSERT_EQ_INT(-1, (int)onion_payload_read_pid_file(pid_path));
+
+  onion_test_remove_file(path);
+  onion_test_remove_file(pid_path);
+  return 0;
+}
+
 int test_payload_suite(void) {
   int failures = 0;
   failures += onion_test_run("payload.is_elf", test_is_elf);
@@ -95,5 +162,9 @@ int test_payload_suite(void) {
   failures += onion_test_run("payload.pid_file_roundtrip",
                              test_pid_file_roundtrip);
   failures += onion_test_run("payload.read_file", test_read_file);
+  failures += onion_test_run("payload.strict_private_loader_policy",
+                             test_strict_private_loader_policy);
+  failures += onion_test_run("payload.load_requires_real_pid",
+                             test_load_requires_real_pid);
   return failures;
 }

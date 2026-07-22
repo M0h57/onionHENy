@@ -4,6 +4,7 @@
 
 #include <errno.h>
 #include <fcntl.h>
+#include <limits.h>
 #include <netinet/in.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -72,13 +73,25 @@ bool elfldr_remote_onion_available(void) {
   }
 
   char buf[64];
-  const ssize_t n = recv(fd, buf, sizeof(buf) - 1, 0);
+  size_t used = 0;
+  bool complete = false;
+  while (used < sizeof(buf)) {
+    const ssize_t n = recv(fd, buf + used, sizeof(buf) - used, 0);
+    if (n < 0 && errno == EINTR)
+      continue;
+    if (n <= 0)
+      break;
+    used += (size_t)n;
+    if (memchr(buf, '\n', used) != NULL) {
+      complete = true;
+      break;
+    }
+  }
   close(fd);
-  if (n <= 0)
-    return false;
-  buf[n] = '\0';
 
-  return strncmp(buf, ONION_ELFLDR_PONG, strlen(ONION_ELFLDR_PONG)) == 0;
+  const size_t expected = strlen(ONION_ELFLDR_PONG);
+  return complete && used == expected &&
+         memcmp(buf, ONION_ELFLDR_PONG, expected) == 0;
 }
 
 bool elfldr_remote_available(void) {
@@ -100,10 +113,6 @@ bool elfldr_remote_send_bytes_to(uint16_t port, const uint8_t *elf,
   }
   close(fd);
   return true;
-}
-
-bool elfldr_remote_send_bytes(const uint8_t *elf, size_t size) {
-  return elfldr_remote_send_bytes_to(ELFLDR_REMOTE_PORT, elf, size);
 }
 
 static int send_file_uri(uint16_t port, const char *abs_path) {
@@ -129,32 +138,40 @@ static int send_file_uri(uint16_t port, const char *abs_path) {
 
 static pid_t read_pid_response(int fd) {
   char buf[64];
+  size_t used = 0;
+  bool complete = false;
   struct timeval timeout;
-  timeout.tv_sec = 5;
+  /* The private loader returns only after ELF mapping/relocation completes.
+   * Keep the exact-PID channel open long enough for large payloads; callers do
+   * not fall back or infer a PID when this protocol fails. */
+  timeout.tv_sec = 120;
   timeout.tv_usec = 0;
   (void)setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout));
 
-  const ssize_t n = recv(fd, buf, sizeof(buf) - 1, 0);
-  if (n <= 0)
-    return 0;
-  buf[n] = '\0';
+  while (used < sizeof(buf) - 1) {
+    const ssize_t n = recv(fd, buf + used, sizeof(buf) - 1 - used, 0);
+    if (n < 0 && errno == EINTR)
+      continue;
+    if (n <= 0)
+      return -1;
+    used += (size_t)n;
+    if (memchr(buf, '\n', used) != NULL) {
+      complete = true;
+      break;
+    }
+  }
+  buf[used] = '\0';
 
-  if (strncmp(buf, "OK ", 3) != 0)
+  if (!complete || strncmp(buf, "OK ", 3) != 0)
     return -1;
-  const long pid = strtol(buf + 3, NULL, 10);
-  return pid > 1 ? (pid_t)pid : 0;
-}
 
-bool elfldr_remote_send_file_uri_to(uint16_t port, const char *abs_path) {
-  int fd = send_file_uri(port, abs_path);
-  if (fd < 0)
-    return false;
-  close(fd);
-  return true;
-}
-
-bool elfldr_remote_send_file_uri(const char *abs_path) {
-  return elfldr_remote_send_file_uri_to(ELFLDR_REMOTE_PORT, abs_path);
+  char *end = NULL;
+  errno = 0;
+  const long pid = strtol(buf + 3, &end, 10);
+  if (errno != 0 || end == buf + 3 || pid <= 1 || pid > INT_MAX ||
+      *end != '\n' || end[1] != '\0')
+    return -1;
+  return (pid_t)pid;
 }
 
 static void mkdir_parent(const char *abs_path) {
@@ -167,34 +184,9 @@ static void mkdir_parent(const char *abs_path) {
   mkdir(tmp, 0777);
 }
 
-bool elfldr_remote_write_and_launch_to(uint16_t port, const char *abs_path,
-                                       const uint8_t *elf, size_t size) {
-  if (!abs_path || !elf || size < 4)
-    return false;
-
-  mkdir_parent(abs_path);
-
-  int out = open(abs_path, O_WRONLY | O_CREAT | O_TRUNC, 0777);
-  if (out < 0)
-    return false;
-
-  size_t off = 0;
-  while (off < size) {
-    ssize_t w = write(out, elf + off, size - off);
-    if (w <= 0) {
-      close(out);
-      return false;
-    }
-    off += (size_t)w;
-  }
-  close(out);
-
-  return elfldr_remote_send_file_uri_to(port, abs_path);
-}
-
-pid_t elfldr_remote_write_and_launch_get_pid(uint16_t port,
-                                             const char *abs_path,
-                                             const uint8_t *elf, size_t size) {
+pid_t elfldr_remote_onion_write_and_launch_get_pid(const char *abs_path,
+                                                   const uint8_t *elf,
+                                                   size_t size) {
   if (!abs_path || !elf || size < 4)
     return -1;
 
@@ -215,24 +207,11 @@ pid_t elfldr_remote_write_and_launch_get_pid(uint16_t port,
   }
   close(out);
 
-  int fd = send_file_uri(port, abs_path);
+  int fd = send_file_uri(ONION_ELFLDR_PORT, abs_path);
   if (fd < 0)
     return -1;
 
   const pid_t pid = read_pid_response(fd);
   close(fd);
   return pid;
-}
-
-bool elfldr_remote_write_and_launch(const char *abs_path,
-                                    const uint8_t *elf, size_t size) {
-  return elfldr_remote_write_and_launch_to(ELFLDR_REMOTE_PORT, abs_path, elf,
-                                          size);
-}
-
-pid_t elfldr_remote_wait_name(const char *name_substr, int timeout_ms) {
-  /* Implemented in callers with their find_pid when needed; stub keeps API. */
-  (void)name_substr;
-  (void)timeout_ms;
-  return -1;
 }

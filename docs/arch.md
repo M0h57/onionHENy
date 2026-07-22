@@ -9,7 +9,7 @@ OnionHEN 是 PS5 的 All-in-One Homebrew Enabler，基于 **etaHEN**（Lightning
 | 许可证 | GPLv3 |
 | 构建 | CMake + Ninja + `PS5_PAYLOAD_SDK`（clang） |
 
-**运行时前置条件：** 必须先有 **外部 elfldr（端口 9021）** 完成首跳。bootstrapper 启动后会拉起 OnionHEN 自己的私有 **9020** `onion_elfldr.elf`，后续运行时 ELF / 用户 payload 优先走 9020，失败时回退 9021。
+**运行时前置条件：** 必须先有 **外部 elfldr（端口 9021）** 完成首跳。bootstrapper 启动后会拉起 OnionHEN 自己的私有 **9020** `onion_elfldr.elf`。用户 Payload 只能走 9020，并且必须取得加载器返回的精确 PID；失败时不做进程快照、不自动重试、也不回退 9021。9021 仅作为首次引导和 9020 恢复通道。
 
 ---
 
@@ -59,13 +59,14 @@ OnionHEN 是 PS5 的 All-in-One Homebrew Enabler，基于 **etaHEN**（Lightning
 ### 1.2 构建嵌入关系
 
 ```
-shellui.elf ──┐
-fps_elf.elf ──┼──► 嵌入 daemon.elf ──┐
-              │                       │
-              │     util.elf ─────────┼──► 嵌入 bootstrapper.elf
-              │     kstuff.elf ───────┤         │
-              │                       │         ▼ LZMA
-              └───────────────────────┘   bootstrapper.elf.lzma
+shellui.elf ───────┐
+fps_elf.elf ───────┼──► 嵌入 daemon.elf ──┐
+util.elf ──────────┤                       │
+onion_elfldr.elf ──┘                       │
+                     util.elf ─────────────┼──► 嵌入 bootstrapper.elf
+                     kstuff.elf ───────────┤         │
+                     onion_elfldr.elf ─────┘         ▼ LZMA
+                                               bootstrapper.elf.lzma
                                               │
                                               ▼ 嵌入
                                          OnionHEN.elf  (最终用户 payload)
@@ -124,25 +125,26 @@ OnionHEN/
 
 - 提权、分区 remount、阻止更新
 - 以 `.incbin` 嵌入 `onion_elfldr.elf`、`daemon.elf`、`util.elf`、`kstuff.elf` 与图标资源
-- 先用外部 9021 启动内置 `onion_elfldr.elf`，再优先通过 9020 启动 util / daemon / kstuff
-- 扫描并加载插件目录
+- 先用外部 9021 启动内置 `onion_elfldr.elf`，再通过 9020 启动 util / daemon / kstuff
+- 扫描并自动启动带 `.auto_start` 标记的用户 Payload ELF
 - 可选日志端口 **9088**
 
 关键启动策略：
 
 1. 检查 `127.0.0.1:9021` 上的外部 elfldr（首跳必需）
 2. 启动内置 `onion_elfldr.elf`，并通过握手确认 `127.0.0.1:9020`
-3. 顺序发送原始 ELF 字节：util → kstuff → daemon（9020 优先，9021 fallback）
+3. 顺序发送内部 ELF 字节：util → kstuff → daemon；9020 是正常路径，9021 仅承担引导/恢复职责
 4. 各子 ELF 启动后把主线程名设为稳定进程名（`util.elf` / `kstuff.elf` / `daemon.elf`）
-5. 加载 `/data/OnionHEN/payloads/` 下带 `.auto_start` 的 `.elf`
+5. 仅在 9020 健康时加载 `/data/OnionHEN/payloads/` 下带 `.auto_start` 的 `.elf`；必须取得精确 PID，否则该 Payload 直接失败
 
 可用 `/data/OnionHEN/no_kstuff` 或 `/mnt/usb0/no_kstuff` 跳过 kstuff。
 
 ### 2.3 `daemon` → `daemon.elf`（Critical 守护进程）
 
-- 内嵌 `shellui.elf`、`fps_elf.elf`，并保留一份 `util.elf` 供 watchdog 纯内存重启
+- 内嵌 `shellui.elf`、`fps_elf.elf`、`util.elf` 与 `onion_elfldr.elf`
 - 经 **libNineS** 将 Toolbox 注入 `SceShellUI`
-- 监视 util，崩溃可重启
+- 按依赖顺序监视私有 9020 与 util：9020 异常时先通过外部 9021 恢复加载器，再通过 9020 恢复 util
+- 9020 在同步加载 Payload 时发布 busy 标记，避免健康检查误杀；超过有界宽限期仍未恢复则按卡死处理
 - Unix socket：`/system_tmp/onionhen/ipc/crit_service`
 - IPC 前缀 `0x9000000`（`BREW_*`）
 
@@ -367,7 +369,7 @@ struct IPCMessage {
 
 ### 4.3 网络服务
 
-- 首跳依赖外部 **9021 elfldr**；运行时 ELF / payload 优先使用内置 **9020 onion_elfldr**
+- 首跳依赖外部 **9021 elfldr**；它同时是私有 9020 的恢复根。用户 Payload 严格使用内置 **9020 onion_elfldr**，不回退 9021
 
 ### 4.4 扩展
 
@@ -378,7 +380,7 @@ struct IPCMessage {
 
 | 能力 | 说明 |
 |------|------|
-| 内嵌 9021 elfldr | 改为内置私有 9020 loader；9021 只作为外部首跳 / fallback |
+| 内嵌 9021 elfldr | 改为内置私有 9020 loader；9021 只作为外部首次引导 / 9020 恢复通道 |
 | FTP 1337 | 服务与 Toolbox 开关已移除 |
 | Legacy CMD 9028 | util TCP hijacker 协议与 Toolbox 开关已移除；app JB 仅 FIFO |
 | Klog server 9081 | 服务与 Toolbox 开关已移除 |
@@ -428,7 +430,7 @@ git submodule update --init --recursive
 |----|------|
 | **libkeystone** (`third_party/keystone/`) | ShnExt 汇编 |
 
-C++ runtime 统一由 `PS5_PAYLOAD_SDK/target/lib` 提供。项目不再携带旧 curl/TLS、minizip/zlib/zstd 或外部 9021 服务镜像；spawn 通过 `common/elfldr_remote.c` 走内置 9020，必要时回退 9021。
+C++ runtime 统一由 `PS5_PAYLOAD_SDK/target/lib` 提供。项目不再携带旧 curl/TLS、minizip/zlib/zstd 或外部 9021 服务镜像。用户 Payload 通过 `common/elfldr_remote.c` 严格走内置 9020；外部 9021 仅用于首次引导和恢复 9020。
 
 ### 5.5 PS5 系统库 stub（`source/platform/ps5/stubs/*.so`）
 
