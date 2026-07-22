@@ -460,6 +460,10 @@ constexpr const char* kIconKstuff =
     "/user/data/OnionHEN/assets/icon_xml_kstuff.png";
 constexpr const char* kIconOverlay =
     "/user/data/OnionHEN/assets/icon_xml_overlay.png";
+constexpr const char* kIconTitleId =
+    "/user/data/OnionHEN/assets/icon_xml_title_id.png";
+constexpr const char* kIconMenuOption =
+    "/user/data/OnionHEN/assets/icon_xml_menu_option.png";
 constexpr const char* kIconFan =
     "/user/data/OnionHEN/assets/icon_xml_fan.png";
 constexpr const char* kIconRestMode =
@@ -558,10 +562,12 @@ void append_toolbox_display_group(ps5ui::Group& g) {
        toolbox_i18n::tr("overlay.group.sub"), kIconOverlay,
        "id_overlay_change_pos")
       .toggle("id_disp_titleids", toolbox_i18n::tr("disp_tids"),
-              toolbox_on("id_disp_titleids"), toolbox_i18n::tr("disp_tids.sub"))
+              toolbox_on("id_disp_titleids"), toolbox_i18n::tr("disp_tids.sub"),
+              std::nullopt, kIconTitleId)
       .toggle("id_custom_game_opts", toolbox_i18n::tr("game_opts.toggle"),
               toolbox_on("id_custom_game_opts"),
-              toolbox_i18n::tr("game_opts.toggle.sub"));
+              toolbox_i18n::tr("game_opts.toggle.sub"), std::nullopt,
+              kIconMenuOption);
 }
 
 void append_toolbox_connection_group(ps5ui::Group& g) {
