@@ -273,6 +273,8 @@ annotated default based on [`config.ini.example`](config.ini.example).
 | `rest_mode.close_running_game_on_entry` | `false` | `true`, `false` |
 | `cheats.memory_backend` | `default` | `default`, `libhijacker` |
 | `app_jailbreak.debug_notifications` | `false` | `true`, `false` |
+| `app_jailbreak.exact_title_ids` | `ITEM00001,NPXS39041,PKGI13337,PKGI12345,TOOL00001` | comma-separated exact Title IDs, or `none` |
+| `app_jailbreak.title_id_prefixes` | `LAPY` | comma-separated uppercase prefixes, or `none` |
 | `cooling.fan_control` | `automatic` | `automatic`, `temperature_threshold` |
 | `cooling.temperature_threshold_celsius` | `77` | `0` through `100` |
 | `overlay.edge` | `top` | `top`, `bottom` |

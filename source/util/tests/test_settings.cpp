@@ -33,6 +33,10 @@ static int test_defaults_and_serialize_keys(void) {
   TEST_ASSERT_TRUE(text.find("stop_utility_daemon_on_entry=false") !=
                    std::string::npos);
   TEST_ASSERT_TRUE(text.find("edge=top") != std::string::npos);
+  TEST_ASSERT_TRUE(
+      text.find("exact_title_ids=ITEM00001,NPXS39041,PKGI13337,PKGI12345,"
+                "TOOL00001") != std::string::npos);
+  TEST_ASSERT_TRUE(text.find("title_id_prefixes=LAPY") != std::string::npos);
   return 0;
 }
 
@@ -95,6 +99,13 @@ static int test_full_schema_roundtrip(void) {
   in.cheats_shortcut_opt = 4;
   in.toolbox_shortcut_opt = 2;
   in.ui_lang = onion::kUiLanguageZhHans;
+  in.app_jailbreak_allowlist.exact_title_ids = {};
+  in.app_jailbreak_allowlist.exact_title_ids[0] = "ITEM00001";
+  in.app_jailbreak_allowlist.exact_title_ids[1] = "CUSA12345";
+  in.app_jailbreak_allowlist.exact_title_id_count = 2;
+  in.app_jailbreak_allowlist.title_id_prefixes = {};
+  in.app_jailbreak_allowlist.title_id_prefixes[0] = "TEST";
+  in.app_jailbreak_allowlist.title_id_prefix_count = 1;
 
   TEST_ASSERT_TRUE(onion::settings_save_file(path.c_str(), in));
   onion::Settings out{};
@@ -118,6 +129,17 @@ static int test_full_schema_roundtrip(void) {
   TEST_ASSERT_EQ_INT(in.cheats_shortcut_opt, out.cheats_shortcut_opt);
   TEST_ASSERT_EQ_INT(in.toolbox_shortcut_opt, out.toolbox_shortcut_opt);
   TEST_ASSERT_EQ_INT(in.ui_lang, out.ui_lang);
+  TEST_ASSERT_EQ_U64(
+      in.app_jailbreak_allowlist.exact_title_id_count,
+      out.app_jailbreak_allowlist.exact_title_id_count);
+  TEST_ASSERT_STREQ(
+      "ITEM00001", out.app_jailbreak_allowlist.exact_title_ids[0].c_str());
+  TEST_ASSERT_STREQ(
+      "CUSA12345", out.app_jailbreak_allowlist.exact_title_ids[1].c_str());
+  TEST_ASSERT_EQ_U64(
+      1, out.app_jailbreak_allowlist.title_id_prefix_count);
+  TEST_ASSERT_STREQ(
+      "TEST", out.app_jailbreak_allowlist.title_id_prefixes[0].c_str());
 
   unlink(path.c_str());
   return 0;
@@ -138,6 +160,12 @@ static int test_partial_ini_keeps_defaults(void) {
   /* specified key applied; unspecified keys stay at defaults */
   TEST_ASSERT_TRUE(out.util_rest_kill == true);
   TEST_ASSERT_EQ_INT(77, out.fan_threshold);
+  TEST_ASSERT_EQ_U64(5, out.app_jailbreak_allowlist.exact_title_id_count);
+  TEST_ASSERT_STREQ("ITEM00001",
+                    out.app_jailbreak_allowlist.exact_title_ids[0].c_str());
+  TEST_ASSERT_EQ_U64(1, out.app_jailbreak_allowlist.title_id_prefix_count);
+  TEST_ASSERT_STREQ("LAPY",
+                    out.app_jailbreak_allowlist.title_id_prefixes[0].c_str());
 
   unlink(path.c_str());
   return 0;
@@ -167,6 +195,70 @@ static int test_empty_file_loads_defaults(void) {
   /* empty file: load may succeed or fall back — either way defaults applied */
   (void)onion::settings_load_file(path.c_str(), &out);
   TEST_ASSERT_EQ_INT(77, out.fan_threshold);
+  unlink(path.c_str());
+  return 0;
+}
+
+static int test_app_jailbreak_allowlist_parse_policy(void) {
+  std::string path = temp_ini_path();
+  TEST_ASSERT_TRUE(!path.empty());
+
+  FILE *f = fopen(path.c_str(), "w");
+  TEST_ASSERT_TRUE(f != nullptr);
+  fputs("[meta]\nschema_version=1\n\n[app_jailbreak]\n"
+        "exact_title_ids=CUSA12345, CUSA12345, TEST00001\n"
+        "title_id_prefixes=ABCD,TEST\n",
+        f);
+  fclose(f);
+
+  onion::Settings configured{};
+  TEST_ASSERT_TRUE(onion::settings_load_file(path.c_str(), &configured));
+  TEST_ASSERT_EQ_U64(
+      2, configured.app_jailbreak_allowlist.exact_title_id_count);
+  TEST_ASSERT_STREQ(
+      "CUSA12345",
+      configured.app_jailbreak_allowlist.exact_title_ids[0].c_str());
+  TEST_ASSERT_STREQ(
+      "TEST00001",
+      configured.app_jailbreak_allowlist.exact_title_ids[1].c_str());
+  TEST_ASSERT_EQ_U64(
+      2, configured.app_jailbreak_allowlist.title_id_prefix_count);
+
+  f = fopen(path.c_str(), "w");
+  TEST_ASSERT_TRUE(f != nullptr);
+  fputs("[meta]\nschema_version=1\n\n[app_jailbreak]\n"
+        "exact_title_ids=none\n"
+        "title_id_prefixes=none\n",
+        f);
+  fclose(f);
+
+  onion::Settings disabled{};
+  TEST_ASSERT_TRUE(onion::settings_load_file(path.c_str(), &disabled));
+  TEST_ASSERT_EQ_U64(0,
+                     disabled.app_jailbreak_allowlist.exact_title_id_count);
+  TEST_ASSERT_EQ_U64(0,
+                     disabled.app_jailbreak_allowlist.title_id_prefix_count);
+
+  f = fopen(path.c_str(), "w");
+  TEST_ASSERT_TRUE(f != nullptr);
+  fputs("[meta]\nschema_version=1\n\n[app_jailbreak]\n"
+        "exact_title_ids=ITEM00001,*\n"
+        "title_id_prefixes=*\n",
+        f);
+  fclose(f);
+
+  onion::Settings invalid{};
+  TEST_ASSERT_TRUE(onion::settings_load_file(path.c_str(), &invalid));
+  /* Invalid replacement values retain the compiled safe defaults. */
+  TEST_ASSERT_EQ_U64(5,
+                     invalid.app_jailbreak_allowlist.exact_title_id_count);
+  TEST_ASSERT_STREQ(
+      "ITEM00001", invalid.app_jailbreak_allowlist.exact_title_ids[0].c_str());
+  TEST_ASSERT_EQ_U64(1,
+                     invalid.app_jailbreak_allowlist.title_id_prefix_count);
+  TEST_ASSERT_STREQ(
+      "LAPY", invalid.app_jailbreak_allowlist.title_id_prefixes[0].c_str());
+
   unlink(path.c_str());
   return 0;
 }
@@ -216,6 +308,8 @@ extern "C" int test_settings_suite(void) {
   failures += onion_test_run("settings_partial_ini_defaults", test_partial_ini_keeps_defaults);
   failures += onion_test_run("settings_serialize_overlay_keys", test_serialize_contains_overlay_keys);
   failures += onion_test_run("settings_empty_file_defaults", test_empty_file_loads_defaults);
+  failures += onion_test_run("settings_app_jailbreak_allowlist",
+                             test_app_jailbreak_allowlist_parse_policy);
   failures += onion_test_run("settings_store_snapshot_update",
                              test_settings_store_snapshot_update);
   failures += onion_test_run("settings_config_mtime_helpers", test_config_mtime_helpers);

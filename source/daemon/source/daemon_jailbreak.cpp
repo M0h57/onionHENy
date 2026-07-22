@@ -43,8 +43,9 @@ pthread_mutex_t jb_lock = PTHREAD_MUTEX_INITIALIZER;
 /** Same authid etaHEN / Hijacker::jailbreak historically used. */
 constexpr uint64_t kJbAuthId = 0x4801000000000013ull;
 
-bool is_whitelisted_app(const std::string &tid) {
-  return onion::app_jailbreak::is_whitelisted(tid);
+bool is_whitelisted_app(const std::string &tid,
+                        const onion::AppJailbreakAllowlist &allowlist) {
+  return onion::app_jailbreak::is_whitelisted(tid, allowlist);
 }
 
 int jb_read_uid(pid_t pid) {
@@ -62,8 +63,10 @@ uint64_t jb_read_authid(pid_t pid) {
   return kernel_get_ucred_authid(pid);
 }
 
-const char *jb_whitelist_reason(const std::string &tid) {
-  return onion::app_jailbreak::whitelist_reason(tid);
+const char *jb_whitelist_reason(
+    const std::string &tid,
+    const onion::AppJailbreakAllowlist &allowlist) {
+  return onion::app_jailbreak::whitelist_reason(tid, allowlist);
 }
 
 /**
@@ -156,8 +159,8 @@ void *fifo_and_dumper_thread(void *args) noexcept {
   std::string last_reject_logged;
   int no_app_log_suppress = 0;
 
-  OnionHEN_log("[JB] fifo watcher started (whitelist: ITEM00001, NPXS39041, "
-               "PKGI13337, PKGI12345, TOOL00001, *LAPY*)");
+  OnionHEN_log("[JB] fifo watcher started (whitelist from "
+               "app_jailbreak.exact_title_ids/title_id_prefixes)");
   OnionHEN_log("[JB] kernel symbols: ALLPROC=0x%lx ROOTVNODE=0x%lx "
                "(0 means SDK did not resolve — jailbreak will fail)",
                static_cast<unsigned long>(KERNEL_ADDRESS_ALLPROC),
@@ -174,11 +177,9 @@ void *fifo_and_dumper_thread(void *args) noexcept {
 
     pthread_mutex_lock(&jb_lock);
 
-    {
-      const onion::Settings cfg = g_settings.snapshot();
-      if (cfg.enable_fan_speed)
-        set_fan_threshold(cfg.fan_threshold);
-    }
+    const onion::Settings cfg = g_settings.snapshot();
+    if (cfg.enable_fan_speed)
+      set_fan_threshold(cfg.fan_threshold);
 
     int bappid = 0;
     if (!Get_Running_App_TID(tid, bappid)) {
@@ -209,15 +210,17 @@ void *fifo_and_dumper_thread(void *args) noexcept {
 
     if (tid != last_tid_logged) {
       OnionHEN_log("[JB] foreground big-app tid=%s appid=%d whitelist=%s",
-                   tid.c_str(), bappid, jb_whitelist_reason(tid));
+                   tid.c_str(), bappid,
+                   jb_whitelist_reason(tid, cfg.app_jailbreak_allowlist));
       last_tid_logged = tid;
       last_reject_logged.clear();
     }
 
-    if (!is_whitelisted_app(tid)) {
+    if (!is_whitelisted_app(tid, cfg.app_jailbreak_allowlist)) {
       if (tid != last_reject_logged) {
         OnionHEN_log("[JB] skip tid=%s — not on jailbreak whitelist "
-                     "(add TID or use LAPY* / known PKGI ids)",
+                     "(configure app_jailbreak.exact_title_ids or "
+                     "title_id_prefixes)",
                      tid.c_str());
         last_reject_logged = tid;
       }
@@ -381,7 +384,7 @@ void *fifo_and_dumper_thread(void *args) noexcept {
 
     if (ok && uid_after == 0) {
       /* Only success may surface a toast, and only when debug notify is on. */
-      if (g_settings.snapshot().debug_app_jb_msg)
+      if (cfg.debug_app_jb_msg)
         onion_notify(true, "App (PID %i) has been granted a jailbreak",
                      reserved_value);
       OnionHEN_log("[JB] OK: pid=%d tid=%s fully jailbroken", reserved_value,

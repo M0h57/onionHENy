@@ -34,6 +34,8 @@ along with this program; see the file COPYING. If not, see
 #ifdef __cplusplus
 extern "C++" {
 
+#include <array>
+#include <cstddef>
 #include <cstdint>
 #include <ctime>
 #include <mutex>
@@ -53,6 +55,19 @@ inline constexpr int kUiLanguageSystem = 0;
 inline constexpr int kUiLanguageZhHans = 1;
 inline constexpr int kUiLanguageEn = 2;
 
+inline constexpr std::size_t kMaxAppJailbreakExactTitleIds = 20;
+inline constexpr std::size_t kMaxAppJailbreakTitleIdPrefixes = 20;
+
+struct AppJailbreakAllowlist {
+  std::array<std::string, kMaxAppJailbreakExactTitleIds> exact_title_ids = {
+      "ITEM00001", "NPXS39041", "PKGI13337", "PKGI12345", "TOOL00001"};
+  std::size_t exact_title_id_count = 5;
+
+  std::array<std::string, kMaxAppJailbreakTitleIdPrefixes>
+      title_id_prefixes = {"LAPY"};
+  std::size_t title_id_prefix_count = 1;
+};
+
 struct Settings {
   // [rest_mode]
   bool util_rest_kill = false;
@@ -62,6 +77,7 @@ struct Settings {
   // [cheats], [app_jailbreak]
   bool libhijacker_cheats = false;
   bool debug_app_jb_msg = false;
+  AppJailbreakAllowlist app_jailbreak_allowlist{};
 
   // [home_screen], [game_menu]
   bool display_tids = false;

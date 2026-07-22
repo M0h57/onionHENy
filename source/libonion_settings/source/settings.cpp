@@ -136,6 +136,124 @@ const char *cheat_backend_name(bool libhijacker) {
   return libhijacker ? "libhijacker" : "default";
 }
 
+std::string trim_copy(const std::string &value) {
+  std::size_t first = 0;
+  while (first < value.size() &&
+         std::isspace(static_cast<unsigned char>(value[first]))) {
+    ++first;
+  }
+  std::size_t last = value.size();
+  while (last > first &&
+         std::isspace(static_cast<unsigned char>(value[last - 1]))) {
+    --last;
+  }
+  return value.substr(first, last - first);
+}
+
+bool is_upper_alnum(char c) {
+  const unsigned char uc = static_cast<unsigned char>(c);
+  return std::isdigit(uc) || std::isupper(uc);
+}
+
+bool valid_exact_title_id(const std::string &value) {
+  if (value.size() != 9) {
+    return false;
+  }
+  for (char c : value) {
+    if (!is_upper_alnum(c)) {
+      return false;
+    }
+  }
+  return true;
+}
+
+bool valid_title_id_prefix(const std::string &value) {
+  if (value.empty() || value.size() >= 9) {
+    return false;
+  }
+  for (char c : value) {
+    if (!is_upper_alnum(c)) {
+      return false;
+    }
+  }
+  return true;
+}
+
+template <std::size_t N>
+bool parse_allowlist_csv(const char *raw, bool (*validator)(const std::string &),
+                         std::array<std::string, N> *values,
+                         std::size_t *count) {
+  if (!raw || !values || !count) {
+    return false;
+  }
+
+  const std::string input = trim_copy(raw);
+  std::array<std::string, N> parsed{};
+  std::size_t parsed_count = 0;
+
+  if (streq_ci(input.c_str(), "none")) {
+    *values = std::move(parsed);
+    *count = 0;
+    return true;
+  }
+  if (input.empty()) {
+    return false;
+  }
+
+  std::size_t start = 0;
+  while (start <= input.size()) {
+    const std::size_t comma = input.find(',', start);
+    const std::string token = trim_copy(input.substr(
+        start, comma == std::string::npos ? std::string::npos : comma - start));
+    if (!validator(token)) {
+      return false;
+    }
+
+    bool duplicate = false;
+    for (std::size_t i = 0; i < parsed_count; ++i) {
+      if (parsed[i] == token) {
+        duplicate = true;
+        break;
+      }
+    }
+    if (!duplicate) {
+      if (parsed_count >= N) {
+        return false;
+      }
+      parsed[parsed_count++] = token;
+    }
+
+    if (comma == std::string::npos) {
+      break;
+    }
+    start = comma + 1;
+  }
+
+  *values = std::move(parsed);
+  *count = parsed_count;
+  return true;
+}
+
+template <std::size_t N>
+std::string serialize_allowlist_csv(const std::array<std::string, N> &values,
+                                    std::size_t count) {
+  if (count == 0) {
+    return "none";
+  }
+  if (count > N) {
+    count = N;
+  }
+
+  std::string out;
+  for (std::size_t i = 0; i < count; ++i) {
+    if (i != 0) {
+      out += ',';
+    }
+    out += values[i];
+  }
+  return out;
+}
+
 bool parse_fan_control(const char *s, bool def) {
   if (streq_ci(s, "automatic")) {
     return false;
@@ -278,6 +396,19 @@ bool apply_parser(IniParser *parser, Settings *out) {
   out->debug_app_jb_msg =
       parse_bool(ini_get(parser, "app_jailbreak.debug_notifications"),
                  out->debug_app_jb_msg);
+  if (const char *exact = ini_get(parser, "app_jailbreak.exact_title_ids")) {
+    (void)parse_allowlist_csv(
+        exact, valid_exact_title_id,
+        &out->app_jailbreak_allowlist.exact_title_ids,
+        &out->app_jailbreak_allowlist.exact_title_id_count);
+  }
+  if (const char *prefixes =
+          ini_get(parser, "app_jailbreak.title_id_prefixes")) {
+    (void)parse_allowlist_csv(
+        prefixes, valid_title_id_prefix,
+        &out->app_jailbreak_allowlist.title_id_prefixes,
+        &out->app_jailbreak_allowlist.title_id_prefix_count);
+  }
   out->enable_fan_speed =
       parse_fan_control(ini_get(parser, "cooling.fan_control"),
                         out->enable_fan_speed);
@@ -391,6 +522,20 @@ std::string settings_serialize(const Settings &in) {
   b += "# debug_notifications shows a notification when OnionHEN jailbreaks an app.\n";
   b += "# Available values: true, false\n";
   b += "debug_notifications=" + bool_text(in.debug_app_jb_msg) + "\n";
+  b += "# exact_title_ids is a comma-separated list of exact 9-character Title IDs.\n";
+  b += "# Use none to disable all exact Title IDs; maximum 20 entries.\n";
+  b += "exact_title_ids=" +
+       serialize_allowlist_csv(
+           in.app_jailbreak_allowlist.exact_title_ids,
+           in.app_jailbreak_allowlist.exact_title_id_count) +
+       "\n";
+  b += "# title_id_prefixes is a comma-separated list of uppercase prefixes.\n";
+  b += "# Use none to disable prefix matching; bare wildcards are not accepted.\n";
+  b += "title_id_prefixes=" +
+       serialize_allowlist_csv(
+           in.app_jailbreak_allowlist.title_id_prefixes,
+           in.app_jailbreak_allowlist.title_id_prefix_count) +
+       "\n";
   b += "\n";
   b += "[cooling]\n";
   b += "# fan_control chooses between stock fan behavior and a manual threshold.\n";

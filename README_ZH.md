@@ -267,6 +267,8 @@ OnionHEN 通过以下两个运行时视图创建并共享同一套配置 schema�
 | `rest_mode.close_running_game_on_entry` | `false` | `true`, `false` |
 | `cheats.memory_backend` | `default` | `default`, `libhijacker` |
 | `app_jailbreak.debug_notifications` | `false` | `true`, `false` |
+| `app_jailbreak.exact_title_ids` | `ITEM00001,NPXS39041,PKGI13337,PKGI12345,TOOL00001` | 逗号分隔的精确 Title ID，或 `none` |
+| `app_jailbreak.title_id_prefixes` | `LAPY` | 逗号分隔的大写前缀，或 `none` |
 | `cooling.fan_control` | `automatic` | `automatic`, `temperature_threshold` |
 | `cooling.temperature_threshold_celsius` | `77` | `0` 到 `100` |
 | `overlay.edge` | `top` | `top`, `bottom` |
