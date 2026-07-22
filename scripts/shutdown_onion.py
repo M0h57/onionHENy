@@ -2,9 +2,9 @@
 """Shut down OnionHEN stack on a PS5 from a PC (LAN).
 
 Sequence (daemon side):
-  1. stop util.elf
+  1. stop onion_util.elf
   2. restart SceShellUI (kill → system respawn)
-  3. exit daemon.elf
+  3. exit onion_daemon.elf
 
 kstuff is intentionally left running — SIGKILL of kstuff panics the kernel.
 

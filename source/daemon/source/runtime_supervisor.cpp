@@ -187,7 +187,8 @@ RecoveryResult recover_private_loader(bool recover_timed_out_busy_loader) {
 }
 
 bool util_running() {
-  return onion_find_pid("util.elf") > 1 ||
+  return onion_find_pid("onion_util.elf") > 1 ||
+         onion_find_pid("util.elf") > 1 ||
          onion_find_pid("OnionHEN Utility") > 1;
 }
 

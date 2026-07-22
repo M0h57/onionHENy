@@ -222,7 +222,7 @@ bool is_800 = false;
 
 int main() {
   /* Raw elfldr uploads default to "payload.elf"; publish our stable name. */
-  (void)syscall(SYS_thr_set_name, -1, "daemon.elf");
+  (void)syscall(SYS_thr_set_name, -1, "onion_daemon.elf");
 
   onion_log_configure("OnionHEN", "/data/OnionHEN/OnionHEN.log");
   /* Real linked kernel export (not a dlsym function-pointer variable). */

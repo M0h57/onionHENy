@@ -95,7 +95,7 @@ bool LoadSettings() {
 
 int main(void) {
     /* Raw elfldr uploads default to "payload.elf"; publish our stable name. */
-    (void)syscall(SYS_thr_set_name, -1, "util.elf");
+    (void)syscall(SYS_thr_set_name, -1, "onion_util.elf");
 
     pthread_t ipc_server = 0;
     char tmp_buf[200];
@@ -135,7 +135,7 @@ int main(void) {
     onion_ready_signal(ONION_READY_UTIL);
 
     if (onion_ready_is_set(ONION_FLAG_UTIL_BOOTED)) {
-        /* util.elf restarted mid-session (crash recover / re-launch) — not rest. */
+        /* onion_util.elf restarted mid-session (crash recover / re-launch) — not rest. */
         OnionHEN_log("util already booted once — toolbox reinject (not rest)");
         patch_checker(/*rest_resume=*/false);
     }

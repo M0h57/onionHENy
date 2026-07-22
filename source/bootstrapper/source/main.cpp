@@ -661,8 +661,8 @@ void free_payload_files(char **plugin_files) {
 
 static void kill_by_name(const char *a, const char *b) {
   int p = -1;
-  while ((p = onion_find_pid_substr(a)) > 0 ||
-         (p = onion_find_pid_substr(b)) > 0) {
+  while ((a && (p = onion_find_pid_substr(a)) > 0) ||
+         (b && (p = onion_find_pid_substr(b)) > 0)) {
     kill(p, SIGKILL);
     sleep(1);
   }
@@ -762,7 +762,8 @@ static int launch_chain(const OrbisKernelSwVersion &sys_ver) {
    * (daemon injects toolbox; kstuff must patch ShellUI first)
    */
   klog_printf("Starting util via %u ...\n", g_payload_loader_port);
-  kill_by_name("util.elf", "OnionHEN Utility");
+  kill_by_name("onion_util.elf", "util.elf");
+  kill_by_name("OnionHEN Utility", nullptr);
   onion_ready_clear(ONION_READY_UTIL);
   onion_ready_clear(ONION_READY_KSTUFF);
   onion_ready_clear(ONION_READY_DAEMON);
@@ -775,7 +776,7 @@ static int launch_chain(const OrbisKernelSwVersion &sys_ver) {
   onion_ready_clear(ONION_FLAG_UTIL_BOOTED);
   onion_ready_clear(ONION_FLAG_FPS_OVERLAY);
 
-  if (!launch_blob(util_start, util_size, "util", "util.elf")) {
+  if (!launch_blob(util_start, util_size, "util", "onion_util.elf")) {
     notify("failed to launch util via elfldr");
     return -2;
   }
@@ -831,9 +832,10 @@ static int launch_chain(const OrbisKernelSwVersion &sys_ver) {
 
   klog_printf("Starting daemon via %u (toolbox inject) ...\n",
               g_payload_loader_port);
-  kill_by_name("daemon.elf", "OnionHEN Critical");
+  kill_by_name("onion_daemon.elf", "daemon.elf");
+  kill_by_name("OnionHEN Critical", nullptr);
   onion_ready_clear(ONION_READY_DAEMON);
-  if (!launch_blob(daemon_start, daemon_size, "daemon", "daemon.elf")) {
+  if (!launch_blob(daemon_start, daemon_size, "daemon", "onion_daemon.elf")) {
     notify("failed to launch daemon via elfldr");
     return -2;
   }

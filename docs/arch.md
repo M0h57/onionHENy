@@ -134,7 +134,7 @@ OnionHEN/
 1. 检查 `127.0.0.1:9021` 上的外部 elfldr（首跳必需）
 2. 启动内置 `onion_elfldr.elf`，并通过握手确认 `127.0.0.1:9020`
 3. 顺序发送内部 ELF 字节：util → kstuff → daemon；9020 是正常路径，9021 仅承担引导/恢复职责
-4. 各子 ELF 启动后把主线程名设为稳定进程名（`util.elf` / `kstuff.elf` / `daemon.elf`）
+4. 各子 ELF 启动后把主线程名设为稳定进程名（`onion_util.elf` / `kstuff.elf` / `onion_daemon.elf`）
 5. 仅在 9020 健康时加载 `/data/OnionHEN/payloads/` 下带 `.auto_start` 的 `.elf`；必须取得精确 PID，否则该 Payload 直接失败
 
 可用 `/data/OnionHEN/no_kstuff` 或 `/mnt/usb0/no_kstuff` 跳过 kstuff。

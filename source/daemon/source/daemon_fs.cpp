@@ -346,6 +346,7 @@ static void shutdown_restart_shellui(void) {
   usleep(100 * 1000);
 
   static const char *const kUtilNames[] = {
+      "onion_util.elf",
       "util.elf",
       "OnionHEN Utility",
       "util",
@@ -354,7 +355,9 @@ static void shutdown_restart_shellui(void) {
   OnionHEN_log("shutdown[1/3]: stop util");
   kill_all_by_comm_substr(kUtilNames,
                           sizeof(kUtilNames) / sizeof(kUtilNames[0]));
-  if (onion_find_pid("util.elf") > 0 || onion_find_pid_substr("util.elf") > 0 ||
+  if (onion_find_pid("onion_util.elf") > 0 ||
+      onion_find_pid_substr("onion_util.elf") > 0 ||
+      onion_find_pid("util.elf") > 0 || onion_find_pid_substr("util.elf") > 0 ||
       onion_find_pid("OnionHEN Utility") > 0) {
     OnionHEN_log("shutdown: util still alive — retry");
     kill_all_by_comm_substr(kUtilNames,
