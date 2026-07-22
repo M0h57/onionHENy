@@ -35,8 +35,9 @@ COMMON_FLAGS := -Wall -Wextra -g -O0 -DONION_HOST_TEST=1 -DCBC=1 \
 	-I$(BUILD_DIR)/generated \
 	$(KEYSTONE_CFLAGS)
 
-I18N_DIR := $(REPO_ROOT)/source/shellui/i18n
+I18N_DIR := $(REPO_ROOT)/source/i18n
 I18N_CATALOG := $(BUILD_DIR)/generated/toolbox_i18n_catalog.inc
+NOTIFY_I18N_CATALOG := $(BUILD_DIR)/generated/notify_i18n_catalog.inc
 
 # ready.h lives under source/include/onion/
 COMMON_FLAGS += -I$(REPO_ROOT)/source/include
@@ -210,6 +211,15 @@ $(I18N_CATALOG): $(I18N_DIR)/generate_catalog.py $(I18N_DIR)/zh-CN.json $(I18N_D
 	$(PYTHON) $(I18N_DIR)/generate_catalog.py \
 		--zh-cn $(I18N_DIR)/zh-CN.json \
 		--en-us $(I18N_DIR)/en-US.json \
+		--catalog toolbox \
+		--output $@
+
+$(NOTIFY_I18N_CATALOG): $(I18N_DIR)/generate_catalog.py $(I18N_DIR)/zh-CN.json $(I18N_DIR)/en-US.json | $(BUILD_DIR)
+	@mkdir -p $(dir $@)
+	$(PYTHON) $(I18N_DIR)/generate_catalog.py \
+		--zh-cn $(I18N_DIR)/zh-CN.json \
+		--en-us $(I18N_DIR)/en-US.json \
+		--catalog notifications \
 		--output $@
 
 $(BUILD_DIR)/prod/shellui/toolbox_i18n.o: $(REPO_ROOT)/source/shellui/src/toolbox_i18n.cpp $(I18N_CATALOG) | $(BUILD_DIR)
@@ -232,7 +242,7 @@ $(BUILD_DIR)/prod/libonion_platform/notify.o: $(REPO_ROOT)/source/libonion_platf
 	@mkdir -p $(dir $@)
 	$(HOST_CC) $(CFLAGS) -c -o $@ $<
 
-$(BUILD_DIR)/prod/libonion_platform/notify_i18n.o: $(REPO_ROOT)/source/libonion_platform/source/notify_i18n.c | $(BUILD_DIR)
+$(BUILD_DIR)/prod/libonion_platform/notify_i18n.o: $(REPO_ROOT)/source/libonion_platform/source/notify_i18n.c $(NOTIFY_I18N_CATALOG) | $(BUILD_DIR)
 	@mkdir -p $(dir $@)
 	$(HOST_CC) $(CFLAGS) -c -o $@ $<
 

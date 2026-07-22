@@ -59,6 +59,23 @@ static int test_notify_format_localized(void) {
   return 0;
 }
 
+static int test_notify_payload_localized(void) {
+  char out[256];
+  onion_notify_set_language(ONION_NOTIFY_LANG_ZH_HANS);
+
+  format_msg(out, sizeof(out), 1, "Loading payload %s ...", "demo.elf");
+  TEST_ASSERT_STREQ("[OnionHEN] 正在加载 Payload demo.elf...", out);
+
+  format_msg(out, sizeof(out), 1,
+             "Payload launched\nPath: %s\nKey: %s", "/data/demo.elf",
+             "demo");
+  TEST_ASSERT_STREQ(
+      "[OnionHEN] Payload 已启动\n路径：/data/demo.elf\n标识：demo", out);
+
+  onion_notify_set_language(ONION_NOTIFY_LANG_EN);
+  return 0;
+}
+
 static char g_rich_payload[4096];
 
 static int32_t capture_rich_notify(int32_t user_id, bool is_logged,
@@ -102,6 +119,8 @@ int test_platform_notify_suite(void) {
                              test_notify_language_resolution);
   failures += onion_test_run("notify_format_localized",
                              test_notify_format_localized);
+  failures += onion_test_run("notify_payload_localized",
+                             test_notify_payload_localized);
   failures +=
       onion_test_run("notify_rich_formats_payload", test_notify_rich_formats_payload);
   failures += onion_test_run("notify_rich_localizes_both_text_fields",
