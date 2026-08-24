@@ -40,6 +40,59 @@ jobs:
       - name: Build OnionHEN builder image
         run: |
           docker compose build onionhen-build
+          # Tag it under a stable name so later plain `docker run` steps
+          # (which need to bypass compose's own volume mounts) can find it.
+          image_id="$(docker compose config --images onionhen-build)"
+          docker tag "${image_id}" onionhen-builder:ci
+
+      # util/CMakeLists.txt hard-requires libcurl.a + curl.h + ca-bundle.crt
+      # under $PS5_PAYLOAD_SDK/target/user/homebrew (cheat-catalog HTTPS).
+      # Locally this comes from a bind-mounted ./.docker/pacbrew-ps5 you
+      # populate yourself; it doesn't exist on a clean CI checkout, so build
+      # it here once and cache it — pin the tag so cache invalidates on
+      # intentional bumps only.
+      - name: Cache pacbrew PS5 homebrew libs (curl + deps)
+        id: pacbrew-cache
+        uses: actions/cache@v4
+        with:
+          path: .docker/pacbrew-ps5
+          key: pacbrew-ps5-libs-v0.36
+
+      - name: Build pacbrew PS5 homebrew libs (curl + deps)
+        if: steps.pacbrew-cache.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p .docker/pacbrew-ps5
+          # NOTE: don't use the compose service's own bind mount for this —
+          # it mounts .docker/pacbrew-ps5 *onto* target/user/homebrew, which
+          # would just shadow the very directory ci-libs.sh needs to install
+          # into. Run a bare `docker run` against the built image instead, so
+          # /opt/ps5-payload-sdk/target/user/homebrew is real, and copy the
+          # result into /workspace (bind-mounted to the host) at the end.
+          # --user root: the image's default USER is the unprivileged
+          # `builder` account (no sudo installed), but this step needs to
+          # apt-get install extra pacbrew-repo build deps.
+          docker run --rm \
+            --user root \
+            -v "${PWD}:/workspace" \
+            -w /workspace \
+            onionhen-builder:ci \
+            /bin/bash -lc '
+              set -euo pipefail
+              apt-get update
+              apt-get install -y --no-install-recommends \
+                autoconf libtool yasm nasm bison flex gperf pkgconf \
+                libarchive-tools autopoint po4a doxygen makepkg \
+                pacman-package-manager python3-mako python3-glad meson
+              git clone --depth 1 --branch v0.36 \
+                https://github.com/ps5-payload-dev/pacbrew-repo.git /tmp/pacbrew-repo
+              cd /tmp/pacbrew-repo
+              export PS5_PAYLOAD_SDK=/opt/ps5-payload-sdk
+              export LLVM_CONFIG=/usr/lib/llvm-18/bin/llvm-config
+              export PATH="/usr/lib/llvm-18/bin:${PS5_PAYLOAD_SDK}/bin:${PATH}"
+              export MAKEFLAGS="-j$(nproc)"
+              ./ci-libs.sh
+              cp -a "${PS5_PAYLOAD_SDK}/target/user/homebrew/." /workspace/.docker/pacbrew-ps5/
+            '
 
       - name: Compile OnionHEN (scripts/build.sh inside container)
         run: |
