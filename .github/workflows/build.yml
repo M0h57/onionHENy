@@ -6,6 +6,18 @@ on:
   pull_request:
     branches: [ main, master ]
   workflow_dispatch:
+    inputs:
+      build_type:
+        description: "Build type"
+        required: false
+        default: "Release"
+        type: choice
+        options:
+          - Debug
+          - Release
+
+env:
+  BUILD_TYPE: ${{ github.event.inputs.build_type || 'Release' }}
 
 jobs:
   build:
@@ -18,50 +30,47 @@ jobs:
           submodules: recursive
           fetch-depth: 0
 
-      - name: Install Build Dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y \
-            build-essential \
-            cmake \
-            ninja-build \
-            clang \
-            lld \
-            llvm \
-            git \
-            python3 \
-            libssl-dev
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
 
-      - name: Setup PS5 Payload SDK / Toolchain
+      # Uses the repo's own Dockerfile: installs clang-18/lld-18/cmake/ninja,
+      # clones ps5-payload-dev/sdk, builds+installs it, and runs libcxx.sh —
+      # this is the same environment scripts/build.sh expects PS5_PAYLOAD_SDK
+      # to already be set up in.
+      - name: Build OnionHEN builder image
         run: |
-          # Fetch and prepare submodules/dependencies if script exists
-          if [ -f "./scripts/sync_dependencies.sh" ]; then
-            chmod +x ./scripts/sync_dependencies.sh
-            ./scripts/sync_dependencies.sh
-          fi
+          docker compose build onionhen-build
 
-      - name: Compile OnionHEN
+      - name: Compile OnionHEN (scripts/build.sh inside container)
         run: |
-          mkdir -p build && cd build
-          if [ -f "../scripts/ps5_cmake.sh" ]; then
-            chmod +x ../scripts/ps5_cmake.sh
-            ../scripts/ps5_cmake.sh --build-type Release
-          elif [ -f "../CMakeLists.txt" ]; then
-            cmake .. -DCMAKE_BUILD_TYPE=Release
-            cmake --build . --config Release -j$(nproc)
-          else
-            make -j$(nproc)
-          fi
+          docker compose run --rm \
+            -e BUILD_TYPE="${{ env.BUILD_TYPE }}" \
+            onionhen-build \
+            /bin/bash -lc '
+              set -euo pipefail
+              rm -rf /tmp/onionhen-build
+              cp -a /workspace/. /tmp/onionhen-build
+              git -C /tmp/onionhen-build submodule update --init --recursive
+              cd /tmp/onionhen-build
+              export PS5_PAYLOAD_SDK=/opt/ps5-payload-sdk
+              export LLVM_CONFIG=/usr/lib/llvm-18/bin/llvm-config
+              export PATH="/usr/lib/llvm-18/bin:${PS5_PAYLOAD_SDK}/bin:${PATH}"
+              ./scripts/build.sh --build-type "${BUILD_TYPE}" --jobs "$(nproc)"
+              rm -rf /workspace/build
+              cp -a /tmp/onionhen-build/build /workspace/build
+            '
+
+      - name: List build outputs
+        run: ls -lahR build/bin || true
 
       - name: Upload Build Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: OnionHEN-Build
+          name: OnionHEN-${{ env.BUILD_TYPE }}-${{ github.sha }}
           path: |
-            build/*.elf
-            build/*.bin
-            build/output/
-            *.elf
+            build/bin/*.elf
+            build/bin/*.lzma
+          if-no-files-found: error
 
       - name: Create GitHub Release (Manual Trigger Only)
         if: github.event_name == 'workflow_dispatch'
@@ -72,8 +81,7 @@ jobs:
           draft: false
           prerelease: false
           files: |
-            build/*.elf
-            build/*.bin
-            *.elf
+            build/bin/*.elf
+            build/bin/*.lzma
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
