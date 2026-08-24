@@ -68,9 +68,11 @@ jobs:
           # into. Run a bare `docker run` against the built image instead, so
           # /opt/ps5-payload-sdk/target/user/homebrew is real, and copy the
           # result into /workspace (bind-mounted to the host) at the end.
-          # --user root: the image's default USER is the unprivileged
-          # `builder` account (no sudo installed), but this step needs to
-          # apt-get install extra pacbrew-repo build deps.
+          # Two-stage: ci-libs.sh internally shells out to `sudo` for apt
+          # installs, but also runs `makepkg`, which refuses to run as root.
+          # So: become root just long enough to install sudo + grant the
+          # unprivileged `builder` user passwordless sudo, then drop back to
+          # `builder` (su) to actually run ci-libs.sh.
           docker run --rm \
             --user root \
             -v "${PWD}:/workspace" \
@@ -79,19 +81,24 @@ jobs:
             /bin/bash -lc '
               set -euo pipefail
               apt-get update
-              apt-get install -y --no-install-recommends \
+              apt-get install -y --no-install-recommends sudo \
                 autoconf libtool yasm nasm bison flex gperf pkgconf \
                 libarchive-tools autopoint po4a doxygen makepkg \
                 pacman-package-manager python3-mako python3-glad meson
-              git clone --depth 1 --branch v0.36 \
-                https://github.com/ps5-payload-dev/pacbrew-repo.git /tmp/pacbrew-repo
-              cd /tmp/pacbrew-repo
-              export PS5_PAYLOAD_SDK=/opt/ps5-payload-sdk
-              export LLVM_CONFIG=/usr/lib/llvm-18/bin/llvm-config
-              export PATH="/usr/lib/llvm-18/bin:${PS5_PAYLOAD_SDK}/bin:${PATH}"
-              export MAKEFLAGS="-j$(nproc)"
-              ./ci-libs.sh
-              cp -a "${PS5_PAYLOAD_SDK}/target/user/homebrew/." /workspace/.docker/pacbrew-ps5/
+              echo "builder ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/builder
+              chmod 0440 /etc/sudoers.d/builder
+              su - builder -c "
+                set -euo pipefail
+                git clone --depth 1 --branch v0.36 \
+                  https://github.com/ps5-payload-dev/pacbrew-repo.git /tmp/pacbrew-repo
+                cd /tmp/pacbrew-repo
+                export PS5_PAYLOAD_SDK=/opt/ps5-payload-sdk
+                export LLVM_CONFIG=/usr/lib/llvm-18/bin/llvm-config
+                export PATH=/usr/lib/llvm-18/bin:\${PS5_PAYLOAD_SDK}/bin:\${PATH}
+                export MAKEFLAGS=-j\$(nproc)
+                ./ci-libs.sh
+                cp -a \${PS5_PAYLOAD_SDK}/target/user/homebrew/. /workspace/.docker/pacbrew-ps5/
+              "
             '
 
       - name: Compile OnionHEN (scripts/build.sh inside container)
